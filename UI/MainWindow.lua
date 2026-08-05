@@ -8,10 +8,14 @@ local SYL = _G.ShowUsYourLoot
 local Theme = SYL.Theme
 local Widgets = SYL.Widgets
 local Rows = SYL.Rows
+local Filters = SYL.Filters
+local FilterBar = SYL.FilterBar
+local FilterDropdown = SYL.FilterDropdown
+local ListSources = SYL.ListSources
 local LootListView = SYL.LootListView
 
 local WINDOW_WIDTH = 830
-local WINDOW_HEIGHT = 562
+local WINDOW_HEIGHT = 590
 local VISIBLE_ROWS = 13
 
 local frame
@@ -26,6 +30,7 @@ local view = {
     offset = 0,
     visibleRows = VISIBLE_ROWS,
     showHidden = false,
+    filters = Filters.CreateState(),
     dropRows = {},
     lootRows = {},
     archiveRows = {},
@@ -122,10 +127,17 @@ local function UpdateRows()
     view.dropHeader:Hide()
     view.lootHeader:Hide()
 
+    -- Nothing on the archive list is filterable, so the bar would only be
+    -- misleading there.
     if view.mode == "archives" then
+        view.filterBar:Hide()
+
         LootListView.UpdateArchiveRows(view)
+
         return
     end
+
+    view.filterBar:Show()
 
     if view.mode == "drops" then
         view.dropHeader:Show()
@@ -138,9 +150,17 @@ local function UpdateRows()
 end
 
 local function SetMode(mode, archiveIndex)
+    -- Switching views changes what the dropdowns list, so an open one would
+    -- be showing options for the view you just left.
+    FilterDropdown.CloseAll()
+
     view.mode = mode
     view.selectedArchiveIndex = archiveIndex
     view.offset = 0
+
+    if view.filterBar then
+        view.filterBar:Refresh()
+    end
 
     UpdateRows()
 end
@@ -211,11 +231,34 @@ local function CreateNavigationBar(parent)
     buttons.back:SetPoint("TOPRIGHT", -16, -66)
 end
 
+local function CreateFilterBar(parent)
+    view.filterBar = FilterBar.Create(parent, {
+        state = view.filters,
+
+        getRecords = function()
+            return ListSources.GetUnfiltered(view)
+        end,
+
+        getFields = function()
+            return ListSources.GetFields(view)
+        end,
+
+        onChange = function()
+            view.offset = 0
+
+            UpdateRows()
+        end,
+    })
+
+    view.filterBar:SetPoint("TOPLEFT", 16, -100)
+    view.filterBar:SetPoint("TOPRIGHT", -16, -100)
+end
+
 local function CreateScrollArea(parent)
     view.countText =
         Theme.CreateText(parent, Theme.sizes.subtitle, "textMuted")
 
-    view.countText:SetPoint("TOPLEFT", 18, -104)
+    view.countText:SetPoint("TOPLEFT", 18, -132)
     view.countText:SetText("0 items")
 
     view.emptyText =
@@ -227,79 +270,23 @@ local function CreateScrollArea(parent)
     view.emptyText:Hide()
 
     view.dropHeader = Rows.CreateColumnHeader(parent, "drops")
-    view.dropHeader:SetPoint("TOPLEFT", 16, -122)
-    view.dropHeader:SetPoint("TOPRIGHT", -34, -122)
+    view.dropHeader:SetPoint("TOPLEFT", 16, -150)
+    view.dropHeader:SetPoint("TOPRIGHT", -34, -150)
 
     view.lootHeader = Rows.CreateColumnHeader(parent, "loot")
-    view.lootHeader:SetPoint("TOPLEFT", 16, -122)
-    view.lootHeader:SetPoint("TOPRIGHT", -34, -122)
+    view.lootHeader:SetPoint("TOPLEFT", 16, -150)
+    view.lootHeader:SetPoint("TOPRIGHT", -34, -150)
     view.lootHeader:Hide()
 
-    view.scrollFrame = CreateFrame(
-        "ScrollFrame",
-        "ShowUsYourLootScrollFrame",
-        parent,
-        "UIPanelScrollFrameTemplate"
-    )
+    SYL.ScrollArea.Create(parent, view, {
+        childWidth = WINDOW_WIDTH - 70,
 
-    view.scrollFrame:SetPoint("TOPLEFT", 16, -146)
-    view.scrollFrame:SetPoint("BOTTOMRIGHT", -34, 52)
+        onScrolled = UpdateRows,
 
-    view.scrollChild = CreateFrame("Frame", nil, view.scrollFrame)
-    view.scrollChild:SetWidth(WINDOW_WIDTH - 70)
-    view.scrollChild:SetHeight(VISIBLE_ROWS * Widgets.ROW_HEIGHT)
-
-    view.scrollFrame:SetScrollChild(view.scrollChild)
-
-    for index = 1, VISIBLE_ROWS do
-        view.dropRows[index] =
-            Rows.CreateDropRow(view.scrollChild, index)
-
-        view.lootRows[index] =
-            Rows.CreateLootRow(view.scrollChild, index)
-
-        view.archiveRows[index] =
-            Rows.CreateArchiveRow(view.scrollChild, index, function(archiveIndex)
-                SetMode("archive", archiveIndex)
-            end)
-    end
-
-    view.scrollFrame:EnableMouseWheel(true)
-
-    view.scrollFrame:SetScript("OnMouseWheel", function(_, delta)
-        if view.mode == "archives" then
-            return
-        end
-
-        local maxOffset = math.max(
-            0,
-            #LootListView.GetRecords(view) - VISIBLE_ROWS
-        )
-
-        view.offset = math.max(
-            0,
-            math.min(maxOffset, view.offset - delta)
-        )
-
-        UpdateRows()
-    end)
-
-    if view.scrollFrame.ScrollBar then
-        view.scrollFrame.ScrollBar:SetScript("OnValueChanged", function(_, value)
-            if view.mode == "archives" then
-                return
-            end
-
-            local newOffset =
-                math.floor((value / Widgets.ROW_HEIGHT) + 0.5)
-
-            if newOffset ~= view.offset then
-                view.offset = newOffset
-
-                UpdateRows()
-            end
-        end)
-    end
+        onArchiveView = function(archiveIndex)
+            SetMode("archive", archiveIndex)
+        end,
+    })
 end
 
 local function CreateFooter(parent)
@@ -346,13 +333,21 @@ local function CreateMainWindow()
 
     CreateTitleBar(frame)
     CreateNavigationBar(frame)
+    CreateFilterBar(frame)
     CreateScrollArea(frame)
     CreateFooter(frame)
 
     frame:SetScript("OnShow", function()
         view.offset = 0
 
+        view.filterBar:Refresh()
+
         UpdateRows()
+    end)
+
+    -- A dropdown is parented to UIParent, so it would outlive the window.
+    frame:SetScript("OnHide", function()
+        FilterDropdown.CloseAll()
     end)
 
     frame:Hide()

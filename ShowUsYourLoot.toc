@@ -8,6 +8,7 @@
 Main.lua
 
 Core\Utilities.lua
+Core\Filters.lua
 Core\Serializer.lua
 Core\Database.lua
 Core\LootCapture.lua
@@ -22,7 +23,11 @@ Core\SlashCommands.lua
 UI\Theme.lua
 UI\Widgets.lua
 UI\Rows.lua
+UI\ListSources.lua
+UI\ScrollArea.lua
 UI\ArchivePopup.lua
+UI\FilterDropdown.lua
+UI\FilterBar.lua
 UI\LootListView.lua
 UI\MainWindow.lua
 UI\DeveloperReport.lua

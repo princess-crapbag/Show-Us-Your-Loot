@@ -8,6 +8,7 @@ local SYL = _G.ShowUsYourLoot
 local Theme = SYL.Theme
 local Widgets = SYL.Widgets
 local Rows = SYL.Rows
+local ListSources = SYL.ListSources
 local Utilities = SYL.Utilities
 
 local LootListView = {}
@@ -60,52 +61,6 @@ local function AbbreviateDifficulty(record)
 end
 
 --------------------------------------------------------------------------
--- Record sources
---------------------------------------------------------------------------
-
--- Hidden records are a display state, never a deletion, so they come back
--- the moment the toggle is flipped.
-local function VisibleRecords(records, view)
-    if view.showHidden then
-        return records
-    end
-
-    local visible = {}
-
-    for _, record in ipairs(records) do
-        if not record.hidden then
-            table.insert(visible, record)
-        end
-    end
-
-    return visible
-end
-
-function LootListView.GetRecords(view)
-    if view.mode == "drops" then
-        return VisibleRecords(SYL.GetActiveDrops(), view)
-    end
-
-    if view.mode == "active" then
-        local season = SYL.GetActiveSeason()
-
-        return VisibleRecords(season and season.loot or {}, view)
-    end
-
-    if view.mode == "all" then
-        return VisibleRecords(SYL.GetAllLoot(), view)
-    end
-
-    if view.mode == "archive" then
-        local season = SYL.GetArchives()[view.selectedArchiveIndex]
-
-        return VisibleRecords(season and season.loot or {}, view)
-    end
-
-    return {}
-end
-
---------------------------------------------------------------------------
 -- Shared helpers
 --------------------------------------------------------------------------
 
@@ -134,6 +89,16 @@ local function SetEmptyState(view, isEmpty, message)
     else
         view.emptyText:Hide()
     end
+end
+
+local function DescribeCount(view, shown, singular, plural)
+    local total = #ListSources.GetUnfiltered(view)
+
+    if shown == total then
+        return shown .. " " .. (shown == 1 and singular or plural)
+    end
+
+    return shown .. " of " .. total .. " " .. plural
 end
 
 local function ClampOffset(view, total)
@@ -203,15 +168,17 @@ local function FillDropRow(row, record, recordIndex)
 end
 
 function LootListView.UpdateDropRows(view)
-    local records = LootListView.GetRecords(view)
+    local records = ListSources.GetFiltered(view)
     local total = #records
 
-    view.countText:SetText(total .. (total == 1 and " drop" or " drops"))
+    view.countText:SetText(DescribeCount(view, total, "drop", "drops"))
 
     SetEmptyState(
         view,
         total == 0,
-        "No drops recorded yet. They are captured on group-loot rolls."
+        ListSources.IsFiltering(view)
+            and "No drops match these filters."
+            or "No drops recorded yet. They are captured on group-loot rolls."
     )
 
     local maxOffset = ClampOffset(view, total)
@@ -254,15 +221,17 @@ local function FillLootRow(row, record, recordIndex)
 end
 
 function LootListView.UpdateLootRows(view)
-    local records = LootListView.GetRecords(view)
+    local records = ListSources.GetFiltered(view)
     local total = #records
 
-    view.countText:SetText(total .. (total == 1 and " item" or " items"))
+    view.countText:SetText(DescribeCount(view, total, "item", "items"))
 
     SetEmptyState(
         view,
         total == 0,
-        "No loot has been recorded in this view."
+        ListSources.IsFiltering(view)
+            and "No loot matches these filters."
+            or "No loot has been recorded in this view."
     )
 
     local maxOffset = ClampOffset(view, total)
@@ -359,4 +328,9 @@ function LootListView.HideAllRows(view)
     for _, row in ipairs(view.archiveRows) do
         row:Hide()
     end
+end
+
+-- Kept so callers do not need to know about ListSources.
+function LootListView.GetRecords(view)
+    return ListSources.GetFiltered(view)
 end
