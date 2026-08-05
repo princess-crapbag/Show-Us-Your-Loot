@@ -60,6 +60,11 @@ local function InitializeSettings()
     if ShowUsYourLootDB.settings.announceCaptures == nil then
         ShowUsYourLootDB.settings.announceCaptures = true
     end
+
+    -- Developer tooling stays off unless it is turned on deliberately.
+    if ShowUsYourLootDB.settings.lootHistoryInspector == nil then
+        ShowUsYourLootDB.settings.lootHistoryInspector = false
+    end
 end
 
 local function MigrateOldLootDatabase()

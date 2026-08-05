@@ -2,10 +2,22 @@
 ## Title: Show Us Your Loot
 ## Notes: Tracks loot and provides loot analytics.
 ## Author: Aimee
-## Version: 0.0.5
+## Version: 0.0.6
 ## SavedVariables: ShowUsYourLootDB
 
 Main.lua
-Database.lua
-Events.lua
-UI.lua
+
+Core\Utilities.lua
+Core\Serializer.lua
+Core\Database.lua
+Core\LootCapture.lua
+Core\LootHistoryAPI.lua
+Core\LootHistory.lua
+Core\Events.lua
+Core\SlashCommands.lua
+
+UI\Widgets.lua
+UI\LootListView.lua
+UI\MainWindow.lua
+UI\DeveloperReport.lua
+UI\DeveloperWindow.lua
