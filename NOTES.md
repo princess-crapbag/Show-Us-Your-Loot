@@ -3,7 +3,7 @@
 Requirements captured outside the code, so they survive between sessions.
 Not a changelog — see `git log` for what has been built.
 
-## Loot list filtering (requested 2026-08-05)
+## Loot list filtering (requested 2026-08-05) — BUILT, UNTESTED IN GAME
 
 The main window needs filtering across four fields:
 
@@ -27,7 +27,7 @@ Implications worth deciding before building:
 - Filters need to compose with the existing Active / All-Time / Archive
   views rather than replace them.
 
-## Row selection and per-line archiving (requested 2026-08-05)
+## Row selection and per-line archiving (requested 2026-08-05) — BUILT, UNTESTED IN GAME
 
 Two interaction ideas, possibly both:
 
@@ -49,9 +49,19 @@ Decided:
 - Date filtering is **arbitrary ranges**, not a list of raid nights.
 - Both a free-text search box **and** multi-select filters, side by side.
 
-## Relationship to Loot History storage
+Resolved while building: shift-clicking a row body already inserts the
+item link into chat, which is a WoW convention worth keeping. So the
+checkbox is the selection target and shift-click on a *checkbox* extends
+the range. Both requested behaviours, neither at the cost of linking.
 
-Multi-select filtering and per-row selection both push toward records
-that are cheap to query and select individually. Worth weighing when
-choosing between one record per drop versus one record per player-roll
-for Loot History storage — that decision is still open.
+## Still open
+
+- Nothing here has been exercised in game. The likeliest problems are the
+  filter dropdown's frame level and the date boxes' focus handling.
+- Filtering by player on the Drops tab matches the **winner**. Matching
+  anyone who rolled would answer different questions ("who keeps losing
+  rolls") and is worth adding later as a separate option.
+- Drops have no all-time or archived view yet; the All-Time tab still
+  shows chat loot only. It will matter once a season is archived.
+- The Archives list still cannot scroll past about nine seasons. Tracked
+  separately; it predates all of this.
