@@ -9,7 +9,27 @@ local Theme = SYL.Theme
 local Widgets = SYL.Widgets
 local Rows = SYL.Rows
 local ListSources = SYL.ListSources
+local Selection = SYL.Selection
 local Utilities = SYL.Utilities
+
+-- Every row carries the record it is showing and that record's place in the
+-- displayed list, because pooled rows are reused as the list scrolls and a
+-- shift-click range needs the on-screen index.
+local function BindRow(view, row, record, recordIndex)
+    row.record = record
+    row.recordIndex = recordIndex
+
+    Rows.SetRowSelected(row, Selection.IsSelected(view.selection, record))
+    Rows.SetRowHidden(row, record.hidden)
+end
+
+local function ReleaseRow(row)
+    row.record = nil
+    row.recordIndex = nil
+    row.itemLink = nil
+
+    row:Hide()
+end
 
 local LootListView = {}
 SYL.LootListView = LootListView
@@ -189,14 +209,17 @@ function LootListView.UpdateDropRows(view)
         local row = view.dropRows[rowIndex]
 
         if recordIndex >= 1 then
-            if not FillDropRow(row, records[recordIndex], recordIndex) then
+            local record = records[recordIndex]
+
+            if not FillDropRow(row, record, recordIndex) then
                 allCached = false
             end
 
+            BindRow(view, row, record, recordIndex)
+
             row:Show()
         else
-            row.itemLink = nil
-            row:Hide()
+            ReleaseRow(row)
         end
     end
 
@@ -243,14 +266,17 @@ function LootListView.UpdateLootRows(view)
         local row = view.lootRows[rowIndex]
 
         if recordIndex >= 1 then
-            if not FillLootRow(row, records[recordIndex], recordIndex) then
+            local record = records[recordIndex]
+
+            if not FillLootRow(row, record, recordIndex) then
                 allCached = false
             end
 
+            BindRow(view, row, record, recordIndex)
+
             row:Show()
         else
-            row.itemLink = nil
-            row:Hide()
+            ReleaseRow(row)
         end
     end
 

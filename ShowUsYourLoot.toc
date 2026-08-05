@@ -24,10 +24,12 @@ UI\Theme.lua
 UI\Widgets.lua
 UI\Rows.lua
 UI\ListSources.lua
+UI\Selection.lua
 UI\ScrollArea.lua
 UI\ArchivePopup.lua
 UI\FilterDropdown.lua
 UI\FilterBar.lua
+UI\SelectionBar.lua
 UI\LootListView.lua
 UI\MainWindow.lua
 UI\DeveloperReport.lua

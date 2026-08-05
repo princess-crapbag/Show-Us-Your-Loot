@@ -12,6 +12,7 @@ local Filters = SYL.Filters
 local FilterBar = SYL.FilterBar
 local FilterDropdown = SYL.FilterDropdown
 local ListSources = SYL.ListSources
+local Selection = SYL.Selection
 local LootListView = SYL.LootListView
 
 local WINDOW_WIDTH = 830
@@ -31,6 +32,7 @@ local view = {
     visibleRows = VISIBLE_ROWS,
     showHidden = false,
     filters = Filters.CreateState(),
+    selection = Selection.Create(),
     dropRows = {},
     lootRows = {},
     archiveRows = {},
@@ -123,6 +125,7 @@ local function UpdateRows()
 
     UpdateHeader()
     UpdateTabs()
+    view.selectionBar:Update()
 
     view.dropHeader:Hide()
     view.lootHeader:Hide()
@@ -153,6 +156,9 @@ local function SetMode(mode, archiveIndex)
     -- Switching views changes what the dropdowns list, so an open one would
     -- be showing options for the view you just left.
     FilterDropdown.CloseAll()
+
+    -- A selection belongs to the list it was made in.
+    Selection.Clear(view.selection)
 
     view.mode = mode
     view.selectedArchiveIndex = archiveIndex
@@ -282,6 +288,9 @@ local function CreateScrollArea(parent)
         childWidth = WINDOW_WIDTH - 70,
 
         onScrolled = UpdateRows,
+        onSelect = function(row, isShift)
+            view.selectionBar:OnRowSelect(row, isShift)
+        end,
 
         onArchiveView = function(archiveIndex)
             SetMode("archive", archiveIndex)
@@ -334,6 +343,9 @@ local function CreateMainWindow()
     CreateTitleBar(frame)
     CreateNavigationBar(frame)
     CreateFilterBar(frame)
+    view.selectionBar = SYL.SelectionBar.Create(frame, view, {
+        onChanged = UpdateRows,
+    })
     CreateScrollArea(frame)
     CreateFooter(frame)
 

@@ -76,10 +76,10 @@ function ScrollArea.Create(parent, view, config)
 
     for index = 1, view.visibleRows do
         view.dropRows[index] =
-            Rows.CreateDropRow(view.scrollChild, index)
+            Rows.CreateDropRow(view.scrollChild, index, config.onSelect)
 
         view.lootRows[index] =
-            Rows.CreateLootRow(view.scrollChild, index)
+            Rows.CreateLootRow(view.scrollChild, index, config.onSelect)
 
         view.archiveRows[index] =
             Rows.CreateArchiveRow(view.scrollChild, index, config.onArchiveView)

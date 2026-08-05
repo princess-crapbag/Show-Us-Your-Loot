@@ -19,17 +19,19 @@ local ICON_TEXT_GAP = 22
 -- frame at the current window size.
 local COLUMN_SETS = {
     loot = {
-        { key = "number", label = "#", width = 30, gap = 10 },
+        { key = "select", label = "", width = 16, gap = 8 },
+        { key = "number", label = "#", width = 30, gap = 8 },
         { key = "player", label = "PLAYER", width = 140, gap = 8 },
-        { key = "item", label = "ITEM", width = 250, gap = 10 },
+        { key = "item", label = "ITEM", width = 226, gap = 10 },
         { key = "location", label = "LOCATION", width = 170, gap = 10 },
         { key = "date", label = "DATE", width = 110, gap = 10 },
     },
 
     drops = {
-        { key = "number", label = "#", width = 30, gap = 10 },
+        { key = "select", label = "", width = 16, gap = 8 },
+        { key = "number", label = "#", width = 30, gap = 8 },
         { key = "boss", label = "BOSS", width = 150, gap = 8 },
-        { key = "item", label = "ITEM", width = 230, gap = 10 },
+        { key = "item", label = "ITEM", width = 206, gap = 10 },
         { key = "winner", label = "WINNER", width = 130, gap = 10 },
         { key = "roll", label = "ROLL", width = 40, gap = 10 },
         { key = "date", label = "DATE", width = 110, gap = 10 },
@@ -117,6 +119,64 @@ function Rows.SetRowItem(row, itemLink, fallbackName)
 end
 
 --------------------------------------------------------------------------
+-- Selection cell
+--------------------------------------------------------------------------
+
+-- The checkbox is a separate button so that shift-clicking the row body can
+-- keep its normal meaning of linking the item into chat. Shift on the
+-- checkbox extends a range instead.
+local function AddSelectCell(row, setKey, onSelect)
+    local box = CreateFrame("Button", nil, row)
+
+    box:SetSize(14, 14)
+    box:SetPoint("LEFT", offsets[setKey].select, 0)
+
+    box.edge = Theme.CreateSolidTexture(box, "border", "BACKGROUND")
+    box.edge:SetAllPoints()
+
+    box.fill = Theme.CreateSolidTexture(box, "window", "ARTWORK")
+    box.fill:SetPoint("TOPLEFT", 1, -1)
+    box.fill:SetPoint("BOTTOMRIGHT", -1, 1)
+
+    box.tick = Theme.CreateSolidTexture(box, "accent", "OVERLAY")
+    box.tick:SetSize(8, 8)
+    box.tick:SetPoint("CENTER")
+    box.tick:Hide()
+
+    box:SetScript("OnClick", function()
+        onSelect(row, IsShiftKeyDown())
+    end)
+
+    Widgets.LinkHoverToRow(box, row)
+
+    row.selectBox = box
+
+    row.selectedTint = Theme.CreateSolidTexture(row, "accentMuted", "BORDER")
+    row.selectedTint:SetAllPoints()
+    row.selectedTint:Hide()
+end
+
+function Rows.SetRowSelected(row, selected)
+    if not row.selectBox then
+        return
+    end
+
+    if selected then
+        row.selectBox.tick:Show()
+        row.selectedTint:Show()
+    else
+        row.selectBox.tick:Hide()
+        row.selectedTint:Hide()
+    end
+end
+
+-- Hidden rows stay legible but visibly set aside, so "Show hidden" reads as a
+-- different state rather than as a broken list.
+function Rows.SetRowHidden(row, hidden)
+    row:SetAlpha(hidden and 0.45 or 1)
+end
+
+--------------------------------------------------------------------------
 -- Shared row behaviour
 --------------------------------------------------------------------------
 
@@ -155,11 +215,12 @@ end
 -- Row builders
 --------------------------------------------------------------------------
 
-function Rows.CreateLootRow(parent, index)
+function Rows.CreateLootRow(parent, index, onSelect)
     local row = CreateFrame("Button", nil, parent)
 
     Widgets.AnchorRow(row, index, Widgets.ROW_HEIGHT)
     Widgets.AddRowBackgrounds(row, index)
+    AddSelectCell(row, "loot", onSelect)
 
     row.numberText = Theme.CreateText(row, Theme.sizes.rowSmall, "textMuted")
     PlaceInColumn(row.numberText, "loot", "number", 30)
@@ -167,7 +228,7 @@ function Rows.CreateLootRow(parent, index)
     row.playerText = Theme.CreateText(row, Theme.sizes.row, "textPrimary")
     PlaceInColumn(row.playerText, "loot", "player", 140)
 
-    AddItemCell(row, "loot", COLUMN_SETS.loot[3])
+    AddItemCell(row, "loot", COLUMN_SETS.loot[4])
 
     row.locationText =
         Theme.CreateText(row, Theme.sizes.rowSmall, "textSecondary")
@@ -182,11 +243,12 @@ function Rows.CreateLootRow(parent, index)
     return row
 end
 
-function Rows.CreateDropRow(parent, index)
+function Rows.CreateDropRow(parent, index, onSelect)
     local row = CreateFrame("Button", nil, parent)
 
     Widgets.AnchorRow(row, index, Widgets.ROW_HEIGHT)
     Widgets.AddRowBackgrounds(row, index)
+    AddSelectCell(row, "drops", onSelect)
 
     row.numberText = Theme.CreateText(row, Theme.sizes.rowSmall, "textMuted")
     PlaceInColumn(row.numberText, "drops", "number", 30)
@@ -194,7 +256,7 @@ function Rows.CreateDropRow(parent, index)
     row.bossText = Theme.CreateText(row, Theme.sizes.rowSmall, "textSecondary")
     PlaceInColumn(row.bossText, "drops", "boss", 150)
 
-    AddItemCell(row, "drops", COLUMN_SETS.drops[3])
+    AddItemCell(row, "drops", COLUMN_SETS.drops[4])
 
     row.winnerText = Theme.CreateText(row, Theme.sizes.row, "textPrimary")
     PlaceInColumn(row.winnerText, "drops", "winner", 130)
