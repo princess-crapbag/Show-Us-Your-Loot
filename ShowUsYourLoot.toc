@@ -1,0 +1,11 @@
+## Interface: 120007
+## Title: Show Us Your Loot
+## Notes: Tracks loot and provides loot analytics.
+## Author: Aimee
+## Version: 0.0.5
+## SavedVariables: ShowUsYourLootDB
+
+Main.lua
+Database.lua
+Events.lua
+UI.lua

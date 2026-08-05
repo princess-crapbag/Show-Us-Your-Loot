@@ -1,0 +1,251 @@
+-- Database.lua
+
+local SYL = _G.ShowUsYourLoot
+
+local DATABASE_VERSION = 2
+
+local function GenerateSeasonID()
+    return "season-" .. date("%Y%m%d-%H%M%S")
+end
+
+local function CreateSeason(name)
+    local timestamp = time()
+
+    return {
+        id = GenerateSeasonID(),
+        name = name or "Current Season",
+
+        createdAt = timestamp,
+        startedAt = timestamp,
+        archivedAt = nil,
+
+        loot = {},
+        raids = {},
+        players = {},
+        bosses = {},
+
+        settings = {
+            locked = false,
+        },
+    }
+end
+
+local function EnsureSeasonStructure(season)
+    season.loot = season.loot or {}
+    season.raids = season.raids or {}
+    season.players = season.players or {}
+    season.bosses = season.bosses or {}
+
+    season.settings = season.settings or {}
+
+    if season.settings.locked == nil then
+        season.settings.locked = false
+    end
+
+    season.createdAt = season.createdAt or time()
+    season.startedAt = season.startedAt or season.createdAt
+    season.id = season.id or GenerateSeasonID()
+    season.name = season.name or "Unnamed Season"
+
+    return season
+end
+
+local function InitializeSettings()
+    ShowUsYourLootDB.settings = ShowUsYourLootDB.settings or {}
+
+    if ShowUsYourLootDB.settings.debug == nil then
+        ShowUsYourLootDB.settings.debug = false
+    end
+
+    if ShowUsYourLootDB.settings.announceCaptures == nil then
+        ShowUsYourLootDB.settings.announceCaptures = true
+    end
+end
+
+local function MigrateOldLootDatabase()
+    local oldLoot = ShowUsYourLootDB.loot
+
+    if type(oldLoot) ~= "table" or #oldLoot == 0 then
+        return false
+    end
+
+    local season = CreateSeason("Imported Loot")
+
+    for _, record in ipairs(oldLoot) do
+        table.insert(season.loot, record)
+    end
+
+    ShowUsYourLootDB.activeSeason = season
+
+    return true
+end
+
+function SYL.DatabaseInitialize()
+    ShowUsYourLootDB = ShowUsYourLootDB or {}
+
+    InitializeSettings()
+
+    ShowUsYourLootDB.archives = ShowUsYourLootDB.archives or {}
+    ShowUsYourLootDB.recentRecordIDs =
+        ShowUsYourLootDB.recentRecordIDs or {}
+
+    local migrated = false
+
+    if not ShowUsYourLootDB.activeSeason then
+        migrated = MigrateOldLootDatabase()
+    end
+
+    if not ShowUsYourLootDB.activeSeason then
+        ShowUsYourLootDB.activeSeason =
+            CreateSeason("Midnight Season 1")
+    end
+
+    EnsureSeasonStructure(ShowUsYourLootDB.activeSeason)
+
+    for _, archivedSeason in ipairs(ShowUsYourLootDB.archives) do
+        EnsureSeasonStructure(archivedSeason)
+        archivedSeason.settings.locked = true
+    end
+
+    ShowUsYourLootDB.databaseVersion = DATABASE_VERSION
+
+    -- Compatibility alias for the current UI.
+    -- Existing code that reads ShowUsYourLootDB.loot will continue working.
+    ShowUsYourLootDB.loot =
+        ShowUsYourLootDB.activeSeason.loot
+
+    if migrated then
+        SYL:Print(
+            "Existing loot was moved into the active season: "
+            .. ShowUsYourLootDB.activeSeason.name
+        )
+    end
+end
+
+function SYL.GetActiveSeason()
+    return ShowUsYourLootDB
+        and ShowUsYourLootDB.activeSeason
+end
+
+function SYL.GetActiveLoot()
+    local season = SYL.GetActiveSeason()
+
+    if not season then
+        return {}
+    end
+
+    season.loot = season.loot or {}
+
+    return season.loot
+end
+
+function SYL.GetArchives()
+    if not ShowUsYourLootDB then
+        return {}
+    end
+
+    ShowUsYourLootDB.archives =
+        ShowUsYourLootDB.archives or {}
+
+    return ShowUsYourLootDB.archives
+end
+
+function SYL.GetAllLoot()
+    local allLoot = {}
+
+    local activeSeason = SYL.GetActiveSeason()
+
+    if activeSeason and activeSeason.loot then
+        for _, record in ipairs(activeSeason.loot) do
+            table.insert(allLoot, record)
+        end
+    end
+
+    for _, season in ipairs(SYL.GetArchives()) do
+        for _, record in ipairs(season.loot or {}) do
+            table.insert(allLoot, record)
+        end
+    end
+
+    return allLoot
+end
+
+function SYL.StartNewSeason(name)
+    name = name and name:gsub("^%s+", ""):gsub("%s+$", "")
+
+    if not name or name == "" then
+        name = "New Season"
+    end
+
+    ShowUsYourLootDB.activeSeason = CreateSeason(name)
+
+    -- Keep old UI and code pointed at the new active-season loot table.
+    ShowUsYourLootDB.loot =
+        ShowUsYourLootDB.activeSeason.loot
+
+    ShowUsYourLootDB.recentRecordIDs = {}
+
+    return ShowUsYourLootDB.activeSeason
+end
+
+function SYL.ArchiveCurrentSeason(newSeasonName)
+    local activeSeason = SYL.GetActiveSeason()
+
+    if not activeSeason then
+        return nil, "There is no active season to archive."
+    end
+
+    activeSeason.archivedAt = time()
+    activeSeason.settings =
+        activeSeason.settings or {}
+    activeSeason.settings.locked = true
+
+    table.insert(
+        ShowUsYourLootDB.archives,
+        activeSeason
+    )
+
+    local archivedSeason = activeSeason
+
+    local newSeason = SYL.StartNewSeason(
+        newSeasonName or "New Season"
+    )
+
+    return archivedSeason, newSeason
+end
+
+function SYL.RenameActiveSeason(newName)
+    newName = newName and
+        newName:gsub("^%s+", ""):gsub("%s+$", "")
+
+    if not newName or newName == "" then
+        return false, "Enter a season name."
+    end
+
+    local activeSeason = SYL.GetActiveSeason()
+
+    if not activeSeason then
+        return false, "There is no active season."
+    end
+
+    activeSeason.name = newName
+
+    return true
+end
+
+function SYL.GetSeasonSummary(season)
+    if not season then
+        return nil
+    end
+
+    return {
+        id = season.id,
+        name = season.name,
+        lootCount = #(season.loot or {}),
+        startedAt = season.startedAt,
+        archivedAt = season.archivedAt,
+        locked = season.settings
+            and season.settings.locked
+            or false,
+    }
+end
