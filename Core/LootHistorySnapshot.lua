@@ -124,6 +124,9 @@ local function BuildDropEntry(encounterID, rawDrop)
         winnerClass = winner and winner.playerClass,
         winnerRoll = winner and winner.roll,
 
+        -- How they won it, not just that they did.
+        winnerState = winner and winner.state,
+
         -- The viewing player's own choice on this drop, not the winner's.
         ownRollStateText = API.DescribeRollState(copied.playerRollState),
 

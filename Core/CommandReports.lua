@@ -149,6 +149,18 @@ function Reports.SeasonStatus()
     print("Chat loot records: " .. #(season.loot or {}))
     print("Started: " .. date("%m/%d/%Y %I:%M %p", season.startedAt))
     print("Archived seasons: " .. #SYL.GetArchives())
+
+    if SYL.Guild.IsInGuild() then
+        print(
+            "Guild: "
+            .. tostring(SYL.Guild.GetGuildName())
+            .. " — "
+            .. SYL.Guild.GetMemberCount()
+            .. " members cached"
+        )
+    else
+        print("Guild: not in a guild, so ranks will not be recorded.")
+    end
 end
 
 function Reports.Archives()

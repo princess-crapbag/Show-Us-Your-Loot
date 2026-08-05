@@ -152,6 +152,20 @@ end
 -- Drops
 --------------------------------------------------------------------------
 
+-- A win type is not decoration: a transmog win is not an upgrade, so it is
+-- muted rather than shown with the same weight as a Need win.
+local function SetWinType(row, record)
+    local short = SYL.LootHistoryAPI.ShortRollState(record.winnerState)
+
+    row.typeText:SetText(short or "")
+
+    if record.winnerState == 0 or record.winnerState == 1 then
+        Theme.SetTextColor(row.typeText, "textPrimary")
+    else
+        Theme.SetTextColor(row.typeText, "textMuted")
+    end
+end
+
 local function FillDropRow(row, record, recordIndex)
     row.numberText:SetText(recordIndex)
 
@@ -166,6 +180,7 @@ local function FillDropRow(row, record, recordIndex)
         row.winnerText:SetText("all passed")
         Theme.SetTextColor(row.winnerText, "textMuted")
         row.rollText:SetText("")
+        row.typeText:SetText("")
     else
         row.winnerText:SetText(tostring(record.winnerName or "Unknown"))
 
@@ -182,6 +197,8 @@ local function FillDropRow(row, record, recordIndex)
         row.rollText:SetText(
             record.winnerRoll and tostring(record.winnerRoll) or "—"
         )
+
+        SetWinType(row, record)
     end
 
     row.dateText:SetText(Utilities.FormatDateTime(record.timestamp))

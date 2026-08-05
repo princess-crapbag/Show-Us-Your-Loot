@@ -55,6 +55,9 @@ local function OnPlayerLogin()
     SYL.MinimapButton.SetShown(
         ShowUsYourLootDB.settings.showMinimapButton
     )
+
+    -- The reply arrives as GUILD_ROSTER_UPDATE.
+    SYL.Guild.Request()
 end
 
 local function OnChatMessageLoot(message)
@@ -63,10 +66,17 @@ local function OnChatMessageLoot(message)
     SYL.LootCapture.HandleChatMessage(message)
 end
 
+local function OnGuildRosterUpdate()
+    local count = SYL.Guild.Refresh()
+
+    SYL:DebugPrint("Guild roster cached: " .. tostring(count) .. " members.")
+end
+
 local HANDLERS = {
     ADDON_LOADED = OnAddonLoaded,
     PLAYER_LOGIN = OnPlayerLogin,
     CHAT_MSG_LOOT = OnChatMessageLoot,
+    GUILD_ROSTER_UPDATE = OnGuildRosterUpdate,
 }
 
 for event in pairs(HANDLERS) do

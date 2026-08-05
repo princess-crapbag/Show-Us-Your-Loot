@@ -10,6 +10,7 @@ Main.lua
 Core\Utilities.lua
 Core\Filters.lua
 Core\Serializer.lua
+Core\Guild.lua
 Core\ItemQuality.lua
 Core\Database.lua
 Core\LootCapture.lua

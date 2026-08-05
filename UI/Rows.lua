@@ -30,11 +30,12 @@ local COLUMN_SETS = {
     drops = {
         { key = "select", label = "", width = 16, gap = 8 },
         { key = "number", label = "#", width = 30, gap = 8 },
-        { key = "boss", label = "BOSS", width = 150, gap = 8 },
-        { key = "item", label = "ITEM", width = 206, gap = 10 },
+        { key = "boss", label = "BOSS", width = 130, gap = 8 },
+        { key = "item", label = "ITEM", width = 170, gap = 10 },
         { key = "winner", label = "WINNER", width = 130, gap = 10 },
-        { key = "roll", label = "ROLL", width = 40, gap = 10 },
-        { key = "date", label = "DATE", width = 110, gap = 10 },
+        { key = "wintype", label = "TYPE", width = 62, gap = 8 },
+        { key = "roll", label = "ROLL", width = 40, gap = 8 },
+        { key = "date", label = "DATE", width = 98, gap = 10 },
     },
 }
 
@@ -267,11 +268,14 @@ function Rows.CreateDropRow(parent, index, onSelect, onActivate)
     row.winnerText = Theme.CreateText(row, Theme.sizes.row, "textPrimary")
     PlaceInColumn(row.winnerText, "drops", "winner", 130)
 
+    row.typeText = Theme.CreateText(row, Theme.sizes.rowSmall, "textSecondary")
+    PlaceInColumn(row.typeText, "drops", "wintype", 62)
+
     row.rollText = Theme.CreateText(row, Theme.sizes.rowSmall, "textSecondary")
     PlaceInColumn(row.rollText, "drops", "roll", 40)
 
     row.dateText = Theme.CreateText(row, Theme.sizes.rowSmall, "textMuted")
-    PlaceInColumn(row.dateText, "drops", "date", 110)
+    PlaceInColumn(row.dateText, "drops", "date", 98)
 
     AttachItemRowScripts(row)
 

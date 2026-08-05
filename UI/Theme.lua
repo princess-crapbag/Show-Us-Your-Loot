@@ -21,31 +21,35 @@ local GetItemInfoInstant =
 local GetItemQualityColor =
     C_Item and C_Item.GetItemQualityColor or _G.GetItemQualityColor
 
--- A mid grey panel: not a dark theme, not a light one. The neutrals carry a
--- slight blue bias so the green accent reads as deliberate against them
--- instead of floating on flat grey.
+-- A dusty rose panel: mid-tone, desaturated enough to read as a neutral that
+-- happens to be pink rather than as a candy colour.
 --
--- Text is pushed brighter than a dark theme would need, because muted greys
--- lose contrast fast against a ground this light.
+-- The accent stays green, which is the addon's chat colour. Mint against
+-- dusty rose is a real pairing, but only while the pink stays muted — a
+-- saturated pink here would make the two fight.
+--
+-- Text carries the same warm bias as the ground, and sits brighter than a
+-- dark theme would need, because muted tones lose contrast fast against a
+-- panel this light.
 Theme.colors = {
-    window = { 0.245, 0.245, 0.275, 0.97 },
-    border = { 0.42, 0.42, 0.48, 1 },
+    window = { 0.295, 0.235, 0.255, 0.97 },
+    border = { 0.47, 0.385, 0.415, 1 },
 
-    headerBar = { 0.305, 0.305, 0.345, 1 },
+    headerBar = { 0.355, 0.285, 0.305, 1 },
     separator = { 1, 1, 1, 0.14 },
 
-    accent = { 0.16, 0.88, 0.54, 1 },
-    accentMuted = { 0.16, 0.88, 0.54, 0.20 },
+    accent = { 0.20, 0.86, 0.56, 1 },
+    accentMuted = { 0.20, 0.86, 0.56, 0.20 },
 
     rowAlt = { 1, 1, 1, 0.05 },
-    rowHover = { 0.16, 0.88, 0.54, 0.17 },
+    rowHover = { 0.20, 0.86, 0.56, 0.17 },
 
     button = { 1, 1, 1, 0.11 },
     buttonHover = { 1, 1, 1, 0.20 },
 
-    textPrimary = { 0.98, 0.98, 0.99, 1 },
-    textSecondary = { 0.82, 0.82, 0.86, 1 },
-    textMuted = { 0.66, 0.66, 0.71, 1 },
+    textPrimary = { 0.99, 0.97, 0.975, 1 },
+    textSecondary = { 0.87, 0.81, 0.83, 1 },
+    textMuted = { 0.72, 0.66, 0.68, 1 },
 }
 
 Theme.sizes = {

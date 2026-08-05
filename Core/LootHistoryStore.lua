@@ -45,10 +45,16 @@ local function BuildRolls(players)
     local rolls = {}
 
     for _, player in ipairs(players or {}) do
+        -- Rank index rather than the rank name: it is a number instead of a
+        -- repeated string, and 25 of these are saved per drop. Non-members
+        -- store nothing at all.
+        local rankIndex = SYL.Guild.GetRankIndex(player.guid, player.name)
+
         table.insert(rolls, {
             name = player.name,
             guid = player.guid,
             class = player.class,
+            guildRankIndex = rankIndex,
 
             state = player.rollState,
             stateText = player.rollStateText,
@@ -101,6 +107,18 @@ local function BuildRecord(recordID, snapshot, drop, season, location)
         winnerGUID = drop.winnerGUID,
         winnerClass = drop.winnerClass,
         winnerRoll = drop.winnerRoll,
+
+        -- A transmog win is not an upgrade. Fairness maths has to be able to
+        -- tell them apart, so the state is stored, not just the winner.
+        winnerState = drop.winnerState,
+
+        -- Captured now rather than looked up later, because ranks change and
+        -- history should show what was true when the item dropped.
+        winnerGuildRank = SYL.Guild.GetRank(drop.winnerGUID, drop.winnerName),
+        winnerGuildRankIndex =
+            SYL.Guild.GetRankIndex(drop.winnerGUID, drop.winnerName),
+        guildName = SYL.Guild.GetGuildName(),
+
         allPassed = drop.allPassed or nil,
 
         rolls = BuildRolls(drop.players),
@@ -127,7 +145,14 @@ local function UpdateRecord(record, drop)
     record.winnerGUID = drop.winnerGUID or record.winnerGUID
     record.winnerClass = drop.winnerClass or record.winnerClass
     record.winnerRoll = drop.winnerRoll or record.winnerRoll
+    record.winnerState = drop.winnerState or record.winnerState
     record.allPassed = drop.allPassed or record.allPassed
+
+    if drop.winnerGUID or drop.winnerName then
+        record.winnerGuildRank =
+            SYL.Guild.GetRank(drop.winnerGUID, drop.winnerName)
+            or record.winnerGuildRank
+    end
 
     local rolls = BuildRolls(drop.players)
 

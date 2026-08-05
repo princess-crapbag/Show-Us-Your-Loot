@@ -11,7 +11,8 @@ local Theme = SYL.Theme
 local Widgets = SYL.Widgets
 local Utilities = SYL.Utilities
 
-local WINDOW_WIDTH = 420
+-- Wide enough for name, state, roll, guild rank and the winner marker.
+local WINDOW_WIDTH = 500
 local ROW_HEIGHT = 20
 local VISIBLE_ROLLS = 14
 local LIST_TOP = 150
@@ -30,15 +31,6 @@ local STATE_ORDER = {
     [3] = 4, -- Greed
     [4] = 5, -- NoRoll
     [5] = 6, -- Pass
-}
-
-local STATE_SHORT = {
-    [0] = "Need",
-    [1] = "Need (OS)",
-    [2] = "Transmog",
-    [3] = "Greed",
-    [4] = "No roll",
-    [5] = "Pass",
 }
 
 local function SortRolls(rolls)
@@ -94,9 +86,13 @@ local function CreateRollRow(parent, index)
     row.rollText:SetPoint("LEFT", row.stateText, "RIGHT", 6, 0)
     row.rollText:SetWidth(44)
 
+    row.rankText = Theme.CreateText(row, Theme.sizes.rowSmall, "textMuted")
+    row.rankText:SetPoint("LEFT", row.rollText, "RIGHT", 6, 0)
+    row.rankText:SetWidth(96)
+
     row.markerText = Theme.CreateText(row, Theme.sizes.rowSmall, "accent")
-    row.markerText:SetPoint("LEFT", row.rollText, "RIGHT", 6, 0)
-    row.markerText:SetWidth(60)
+    row.markerText:SetPoint("LEFT", row.rankText, "RIGHT", 4, 0)
+    row.markerText:SetWidth(38)
 
     return row
 end
@@ -113,12 +109,22 @@ local function FillRollRow(row, roll)
     end
 
     row.stateText:SetText(
-        STATE_SHORT[roll.state] or roll.stateText or "unknown"
+        SYL.LootHistoryAPI.ShortRollState(roll.state)
+        or roll.stateText
+        or "unknown"
     )
 
     -- Players who passed or took transmog never rolled, so a number here
     -- would be invented.
     row.rollText:SetText(roll.roll and tostring(roll.roll) or "—")
+
+    -- Rank is only shown for our own guild. Someone else's guild rank is
+    -- not information this addon is for.
+    local rank =
+        SYL.Guild.GetRank(roll.guid, roll.name)
+        or roll.guildRank
+
+    row.rankText:SetText(rank or "")
 
     row.markerText:SetText(roll.isWinner and "WON" or "")
 end

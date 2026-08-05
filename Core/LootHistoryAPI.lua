@@ -131,6 +131,29 @@ local function GetRollStateNames()
     return rollStateNames
 end
 
+-- Short labels for display. A transmog win is not the same as a main-spec
+-- upgrade, so the distinction has to survive all the way to the UI.
+local SHORT_STATE_NAMES = {
+    [0] = "Need",
+    [1] = "Need OS",
+    [2] = "Mog",
+    [3] = "Greed",
+    [4] = "No roll",
+    [5] = "Pass",
+}
+
+function LootHistoryAPI.ShortRollState(value)
+    if value == nil then
+        return nil
+    end
+
+    return SHORT_STATE_NAMES[value] or ("state " .. tostring(value))
+end
+
+function LootHistoryAPI.GetShortStateNames()
+    return SHORT_STATE_NAMES
+end
+
 function LootHistoryAPI.DescribeRollState(value)
     if value == nil then
         return "unknown"
