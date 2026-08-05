@@ -24,6 +24,7 @@ Core\SlashCommands.lua
 
 UI\Theme.lua
 UI\Widgets.lua
+UI\TabStrip.lua
 UI\Rows.lua
 UI\ListSources.lua
 UI\Selection.lua
@@ -34,6 +35,7 @@ UI\FilterBar.lua
 UI\SelectionBar.lua
 UI\LootListView.lua
 UI\MainWindow.lua
+UI\DropDetailWindow.lua
 UI\CommandMenu.lua
 UI\MinimapButton.lua
 UI\SettingsWindow.lua

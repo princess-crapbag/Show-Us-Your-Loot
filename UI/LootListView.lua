@@ -122,7 +122,8 @@ local function DescribeCount(view, shown, singular, plural)
 end
 
 local function ClampOffset(view, total)
-    local maxOffset = math.max(0, total - view.visibleRows)
+    local maxOffset =
+        math.max(0, total - SYL.ScrollArea.VisibleRows(view))
 
     if view.offset > maxOffset then
         view.offset = maxOffset
@@ -132,10 +133,11 @@ local function ClampOffset(view, total)
 end
 
 local function UpdateScrollRange(view, maxOffset, total)
-    local rowHeight = Widgets.ROW_HEIGHT
+    local rowHeight = SYL.ScrollArea.RowHeight(view)
+    local visibleRows = SYL.ScrollArea.VisibleRows(view)
 
     view.scrollChild:SetHeight(
-        math.max(view.visibleRows * rowHeight, total * rowHeight)
+        math.max(visibleRows * rowHeight, total * rowHeight)
     )
 
     view.scrollFrame:SetVerticalScroll(view.offset * rowHeight)
@@ -301,9 +303,13 @@ function LootListView.UpdateArchiveRows(view)
 
     SetEmptyState(view, total == 0, "No seasons have been archived.")
 
-    for index = 1, view.visibleRows do
-        local row = view.archiveRows[index]
-        local season = archives[index]
+    local maxOffset = ClampOffset(view, total)
+    local visibleRows = SYL.ScrollArea.VisibleRows(view)
+
+    for rowIndex = 1, visibleRows do
+        local row = view.archiveRows[rowIndex]
+        local archiveIndex = rowIndex + view.offset
+        local season = archives[archiveIndex]
 
         if season then
             row.nameText:SetText(season.name or "Unnamed Season")
@@ -322,7 +328,7 @@ function LootListView.UpdateArchiveRows(view)
                 )
             )
 
-            row.archiveIndex = index
+            row.archiveIndex = archiveIndex
 
             row:Show()
         else
@@ -330,16 +336,7 @@ function LootListView.UpdateArchiveRows(view)
         end
     end
 
-    view.scrollChild:SetHeight(
-        view.visibleRows * Widgets.ARCHIVE_ROW_HEIGHT
-    )
-
-    view.scrollFrame:SetVerticalScroll(0)
-
-    if view.scrollFrame.ScrollBar then
-        view.scrollFrame.ScrollBar:SetMinMaxValues(0, 0)
-        view.scrollFrame.ScrollBar:SetValue(0)
-    end
+    UpdateScrollRange(view, maxOffset, total)
 end
 
 function LootListView.HideAllRows(view)

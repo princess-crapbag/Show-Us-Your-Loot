@@ -200,13 +200,17 @@ local function AttachItemRowScripts(row)
         GameTooltip:Hide()
     end)
 
+    -- Shift-click keeps its usual meaning of linking the item. A plain click
+    -- opens the row's detail, where a view provides one.
     row:SetScript("OnClick", function(self)
-        if not self.itemLink then
+        if self.itemLink and IsModifiedClick("CHATLINK") then
+            ChatEdit_InsertLink(self.itemLink)
+
             return
         end
 
-        if IsModifiedClick("CHATLINK") then
-            ChatEdit_InsertLink(self.itemLink)
+        if self.onActivate and self.record then
+            self.onActivate(self.record)
         end
     end)
 end
@@ -243,8 +247,10 @@ function Rows.CreateLootRow(parent, index, onSelect)
     return row
 end
 
-function Rows.CreateDropRow(parent, index, onSelect)
+function Rows.CreateDropRow(parent, index, onSelect, onActivate)
     local row = CreateFrame("Button", nil, parent)
+
+    row.onActivate = onActivate
 
     Widgets.AnchorRow(row, index, Widgets.ROW_HEIGHT)
     Widgets.AddRowBackgrounds(row, index)

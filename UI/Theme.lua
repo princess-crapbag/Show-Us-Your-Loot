@@ -21,28 +21,31 @@ local GetItemInfoInstant =
 local GetItemQualityColor =
     C_Item and C_Item.GetItemQualityColor or _G.GetItemQualityColor
 
--- A charcoal panel rather than a near-black one. The neutrals carry a slight
--- blue bias so the green accent reads as deliberate against them instead of
--- floating on flat grey.
+-- A mid grey panel: not a dark theme, not a light one. The neutrals carry a
+-- slight blue bias so the green accent reads as deliberate against them
+-- instead of floating on flat grey.
+--
+-- Text is pushed brighter than a dark theme would need, because muted greys
+-- lose contrast fast against a ground this light.
 Theme.colors = {
-    window = { 0.13, 0.13, 0.155, 0.97 },
-    border = { 0.30, 0.30, 0.35, 1 },
+    window = { 0.245, 0.245, 0.275, 0.97 },
+    border = { 0.42, 0.42, 0.48, 1 },
 
-    headerBar = { 0.18, 0.18, 0.215, 1 },
-    separator = { 1, 1, 1, 0.10 },
+    headerBar = { 0.305, 0.305, 0.345, 1 },
+    separator = { 1, 1, 1, 0.14 },
 
-    accent = { 0.20, 0.95, 0.60, 1 },
-    accentMuted = { 0.20, 0.95, 0.60, 0.16 },
+    accent = { 0.16, 0.88, 0.54, 1 },
+    accentMuted = { 0.16, 0.88, 0.54, 0.20 },
 
-    rowAlt = { 1, 1, 1, 0.035 },
-    rowHover = { 0.20, 0.95, 0.60, 0.12 },
+    rowAlt = { 1, 1, 1, 0.05 },
+    rowHover = { 0.16, 0.88, 0.54, 0.17 },
 
-    button = { 1, 1, 1, 0.085 },
-    buttonHover = { 1, 1, 1, 0.16 },
+    button = { 1, 1, 1, 0.11 },
+    buttonHover = { 1, 1, 1, 0.20 },
 
-    textPrimary = { 0.95, 0.95, 0.96, 1 },
-    textSecondary = { 0.72, 0.72, 0.77, 1 },
-    textMuted = { 0.54, 0.54, 0.60, 1 },
+    textPrimary = { 0.98, 0.98, 0.99, 1 },
+    textSecondary = { 0.82, 0.82, 0.86, 1 },
+    textMuted = { 0.66, 0.66, 0.71, 1 },
 }
 
 Theme.sizes = {

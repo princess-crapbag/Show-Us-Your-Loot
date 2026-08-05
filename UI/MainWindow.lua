@@ -1,8 +1,8 @@
 -- UI/MainWindow.lua
 --
--- The main loot window: chrome, navigation and view state. Row rendering
--- lives in UI/LootListView.lua, frame building in UI/Widgets.lua and every
--- colour and size in UI/Theme.lua.
+-- The main loot window: chrome, navigation and view state. Rendering lives in
+-- UI/LootListView.lua, scrolling in UI/ScrollArea.lua, and every colour and
+-- size in UI/Theme.lua.
 
 local SYL = _G.ShowUsYourLoot
 local Theme = SYL.Theme
@@ -21,7 +21,6 @@ local VISIBLE_ROWS = 13
 
 local frame
 local buttons = {}
-local tabs = {}
 
 -- Shared with LootListView, which reads it but never owns it.
 local view = {
@@ -91,15 +90,11 @@ local function UpdateHeader()
 end
 
 local function UpdateTabs()
-    for _, tab in ipairs(tabs) do
-        -- Viewing one archive keeps the Archives tab lit, since that is where
-        -- the user came from.
-        local isSelected =
-            tab.key == view.mode
-            or (tab.key == "archives" and view.mode == "archive")
-
-        tab:SetSelected(isSelected)
-    end
+    -- Viewing one archive keeps the Archives tab lit, since that is where the
+    -- user came from.
+    view.tabStrip:SetSelected(
+        view.mode == "archive" and "archives" or view.mode
+    )
 
     if view.mode == "archive" then
         buttons.back:Show()
@@ -196,25 +191,9 @@ local function CreateTitleBar(parent)
 end
 
 local function CreateNavigationBar(parent)
-    local previous
-
-    for _, definition in ipairs(TABS) do
-        local tab = Theme.CreateTab(parent, definition.label, function()
-            SetMode(definition.key, nil)
-        end)
-
-        tab.key = definition.key
-
-        if previous then
-            tab:SetPoint("LEFT", previous, "RIGHT", 4, 0)
-        else
-            tab:SetPoint("TOPLEFT", 14, -66)
-        end
-
-        previous = tab
-
-        table.insert(tabs, tab)
-    end
+    view.tabStrip = SYL.TabStrip.Create(parent, TABS, function(key)
+        SetMode(key, nil)
+    end, 14, -66)
 
     local separator = Theme.CreateSeparator(parent)
     separator:SetPoint("TOPLEFT", 16, -92)
@@ -287,10 +266,16 @@ local function CreateScrollArea(parent)
 
     SYL.ScrollArea.Create(parent, view, {
         childWidth = WINDOW_WIDTH - 70,
+        windowHeight = WINDOW_HEIGHT,
 
         onScrolled = UpdateRows,
+
         onSelect = function(row, isShift)
             view.selectionBar:OnRowSelect(row, isShift)
+        end,
+
+        onActivate = function(record)
+            SYL:OpenDropDetail(record)
         end,
 
         onArchiveView = function(archiveIndex)
