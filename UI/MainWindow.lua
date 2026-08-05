@@ -1,18 +1,21 @@
 -- UI/MainWindow.lua
 --
 -- The main loot window: chrome, navigation and view state. Row rendering
--- lives in UI/LootListView.lua and frame building in UI/Widgets.lua.
+-- lives in UI/LootListView.lua, frame building in UI/Widgets.lua and every
+-- colour and size in UI/Theme.lua.
 
 local SYL = _G.ShowUsYourLoot
+local Theme = SYL.Theme
 local Widgets = SYL.Widgets
 local LootListView = SYL.LootListView
 
 local WINDOW_WIDTH = 830
-local WINDOW_HEIGHT = 520
+local WINDOW_HEIGHT = 562
 local VISIBLE_ROWS = 13
 
 local frame
 local buttons = {}
+local tabs = {}
 
 -- Shared with LootListView, which reads it but never owns it.
 local view = {
@@ -24,13 +27,17 @@ local view = {
     archiveRows = {},
 }
 
+local TABS = {
+    { key = "active", label = "Active Season" },
+    { key = "all", label = "All-Time" },
+    { key = "archives", label = "Archives" },
+}
+
 --------------------------------------------------------------------------
 -- View state
 --------------------------------------------------------------------------
 
 local function UpdateHeader()
-    view.titleText:SetText("Show Us Your Loot")
-
     if view.mode == "active" then
         local season = SYL.GetActiveSeason()
 
@@ -60,14 +67,16 @@ local function UpdateHeader()
     end
 end
 
-local function UpdateNavigationButtons()
-    Widgets.SetButtonSelected(buttons.active, view.mode == "active")
-    Widgets.SetButtonSelected(buttons.allTime, view.mode == "all")
+local function UpdateTabs()
+    for _, tab in ipairs(tabs) do
+        -- Viewing one archive keeps the Archives tab lit, since that is where
+        -- the user came from.
+        local isSelected =
+            tab.key == view.mode
+            or (tab.key == "archives" and view.mode == "archive")
 
-    Widgets.SetButtonSelected(
-        buttons.archives,
-        view.mode == "archives" or view.mode == "archive"
-    )
+        tab:SetSelected(isSelected)
+    end
 
     if view.mode == "archive" then
         buttons.back:Show()
@@ -90,11 +99,13 @@ local function UpdateRows()
     LootListView.HideAllRows(view)
 
     UpdateHeader()
-    UpdateNavigationButtons()
+    UpdateTabs()
 
     if view.mode == "archives" then
+        view.columnHeader:Hide()
         LootListView.UpdateArchiveRows(view)
     else
+        view.columnHeader:Show()
         LootListView.UpdateLootRows(view)
     end
 end
@@ -108,139 +119,90 @@ local function SetMode(mode, archiveIndex)
 end
 
 --------------------------------------------------------------------------
--- Archive confirmation
---------------------------------------------------------------------------
-
-StaticPopupDialogs["SHOWUSYOURLOOT_ARCHIVE_SEASON"] = {
-    text = "Archive the current season and enter the name of the new active season.",
-
-    button1 = "Archive",
-    button2 = "Cancel",
-
-    hasEditBox = true,
-    editBoxWidth = 240,
-
-    OnShow = function(self)
-        self.EditBox:SetText("New Season")
-        self.EditBox:HighlightText()
-        self.EditBox:SetFocus()
-    end,
-
-    OnAccept = function(self)
-        local newSeasonName = self.EditBox:GetText()
-
-        if not newSeasonName or newSeasonName == "" then
-            newSeasonName = "New Season"
-        end
-
-        local archivedSeason, newSeason =
-            SYL.ArchiveCurrentSeason(newSeasonName)
-
-        if not archivedSeason then
-            return
-        end
-
-        SYL:Print(
-            "Archived "
-            .. archivedSeason.name
-            .. " with "
-            .. #(archivedSeason.loot or {})
-            .. " records."
-        )
-
-        SYL:Print("New active season: " .. newSeason.name)
-
-        SetMode("active", nil)
-    end,
-
-    EditBoxOnEnterPressed = function(self)
-        self:GetParent().button1:Click()
-    end,
-
-    EditBoxOnEscapePressed = function(self)
-        self:GetParent():Hide()
-    end,
-
-    timeout = 0,
-    whileDead = true,
-    hideOnEscape = true,
-    preferredIndex = 3,
-}
-
---------------------------------------------------------------------------
 -- Construction
 --------------------------------------------------------------------------
 
-local function CreateHeaderText(parent)
-    view.titleText =
-        parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+local function CreateTitleBar(parent)
+    local accentMark = Theme.CreateAccentMark(parent)
+    accentMark:SetPoint("TOPLEFT", 16, -20)
 
-    view.titleText:SetPoint("TOP", 0, -16)
-    view.titleText:SetText("Show Us Your Loot")
+    view.titleText = Theme.CreateText(parent, Theme.sizes.title, "textPrimary")
+    view.titleText:SetPoint("LEFT", accentMark, "RIGHT", 8, 0)
+    view.titleText:SetText("SHOW US YOUR LOOT")
 
     view.subtitleText =
-        parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        Theme.CreateText(parent, Theme.sizes.subtitle, "textSecondary")
 
-    view.subtitleText:SetPoint("TOP", 0, -40)
+    view.subtitleText:SetPoint("TOPLEFT", 27, -40)
     view.subtitleText:SetText("Active Season")
 
-    view.countText =
-        parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-
-    view.countText:SetPoint("TOPLEFT", 22, -90)
-    view.countText:SetText("Recorded items: 0")
-
-    view.emptyText =
-        parent:CreateFontString(nil, "OVERLAY", "GameFontDisableLarge")
-
-    view.emptyText:SetPoint("CENTER", 0, -12)
-    view.emptyText:SetText("No loot has been recorded.")
-    view.emptyText:Hide()
-end
-
-local function CreateNavigationBar(parent)
     local closeCorner =
         CreateFrame("Button", nil, parent, "UIPanelCloseButton")
 
-    closeCorner:SetPoint("TOPRIGHT", -5, -5)
+    closeCorner:SetPoint("TOPRIGHT", -6, -6)
+end
 
-    buttons.active =
-        Widgets.CreatePanelButton(parent, 120, 24, "Active Season", function()
-            SetMode("active", nil)
+local function CreateNavigationBar(parent)
+    local previous
+
+    for _, definition in ipairs(TABS) do
+        local tab = Theme.CreateTab(parent, definition.label, function()
+            SetMode(definition.key, nil)
         end)
 
-    buttons.active:SetPoint("TOPLEFT", 20, -58)
+        tab.key = definition.key
 
-    buttons.allTime =
-        Widgets.CreatePanelButton(parent, 100, 24, "All-Time", function()
-            SetMode("all", nil)
-        end)
+        if previous then
+            tab:SetPoint("LEFT", previous, "RIGHT", 4, 0)
+        else
+            tab:SetPoint("TOPLEFT", 14, -66)
+        end
 
-    buttons.allTime:SetPoint("LEFT", buttons.active, "RIGHT", 6, 0)
+        previous = tab
 
-    buttons.archives =
-        Widgets.CreatePanelButton(parent, 100, 24, "Archives", function()
-            SetMode("archives", nil)
-        end)
+        table.insert(tabs, tab)
+    end
 
-    buttons.archives:SetPoint("LEFT", buttons.allTime, "RIGHT", 6, 0)
-
-    buttons.back =
-        Widgets.CreatePanelButton(parent, 115, 24, "Back to Archives", function()
-            SetMode("archives", nil)
-        end)
-
-    buttons.back:SetPoint("TOPRIGHT", -20, -58)
+    local separator = Theme.CreateSeparator(parent)
+    separator:SetPoint("TOPLEFT", 16, -92)
+    separator:SetPoint("TOPRIGHT", -16, -92)
 
     buttons.archiveSeason =
-        Widgets.CreatePanelButton(parent, 125, 24, "Archive Season", function()
-            StaticPopup_Show("SHOWUSYOURLOOT_ARCHIVE_SEASON")
+        Theme.CreateButton(parent, 120, 24, "Archive Season", function()
+            SYL.ArchivePopup.Show(function()
+                SetMode("active", nil)
+            end)
         end)
 
-    buttons.archiveSeason:SetPoint("TOPRIGHT", -20, -86)
+    buttons.archiveSeason:SetPoint("TOPRIGHT", -16, -66)
+
+    buttons.back =
+        Theme.CreateButton(parent, 130, 24, "Back to Archives", function()
+            SetMode("archives", nil)
+        end)
+
+    buttons.back:SetPoint("TOPRIGHT", -16, -66)
 end
 
 local function CreateScrollArea(parent)
+    view.countText =
+        Theme.CreateText(parent, Theme.sizes.subtitle, "textMuted")
+
+    view.countText:SetPoint("TOPLEFT", 18, -104)
+    view.countText:SetText("0 items")
+
+    view.emptyText =
+        Theme.CreateText(parent, Theme.sizes.title, "textMuted")
+
+    view.emptyText:SetPoint("CENTER", 0, -12)
+    view.emptyText:SetJustifyH("CENTER")
+    view.emptyText:SetText("No loot has been recorded.")
+    view.emptyText:Hide()
+
+    view.columnHeader = Widgets.CreateLootColumnHeader(parent)
+    view.columnHeader:SetPoint("TOPLEFT", 16, -122)
+    view.columnHeader:SetPoint("TOPRIGHT", -34, -122)
+
     view.scrollFrame = CreateFrame(
         "ScrollFrame",
         "ShowUsYourLootScrollFrame",
@@ -248,8 +210,8 @@ local function CreateScrollArea(parent)
         "UIPanelScrollFrameTemplate"
     )
 
-    view.scrollFrame:SetPoint("TOPLEFT", 18, -142)
-    view.scrollFrame:SetPoint("BOTTOMRIGHT", -38, 58)
+    view.scrollFrame:SetPoint("TOPLEFT", 16, -146)
+    view.scrollFrame:SetPoint("BOTTOMRIGHT", -34, 52)
 
     view.scrollChild = CreateFrame("Frame", nil, view.scrollFrame)
     view.scrollChild:SetWidth(WINDOW_WIDTH - 70)
@@ -306,21 +268,25 @@ local function CreateScrollArea(parent)
 end
 
 local function CreateFooter(parent)
+    local separator = Theme.CreateSeparator(parent)
+    separator:SetPoint("BOTTOMLEFT", 16, 44)
+    separator:SetPoint("BOTTOMRIGHT", -16, 44)
+
     local refreshButton =
-        Widgets.CreatePanelButton(parent, 110, 24, "Refresh", function()
+        Theme.CreateButton(parent, 100, 26, "Refresh", function()
             view.offset = 0
 
             UpdateRows()
         end)
 
-    refreshButton:SetPoint("BOTTOMLEFT", 20, 22)
+    refreshButton:SetPoint("BOTTOMLEFT", 16, 12)
 
     local closeButton =
-        Widgets.CreatePanelButton(parent, 110, 24, "Close", function()
+        Theme.CreateButton(parent, 100, 26, "Close", function()
             frame:Hide()
         end)
 
-    closeButton:SetPoint("BOTTOMRIGHT", -20, 22)
+    closeButton:SetPoint("BOTTOMRIGHT", -16, 12)
 end
 
 local function CreateMainWindow()
@@ -341,11 +307,10 @@ local function CreateMainWindow()
     frame:SetClampedToScreen(true)
 
     Widgets.MakeMovable(frame)
-    Widgets.ApplyDialogBackdrop(frame)
+    Theme.StyleWindow(frame)
 
-    CreateHeaderText(frame)
+    CreateTitleBar(frame)
     CreateNavigationBar(frame)
-    Widgets.CreateLootColumnHeader(frame)
     CreateScrollArea(frame)
     CreateFooter(frame)
 

@@ -7,6 +7,7 @@
 -- Report text is built in UI/DeveloperReport.lua.
 
 local SYL = _G.ShowUsYourLoot
+local Theme = SYL.Theme
 local Widgets = SYL.Widgets
 local Serializer = SYL.Serializer
 local LootHistory = SYL.LootHistory
@@ -91,7 +92,8 @@ local function CreateTextArea(parent)
     editBox:SetMultiLine(true)
     editBox:SetAutoFocus(false)
     editBox:SetMaxLetters(0)
-    editBox:SetFontObject("GameFontHighlightSmall")
+    editBox:SetFont(Theme.GetFontPath(), Theme.sizes.rowSmall, "")
+    editBox:SetTextColor(unpack(Theme.colors.textPrimary))
     editBox:SetWidth(WINDOW_WIDTH - 76)
     editBox:SetHeight(400)
 
@@ -159,24 +161,29 @@ local function CreateDeveloperWindow()
     frame:SetClampedToScreen(true)
 
     Widgets.MakeMovable(frame)
-    Widgets.ApplyDialogBackdrop(frame)
+    Theme.StyleWindow(frame)
 
-    local title =
-        frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    local accentMark = Theme.CreateAccentMark(frame)
+    accentMark:SetPoint("TOPLEFT", 16, -20)
 
-    title:SetPoint("TOP", 0, -16)
-    title:SetText("Show Us Your Loot — Loot History Inspector")
+    local title = Theme.CreateText(frame, Theme.sizes.title, "textPrimary")
+    title:SetPoint("LEFT", accentMark, "RIGHT", 8, 0)
+    title:SetText("LOOT HISTORY INSPECTOR")
 
     subtitleText =
-        frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        Theme.CreateText(frame, Theme.sizes.subtitle, "textSecondary")
 
-    subtitleText:SetPoint("TOP", 0, -42)
+    subtitleText:SetPoint("TOPLEFT", 27, -40)
     subtitleText:SetText("Live report")
+
+    local separator = Theme.CreateSeparator(frame)
+    separator:SetPoint("TOPLEFT", 16, -62)
+    separator:SetPoint("TOPRIGHT", -16, -62)
 
     local closeCorner =
         CreateFrame("Button", nil, frame, "UIPanelCloseButton")
 
-    closeCorner:SetPoint("TOPRIGHT", -5, -5)
+    closeCorner:SetPoint("TOPRIGHT", -6, -6)
 
     CreateTextArea(frame)
     CreateFooter(frame)

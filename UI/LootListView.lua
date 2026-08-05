@@ -11,6 +11,29 @@ local Utilities = SYL.Utilities
 local LootListView = {}
 SYL.LootListView = LootListView
 
+local CACHE_RETRY_SECONDS = 0.6
+
+local retryScheduled = false
+
+-- Item quality and icon come from the client cache, which may not hold an
+-- item this character has never seen. One delayed refresh lets the cache fill
+-- rather than leaving uncoloured names on screen.
+local function ScheduleCacheRetry()
+    if retryScheduled then
+        return
+    end
+
+    retryScheduled = true
+
+    C_Timer.After(CACHE_RETRY_SECONDS, function()
+        retryScheduled = false
+
+        if SYL.RefreshMainWindow then
+            SYL:RefreshMainWindow()
+        end
+    end)
+end
+
 function LootListView.GetRecords(view)
     if view.mode == "active" then
         local season = SYL.GetActiveSeason()
@@ -58,20 +81,14 @@ local function SetEmptyState(view, isEmpty, message)
     end
 end
 
+-- Returns false when the item was not cached, so the caller can retry.
 local function FillLootRow(row, record, recordIndex)
-    row.numberText:SetText(recordIndex .. ".")
+    row.numberText:SetText(recordIndex)
     row.playerText:SetText(record.recipient or "Unknown")
-
-    row.itemText:SetText(
-        record.itemLink
-        or record.itemName
-        or "Unknown item"
-    )
-
     row.locationText:SetText(FormatLocation(record))
     row.dateText:SetText(Utilities.FormatDateTime(record.timestamp))
 
-    Widgets.SetItemLink(row.itemButton, record.itemLink)
+    return Widgets.SetRowItem(row, record.itemLink, record.itemName)
 end
 
 local function UpdateScrollRange(view, maxOffset, totalRecords)
@@ -96,7 +113,7 @@ function LootListView.UpdateLootRows(view)
     local records = LootListView.GetRecords(view)
     local totalRecords = #records
 
-    view.countText:SetText("Recorded items: " .. totalRecords)
+    view.countText:SetText(totalRecords .. " items")
 
     SetEmptyState(
         view,
@@ -110,6 +127,8 @@ function LootListView.UpdateLootRows(view)
         view.offset = maxOffset
     end
 
+    local allCached = true
+
     -- Rows read newest first, so row 1 shows the most recent record.
     for rowIndex = 1, view.visibleRows do
         local recordIndex =
@@ -118,12 +137,19 @@ function LootListView.UpdateLootRows(view)
         local row = view.lootRows[rowIndex]
 
         if recordIndex >= 1 then
-            FillLootRow(row, records[recordIndex], recordIndex)
+            if not FillLootRow(row, records[recordIndex], recordIndex) then
+                allCached = false
+            end
+
             row:Show()
         else
-            row.itemButton.itemLink = nil
+            row.itemLink = nil
             row:Hide()
         end
+    end
+
+    if not allCached then
+        ScheduleCacheRetry()
     end
 
     UpdateScrollRange(view, maxOffset, totalRecords)
@@ -133,7 +159,7 @@ function LootListView.UpdateArchiveRows(view)
     local archives = SYL.GetArchives()
     local totalArchives = #archives
 
-    view.countText:SetText("Archived seasons: " .. totalArchives)
+    view.countText:SetText(totalArchives .. " archived seasons")
 
     SetEmptyState(
         view,
@@ -156,7 +182,7 @@ function LootListView.UpdateArchiveRows(view)
                 )
             )
 
-            row.viewButton.archiveIndex = index
+            row.archiveIndex = index
 
             row:Show()
         else
