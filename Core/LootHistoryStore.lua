@@ -254,6 +254,10 @@ function Store.RecordSnapshot(snapshot)
                 added = added + 1
 
                 AnnounceDrop(record)
+
+                -- Only on first capture. Re-processing the same drop must
+                -- not rebroadcast it.
+                SYL.Sync.Send(record)
             end
         end
     end

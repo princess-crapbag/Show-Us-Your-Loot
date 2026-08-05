@@ -57,6 +57,7 @@ local function OnPlayerLogin()
     )
 
     SYL.ItemTooltip.Enable()
+    SYL.Sync.Enable()
 
     -- The reply arrives as GUILD_ROSTER_UPDATE.
     SYL.Guild.Request()

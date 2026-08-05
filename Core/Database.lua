@@ -89,6 +89,12 @@ local function InitializeSettings()
     if ShowUsYourLootDB.settings.chatFrameIndex == nil then
         ShowUsYourLootDB.settings.chatFrameIndex = 1
     end
+
+    -- The only feature that sends anything to other players, so it stays off
+    -- until it is turned on deliberately.
+    if ShowUsYourLootDB.settings.syncEnabled == nil then
+        ShowUsYourLootDB.settings.syncEnabled = false
+    end
 end
 
 local function MigrateOldLootDatabase()

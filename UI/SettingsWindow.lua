@@ -189,6 +189,10 @@ local TOGGLES = {
         end,
     },
     {
+        label = "Share drops with officers in raid",
+        key = "syncEnabled",
+    },
+    {
         label = "Announce captures in chat",
         key = "announceCaptures",
     },

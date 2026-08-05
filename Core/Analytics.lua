@@ -79,7 +79,9 @@ function Analytics.BuildPlayerStats(drops)
     for _, drop in ipairs(drops or {}) do
         -- hidden is a display state and still counts. excludedFromAnalytics
         -- is the flag that actually removes a drop from the maths.
-        if not drop.excludedFromAnalytics then
+        -- Synced records carry no roll list. Counting them would report
+        -- zero eligible players rather than "we do not know".
+        if not drop.excludedFromAnalytics and not drop.partial then
             for _, roll in ipairs(drop.rolls or {}) do
                 local key = roll.guid or roll.name
 
