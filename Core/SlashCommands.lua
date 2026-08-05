@@ -93,6 +93,12 @@ COMMANDS.archive = function(remainder)
     end
 end
 
+COMMANDS.players = function()
+    if SYL.OpenPlayerWindow then
+        SYL:OpenPlayerWindow()
+    end
+end
+
 COMMANDS.settings = function()
     if SYL.OpenSettingsWindow then
         SYL:OpenSettingsWindow()

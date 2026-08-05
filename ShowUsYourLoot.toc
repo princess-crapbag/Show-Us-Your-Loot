@@ -19,6 +19,7 @@ Core\LootHistorySnapshot.lua
 Core\LootHistoryStore.lua
 Core\LootHistory.lua
 Core\Events.lua
+Core\Analytics.lua
 Core\CommandList.lua
 Core\CommandReports.lua
 Core\SlashCommands.lua
@@ -39,6 +40,7 @@ UI\MainWindow.lua
 UI\DropDetailWindow.lua
 UI\CommandMenu.lua
 UI\MinimapButton.lua
+UI\PlayerWindow.lua
 UI\SettingsWindow.lua
 UI\DeveloperReport.lua
 UI\DeveloperWindow.lua

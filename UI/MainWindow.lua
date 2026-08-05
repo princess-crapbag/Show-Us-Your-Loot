@@ -305,6 +305,13 @@ local function CreateFooter(parent)
 
     settingsButton:SetPoint("LEFT", refreshButton, "RIGHT", 6, 0)
 
+    local playersButton =
+        Theme.CreateButton(parent, 100, 26, "Players", function()
+            SYL:OpenPlayerWindow()
+        end)
+
+    playersButton:SetPoint("LEFT", settingsButton, "RIGHT", 6, 0)
+
     local closeButton =
         Theme.CreateButton(parent, 100, 26, "Close", function()
             frame:Hide()

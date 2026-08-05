@@ -37,6 +37,10 @@ CommandList.ENTRIES = {
     },
     { command = "archives", description = "List archived seasons" },
     {
+        command = "players",
+        description = "Per-player upgrades, drought and attendance",
+    },
+    {
         command = "settings",
         description = "Settings, including which qualities to record",
     },
