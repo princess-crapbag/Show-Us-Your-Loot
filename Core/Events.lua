@@ -49,6 +49,12 @@ end
 
 local function OnPlayerLogin()
     SYL:DebugPrint("Player login complete.")
+
+    -- Created here rather than at ADDON_LOADED so the minimap is certain to
+    -- exist and to have been positioned.
+    SYL.MinimapButton.SetShown(
+        ShowUsYourLootDB.settings.showMinimapButton
+    )
 end
 
 local function OnChatMessageLoot(message)

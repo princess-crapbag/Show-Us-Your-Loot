@@ -242,23 +242,15 @@ function Reports.APIReport()
     end
 end
 
+-- Built from Core/CommandList.lua so this and the minimap menu always agree.
 function Reports.Help()
     SYL:Print("Commands:")
 
-    print("/syl — Open the loot window")
-    print("/syl drops — Show recent group-loot drops with winners and rolls")
-    print("/syl recent — Show recent chat-captured loot")
-    print("/syl count — Show active and all-time totals")
-    print("/syl player NAME — Show active-season loot for a player")
-    print("/syl season — Show active-season information")
-    print("/syl rename NAME — Rename the active season")
-    print("/syl archive NEW SEASON NAME — Archive the current season and start a new one")
-    print("/syl archives — List archived seasons")
-    print("/syl settings — Open settings, including which item qualities to record")
-    print("/syl capture — Toggle Loot History capture")
-    print("/syl dev — Open the Loot History developer window")
-    print("/syl api — Print the live Loot History API surface")
-    print("/syl debug — Toggle debug messages")
-    print("/syl announce — Toggle capture messages")
-    print("/syl clear — Clear active-season drops and loot")
+    for _, entry in ipairs(SYL.CommandList.ENTRIES) do
+        print(
+            SYL.CommandList.Format(entry)
+            .. " — "
+            .. entry.description
+        )
+    end
 end

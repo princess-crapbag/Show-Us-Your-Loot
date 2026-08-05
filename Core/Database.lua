@@ -79,6 +79,10 @@ local function InitializeSettings()
         ShowUsYourLootDB.settings.trackedQualities =
             SYL.ItemQuality.GetDefaults()
     end
+
+    if ShowUsYourLootDB.settings.showMinimapButton == nil then
+        ShowUsYourLootDB.settings.showMinimapButton = true
+    end
 end
 
 local function MigrateOldLootDatabase()

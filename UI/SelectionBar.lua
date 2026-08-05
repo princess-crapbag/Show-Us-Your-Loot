@@ -31,7 +31,7 @@ function SelectionBar.Create(parent, view, config)
             onChanged()
         end)
 
-    bar.showHidden:SetPoint("TOPRIGHT", -16, -130)
+    bar.showHidden:SetPoint("TOPRIGHT", -16, -128)
 
     bar.action = Theme.CreateButton(parent, 70, 20, "Hide", function()
         bar:ApplyHidden()

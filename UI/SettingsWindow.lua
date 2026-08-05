@@ -11,11 +11,15 @@ local Widgets = SYL.Widgets
 local ItemQuality = SYL.ItemQuality
 
 local WINDOW_WIDTH = 420
-
--- Tall enough to clear the footer: the toggle section ends 448px down, and
--- the footer rule sits 44px up from the bottom.
-local WINDOW_HEIGHT = 512
 local ROW_HEIGHT = 24
+
+-- Layout is derived from the content rather than hardcoded, so adding a
+-- quality or a toggle cannot silently push the last row through the footer.
+local QUALITY_TOP = -104
+local HEADING_HEIGHT = 18
+local NOTE_HEIGHT = 30
+local SECTION_GAP = 44
+local FOOTER_HEIGHT = 60
 
 local frame
 local rows = {}
@@ -103,8 +107,17 @@ local function AddSection(parent, title, offsetY)
     return container
 end
 
+local function QualityBlockBottom()
+    return QUALITY_TOP - HEADING_HEIGHT - #ItemQuality.ORDER * ROW_HEIGHT
+end
+
+local function ToggleSectionTop()
+    return QualityBlockBottom() - NOTE_HEIGHT - SECTION_GAP
+end
+
 local function BuildQualitySection(parent)
-    local container = AddSection(parent, "RECORD THESE ITEM QUALITIES", -104)
+    local container =
+        AddSection(parent, "RECORD THESE ITEM QUALITIES", QUALITY_TOP)
 
     container:SetHeight(#ItemQuality.ORDER * ROW_HEIGHT)
 
@@ -138,8 +151,8 @@ local function BuildQualitySection(parent)
 
     local note = Theme.CreateText(parent, Theme.sizes.rowSmall, "textMuted")
 
-    note:SetPoint("TOPLEFT", 20, -104 - 18 - #ItemQuality.ORDER * ROW_HEIGHT - 6)
-    note:SetPoint("TOPRIGHT", -20, -104 - 18 - #ItemQuality.ORDER * ROW_HEIGHT - 6)
+    note:SetPoint("TOPLEFT", 20, QualityBlockBottom() - 6)
+    note:SetPoint("TOPRIGHT", -20, QualityBlockBottom() - 6)
     note:SetWordWrap(true)
     note:SetJustifyH("LEFT")
     note:SetHeight(30)
@@ -164,6 +177,14 @@ local TOGGLES = {
         end,
     },
     {
+        label = "Show the minimap button",
+        key = "showMinimapButton",
+
+        onChanged = function(enabled)
+            SYL.MinimapButton.SetShown(enabled)
+        end,
+    },
+    {
         label = "Announce captures in chat",
         key = "announceCaptures",
     },
@@ -173,9 +194,17 @@ local TOGGLES = {
     },
 }
 
+local function ComputeWindowHeight()
+    local contentBottom =
+        math.abs(ToggleSectionTop())
+        + HEADING_HEIGHT
+        + #TOGGLES * ROW_HEIGHT
+
+    return contentBottom + FOOTER_HEIGHT
+end
+
 local function BuildToggleSection(parent)
-    local top = -104 - 18 - #ItemQuality.ORDER * ROW_HEIGHT - 44
-    local container = AddSection(parent, "BEHAVIOUR", top)
+    local container = AddSection(parent, "BEHAVIOUR", ToggleSectionTop())
 
     container:SetHeight(#TOGGLES * ROW_HEIGHT)
 
@@ -217,7 +246,7 @@ local function CreateSettingsWindow()
         "BackdropTemplate"
     )
 
-    frame:SetSize(WINDOW_WIDTH, WINDOW_HEIGHT)
+    frame:SetSize(WINDOW_WIDTH, ComputeWindowHeight())
     frame:SetPoint("CENTER")
     frame:SetFrameStrata("DIALOG")
     frame:SetClampedToScreen(true)

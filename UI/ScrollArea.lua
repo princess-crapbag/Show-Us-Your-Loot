@@ -65,7 +65,7 @@ function ScrollArea.Create(parent, view, config)
         "UIPanelScrollFrameTemplate"
     )
 
-    view.scrollFrame:SetPoint("TOPLEFT", 16, -174)
+    view.scrollFrame:SetPoint("TOPLEFT", 16, -180)
     view.scrollFrame:SetPoint("BOTTOMRIGHT", -34, 52)
 
     view.scrollChild = CreateFrame("Frame", nil, view.scrollFrame)

@@ -16,7 +16,7 @@ local Selection = SYL.Selection
 local LootListView = SYL.LootListView
 
 local WINDOW_WIDTH = 830
-local WINDOW_HEIGHT = 590
+local WINDOW_HEIGHT = 596
 local VISIBLE_ROWS = 13
 
 local frame
@@ -264,7 +264,7 @@ local function CreateScrollArea(parent)
     view.countText =
         Theme.CreateText(parent, Theme.sizes.subtitle, "textMuted")
 
-    view.countText:SetPoint("TOPLEFT", 18, -132)
+    view.countText:SetPoint("TOPLEFT", 18, -130)
     view.countText:SetText("0 items")
 
     view.emptyText =
@@ -275,13 +275,14 @@ local function CreateScrollArea(parent)
     view.emptyText:SetText("No loot has been recorded.")
     view.emptyText:Hide()
 
+    -- 6px below the action row, which ends at 148.
     view.dropHeader = Rows.CreateColumnHeader(parent, "drops")
-    view.dropHeader:SetPoint("TOPLEFT", 16, -150)
-    view.dropHeader:SetPoint("TOPRIGHT", -34, -150)
+    view.dropHeader:SetPoint("TOPLEFT", 16, -154)
+    view.dropHeader:SetPoint("TOPRIGHT", -34, -154)
 
     view.lootHeader = Rows.CreateColumnHeader(parent, "loot")
-    view.lootHeader:SetPoint("TOPLEFT", 16, -150)
-    view.lootHeader:SetPoint("TOPRIGHT", -34, -150)
+    view.lootHeader:SetPoint("TOPLEFT", 16, -154)
+    view.lootHeader:SetPoint("TOPRIGHT", -34, -154)
     view.lootHeader:Hide()
 
     SYL.ScrollArea.Create(parent, view, {

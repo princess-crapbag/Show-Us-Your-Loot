@@ -21,25 +21,28 @@ local GetItemInfoInstant =
 local GetItemQualityColor =
     C_Item and C_Item.GetItemQualityColor or _G.GetItemQualityColor
 
+-- A charcoal panel rather than a near-black one. The neutrals carry a slight
+-- blue bias so the green accent reads as deliberate against them instead of
+-- floating on flat grey.
 Theme.colors = {
-    window = { 0.055, 0.055, 0.067, 0.96 },
-    border = { 0.20, 0.20, 0.24, 1 },
+    window = { 0.13, 0.13, 0.155, 0.97 },
+    border = { 0.30, 0.30, 0.35, 1 },
 
-    headerBar = { 0.10, 0.10, 0.12, 1 },
-    separator = { 1, 1, 1, 0.07 },
+    headerBar = { 0.18, 0.18, 0.215, 1 },
+    separator = { 1, 1, 1, 0.10 },
 
     accent = { 0.20, 0.95, 0.60, 1 },
-    accentMuted = { 0.20, 0.95, 0.60, 0.15 },
+    accentMuted = { 0.20, 0.95, 0.60, 0.16 },
 
-    rowAlt = { 1, 1, 1, 0.022 },
-    rowHover = { 0.20, 0.95, 0.60, 0.09 },
+    rowAlt = { 1, 1, 1, 0.035 },
+    rowHover = { 0.20, 0.95, 0.60, 0.12 },
 
-    button = { 1, 1, 1, 0.06 },
-    buttonHover = { 1, 1, 1, 0.12 },
+    button = { 1, 1, 1, 0.085 },
+    buttonHover = { 1, 1, 1, 0.16 },
 
-    textPrimary = { 0.92, 0.92, 0.94, 1 },
-    textSecondary = { 0.62, 0.62, 0.68, 1 },
-    textMuted = { 0.42, 0.42, 0.47, 1 },
+    textPrimary = { 0.95, 0.95, 0.96, 1 },
+    textSecondary = { 0.72, 0.72, 0.77, 1 },
+    textMuted = { 0.54, 0.54, 0.60, 1 },
 }
 
 Theme.sizes = {
