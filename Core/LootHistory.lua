@@ -6,11 +6,13 @@
 -- out exactly what the live client hands us, so that a later version can make
 -- Loot History the primary loot source instead of CHAT_MSG_LOOT.
 --
--- Safe API access and discovery live in Core/LootHistoryAPI.lua.
+-- Safe API access and discovery live in Core/LootHistoryAPI.lua, and turning
+-- API results into structured snapshots lives in Core/LootHistorySnapshot.lua.
 
 local SYL = _G.ShowUsYourLoot
 local Utilities = SYL.Utilities
 local API = SYL.LootHistoryAPI
+local Snapshot = SYL.LootHistorySnapshot
 
 local LootHistory = {}
 SYL.LootHistory = LootHistory
@@ -54,109 +56,19 @@ end
 -- Snapshots
 --------------------------------------------------------------------------
 
-local function BuildPlayerEntries(encounterID, lootListID)
-    local players = {}
-
-    local results, reason =
-        API.SafeCall("GetPlayerInfoForDrop", encounterID, lootListID)
-
-    if not results then
-        return players, reason
-    end
-
-    local rawPlayers = results[1]
-
-    if type(rawPlayers) ~= "table" then
-        return players, "no player table returned"
-    end
-
-    for index, rawPlayer in ipairs(rawPlayers) do
-        local copied = API.CopyValue(rawPlayer)
-
-        table.insert(players, {
-            index = index,
-            raw = copied,
-
-            -- Derived with fallbacks; the raw table above stays authoritative
-            -- until the real field names are confirmed in game.
-            name = copied.playerName or copied.name,
-            class = copied.playerClass or copied.class,
-            rollState = copied.state or copied.rollState,
-            rollStateText = API.DescribeRollState(
-                copied.state or copied.rollState
-            ),
-            roll = copied.roll or copied.rollValue,
-            isWinner = copied.isWinner,
-        })
-    end
-
-    return players, nil
-end
-
-local function BuildDropEntry(encounterID, rawDrop)
-    local copied = API.CopyValue(rawDrop)
-    local lootListID = copied.lootListID
-
-    local players, playerError =
-        BuildPlayerEntries(encounterID, lootListID)
-
-    local winner = copied.winner
-
-    return {
-        lootListID = lootListID,
-        raw = copied,
-
-        itemHyperlink = copied.itemHyperlink or copied.itemLink,
-        itemID = Utilities.GetItemIDFromLink(
-            copied.itemHyperlink or copied.itemLink
-        ),
-        allPassed = copied.allPassed,
-        isCurrentlyRolling = copied.isCurrentlyRolling,
-
-        winnerName = type(winner) == "table"
-            and (winner.playerName or winner.name)
-            or winner,
-
-        rollStateText = API.DescribeRollState(copied.playerRollState),
-
-        players = players,
-        playerError = playerError,
-    }
-end
-
+-- Snapshot building lives in Core/LootHistorySnapshot.lua; this module only
+-- decides when to take one and holds the result.
 function LootHistory.GetEncounterSnapshot(encounterID)
     if not encounterID then
         return nil
     end
 
-    local snapshot = {
-        encounterID = encounterID,
-        encounterName = LootHistory.state.encounterNames[encounterID],
-        capturedAt = time(),
-        drops = {},
-    }
-
-    local results, reason =
-        API.SafeCall("GetSortedDropsForEncounter", encounterID)
-
-    if not results then
-        snapshot.error = reason
-        return snapshot
-    end
-
-    local drops = results[1]
-
-    if type(drops) ~= "table" then
-        snapshot.error = "no drop table returned"
-        return snapshot
-    end
-
-    for _, rawDrop in ipairs(drops) do
-        table.insert(snapshot.drops, BuildDropEntry(encounterID, rawDrop))
-    end
-
-    return snapshot
+    return Snapshot.Build(
+        encounterID,
+        LootHistory.state.encounterNames[encounterID]
+    )
 end
+
 
 --------------------------------------------------------------------------
 -- Event capture
@@ -365,6 +277,7 @@ function LootHistory.BuildExportTable()
         inspectorEnabled = state.enabled,
 
         api = LootHistory.GetAPIReport(),
+        client = Snapshot.GetClientHistory(),
 
         currentEncounterID = state.currentEncounterID,
         currentLootListID = state.currentLootListID,

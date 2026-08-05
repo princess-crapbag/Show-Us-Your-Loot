@@ -154,12 +154,27 @@ local function AppendDrop(lines, drop, position)
         "      playerRollState: " .. tostring(drop.rollStateText)
     )
 
+    table.insert(
+        lines,
+        "      playerListKey: " .. tostring(drop.playerListKey)
+    )
+
     AppendPlayers(lines, drop.players, drop.playerError)
 
     table.insert(
         lines,
         IndentBlock(Serializer.ToText(drop.raw, "raw drop"), 6)
     )
+
+    if drop.detail then
+        table.insert(
+            lines,
+            IndentBlock(
+                Serializer.ToText(drop.detail, "raw GetSortedInfoForDrop"),
+                6
+            )
+        )
+    end
 
     table.insert(lines, "")
 end
@@ -202,6 +217,25 @@ local function AppendEncounterSection(lines)
     end
 
     table.insert(lines, "  drops: " .. #snapshot.drops)
+
+    if snapshot.encounterInfo then
+        table.insert(
+            lines,
+            IndentBlock(
+                Serializer.ToText(
+                    snapshot.encounterInfo,
+                    "raw GetInfoForEncounter"
+                ),
+                2
+            )
+        )
+    elseif snapshot.encounterInfoError then
+        table.insert(
+            lines,
+            "  encounterInfo: " .. tostring(snapshot.encounterInfoError)
+        )
+    end
+
     table.insert(lines, "")
 
     for position, drop in ipairs(snapshot.drops) do

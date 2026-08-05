@@ -12,6 +12,7 @@ Core\Serializer.lua
 Core\Database.lua
 Core\LootCapture.lua
 Core\LootHistoryAPI.lua
+Core\LootHistorySnapshot.lua
 Core\LootHistory.lua
 Core\Events.lua
 Core\SlashCommands.lua

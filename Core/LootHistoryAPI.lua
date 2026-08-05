@@ -6,6 +6,22 @@
 -- This module is stateless. It never assumes a function, event or enum
 -- exists; it asks the client and reports back. Core/LootHistory.lua owns the
 -- capture state and calls into here.
+--
+-- Confirmed on a live 12.0.7 client (build 68974) via /syl api:
+--
+--   C_LootHistory has exactly five members:
+--     GetAllEncounterInfos, GetInfoForEncounter, GetLootHistoryTime,
+--     GetSortedDropsForEncounter, GetSortedInfoForDrop
+--   There is no per-player accessor, so roll data must arrive nested inside
+--     the result of GetSortedInfoForDrop.
+--   Enum.EncounterLootDropRollState:
+--     NeedMainSpec=0 NeedOffSpec=1 Transmog=2 Greed=3 NoRoll=4 Pass=5
+--   Enum.LootRollType and Enum.LootHistoryFilter do not exist, so roll type
+--     comes from EncounterLootDropRollState.
+--   12 of the 16 candidate events registered. The four rejected are the
+--     pre-Dragonflight names: LOOT_HISTORY_AUTO_SHOW, _FULL_UPDATE,
+--     _ROLL_CHANGED and _ROLL_COMPLETE. They stay in the list so a future
+--     client re-adding them is detected rather than missed.
 
 local SYL = _G.ShowUsYourLoot
 
