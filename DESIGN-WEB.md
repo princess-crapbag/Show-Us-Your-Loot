@@ -1,0 +1,125 @@
+# Browser access and sync — design options
+
+Status: **plan only, nothing built.** Needs two decisions before work starts.
+
+## The hard constraint
+
+WoW addons have no network access. None. No HTTP, no sockets, no way to
+reach a URL. This is a sandbox rule, not an API gap, and there is no
+workaround inside the addon.
+
+Data can leave the game in exactly three ways:
+
+1. **SavedVariables** — `WTF/Account/<ACCOUNT>/SavedVariables/ShowUsYourLoot.lua`,
+   written on logout or `/reload`, never during play.
+2. **Manual copy** — the export window, pasted somewhere by a person.
+3. **Addon comms** — messages to other players' WoW clients, in game only.
+   This reaches other officers, never the internet.
+
+So a browser view means something outside the game reads that file. The
+only question is what.
+
+## The conflict worth naming
+
+The handoff says: *"No server. No external database. No required companion
+app. One person should be able to install the addon and immediately start
+collecting useful data."*
+
+A browser view that syncs breaks at least one of those. That is not a
+reason to refuse it — it is a reason to decide deliberately which one gets
+relaxed, and to keep the addon fully useful for anyone who does not opt in.
+
+**Whatever we build must stay optional.** A raider who installs the addon
+and never touches a browser should notice no difference.
+
+## What "sync" could mean
+
+These are different problems and want different answers:
+
+- **Between officers** — several people record loot, one merged history.
+  This is the one that actually matters for a guild, and it is solvable
+  *inside* the game.
+- **Between your own devices** — your data readable on your phone.
+  A file-sharing problem, not a WoW problem.
+- **Shared with the guild** — read-only page raiders can look at.
+  A publishing problem, and the only one that genuinely needs hosting.
+
+## Option 1 — Local page, drag and drop
+
+A single self-contained `SYL.html`. Open it, drag the SavedVariables file
+onto it, get the full dashboard. Parsing Lua tables in JavaScript is
+straightforward for data this shape.
+
+- No server, no install, works offline, no ongoing cost
+- Nothing to maintain but one file
+- No sync at all; manual and per-person
+- Data is only as fresh as the last `/reload`
+
+## Option 2 — Local watcher
+
+A small script watches the SavedVariables file, converts it, and serves
+`localhost`. The page refreshes itself when you reload in game.
+
+- Feels live, still no hosting
+- Requires running a script — a companion app in all but name
+- Still one person's data on one machine
+
+## Option 3 — In-game officer sync, then a local page
+
+Officers' addons share captured drops with each other over addon comms
+during raid. Every officer's SavedVariables ends up holding the full
+picture. Then Option 1 is enough, because one file is already complete.
+
+- Solves the sync that matters, with no server and no external anything
+- Stays inside the addon's existing rules
+- Merge is well defined: drops already carry stable ids
+  (`runID-encounterID-lootListID`), so merging is idempotent
+- Needs care: addon comms are real traffic to other players, rate limited,
+  and should be officer-only and opt-in
+- Does not help across devices or give the guild a link
+
+## Option 4 — Hosted dashboard
+
+Uploader plus an API plus a web app plus accounts.
+
+- The only option that gives shareable links and true multi-device access
+- Breaks the no-server rule outright, and adds cost, maintenance,
+  authentication, and a place where guild data lives that is not a
+  player's own machine
+- Everything else on this list is a weekend; this is a product
+
+## Recommendation
+
+**Option 3, then Option 1.** In-game sync first, local page second.
+
+That order matters. In-game sync is the piece that makes the data
+*complete*, and it is worth having whether or not a browser view ever
+exists — it fixes the current situation where loot is only recorded if one
+particular person is present and online. Once any officer's file holds
+everything, a browser view is just a reader, and the simplest possible
+reader will do.
+
+Option 4 stays open afterwards. Nothing in this path forecloses it, and by
+then the export format will have been exercised for real.
+
+## Work that is worth doing under every option
+
+Independent of the decision, and the sensible first step:
+
+- **A versioned, machine-readable export.** One JSON document with a
+  schema version, seasons, drops, rolls, raid sessions and guild ranks.
+  Every option above consumes exactly this. The current export is
+  human-readable text aimed at Discord, which is a different job.
+- **Stable identity.** Drops already have stable ids and players are keyed
+  by GUID. Raid sessions are keyed by instance, difficulty and date.
+  Merging any two exports is already well defined.
+- **A schema version field**, so a page written today can refuse or adapt
+  to a file written by a much later addon.
+
+## Open questions
+
+1. Does "no server" still hold? A hosted dashboard is the only way to get
+   shareable links, and it changes the project from an addon into a
+   service with all that implies.
+2. Which sync actually matters first — officers merging their data, your
+   own devices, or a read-only page for the guild?
