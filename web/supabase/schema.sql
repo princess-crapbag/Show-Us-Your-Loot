@@ -2,11 +2,16 @@
 --
 -- Run this once in the Supabase SQL editor (Database → SQL editor → New query).
 --
--- Security model: officers share one key. The tables have row level security
--- on with no policies at all, so the public anon key cannot read or write
--- them directly. Everything goes through two SECURITY DEFINER functions that
--- check the shared key first. That keeps the secret out of the database rows
--- and means a leaked anon key on its own is useless.
+-- Security model, two halves, because they have different needs:
+--
+--   READING is done by people, so it uses Discord logins. Each officer signs
+--   in once, you add them to the guild, and row level security does the rest.
+--   Revoking someone is deleting one row, not rotating a secret everybody
+--   shares.
+--
+--   WRITING is done by the uploader, which is a background script and cannot
+--   complete an interactive login. It keeps a machine key, checked inside a
+--   SECURITY DEFINER function. That key can only add data, never read it.
 
 create extension if not exists pgcrypto;
 
@@ -87,11 +92,49 @@ create index if not exists syl_drops_occurred_idx
 create index if not exists syl_raids_started_idx
     on syl_raids (guild_id, started_at desc);
 
--- Locked down. No policies are defined, so nothing reaches these tables
--- except through the functions below.
-alter table syl_guilds enable row level security;
-alter table syl_drops  enable row level security;
-alter table syl_raids  enable row level security;
+-- Who may read which guild. One row per person per guild.
+create table if not exists syl_members (
+    guild_id   uuid not null references syl_guilds(id) on delete cascade,
+    user_id    uuid not null references auth.users(id) on delete cascade,
+    role       text not null default 'officer',
+    added_at   timestamptz not null default now(),
+    primary key (guild_id, user_id)
+);
+
+alter table syl_guilds  enable row level security;
+alter table syl_drops   enable row level security;
+alter table syl_raids   enable row level security;
+alter table syl_members enable row level security;
+
+-- Reading is allowed only for signed-in people who are members of that guild.
+-- No policy grants insert or update, so a logged-in officer can look but
+-- cannot alter history from the browser.
+create policy syl_drops_read on syl_drops
+    for select to authenticated
+    using (exists (
+        select 1 from syl_members m
+        where m.guild_id = syl_drops.guild_id and m.user_id = auth.uid()
+    ));
+
+create policy syl_raids_read on syl_raids
+    for select to authenticated
+    using (exists (
+        select 1 from syl_members m
+        where m.guild_id = syl_raids.guild_id and m.user_id = auth.uid()
+    ));
+
+create policy syl_guilds_read on syl_guilds
+    for select to authenticated
+    using (exists (
+        select 1 from syl_members m
+        where m.guild_id = syl_guilds.id and m.user_id = auth.uid()
+    ));
+
+-- You can see your own membership, so the page can tell you which guild you
+-- are looking at. You cannot see anyone else's.
+create policy syl_members_read on syl_members
+    for select to authenticated
+    using (user_id = auth.uid());
 
 -- ---------------------------------------------------------------------------
 -- Key handling
@@ -290,88 +333,9 @@ begin
 end;
 $$;
 
--- ---------------------------------------------------------------------------
--- Fetch
--- ---------------------------------------------------------------------------
-
--- Returns everything for the guild behind the key, shaped like the addon's
--- own export so the dashboard can read either source unchanged.
-create or replace function syl_fetch(p_key text)
-returns jsonb
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-    v_guild uuid;
-    v_name  text;
-begin
-    v_guild := syl_guild_for_key(p_key);
-
-    if v_guild is null then
-        raise exception 'unknown key';
-    end if;
-
-    select name into v_name from syl_guilds where id = v_guild;
-
-    return jsonb_build_object(
-        'schemaVersion', 1,
-        'source', 'supabase',
-        'guild', jsonb_build_object('name', v_name),
-        'fetchedAt', extract(epoch from now())::bigint,
-        'seasons', jsonb_build_array(
-            jsonb_build_object(
-                'name', coalesce(v_name, 'All data'),
-                'active', true,
-                'drops', coalesce((
-                    select jsonb_agg(jsonb_build_object(
-                        'id', id,
-                        'encounterID', encounter_id,
-                        'encounterName', encounter_name,
-                        'difficultyID', difficulty_id,
-                        'difficultyName', difficulty_name,
-                        'instanceID', instance_id,
-                        'instanceName', instance_name,
-                        'itemID', item_id,
-                        'itemName', item_name,
-                        'winnerName', winner_name,
-                        'winnerGUID', winner_guid,
-                        'winnerClass', winner_class,
-                        'winnerState', winner_state,
-                        'winnerRoll', winner_roll,
-                        'winnerGuildRank', winner_rank,
-                        'allPassed', all_passed,
-                        'eligibleCount', eligible_count,
-                        'timestamp', extract(epoch from occurred_at)::bigint,
-                        'dateText', date_text,
-                        'rolls', rolls
-                    ) order by occurred_at desc)
-                    from syl_drops where guild_id = v_guild
-                ), '[]'::jsonb),
-                'raids', coalesce((
-                    select jsonb_agg(jsonb_build_object(
-                        'id', id,
-                        'instanceName', instance_name,
-                        'difficultyName', difficulty_name,
-                        'startedAt', extract(epoch from started_at)::bigint,
-                        'endedAt', extract(epoch from ended_at)::bigint,
-                        'dateText', date_text,
-                        'rosterCount', roster_count,
-                        'encounters', encounters,
-                        'roster', roster
-                    ) order by started_at desc)
-                    from syl_raids where guild_id = v_guild
-                ), '[]'::jsonb),
-                'loot', '[]'::jsonb
-            )
-        )
-    );
-end;
-$$;
-
--- Anyone may call the two entry points; both refuse without a valid key.
+-- The uploader calls this with the anon key plus the machine key. Reading is
+-- not possible through it.
 grant execute on function syl_upload(text, jsonb) to anon, authenticated;
-grant execute on function syl_fetch(text)         to anon, authenticated;
 
 -- Deliberately NOT granted to anon: guild creation is a one-off you run here
 -- in the SQL editor, not something the internet should be able to do.
@@ -382,4 +346,14 @@ revoke execute on function syl_create_guild(text, text) from anon, authenticated
 -- ---------------------------------------------------------------------------
 --
 --   select syl_create_guild('Show Us Your Kitties', 'pick-a-long-random-key');
+--
+-- Then, after each officer has signed in with Discord once, add them:
+--
+--   insert into syl_members (guild_id, user_id)
+--   select g.id, u.id
+--   from syl_guilds g, auth.users u
+--   where g.name = 'Show Us Your Kitties'
+--     and u.email = 'their-discord-email@example.com';
+--
+-- To revoke someone, delete their row. No key rotation, nobody else affected.
 --

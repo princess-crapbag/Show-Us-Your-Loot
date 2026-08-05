@@ -78,8 +78,9 @@
   .cloudrow button {
     font: inherit; font-size: 13px; padding: 7px 16px; cursor: pointer;
     border: 1px solid var(--accent); border-radius: 6px;
-    background: var(--accent); color: #fff;
+    background: var(--accent); color: #fff; flex: 0 0 auto;
   }
+  .cloudrow button.alt { background: transparent; color: var(--ink-soft); border-color: var(--rule); }
 
   .err {
     margin: 16px 0; padding: 12px 14px; border-radius: 8px;
@@ -147,17 +148,20 @@
   </div>
 
   <details id="cloud">
-    <summary>Or connect to Supabase</summary>
+    <summary>Or sign in to see synced guild data</summary>
     <div class="cloudbody">
       <p class="muted">
-        Stored in this browser only, never sent anywhere but your own project.
+        Your project details are remembered in this browser only. Signing in
+        uses Discord; you will only see guilds an officer has added you to.
       </p>
       <div class="cloudrow">
         <input id="sb-url" placeholder="https://xxxx.supabase.co" autocomplete="off">
-        <input id="sb-anon" placeholder="anon key" autocomplete="off">
-        <input id="sb-key" type="password" placeholder="guild key" autocomplete="off">
-        <button id="sb-go">Load</button>
+        <input id="sb-anon" placeholder="anon public key" autocomplete="off">
+        <button id="sb-login">Sign in with Discord</button>
+        <button id="sb-load" class="hide">Load data</button>
+        <button id="sb-out" class="hide alt">Sign out</button>
       </div>
+      <p class="muted" id="sb-who" style="margin-top:10px"></p>
     </div>
   </details>
 
@@ -517,49 +521,150 @@ function tryJson(trimmed, full) {
   try { return JSON.parse(trimmed); } catch { return parseLua(full); }
 }
 
-/* ---------- Supabase ------------------------------------------------- */
-const REMEMBER = ["sb-url", "sb-anon", "sb-key"];
-REMEMBER.forEach(id => {
+/* ---------- Supabase, with Discord login ------------------------------ */
+/* No supabase-js: the page must stay self-contained, so this speaks the
+   auth and REST endpoints directly with fetch. */
+
+const CFG = ["sb-url", "sb-anon"];
+CFG.forEach(id => {
   const saved = localStorage.getItem("syl:" + id);
   if (saved) $("#" + id).value = saved;
 });
 
-$("#sb-go").onclick = async () => {
-  const url = $("#sb-url").value.trim().replace(/\/$/, "");
-  const anon = $("#sb-anon").value.trim();
-  const key = $("#sb-key").value;
+const cfg = () => ({
+  url: $("#sb-url").value.trim().replace(/[/]+$/, ""),
+  anon: $("#sb-anon").value.trim(),
+});
 
-  if (!url || !anon || !key) {
-    $("#err").textContent = "Fill in all three fields first.";
+function saveCfg() {
+  CFG.forEach(id => localStorage.setItem("syl:" + id, $("#" + id).value));
+}
+
+function token() { return localStorage.getItem("syl:token"); }
+
+/* Supabase returns the session in the URL fragment after Discord sends the
+   browser back. Take it, store it, and clean the address bar. */
+(function captureSession() {
+  if (!location.hash.includes("access_token")) return;
+  const params = new URLSearchParams(location.hash.slice(1));
+  const access = params.get("access_token");
+  if (access) {
+    localStorage.setItem("syl:token", access);
+    history.replaceState(null, "", location.pathname + location.search);
+  }
+})();
+
+function showSignedIn(on, who) {
+  $("#sb-login").classList.toggle("hide", on);
+  $("#sb-load").classList.toggle("hide", !on);
+  $("#sb-out").classList.toggle("hide", !on);
+  $("#sb-who").textContent = on ? (who || "Signed in.") : "";
+}
+
+$("#sb-login").onclick = () => {
+  const { url } = cfg();
+  if (!url || !cfg().anon) {
+    $("#err").textContent = "Enter the project URL and anon key first.";
     $("#err").classList.remove("hide");
     return;
   }
+  saveCfg();
+  const back = encodeURIComponent(location.origin + location.pathname);
+  location.href = `${url}/auth/v1/authorize?provider=discord&redirect_to=${back}`;
+};
 
-  REMEMBER.forEach(id => localStorage.setItem("syl:" + id, $("#" + id).value));
-  $("#sb-go").textContent = "Loading…";
+$("#sb-out").onclick = () => {
+  localStorage.removeItem("syl:token");
+  showSignedIn(false);
+  $("#sb-who").textContent = "Signed out.";
+};
 
+async function api(path) {
+  const { url, anon } = cfg();
+  const res = await fetch(url + "/rest/v1/" + path, {
+    headers: {
+      apikey: anon,
+      Authorization: "Bearer " + token(),
+      Accept: "application/json",
+    },
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`Supabase said ${res.status}: ${text.slice(0, 200)}`);
+  return JSON.parse(text || "[]");
+}
+
+/* Rows come back in database shape; the dashboard already understands the
+   addon's export shape, so they are mapped rather than duplicating the model. */
+function fromRows(drops, raids, guildName) {
+  return {
+    schemaVersion: 1,
+    seasons: [{
+      name: guildName || "Synced data",
+      active: true,
+      drops: drops.map(d => ({
+        id: d.id,
+        encounterName: d.encounter_name,
+        difficultyName: d.difficulty_name,
+        instanceName: d.instance_name,
+        itemID: d.item_id,
+        itemName: d.item_name,
+        winnerName: d.winner_name,
+        winnerGUID: d.winner_guid,
+        winnerClass: d.winner_class,
+        winnerState: d.winner_state,
+        winnerRoll: d.winner_roll,
+        winnerGuildRank: d.winner_rank,
+        allPassed: d.all_passed,
+        eligibleCount: d.eligible_count,
+        dateText: d.date_text,
+        timestamp: d.occurred_at ? Date.parse(d.occurred_at) / 1000 : null,
+        rolls: d.rolls || [],
+      })),
+      raids: raids.map(r => ({
+        id: r.id,
+        instanceName: r.instance_name,
+        difficultyName: r.difficulty_name,
+        dateText: r.date_text,
+        startedAt: r.started_at ? Date.parse(r.started_at) / 1000 : null,
+        endedAt: r.ended_at ? Date.parse(r.ended_at) / 1000 : null,
+        rosterCount: r.roster_count,
+        encounters: r.encounters || [],
+        roster: r.roster || [],
+      })),
+      loot: [],
+    }],
+  };
+}
+
+$("#sb-load").onclick = async () => {
+  saveCfg();
+  $("#sb-load").textContent = "Loading…";
   try {
-    const res = await fetch(url + "/rest/v1/rpc/syl_fetch", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: anon,
-        Authorization: "Bearer " + anon,
-      },
-      body: JSON.stringify({ p_key: key }),
-    });
-
-    const text = await res.text();
-    if (!res.ok) throw new Error(`Supabase said ${res.status}: ${text.slice(0, 200)}`);
-
-    load(text, "Supabase");
+    const guilds = await api("syl_guilds?select=id,name");
+    if (!guilds.length) {
+      throw new Error(
+        "Signed in, but you are not a member of any guild yet. " +
+        "An officer needs to add you in syl_members."
+      );
+    }
+    const [drops, raids] = await Promise.all([
+      api("syl_drops?select=*&order=occurred_at.desc"),
+      api("syl_raids?select=*&order=started_at.desc"),
+    ]);
+    const model = fromRows(drops, raids, guilds[0].name);
+    load(JSON.stringify(model), "Supabase · " + guilds[0].name);
+    $("#sb-who").textContent =
+      `${drops.length} drops and ${raids.length} raid nights.`;
   } catch (e) {
     $("#err").textContent = e.message || String(e);
     $("#err").classList.remove("hide");
   } finally {
-    $("#sb-go").textContent = "Load";
+    $("#sb-load").textContent = "Load data";
   }
 };
+
+showSignedIn(!!token());
+if (token()) $("#cloud").open = true;
 
 const drop = $("#drop"), file = $("#file");
 drop.onclick = () => file.click();
