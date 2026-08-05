@@ -63,6 +63,24 @@
   #drop p { margin: 0; color: var(--ink-soft); font-size: 14px; }
   #drop code { font-family: var(--mono); font-size: 12px; color: var(--ink-faint); }
 
+  #cloud {
+    margin: -12px 0 8px; background: var(--panel);
+    border: 1px solid var(--rule); border-radius: 8px; padding: 10px 14px;
+  }
+  #cloud summary { cursor: pointer; font-size: 14px; color: var(--ink-soft); }
+  .cloudbody { padding-top: 10px; }
+  .cloudrow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .cloudrow input {
+    font: inherit; font-size: 13px; padding: 7px 9px; flex: 1 1 190px;
+    border: 1px solid var(--rule); border-radius: 6px;
+    background: var(--ground); color: var(--ink);
+  }
+  .cloudrow button {
+    font: inherit; font-size: 13px; padding: 7px 16px; cursor: pointer;
+    border: 1px solid var(--accent); border-radius: 6px;
+    background: var(--accent); color: #fff;
+  }
+
   .err {
     margin: 16px 0; padding: 12px 14px; border-radius: 8px;
     background: #B0304820; border: 1px solid #B0304860;
@@ -127,6 +145,21 @@
     <p style="margin-top:8px"><span class="muted">or click to choose a file</span></p>
     <input type="file" id="file" accept=".lua,.json,.txt" class="hide">
   </div>
+
+  <details id="cloud">
+    <summary>Or connect to Supabase</summary>
+    <div class="cloudbody">
+      <p class="muted">
+        Stored in this browser only, never sent anywhere but your own project.
+      </p>
+      <div class="cloudrow">
+        <input id="sb-url" placeholder="https://xxxx.supabase.co" autocomplete="off">
+        <input id="sb-anon" placeholder="anon key" autocomplete="off">
+        <input id="sb-key" type="password" placeholder="guild key" autocomplete="off">
+        <button id="sb-go">Load</button>
+      </div>
+    </div>
+  </details>
 
   <div id="err" class="err hide"></div>
 
@@ -483,6 +516,50 @@ function load(text, name) {
 function tryJson(trimmed, full) {
   try { return JSON.parse(trimmed); } catch { return parseLua(full); }
 }
+
+/* ---------- Supabase ------------------------------------------------- */
+const REMEMBER = ["sb-url", "sb-anon", "sb-key"];
+REMEMBER.forEach(id => {
+  const saved = localStorage.getItem("syl:" + id);
+  if (saved) $("#" + id).value = saved;
+});
+
+$("#sb-go").onclick = async () => {
+  const url = $("#sb-url").value.trim().replace(/\/$/, "");
+  const anon = $("#sb-anon").value.trim();
+  const key = $("#sb-key").value;
+
+  if (!url || !anon || !key) {
+    $("#err").textContent = "Fill in all three fields first.";
+    $("#err").classList.remove("hide");
+    return;
+  }
+
+  REMEMBER.forEach(id => localStorage.setItem("syl:" + id, $("#" + id).value));
+  $("#sb-go").textContent = "Loading…";
+
+  try {
+    const res = await fetch(url + "/rest/v1/rpc/syl_fetch", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: anon,
+        Authorization: "Bearer " + anon,
+      },
+      body: JSON.stringify({ p_key: key }),
+    });
+
+    const text = await res.text();
+    if (!res.ok) throw new Error(`Supabase said ${res.status}: ${text.slice(0, 200)}`);
+
+    load(text, "Supabase");
+  } catch (e) {
+    $("#err").textContent = e.message || String(e);
+    $("#err").classList.remove("hide");
+  } finally {
+    $("#sb-go").textContent = "Load";
+  }
+};
 
 const drop = $("#drop"), file = $("#file");
 drop.onclick = () => file.click();
