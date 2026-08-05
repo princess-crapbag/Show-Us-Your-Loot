@@ -1,0 +1,508 @@
+<title>Show Us Your Loot — Dashboard</title>
+<style>
+  :root {
+    --ground: #F7F3F4;
+    --panel: #FFFFFF;
+    --sunk: #EFE7EA;
+    --ink: #2A2126;
+    --ink-soft: #6A5A61;
+    --ink-faint: #94838B;
+    --rule: #E3D6DB;
+    --accent: #0B7A4D;
+    --rose: #815865;
+
+    --need: #0B7A4D;
+    --mog: #8A5FB0;
+    --greed: #B07A2A;
+
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #1B1519; --panel: #241C21; --sunk: #2E242A;
+      --ink: #F4EDF0; --ink-soft: #C0AEB6; --ink-faint: #907F87;
+      --rule: #3A2E34; --accent: #33F299; --rose: #C98CA0;
+      --need: #33F299; --mog: #C79BE8; --greed: #E8B563;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #1B1519; --panel: #241C21; --sunk: #2E242A;
+    --ink: #F4EDF0; --ink-soft: #C0AEB6; --ink-faint: #907F87;
+    --rule: #3A2E34; --accent: #33F299; --rose: #C98CA0;
+    --need: #33F299; --mog: #C79BE8; --greed: #E8B563;
+  }
+  :root[data-theme="light"] {
+    --ground: #F7F3F4; --panel: #FFFFFF; --sunk: #EFE7EA;
+    --ink: #2A2126; --ink-soft: #6A5A61; --ink-faint: #94838B;
+    --rule: #E3D6DB; --accent: #0B7A4D; --rose: #815865;
+    --need: #0B7A4D; --mog: #8A5FB0; --greed: #B07A2A;
+  }
+
+  body {
+    margin: 0; padding: 32px 24px 80px;
+    background: var(--ground); color: var(--ink);
+    font-family: var(--sans); line-height: 1.5;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+
+  header { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .mark { width: 4px; height: 22px; background: var(--rose); border-radius: 1px; }
+  h1 { font-size: 20px; margin: 0; letter-spacing: 0.04em; font-weight: 650; }
+  .sub { color: var(--ink-soft); font-size: 14px; margin: 4px 0 0; }
+
+  #drop {
+    margin: 28px 0; padding: 40px 24px;
+    border: 2px dashed var(--rule); border-radius: 10px;
+    background: var(--panel); text-align: center; cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  #drop.over { border-color: var(--accent); background: var(--sunk); }
+  #drop h2 { margin: 0 0 6px; font-size: 16px; font-weight: 600; }
+  #drop p { margin: 0; color: var(--ink-soft); font-size: 14px; }
+  #drop code { font-family: var(--mono); font-size: 12px; color: var(--ink-faint); }
+
+  .err {
+    margin: 16px 0; padding: 12px 14px; border-radius: 8px;
+    background: #B0304820; border: 1px solid #B0304860;
+    color: var(--ink); font-size: 14px;
+  }
+
+  .cards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin: 24px 0; }
+  .card { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 14px 16px; }
+  .card .n { font-size: 26px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .card .l { font-size: 12px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.07em; }
+
+  nav { display: flex; gap: 4px; border-bottom: 1px solid var(--rule); margin: 28px 0 0; flex-wrap: wrap; }
+  nav button {
+    background: none; border: 0; padding: 9px 14px; cursor: pointer;
+    font: inherit; font-size: 14px; color: var(--ink-soft);
+    border-bottom: 2px solid transparent;
+  }
+  nav button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+  .bar { display: flex; gap: 10px; align-items: center; margin: 18px 0; flex-wrap: wrap; }
+  .bar input, .bar select {
+    font: inherit; font-size: 14px; padding: 7px 10px;
+    border: 1px solid var(--rule); border-radius: 6px;
+    background: var(--panel); color: var(--ink);
+  }
+  .bar input[type="search"] { min-width: 220px; }
+
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; background: var(--panel); }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+  th {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--ink-faint); font-weight: 600; cursor: pointer; user-select: none;
+    position: sticky; top: 0; background: var(--panel);
+  }
+  th.sorted { color: var(--accent); }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tbody tr:hover { background: var(--sunk); }
+
+  .tag { font-size: 11px; padding: 2px 7px; border-radius: 99px; border: 1px solid currentColor; }
+  .t-need { color: var(--need); } .t-mog { color: var(--mog); } .t-greed { color: var(--greed); }
+  .muted { color: var(--ink-faint); }
+  .zero { color: var(--ink-faint); }
+  .hide { display: none; }
+  footer { margin-top: 40px; color: var(--ink-faint); font-size: 13px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="mark"></span>
+    <h1>SHOW US YOUR LOOT</h1>
+    <span class="sub" id="src">no data loaded</span>
+  </header>
+
+  <div id="drop">
+    <h2>Drop your data here</h2>
+    <p>
+      Either <code>ShowUsYourLoot.lua</code> from
+      <code>WTF/Account/&lt;ACCOUNT&gt;/SavedVariables/</code>,
+      or a <code>.json</code> saved from the in-game Full data export.
+    </p>
+    <p style="margin-top:8px"><span class="muted">or click to choose a file</span></p>
+    <input type="file" id="file" accept=".lua,.json,.txt" class="hide">
+  </div>
+
+  <div id="err" class="err hide"></div>
+
+  <div id="app" class="hide">
+    <div class="cards" id="cards"></div>
+
+    <nav id="tabs">
+      <button data-tab="drops" aria-selected="true">Drops</button>
+      <button data-tab="players" aria-selected="false">Players</button>
+      <button data-tab="raids" aria-selected="false">Raid nights</button>
+    </nav>
+
+    <div class="bar">
+      <input type="search" id="q" placeholder="Search player, item, boss…">
+      <select id="season"></select>
+      <select id="wintype">
+        <option value="">All win types</option>
+        <option value="Need">Need</option>
+        <option value="Need OS">Need offspec</option>
+        <option value="Mog">Transmog</option>
+        <option value="Greed">Greed</option>
+      </select>
+      <label class="muted" style="font-size:13px">
+        <input type="checkbox" id="guildonly"> Guild only
+      </label>
+      <span class="muted" id="count"></span>
+    </div>
+
+    <div class="scroll"><table id="tbl"><thead></thead><tbody></tbody></table></div>
+  </div>
+
+  <footer>
+    Everything happens in this page. No file is uploaded and nothing leaves
+    your machine.
+  </footer>
+</div>
+
+<script>
+const STATE = { data: null, tab: "drops", sort: {}, };
+
+/* ---------- Lua SavedVariables parser -------------------------------- */
+/* Handles the subset WoW writes: nested tables, string/number/boolean,
+   ["key"] = value and [1] = value. Not a general Lua parser. */
+function parseLua(text) {
+  let i = 0;
+  const n = text.length;
+
+  function ws() {
+    while (i < n) {
+      const c = text[i];
+      if (c === " " || c === "\t" || c === "\r" || c === "\n") { i++; continue; }
+      if (c === "-" && text[i + 1] === "-") {
+        while (i < n && text[i] !== "\n") i++;
+        continue;
+      }
+      break;
+    }
+  }
+
+  function str() {
+    const quote = text[i++];
+    let out = "";
+    while (i < n) {
+      const c = text[i];
+      if (c === "\\") {
+        const next = text[i + 1];
+        if (next === "n") out += "\n";
+        else if (next === "t") out += "\t";
+        else if (next === "r") out += "\r";
+        else out += next;
+        i += 2;
+        continue;
+      }
+      if (c === quote) { i++; break; }
+      out += c;
+      i++;
+    }
+    return out;
+  }
+
+  function value() {
+    ws();
+    const c = text[i];
+    if (c === '"' || c === "'") return str();
+    if (c === "{") return table();
+    if (text.startsWith("true", i)) { i += 4; return true; }
+    if (text.startsWith("false", i)) { i += 5; return false; }
+    if (text.startsWith("nil", i)) { i += 3; return null; }
+    let j = i;
+    while (j < n && /[-+0-9.eExXaAbBcCdDfF]/.test(text[j])) j++;
+    const raw = text.slice(i, j);
+    i = j;
+    const num = Number(raw);
+    return Number.isNaN(num) ? raw : num;
+  }
+
+  function table() {
+    i++; // {
+    const obj = {};
+    const arr = [];
+    let isArray = true;
+
+    for (;;) {
+      ws();
+      if (i >= n) break;
+      if (text[i] === "}") { i++; break; }
+      if (text[i] === ",") { i++; continue; }
+
+      if (text[i] === "[") {
+        i++; ws();
+        const key = value();
+        ws();
+        if (text[i] === "]") i++;
+        ws();
+        if (text[i] === "=") i++;
+        const val = value();
+        if (typeof key === "number") arr[key - 1] = val;
+        else { isArray = false; obj[key] = val; }
+        continue;
+      }
+
+      // bare identifier key
+      let j = i;
+      while (j < n && /[A-Za-z0-9_]/.test(text[j])) j++;
+      if (j > i && /\s*=/.test(text.slice(j, j + 3))) {
+        const key = text.slice(i, j);
+        i = j; ws();
+        if (text[i] === "=") i++;
+        obj[key] = value();
+        isArray = false;
+        continue;
+      }
+
+      arr.push(value());
+    }
+
+    if (isArray && Object.keys(obj).length === 0) return arr.filter(v => v !== undefined);
+    for (let k = 0; k < arr.length; k++) if (arr[k] !== undefined) obj[k + 1] = arr[k];
+    return obj;
+  }
+
+  // Find the assignment we care about and parse the table after it.
+  const marker = text.indexOf("ShowUsYourLootDB");
+  if (marker === -1) throw new Error("No ShowUsYourLootDB found in that file.");
+  i = text.indexOf("{", marker);
+  if (i === -1) throw new Error("ShowUsYourLootDB has no table body.");
+  return table();
+}
+
+/* ---------- normalise both input shapes ------------------------------ */
+function asList(v) {
+  if (!v) return [];
+  if (Array.isArray(v)) return v.filter(Boolean);
+  return Object.keys(v).filter(k => /^\d+$/.test(k)).sort((a,b)=>a-b).map(k => v[k]).filter(Boolean);
+}
+
+function normalise(raw, name) {
+  // Already the addon's JSON export.
+  if (raw.schemaVersion && raw.seasons) {
+    return { seasons: asList(raw.seasons), origin: `${name} · schema v${raw.schemaVersion}` };
+  }
+  // Raw SavedVariables.
+  const seasons = [];
+  if (raw.activeSeason) seasons.push(Object.assign({ active: true }, raw.activeSeason));
+  for (const s of asList(raw.archives)) seasons.push(s);
+  if (!seasons.length) throw new Error("No seasons found. Has the addon saved yet?");
+  return { seasons, origin: `${name} · SavedVariables` };
+}
+
+const WIN_TYPE = { 0: "Need", 1: "Need OS", 2: "Mog", 3: "Greed", 4: "No roll", 5: "Pass" };
+
+function buildModel(seasons) {
+  const drops = [], raids = [];
+  for (const s of seasons) {
+    const label = s.name || "Unnamed season";
+    for (const d of asList(s.drops)) drops.push(Object.assign({ seasonName: label }, d));
+    for (const r of asList(s.raids)) raids.push(Object.assign({ seasonName: label }, r));
+  }
+  drops.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+  raids.sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0));
+
+  // Attendance from raid rosters, upgrades from rolls — same rules as the addon.
+  const players = new Map();
+  const touch = (key, seed) => {
+    if (!players.has(key)) players.set(key, Object.assign({
+      key, name: "?", nights: 0, eligible: 0, upgrades: 0, mog: 0, greed: 0,
+      lastWin: null, guildRank: null,
+    }, seed));
+    return players.get(key);
+  };
+
+  for (const r of raids) {
+    for (const m of asList(r.roster).concat(Object.values(r.roster || {}).filter(v => v && v.name))) {
+      if (!m || !m.name) continue;
+      const p = touch(m.guid || m.name, { name: m.name, guildRank: m.guildRank || null });
+      p.nights++;
+      if (m.guildRank) p.guildRank = m.guildRank;
+    }
+  }
+
+  for (const d of drops) {
+    for (const roll of asList(d.rolls)) {
+      if (!roll || !roll.name) continue;
+      const p = touch(roll.guid || roll.name, { name: roll.name });
+      p.eligible++;
+      if (roll.isWinner) {
+        if (roll.state === 0 || roll.state === 1) { p.upgrades++; p.lastWin = Math.max(p.lastWin || 0, d.timestamp || 0); }
+        else if (roll.state === 2) p.mog++;
+        else if (roll.state === 3) p.greed++;
+      }
+    }
+    if (d.winnerGuildRank) {
+      const p = players.get(d.winnerGUID) || players.get(d.winnerName);
+      if (p) p.guildRank = d.winnerGuildRank;
+    }
+  }
+
+  return { drops, raids, players: [...players.values()] };
+}
+
+/* ---------- rendering ------------------------------------------------ */
+const $ = s => document.querySelector(s);
+const fmtDate = t => t ? new Date(t * 1000).toISOString().slice(0, 10) : "";
+const esc = s => String(s ?? "").replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+
+function tagFor(state) {
+  const label = WIN_TYPE[state];
+  if (!label) return "";
+  const cls = state === 0 || state === 1 ? "t-need" : state === 2 ? "t-mog" : "t-greed";
+  return `<span class="tag ${cls}">${label}</span>`;
+}
+
+const VIEWS = {
+  drops: {
+    cols: [
+      ["dateText", "Date", r => r.dateText || fmtDate(r.timestamp)],
+      ["encounterName", "Boss", r => esc(r.encounterName || "?")],
+      ["difficultyName", "Diff", r => esc(r.difficultyName || "")],
+      ["itemName", "Item", r => esc(r.itemName || "?")],
+      ["winnerName", "Winner", r => r.allPassed ? '<span class="muted">all passed</span>' : esc(r.winnerName || "?")],
+      ["winnerState", "Type", r => r.allPassed ? "" : tagFor(r.winnerState)],
+      ["winnerRoll", "Roll", r => r.winnerRoll ?? "", true],
+      ["eligibleCount", "Elig.", r => r.eligibleCount ?? "", true],
+    ],
+    rows: m => m.drops,
+    match: (r, q) => [r.winnerName, r.itemName, r.encounterName, r.instanceName].some(v => (v || "").toLowerCase().includes(q)),
+  },
+  players: {
+    cols: [
+      ["name", "Player", r => esc(r.name)],
+      ["guildRank", "Guild rank", r => esc(r.guildRank || "")],
+      ["nights", "Nights", r => r.nights, true],
+      ["eligible", "Rolled on", r => r.eligible, true],
+      ["upgrades", "Upgrades", r => r.upgrades ? r.upgrades : '<span class="zero">0</span>', true],
+      ["mog", "Mog", r => r.mog || "", true],
+      ["lastWin", "Last upgrade", r => r.lastWin ? fmtDate(r.lastWin) : '<span class="muted">never</span>'],
+    ],
+    rows: m => m.players,
+    match: (r, q) => (r.name || "").toLowerCase().includes(q),
+  },
+  raids: {
+    cols: [
+      ["dateText", "Date", r => r.dateText || fmtDate(r.startedAt)],
+      ["instanceName", "Instance", r => esc(r.instanceName || "?")],
+      ["difficultyName", "Difficulty", r => esc(r.difficultyName || "")],
+      ["pulls", "Pulls", r => asList(r.encounters).length, true],
+      ["kills", "Kills", r => asList(r.encounters).filter(e => e && e.killed).length, true],
+      ["rosterCount", "Raiders", r => r.rosterCount ?? "", true],
+    ],
+    rows: m => m.raids,
+    match: (r, q) => (r.instanceName || "").toLowerCase().includes(q),
+  },
+};
+
+function render() {
+  const m = STATE.model;
+  const view = VIEWS[STATE.tab];
+  const q = $("#q").value.trim().toLowerCase();
+  const wt = $("#wintype").value;
+  const guildOnly = $("#guildonly").checked;
+  const season = $("#season").value;
+
+  let rows = view.rows(m);
+  if (season) rows = rows.filter(r => r.seasonName === season);
+  if (q) rows = rows.filter(r => view.match(r, q));
+  if (guildOnly) rows = rows.filter(r => r.guildRank || r.winnerGuildRank);
+  if (wt && STATE.tab === "drops") rows = rows.filter(r => WIN_TYPE[r.winnerState] === wt);
+
+  const sortKey = STATE.sort[STATE.tab];
+  if (sortKey) {
+    const dir = STATE.sort[STATE.tab + ":dir"] || 1;
+    rows = rows.slice().sort((a, b) => {
+      const x = a[sortKey], y = b[sortKey];
+      if (typeof x === "number" || typeof y === "number") return ((y || 0) - (x || 0)) * dir;
+      return String(x || "").localeCompare(String(y || "")) * dir;
+    });
+  }
+
+  $("#count").textContent = `${rows.length} rows`;
+  $("#tbl").querySelector("thead").innerHTML =
+    "<tr>" + view.cols.map(([k, label, , num]) =>
+      `<th data-k="${k}" class="${num ? "num " : ""}${sortKey === k ? "sorted" : ""}">${label}</th>`).join("") + "</tr>";
+  $("#tbl").querySelector("tbody").innerHTML =
+    rows.slice(0, 1000).map(r =>
+      "<tr>" + view.cols.map(([, , fn, num]) => `<td class="${num ? "num" : ""}">${fn(r)}</td>`).join("") + "</tr>").join("");
+
+  $("#tbl").querySelectorAll("th").forEach(th => th.onclick = () => {
+    const k = th.dataset.k;
+    if (STATE.sort[STATE.tab] === k) STATE.sort[STATE.tab + ":dir"] = (STATE.sort[STATE.tab + ":dir"] || 1) * -1;
+    else { STATE.sort[STATE.tab] = k; STATE.sort[STATE.tab + ":dir"] = 1; }
+    render();
+  });
+}
+
+function renderCards() {
+  const m = STATE.model;
+  const upgrades = m.drops.filter(d => d.winnerState === 0 || d.winnerState === 1).length;
+  const mog = m.drops.filter(d => d.winnerState === 2).length;
+  const empty = m.players.filter(p => p.upgrades === 0 && p.nights > 0).length;
+  const cards = [
+    [m.drops.length, "Drops"],
+    [upgrades, "Upgrades"],
+    [mog, "Transmog"],
+    [m.raids.length, "Raid nights"],
+    [m.players.length, "Players"],
+    [empty, "No upgrade yet"],
+  ];
+  $("#cards").innerHTML = cards.map(([n, l]) =>
+    `<div class="card"><div class="n">${n}</div><div class="l">${l}</div></div>`).join("");
+}
+
+function load(text, name) {
+  try {
+    let raw;
+    const trimmed = text.trim();
+    raw = trimmed.startsWith("{") && !trimmed.startsWith("{\n\t[") ? tryJson(trimmed, text) : parseLua(text);
+    const { seasons, origin } = normalise(raw, name);
+    STATE.model = buildModel(seasons);
+    $("#src").textContent = origin;
+    $("#err").classList.add("hide");
+    $("#app").classList.remove("hide");
+    $("#drop").style.padding = "16px";
+    $("#drop").querySelector("h2").textContent = "Load a different file";
+    $("#season").innerHTML = '<option value="">All seasons</option>' +
+      [...new Set(seasons.map(s => s.name).filter(Boolean))].map(s => `<option>${esc(s)}</option>`).join("");
+    renderCards();
+    render();
+  } catch (e) {
+    $("#err").textContent = e.message || String(e);
+    $("#err").classList.remove("hide");
+  }
+}
+
+function tryJson(trimmed, full) {
+  try { return JSON.parse(trimmed); } catch { return parseLua(full); }
+}
+
+const drop = $("#drop"), file = $("#file");
+drop.onclick = () => file.click();
+file.onchange = e => { const f = e.target.files[0]; if (f) f.text().then(t => load(t, f.name)); };
+drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };
+drop.ondragleave = () => drop.classList.remove("over");
+drop.ondrop = e => {
+  e.preventDefault(); drop.classList.remove("over");
+  const f = e.dataTransfer.files[0];
+  if (f) f.text().then(t => load(t, f.name));
+};
+
+$("#tabs").onclick = e => {
+  const b = e.target.closest("button"); if (!b) return;
+  STATE.tab = b.dataset.tab;
+  [...$("#tabs").children].forEach(x => x.setAttribute("aria-selected", x === b));
+  $("#wintype").classList.toggle("hide", STATE.tab !== "drops");
+  render();
+};
+["#q", "#season", "#wintype", "#guildonly"].forEach(s => {
+  $(s).addEventListener("input", () => STATE.model && render());
+});
+</script>

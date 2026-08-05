@@ -63,6 +63,25 @@ local function ShowEmptyHanded()
     SetContent(Export.BuildEmptyHandedSummary(Drops()), "No upgrade yet")
 end
 
+-- The machine-readable document. Fed to the browser dashboard, and the same
+-- shape officer sync and any hosted service would use.
+local function ShowData()
+    local counts = SYL.DataExport.CountRecords()
+
+    SetContent(
+        SYL.DataExport.BuildJSON(),
+        "Full data v"
+        .. SYL.DataExport.SCHEMA_VERSION
+        .. " — "
+        .. counts.drops
+        .. " drops, "
+        .. counts.rolls
+        .. " rolls, "
+        .. counts.raids
+        .. " nights"
+    )
+end
+
 local function CreateTextArea(parent)
     local scrollFrame = CreateFrame(
         "ScrollFrame",
@@ -111,6 +130,11 @@ local function CreateFooter(parent)
         Theme.CreateButton(parent, 120, 24, "No upgrade", ShowEmptyHanded)
 
     emptyButton:SetPoint("LEFT", playersButton, "RIGHT", 6, 0)
+
+    local dataButton =
+        Theme.CreateButton(parent, 110, 24, "Full data", ShowData)
+
+    dataButton:SetPoint("LEFT", emptyButton, "RIGHT", 6, 0)
 
     local closeButton = Theme.CreateButton(parent, 90, 24, "Close", function()
         frame:Hide()

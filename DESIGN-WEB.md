@@ -1,6 +1,21 @@
 # Browser access and sync — design options
 
-Status: **plan only, nothing built.** Needs two decisions before work starts.
+Status: **direction confirmed 2026-08-05.** Browser access and sync are now
+wanted, and the original "no server, no companion app" rule is explicitly
+relaxed to get them.
+
+Building in this order:
+
+1. **Versioned data export** — BUILT. One JSON document with a schema
+   version covering seasons, drops, rolls, raid sessions and guild ranks.
+   Every option below reads exactly this, so it is correct work regardless
+   of which route is taken.
+2. **Local browser dashboard** — BUILT. Drag the SavedVariables file onto a
+   page and read the whole history. No server, nothing to install.
+3. **In-game officer sync** — next. Makes any one officer's file complete.
+4. **Hosted dashboard** — open, now that the constraint is lifted. Worth
+   doing only once 1 to 3 are proven, and it is a service rather than an
+   addon feature.
 
 ## The hard constraint
 
@@ -19,18 +34,17 @@ Data can leave the game in exactly three ways:
 So a browser view means something outside the game reads that file. The
 only question is what.
 
-## The conflict worth naming
+## The constraint that was relaxed
 
-The handoff says: *"No server. No external database. No required companion
-app. One person should be able to install the addon and immediately start
-collecting useful data."*
+The original handoff said: *"No server. No external database. No required
+companion app."* That has been set aside deliberately in favour of browser
+access and sync.
 
-A browser view that syncs breaks at least one of those. That is not a
-reason to refuse it — it is a reason to decide deliberately which one gets
-relaxed, and to keep the addon fully useful for anyone who does not opt in.
-
-**Whatever we build must stay optional.** A raider who installs the addon
-and never touches a browser should notice no difference.
+One part of it still holds and should keep holding: **a raider who installs
+the addon and never opens a browser must notice no difference.** Everything
+here is additive. Nothing in the addon may come to depend on an export
+having happened, a page having been opened, or another officer being
+online.
 
 ## What "sync" could mean
 

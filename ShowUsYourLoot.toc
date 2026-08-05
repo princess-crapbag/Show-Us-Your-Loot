@@ -23,6 +23,7 @@ Core\LootHistory.lua
 Core\Events.lua
 Core\Analytics.lua
 Core\Export.lua
+Core\DataExport.lua
 Core\CommandList.lua
 Core\CommandReports.lua
 Core\SlashCommands.lua
