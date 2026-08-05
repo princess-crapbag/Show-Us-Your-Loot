@@ -248,6 +248,30 @@ function Theme.GetItemIcon(itemLink)
     return nil
 end
 
+-- Drop records store the winner's class file name, so their names can be
+-- class-coloured. Chat-derived loot records cannot: they hold only a name.
+function Theme.GetClassColor(classFile)
+    if not classFile or classFile == "" then
+        return nil
+    end
+
+    local color
+
+    if C_ClassColor and C_ClassColor.GetClassColor then
+        color = C_ClassColor.GetClassColor(classFile)
+    end
+
+    if not color and RAID_CLASS_COLORS then
+        color = RAID_CLASS_COLORS[classFile]
+    end
+
+    if not color then
+        return nil
+    end
+
+    return { color.r, color.g, color.b }
+end
+
 -- Returns nil when the item is not cached yet, which the caller uses as a
 -- signal to retry shortly rather than to render a wrong colour permanently.
 function Theme.GetItemQualityColor(itemLink)

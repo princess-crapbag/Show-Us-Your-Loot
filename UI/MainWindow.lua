@@ -7,6 +7,7 @@
 local SYL = _G.ShowUsYourLoot
 local Theme = SYL.Theme
 local Widgets = SYL.Widgets
+local Rows = SYL.Rows
 local LootListView = SYL.LootListView
 
 local WINDOW_WIDTH = 830
@@ -19,16 +20,20 @@ local tabs = {}
 
 -- Shared with LootListView, which reads it but never owns it.
 local view = {
-    mode = "active",
+    -- Drops are the primary record now, so the window opens on them.
+    mode = "drops",
     selectedArchiveIndex = nil,
     offset = 0,
     visibleRows = VISIBLE_ROWS,
+    showHidden = false,
+    dropRows = {},
     lootRows = {},
     archiveRows = {},
 }
 
 local TABS = {
-    { key = "active", label = "Active Season" },
+    { key = "drops", label = "Drops" },
+    { key = "active", label = "Chat Loot" },
     { key = "all", label = "All-Time" },
     { key = "archives", label = "Archives" },
 }
@@ -38,6 +43,17 @@ local TABS = {
 --------------------------------------------------------------------------
 
 local function UpdateHeader()
+    if view.mode == "drops" then
+        local season = SYL.GetActiveSeason()
+
+        view.subtitleText:SetText(
+            (season and season.name or "Active Season")
+            .. " — group loot"
+        )
+
+        return
+    end
+
     if view.mode == "active" then
         local season = SYL.GetActiveSeason()
 
@@ -84,7 +100,9 @@ local function UpdateTabs()
         buttons.back:Hide()
     end
 
-    if view.mode == "active" then
+    -- Archiving acts on the whole season, so it is offered from either of the
+    -- active-season views.
+    if view.mode == "drops" or view.mode == "active" then
         buttons.archiveSeason:Show()
     else
         buttons.archiveSeason:Hide()
@@ -101,13 +119,22 @@ local function UpdateRows()
     UpdateHeader()
     UpdateTabs()
 
+    view.dropHeader:Hide()
+    view.lootHeader:Hide()
+
     if view.mode == "archives" then
-        view.columnHeader:Hide()
         LootListView.UpdateArchiveRows(view)
-    else
-        view.columnHeader:Show()
-        LootListView.UpdateLootRows(view)
+        return
     end
+
+    if view.mode == "drops" then
+        view.dropHeader:Show()
+        LootListView.UpdateDropRows(view)
+        return
+    end
+
+    view.lootHeader:Show()
+    LootListView.UpdateLootRows(view)
 end
 
 local function SetMode(mode, archiveIndex)
@@ -199,9 +226,14 @@ local function CreateScrollArea(parent)
     view.emptyText:SetText("No loot has been recorded.")
     view.emptyText:Hide()
 
-    view.columnHeader = Widgets.CreateLootColumnHeader(parent)
-    view.columnHeader:SetPoint("TOPLEFT", 16, -122)
-    view.columnHeader:SetPoint("TOPRIGHT", -34, -122)
+    view.dropHeader = Rows.CreateColumnHeader(parent, "drops")
+    view.dropHeader:SetPoint("TOPLEFT", 16, -122)
+    view.dropHeader:SetPoint("TOPRIGHT", -34, -122)
+
+    view.lootHeader = Rows.CreateColumnHeader(parent, "loot")
+    view.lootHeader:SetPoint("TOPLEFT", 16, -122)
+    view.lootHeader:SetPoint("TOPRIGHT", -34, -122)
+    view.lootHeader:Hide()
 
     view.scrollFrame = CreateFrame(
         "ScrollFrame",
@@ -220,11 +252,14 @@ local function CreateScrollArea(parent)
     view.scrollFrame:SetScrollChild(view.scrollChild)
 
     for index = 1, VISIBLE_ROWS do
+        view.dropRows[index] =
+            Rows.CreateDropRow(view.scrollChild, index)
+
         view.lootRows[index] =
-            Widgets.CreateLootRow(view.scrollChild, index)
+            Rows.CreateLootRow(view.scrollChild, index)
 
         view.archiveRows[index] =
-            Widgets.CreateArchiveRow(view.scrollChild, index, function(archiveIndex)
+            Rows.CreateArchiveRow(view.scrollChild, index, function(archiveIndex)
                 SetMode("archive", archiveIndex)
             end)
     end

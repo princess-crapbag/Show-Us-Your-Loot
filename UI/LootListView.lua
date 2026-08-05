@@ -1,11 +1,13 @@
 -- UI/LootListView.lua
 --
--- Renders loot rows and archive rows into an already-built window. The window
--- passes its own state in as `view`, so this file holds no state of its own
--- and can later be reused by a second window.
+-- Renders drop rows, chat-loot rows and archive rows into an already-built
+-- window. The window passes its own state in as `view`, so this file holds no
+-- state of its own and can later be reused by a second window.
 
 local SYL = _G.ShowUsYourLoot
+local Theme = SYL.Theme
 local Widgets = SYL.Widgets
+local Rows = SYL.Rows
 local Utilities = SYL.Utilities
 
 local LootListView = {}
@@ -34,25 +36,78 @@ local function ScheduleCacheRetry()
     end)
 end
 
+local DIFFICULTY_SHORT = {
+    [14] = "N",
+    [15] = "HC",
+    [16] = "M",
+    [17] = "LFR",
+}
+
+local function AbbreviateDifficulty(record)
+    local short = DIFFICULTY_SHORT[record.difficultyID]
+
+    if short then
+        return short
+    end
+
+    local name = record.difficultyName
+
+    if name and name ~= "" and name ~= "None" then
+        return name
+    end
+
+    return nil
+end
+
+--------------------------------------------------------------------------
+-- Record sources
+--------------------------------------------------------------------------
+
+-- Hidden records are a display state, never a deletion, so they come back
+-- the moment the toggle is flipped.
+local function VisibleRecords(records, view)
+    if view.showHidden then
+        return records
+    end
+
+    local visible = {}
+
+    for _, record in ipairs(records) do
+        if not record.hidden then
+            table.insert(visible, record)
+        end
+    end
+
+    return visible
+end
+
 function LootListView.GetRecords(view)
+    if view.mode == "drops" then
+        return VisibleRecords(SYL.GetActiveDrops(), view)
+    end
+
     if view.mode == "active" then
         local season = SYL.GetActiveSeason()
 
-        return season and season.loot or {}
+        return VisibleRecords(season and season.loot or {}, view)
     end
 
     if view.mode == "all" then
-        return SYL.GetAllLoot()
+        return VisibleRecords(SYL.GetAllLoot(), view)
     end
 
     if view.mode == "archive" then
         local season = SYL.GetArchives()[view.selectedArchiveIndex]
 
-        return season and season.loot or {}
+        return VisibleRecords(season and season.loot or {}, view)
     end
 
     return {}
 end
+
+--------------------------------------------------------------------------
+-- Shared helpers
+--------------------------------------------------------------------------
 
 local function FormatLocation(record)
     local instanceName =
@@ -81,24 +136,21 @@ local function SetEmptyState(view, isEmpty, message)
     end
 end
 
--- Returns false when the item was not cached, so the caller can retry.
-local function FillLootRow(row, record, recordIndex)
-    row.numberText:SetText(recordIndex)
-    row.playerText:SetText(record.recipient or "Unknown")
-    row.locationText:SetText(FormatLocation(record))
-    row.dateText:SetText(Utilities.FormatDateTime(record.timestamp))
+local function ClampOffset(view, total)
+    local maxOffset = math.max(0, total - view.visibleRows)
 
-    return Widgets.SetRowItem(row, record.itemLink, record.itemName)
+    if view.offset > maxOffset then
+        view.offset = maxOffset
+    end
+
+    return maxOffset
 end
 
-local function UpdateScrollRange(view, maxOffset, totalRecords)
+local function UpdateScrollRange(view, maxOffset, total)
     local rowHeight = Widgets.ROW_HEIGHT
 
     view.scrollChild:SetHeight(
-        math.max(
-            view.visibleRows * rowHeight,
-            totalRecords * rowHeight
-        )
+        math.max(view.visibleRows * rowHeight, total * rowHeight)
     )
 
     view.scrollFrame:SetVerticalScroll(view.offset * rowHeight)
@@ -109,31 +161,116 @@ local function UpdateScrollRange(view, maxOffset, totalRecords)
     end
 end
 
-function LootListView.UpdateLootRows(view)
-    local records = LootListView.GetRecords(view)
-    local totalRecords = #records
+--------------------------------------------------------------------------
+-- Drops
+--------------------------------------------------------------------------
 
-    view.countText:SetText(totalRecords .. " items")
+local function FillDropRow(row, record, recordIndex)
+    row.numberText:SetText(recordIndex)
+
+    local difficulty = AbbreviateDifficulty(record)
+
+    row.bossText:SetText(
+        tostring(record.encounterName or "Unknown boss")
+        .. (difficulty and ("  " .. difficulty) or "")
+    )
+
+    if record.allPassed then
+        row.winnerText:SetText("all passed")
+        Theme.SetTextColor(row.winnerText, "textMuted")
+        row.rollText:SetText("")
+    else
+        row.winnerText:SetText(tostring(record.winnerName or "Unknown"))
+
+        local classColor = Theme.GetClassColor(record.winnerClass)
+
+        if classColor then
+            row.winnerText:SetTextColor(
+                classColor[1], classColor[2], classColor[3]
+            )
+        else
+            Theme.SetTextColor(row.winnerText, "textPrimary")
+        end
+
+        row.rollText:SetText(
+            record.winnerRoll and tostring(record.winnerRoll) or "—"
+        )
+    end
+
+    row.dateText:SetText(Utilities.FormatDateTime(record.timestamp))
+
+    return Rows.SetRowItem(row, record.itemLink, record.itemName)
+end
+
+function LootListView.UpdateDropRows(view)
+    local records = LootListView.GetRecords(view)
+    local total = #records
+
+    view.countText:SetText(total .. (total == 1 and " drop" or " drops"))
 
     SetEmptyState(
         view,
-        totalRecords == 0,
+        total == 0,
+        "No drops recorded yet. They are captured on group-loot rolls."
+    )
+
+    local maxOffset = ClampOffset(view, total)
+    local allCached = true
+
+    for rowIndex = 1, view.visibleRows do
+        local recordIndex = total - view.offset - rowIndex + 1
+        local row = view.dropRows[rowIndex]
+
+        if recordIndex >= 1 then
+            if not FillDropRow(row, records[recordIndex], recordIndex) then
+                allCached = false
+            end
+
+            row:Show()
+        else
+            row.itemLink = nil
+            row:Hide()
+        end
+    end
+
+    if not allCached then
+        ScheduleCacheRetry()
+    end
+
+    UpdateScrollRange(view, maxOffset, total)
+end
+
+--------------------------------------------------------------------------
+-- Chat loot
+--------------------------------------------------------------------------
+
+local function FillLootRow(row, record, recordIndex)
+    row.numberText:SetText(recordIndex)
+    row.playerText:SetText(record.recipient or "Unknown")
+    row.locationText:SetText(FormatLocation(record))
+    row.dateText:SetText(Utilities.FormatDateTime(record.timestamp))
+
+    return Rows.SetRowItem(row, record.itemLink, record.itemName)
+end
+
+function LootListView.UpdateLootRows(view)
+    local records = LootListView.GetRecords(view)
+    local total = #records
+
+    view.countText:SetText(total .. (total == 1 and " item" or " items"))
+
+    SetEmptyState(
+        view,
+        total == 0,
         "No loot has been recorded in this view."
     )
 
-    local maxOffset = math.max(0, totalRecords - view.visibleRows)
-
-    if view.offset > maxOffset then
-        view.offset = maxOffset
-    end
-
+    local maxOffset = ClampOffset(view, total)
     local allCached = true
 
     -- Rows read newest first, so row 1 shows the most recent record.
     for rowIndex = 1, view.visibleRows do
-        local recordIndex =
-            totalRecords - view.offset - rowIndex + 1
-
+        local recordIndex = total - view.offset - rowIndex + 1
         local row = view.lootRows[rowIndex]
 
         if recordIndex >= 1 then
@@ -152,20 +289,22 @@ function LootListView.UpdateLootRows(view)
         ScheduleCacheRetry()
     end
 
-    UpdateScrollRange(view, maxOffset, totalRecords)
+    UpdateScrollRange(view, maxOffset, total)
 end
+
+--------------------------------------------------------------------------
+-- Archives
+--------------------------------------------------------------------------
 
 function LootListView.UpdateArchiveRows(view)
     local archives = SYL.GetArchives()
-    local totalArchives = #archives
+    local total = #archives
 
-    view.countText:SetText(totalArchives .. " archived seasons")
-
-    SetEmptyState(
-        view,
-        totalArchives == 0,
-        "No seasons have been archived."
+    view.countText:SetText(
+        total .. (total == 1 and " archived season" or " archived seasons")
     )
+
+    SetEmptyState(view, total == 0, "No seasons have been archived.")
 
     for index = 1, view.visibleRows do
         local row = view.archiveRows[index]
@@ -173,7 +312,13 @@ function LootListView.UpdateArchiveRows(view)
 
         if season then
             row.nameText:SetText(season.name or "Unnamed Season")
-            row.countText:SetText(#(season.loot or {}) .. " items")
+
+            row.countText:SetText(
+                #(season.drops or {})
+                .. " drops, "
+                .. #(season.loot or {})
+                .. " items"
+            )
 
             row.dateText:SetText(
                 "Archived "
@@ -203,6 +348,10 @@ function LootListView.UpdateArchiveRows(view)
 end
 
 function LootListView.HideAllRows(view)
+    for _, row in ipairs(view.dropRows) do
+        row:Hide()
+    end
+
     for _, row in ipairs(view.lootRows) do
         row:Hide()
     end
