@@ -213,6 +213,10 @@ local EVENT_HANDLERS = {
     ENCOUNTER_START = function(encounterID, encounterName, difficultyID, groupSize)
         RememberEncounter(encounterID, encounterName, difficultyID, groupSize)
         EnsureRunID(encounterID, true)
+
+        SYL.RaidSession.OnEncounterStart(
+            encounterID, encounterName, difficultyID
+        )
     end,
 
     -- Carries a roll identifier rather than an encounter, so this settles the
@@ -221,8 +225,15 @@ local EVENT_HANDLERS = {
         ScheduleRefresh(LootHistory.state.currentEncounterID)
     end,
 
-    ENCOUNTER_END = function(encounterID, encounterName, difficultyID, groupSize)
+    ENCOUNTER_END = function(encounterID, encounterName, difficultyID, groupSize, success)
         RememberEncounter(encounterID, encounterName, difficultyID, groupSize)
+
+        -- Recorded before the refresh, because the roster has to be read
+        -- while everyone is still grouped.
+        SYL.RaidSession.OnEncounterEnd(
+            encounterID, encounterName, difficultyID, groupSize, success
+        )
+
         ScheduleRefresh(encounterID)
     end,
 

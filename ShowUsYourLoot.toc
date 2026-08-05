@@ -15,6 +15,7 @@ Core\Guild.lua
 Core\ItemQuality.lua
 Core\Database.lua
 Core\LootCapture.lua
+Core\RaidSession.lua
 Core\LootHistoryAPI.lua
 Core\LootHistorySnapshot.lua
 Core\LootHistoryStore.lua
@@ -43,6 +44,8 @@ UI\DropDetailWindow.lua
 UI\CommandMenu.lua
 UI\MinimapButton.lua
 UI\PlayerWindow.lua
+UI\RaidWindow.lua
+UI\ItemTooltip.lua
 UI\ExportWindow.lua
 UI\SettingsWindow.lua
 UI\DeveloperReport.lua

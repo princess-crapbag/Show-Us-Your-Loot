@@ -114,9 +114,23 @@ function Analytics.BuildPlayerStats(drops)
         end
     end
 
+    -- Nights come from the raid roster, not from loot. Someone eligible for
+    -- nothing all evening still raided, and only the roster knows that.
+    local _, attendanceByKey =
+        SYL.RaidSession.BuildAttendance(SYL.GetAllRaids())
+
     local now = time()
 
     for _, entry in ipairs(order) do
+        local attendance =
+            attendanceByKey[entry.guid or ""]
+            or attendanceByKey[entry.key or ""]
+
+        if attendance then
+            entry.nights = attendance.nights
+            entry.pulls = attendance.encounters
+        end
+
         entry.upgradeWins = entry.needWins + entry.offspecWins
 
         entry.guildRank = SYL.Guild.GetRank(entry.guid, entry.name)
@@ -135,6 +149,33 @@ function Analytics.BuildPlayerStats(drops)
         entry.hasEverWon = entry.wins > 0
 
         entry.nightsSeen = nil
+    end
+
+    -- Anyone who raided but never appeared in a single roll list is still a
+    -- raider who got nothing, which is the whole question being asked.
+    local attendance = SYL.RaidSession.BuildAttendance(SYL.GetAllRaids())
+
+    for _, member in ipairs(attendance) do
+        local key = member.guid or member.name
+
+        if key and not byKey[key] then
+            local entry = NewEntry(member)
+
+            entry.key = key
+            entry.nights = member.nights
+            entry.pulls = member.encounters
+            entry.lastSeenAt = member.lastSeen
+            entry.upgradeWins = 0
+            entry.droughtDays = 0
+            entry.hasEverWon = false
+            entry.guildRank = SYL.Guild.GetRank(member.guid, member.name)
+            entry.inGuild = entry.guildRank ~= nil
+            entry.nightsSeen = nil
+
+            byKey[key] = entry
+
+            table.insert(order, entry)
+        end
     end
 
     return order

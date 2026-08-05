@@ -99,6 +99,12 @@ COMMANDS.players = function()
     end
 end
 
+COMMANDS.raids = function()
+    if SYL.OpenRaidWindow then
+        SYL:OpenRaidWindow()
+    end
+end
+
 COMMANDS.export = function()
     if SYL.OpenExportWindow then
         SYL:OpenExportWindow()

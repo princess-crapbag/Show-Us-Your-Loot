@@ -18,6 +18,14 @@ local DROP_FIELDS = {
     item = function(record) return record.itemName end,
     location = function(record) return record.instanceName end,
     timestamp = function(record) return record.timestamp end,
+
+    wintype = function(record)
+        if record.allPassed then
+            return "All passed"
+        end
+
+        return SYL.LootHistoryAPI.ShortRollState(record.winnerState)
+    end,
 }
 
 local LOOT_FIELDS = {

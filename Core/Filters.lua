@@ -21,12 +21,13 @@ SYL.Filters = Filters
 
 -- Multi-select fields. Date is a range and search is free text, so neither
 -- belongs here.
-Filters.FIELDS = { "player", "item", "location" }
+Filters.FIELDS = { "player", "item", "location", "wintype" }
 
 Filters.LABELS = {
     player = "Player",
     item = "Item",
     location = "Location",
+    wintype = "Win type",
 }
 
 function Filters.CreateState()
@@ -39,6 +40,7 @@ function Filters.CreateState()
             player = {},
             item = {},
             location = {},
+            wintype = {},
         },
 
         dateFrom = nil,

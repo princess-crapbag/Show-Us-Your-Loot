@@ -231,6 +231,38 @@ function SYL.GetAllDrops()
     return allDrops
 end
 
+function SYL.GetActiveRaids()
+    local season = SYL.GetActiveSeason()
+
+    if not season then
+        return {}
+    end
+
+    season.raids = season.raids or {}
+
+    return season.raids
+end
+
+function SYL.GetAllRaids()
+    local allRaids = {}
+
+    local activeSeason = SYL.GetActiveSeason()
+
+    if activeSeason and activeSeason.raids then
+        for _, session in ipairs(activeSeason.raids) do
+            table.insert(allRaids, session)
+        end
+    end
+
+    for _, season in ipairs(SYL.GetArchives()) do
+        for _, session in ipairs(season.raids or {}) do
+            table.insert(allRaids, session)
+        end
+    end
+
+    return allRaids
+end
+
 function SYL.StartNewSeason(name)
     name = name and name:gsub("^%s+", ""):gsub("%s+$", "")
 

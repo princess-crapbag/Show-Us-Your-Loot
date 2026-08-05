@@ -65,3 +65,39 @@ the range. Both requested behaviours, neither at the cost of linking.
   shows chat loot only. It will matter once a season is archived.
 - The Archives list still cannot scroll past about nine seasons. Tracked
   separately; it predates all of this.
+
+## Ten features to make this indispensable (drafted 2026-08-05)
+
+Ordered roughly by effort. The first five are built; the rest need a
+decision or are large enough to be worth discussing first.
+
+1. **Raid sessions and true attendance** — BUILT. Eligibility is not
+   attendance: roll lists only name players an item could drop for, so a
+   healer who raided all night without being eligible looked absent. The
+   group roster is now read at every pull and stored per night.
+2. **Raids window** — BUILT. Every raid night: instance, difficulty,
+   bosses pulled, kills, duration, how many people were there.
+3. **Attendance in player stats** — BUILT. Nights present now come from
+   the raid roster, and "attended but got no upgrade" is answerable for
+   real rather than inferred from who happened to be eligible.
+4. **Filter by win type** — BUILT. Need, offspec, transmog and greed are
+   selectable filters, so "show me every transmog win" is one click.
+5. **Item tooltips** — BUILT. Hovering any item anywhere in the game shows
+   who won it and when, if this addon has seen it drop.
+6. **Player detail window** — click a player to see their full history:
+   every drop they rolled on, what they chose, what they won, their
+   droughts. Medium effort; mostly a new window over existing data.
+7. **Boss history** — per boss: times killed, what it dropped, who won,
+   which items have never dropped for the guild. Needs a view and some
+   grouping, no new capture.
+8. **A "due" list** — rank guild members by nights attended against
+   upgrades received, so the next reasonable winner is obvious. This is a
+   judgement call encoded as a formula, so the weighting needs agreeing
+   before it is worth building.
+9. **Officer sync** — share captured loot between officers over addon
+   comms so no one person has to be present for everything. Technically
+   possible and genuinely useful, but it is real network traffic to other
+   players and needs a deliberate decision about what gets sent.
+10. **Automatic raid-night summary** — post the night's loot to the chat
+    window when the raid ends, ready to paste. Small, but it needs a rule
+    for when a night has actually ended.

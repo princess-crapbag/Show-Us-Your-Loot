@@ -120,7 +120,7 @@ local function CreateDateField(parent, labelText, state, key, endOfDay, onChange
     label:SetPoint("LEFT", anchorTo, "RIGHT", 10, 0)
 
     local input =
-        CreateDateInput(parent, 92, "YYYY-MM-DD", state, key, endOfDay, onChange)
+        CreateDateInput(parent, 84, "YYYY-MM-DD", state, key, endOfDay, onChange)
 
     input:SetPoint("LEFT", label, "RIGHT", 4, 0)
 
@@ -140,7 +140,7 @@ function FilterBar.Create(parent, config)
     bar:SetHeight(BAR_HEIGHT)
     bar.dropdowns = {}
 
-    local search = CreateTextInput(bar, 150, "Search…")
+    local search = CreateTextInput(bar, 100, "Search…")
 
     search:SetPoint("LEFT", 0, 0)
 
@@ -161,7 +161,7 @@ function FilterBar.Create(parent, config)
     for _, field in ipairs(Filters.FIELDS) do
         local dropdown = FilterDropdown.Create(bar, {
             label = Filters.LABELS[field],
-            width = 98,
+            width = 86,
 
             getOptions = function()
                 return Filters.DeriveOptions(

@@ -56,6 +56,8 @@ local function OnPlayerLogin()
         ShowUsYourLootDB.settings.showMinimapButton
     )
 
+    SYL.ItemTooltip.Enable()
+
     -- The reply arrives as GUILD_ROSTER_UPDATE.
     SYL.Guild.Request()
 end

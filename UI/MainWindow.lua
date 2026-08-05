@@ -313,6 +313,13 @@ local function CreateFooter(parent)
 
     playersButton:SetPoint("LEFT", settingsButton, "RIGHT", 6, 0)
 
+    local raidsButton =
+        Theme.CreateButton(parent, 100, 26, "Raids", function()
+            SYL:OpenRaidWindow()
+        end)
+
+    raidsButton:SetPoint("LEFT", playersButton, "RIGHT", 6, 0)
+
     local closeButton =
         Theme.CreateButton(parent, 100, 26, "Close", function()
             frame:Hide()

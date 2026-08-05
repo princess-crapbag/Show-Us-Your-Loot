@@ -41,6 +41,10 @@ CommandList.ENTRIES = {
         description = "Per-player upgrades, drought and attendance",
     },
     {
+        command = "raids",
+        description = "Raid nights, kills and who was there",
+    },
+    {
         command = "export",
         description = "Copyable raid night or season summary",
     },
