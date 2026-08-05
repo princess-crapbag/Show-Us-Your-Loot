@@ -232,15 +232,10 @@ local EVENT_HANDLERS = {
 }
 
 local function OnEvent(_, event, ...)
-    local entry = RecordEvent(event, ...)
-
-    SYL:DebugPrint(
-        "LootHistory event: "
-        .. event
-        .. " ("
-        .. entry.argCount
-        .. " args)"
-    )
+    -- Deliberately not logged per event: a single boss fires 200+ of these,
+    -- which would bury chat. The developer window shows the same log with
+    -- full arguments and is the right place to read it.
+    RecordEvent(event, ...)
 
     local handler = EVENT_HANDLERS[event]
 
