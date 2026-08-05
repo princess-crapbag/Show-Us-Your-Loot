@@ -338,6 +338,13 @@ local function CreateWindow()
     footerRule:SetPoint("BOTTOMLEFT", 16, 44)
     footerRule:SetPoint("BOTTOMRIGHT", -16, 44)
 
+    local exportButton =
+        Theme.CreateButton(frame, 100, 26, "Export", function()
+            SYL:OpenExportWindow()
+        end)
+
+    exportButton:SetPoint("BOTTOMLEFT", 16, 12)
+
     local closeButton = Theme.CreateButton(frame, 100, 26, "Close", function()
         frame:Hide()
     end)

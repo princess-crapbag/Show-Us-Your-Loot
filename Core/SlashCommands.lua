@@ -99,6 +99,12 @@ COMMANDS.players = function()
     end
 end
 
+COMMANDS.export = function()
+    if SYL.OpenExportWindow then
+        SYL:OpenExportWindow()
+    end
+end
+
 COMMANDS.settings = function()
     if SYL.OpenSettingsWindow then
         SYL:OpenSettingsWindow()

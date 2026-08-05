@@ -32,24 +32,30 @@ local GetItemQualityColor =
 -- dark theme would need, because muted tones lose contrast fast against a
 -- panel this light.
 Theme.colors = {
-    window = { 0.295, 0.235, 0.255, 0.97 },
-    border = { 0.47, 0.385, 0.415, 1 },
+    -- Red sits well clear of green and blue, with blue above green: that gap
+    -- is what makes it read as rose rather than as a warm grey. An earlier
+    -- pass kept the three channels within 0.06 of each other and looked grey
+    -- no matter how it was described.
+    window = { 0.505, 0.345, 0.395, 0.97 },
+    border = { 0.68, 0.52, 0.575, 1 },
 
-    headerBar = { 0.355, 0.285, 0.305, 1 },
-    separator = { 1, 1, 1, 0.14 },
+    headerBar = { 0.575, 0.415, 0.465, 1 },
+    separator = { 1, 1, 1, 0.16 },
 
-    accent = { 0.20, 0.86, 0.56, 1 },
-    accentMuted = { 0.20, 0.86, 0.56, 0.20 },
+    -- Deepened so it reads as an accent rather than a highlighter against a
+    -- ground this light.
+    accent = { 0.10, 0.62, 0.38, 1 },
+    accentMuted = { 0.10, 0.62, 0.38, 0.24 },
 
-    rowAlt = { 1, 1, 1, 0.05 },
-    rowHover = { 0.20, 0.86, 0.56, 0.17 },
+    rowAlt = { 1, 1, 1, 0.06 },
+    rowHover = { 1, 1, 1, 0.13 },
 
-    button = { 1, 1, 1, 0.11 },
-    buttonHover = { 1, 1, 1, 0.20 },
+    button = { 1, 1, 1, 0.13 },
+    buttonHover = { 1, 1, 1, 0.23 },
 
-    textPrimary = { 0.99, 0.97, 0.975, 1 },
-    textSecondary = { 0.87, 0.81, 0.83, 1 },
-    textMuted = { 0.72, 0.66, 0.68, 1 },
+    textPrimary = { 1, 0.98, 0.985, 1 },
+    textSecondary = { 0.92, 0.85, 0.875, 1 },
+    textMuted = { 0.82, 0.73, 0.76, 1 },
 }
 
 Theme.sizes = {

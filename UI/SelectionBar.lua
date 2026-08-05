@@ -33,11 +33,26 @@ function SelectionBar.Create(parent, view, config)
 
     bar.showHidden:SetPoint("TOPRIGHT", -16, -128)
 
+    -- Not selection, but this is the row of list controls in practice, and
+    -- Show hidden already sits here for the same reason.
+    bar.allSeasons =
+        Theme.CreateButton(parent, 100, 20, "All seasons", function()
+            view.allSeasons = not view.allSeasons
+
+            Selection.Clear(view.selection)
+
+            view.offset = 0
+
+            onChanged()
+        end)
+
+    bar.allSeasons:SetPoint("RIGHT", bar.showHidden, "LEFT", -6, 0)
+
     bar.action = Theme.CreateButton(parent, 70, 20, "Hide", function()
         bar:ApplyHidden()
     end)
 
-    bar.action:SetPoint("RIGHT", bar.showHidden, "LEFT", -6, 0)
+    bar.action:SetPoint("RIGHT", bar.allSeasons, "LEFT", -6, 0)
 
     bar.deselect = Theme.CreateButton(parent, 78, 20, "Deselect all", function()
         Selection.Clear(view.selection)
@@ -122,7 +137,8 @@ function SelectionBar.Create(parent, view, config)
         -- Buttons stay put rather than appearing and disappearing, so the row
         -- does not reflow every time the selection changes.
         for _, control in ipairs({
-            self.showHidden, self.action, self.deselect, self.selectAll,
+            self.showHidden, self.allSeasons,
+            self.action, self.deselect, self.selectAll,
         }) do
             if onList then
                 control:Show()
@@ -144,6 +160,15 @@ function SelectionBar.Create(parent, view, config)
         Theme.SetTextColor(
             self.showHidden.label,
             view.showHidden and "accent" or "textPrimary"
+        )
+
+        self.allSeasons.label:SetText(
+            view.allSeasons and "All seasons" or "This season"
+        )
+
+        Theme.SetTextColor(
+            self.allSeasons.label,
+            view.allSeasons and "accent" or "textPrimary"
         )
 
         if count == 0 then

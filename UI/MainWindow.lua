@@ -30,6 +30,7 @@ local view = {
     offset = 0,
     visibleRows = VISIBLE_ROWS,
     showHidden = false,
+    allSeasons = false,
     filters = Filters.CreateState(),
     selection = Selection.Create(),
     dropRows = {},

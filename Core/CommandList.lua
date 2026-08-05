@@ -41,6 +41,10 @@ CommandList.ENTRIES = {
         description = "Per-player upgrades, drought and attendance",
     },
     {
+        command = "export",
+        description = "Copyable raid night or season summary",
+    },
+    {
         command = "settings",
         description = "Settings, including which qualities to record",
     },

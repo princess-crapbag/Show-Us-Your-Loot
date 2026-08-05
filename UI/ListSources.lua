@@ -58,11 +58,21 @@ end
 -- Everything in scope before filtering. Dropdown options are derived from
 -- this, so choosing one filter never empties the other dropdowns.
 function ListSources.GetUnfiltered(view)
+    -- allSeasons widens whichever dataset the tab is showing, rather than
+    -- being a tab of its own, so it works for drops and chat loot alike.
     if view.mode == "drops" then
+        if view.allSeasons then
+            return VisibleRecords(SYL.GetAllDrops(), view)
+        end
+
         return VisibleRecords(SYL.GetActiveDrops(), view)
     end
 
     if view.mode == "active" then
+        if view.allSeasons then
+            return VisibleRecords(SYL.GetAllLoot(), view)
+        end
+
         local season = SYL.GetActiveSeason()
 
         return VisibleRecords(season and season.loot or {}, view)
