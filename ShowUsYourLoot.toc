@@ -7,6 +7,7 @@
 
 Main.lua
 
+Core\Output.lua
 Core\Utilities.lua
 Core\Filters.lua
 Core\Serializer.lua

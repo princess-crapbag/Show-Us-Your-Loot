@@ -44,6 +44,10 @@ CommandList.ENTRIES = {
         command = "settings",
         description = "Settings, including which qualities to record",
     },
+    {
+        command = "output",
+        description = "Send addon messages to the next chat window",
+    },
     { command = "capture", description = "Toggle Loot History capture" },
     { command = "dev", description = "Open the developer window" },
     { command = "api", description = "Print the live Loot History API" },

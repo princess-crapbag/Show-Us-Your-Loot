@@ -37,7 +37,7 @@ COMMANDS.count = function()
         .. " chat items"
     )
 
-    print(
+    SYL:Write(
         "All-time: "
         .. counts.allTime
         .. " drops, "
@@ -84,7 +84,7 @@ COMMANDS.archive = function(remainder)
         .. " loot records."
     )
 
-    print("New active season: " .. newSeason.name)
+    SYL:Write("New active season: " .. newSeason.name)
 
     SYL.LootHistoryStore.RebuildIndex()
 
@@ -117,6 +117,14 @@ COMMANDS.dev = function()
     if SYL.OpenDeveloperWindow then
         SYL:OpenDeveloperWindow()
     end
+end
+
+COMMANDS.output = function()
+    local name = SYL.Output.CycleWindow()
+
+    -- Printed after the switch, so it lands in the window just chosen and
+    -- proves where messages will appear.
+    SYL:Print("Messages now go to the \"" .. tostring(name) .. "\" window.")
 end
 
 COMMANDS.capture = function()

@@ -144,7 +144,7 @@ local function AnnounceCapture(record)
         return
     end
 
-    print(
+    SYL:Write(
         SYL.colors.highlight
         .. "[SYL]"
         .. SYL.colors.reset

@@ -182,7 +182,7 @@ local function AnnounceDrop(record)
             .. (record.winnerRoll and (" (" .. record.winnerRoll .. ")") or "")
     end
 
-    print(
+    SYL:Write(
         SYL.colors.highlight
         .. "[SYL]"
         .. SYL.colors.reset

@@ -85,6 +85,10 @@ end
 local function RefreshRows()
     for _, row in ipairs(rows) do
         row:SetChecked(row.isChecked())
+
+        if row.describe then
+            row.label:SetText(row.describe())
+        end
     end
 
     if SYL.RefreshMainWindow then
@@ -189,6 +193,20 @@ local TOGGLES = {
         key = "announceCaptures",
     },
     {
+        -- Not a checkbox: it cycles windows and reports where it landed.
+        label = "Output window",
+        action = function()
+            local name = SYL.Output.CycleWindow()
+
+            SYL:Print(
+                "Messages now go to the \"" .. tostring(name) .. "\" window."
+            )
+        end,
+        describe = function()
+            return "Output window: " .. SYL.Output.GetWindowName()
+        end,
+    },
+    {
         label = "Show debug messages",
         key = "debug",
     },
@@ -214,6 +232,13 @@ local function BuildToggleSection(parent)
             index,
             toggle.label,
             function()
+                if toggle.action then
+                    toggle.action()
+                    RefreshRows()
+
+                    return
+                end
+
                 local settings = ShowUsYourLootDB.settings
 
                 settings[toggle.key] = not settings[toggle.key]
@@ -227,7 +252,15 @@ local function BuildToggleSection(parent)
         )
 
         row.isChecked = function()
+            if toggle.action then
+                return false
+            end
+
             return ShowUsYourLootDB.settings[toggle.key] and true or false
+        end
+
+        if toggle.describe then
+            row.describe = toggle.describe
         end
 
         table.insert(rows, row)

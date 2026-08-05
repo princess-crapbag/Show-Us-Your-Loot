@@ -83,6 +83,12 @@ local function InitializeSettings()
     if ShowUsYourLootDB.settings.showMinimapButton == nil then
         ShowUsYourLootDB.settings.showMinimapButton = true
     end
+
+    -- Chat window 1 by default, which is wherever the player already reads
+    -- chat. Moving output is opt-in.
+    if ShowUsYourLootDB.settings.chatFrameIndex == nil then
+        ShowUsYourLootDB.settings.chatFrameIndex = 1
+    end
 end
 
 local function MigrateOldLootDatabase()

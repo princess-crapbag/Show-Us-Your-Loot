@@ -21,7 +21,7 @@ function Reports.RecentLoot(limit)
     SYL:Print("Active-season item records: " .. count)
 
     if count == 0 then
-        print("No item loot has been recorded in this season.")
+        SYL:Write("No item loot has been recorded in this season.")
         return
     end
 
@@ -30,7 +30,7 @@ function Reports.RecentLoot(limit)
     for index = startIndex, count do
         local record = records[index]
 
-        print(
+        SYL:Write(
             index
             .. ". "
             .. tostring(record.recipient)
@@ -72,7 +72,7 @@ function Reports.PlayerLoot(searchName)
     for index = startIndex, #matches do
         local record = matches[index]
 
-        print(
+        SYL:Write(
             record.recipient
             .. " — "
             .. record.itemLink
@@ -106,7 +106,7 @@ function Reports.Drops(limit)
     local drops = SYL.GetActiveDrops()
 
     if #drops == 0 then
-        print(
+        SYL:Write(
             "No drops recorded yet. They are captured on group-loot rolls "
             .. "during an encounter."
         )
@@ -119,7 +119,7 @@ function Reports.Drops(limit)
     for index = startIndex, #drops do
         local record = drops[index]
 
-        print(
+        SYL:Write(
             index
             .. ". "
             .. tostring(record.encounterName or "Unknown boss")
@@ -144,14 +144,14 @@ function Reports.SeasonStatus()
 
     SYL:Print("Active season: " .. season.name)
 
-    print("Season ID: " .. tostring(season.id))
-    print("Drops: " .. #(season.drops or {}))
-    print("Chat loot records: " .. #(season.loot or {}))
-    print("Started: " .. date("%m/%d/%Y %I:%M %p", season.startedAt))
-    print("Archived seasons: " .. #SYL.GetArchives())
+    SYL:Write("Season ID: " .. tostring(season.id))
+    SYL:Write("Drops: " .. #(season.drops or {}))
+    SYL:Write("Chat loot records: " .. #(season.loot or {}))
+    SYL:Write("Started: " .. date("%m/%d/%Y %I:%M %p", season.startedAt))
+    SYL:Write("Archived seasons: " .. #SYL.GetArchives())
 
     if SYL.Guild.IsInGuild() then
-        print(
+        SYL:Write(
             "Guild: "
             .. tostring(SYL.Guild.GetGuildName())
             .. " — "
@@ -159,7 +159,7 @@ function Reports.SeasonStatus()
             .. " members cached"
         )
     else
-        print("Guild: not in a guild, so ranks will not be recorded.")
+        SYL:Write("Guild: not in a guild, so ranks will not be recorded.")
     end
 end
 
@@ -169,12 +169,12 @@ function Reports.Archives()
     SYL:Print("Archived seasons: " .. #archives)
 
     if #archives == 0 then
-        print("No seasons have been archived.")
+        SYL:Write("No seasons have been archived.")
         return
     end
 
     for index, season in ipairs(archives) do
-        print(
+        SYL:Write(
             index
             .. ". "
             .. season.name
@@ -206,21 +206,21 @@ function Reports.APIReport()
     )
 
     if not report.namespacePresent then
-        print("C_LootHistory is NOT present in this client.")
+        SYL:Write("C_LootHistory is NOT present in this client.")
         return
     end
 
     if type(report.functions) ~= "table" then
-        print(tostring(report.functions))
+        SYL:Write(tostring(report.functions))
         return
     end
 
     local names = Utilities.GetSortedKeys(report.functions)
 
-    print("C_LootHistory exposes " .. #names .. " members:")
+    SYL:Write("C_LootHistory exposes " .. #names .. " members:")
 
     for _, name in ipairs(names) do
-        print("  " .. name .. " (" .. report.functions[name] .. ")")
+        SYL:Write("  " .. name .. " (" .. report.functions[name] .. ")")
     end
 
     for _, enumName in ipairs(Utilities.GetSortedKeys(report.enums)) do
@@ -233,13 +233,13 @@ function Reports.APIReport()
                 table.insert(pieces, key .. "=" .. tostring(values[key]))
             end
 
-            print("Enum." .. enumName .. ": " .. table.concat(pieces, ", "))
+            SYL:Write("Enum." .. enumName .. ": " .. table.concat(pieces, ", "))
         else
-            print("Enum." .. enumName .. ": not present")
+            SYL:Write("Enum." .. enumName .. ": not present")
         end
     end
 
-    print(
+    SYL:Write(
         "Events monitored: "
         .. #report.events.registered
         .. " (capture "
@@ -250,7 +250,7 @@ function Reports.APIReport()
     for _, event in ipairs(
         Utilities.GetSortedKeys(report.events.unavailable)
     ) do
-        print("  unavailable: " .. tostring(event))
+        SYL:Write("  unavailable: " .. tostring(event))
     end
 end
 
@@ -259,7 +259,7 @@ function Reports.Help()
     SYL:Print("Commands:")
 
     for _, entry in ipairs(SYL.CommandList.ENTRIES) do
-        print(
+        SYL:Write(
             SYL.CommandList.Format(entry)
             .. " — "
             .. entry.description
