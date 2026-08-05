@@ -8,7 +8,7 @@ local addonName, SYL = ...
 _G.ShowUsYourLoot = SYL
 
 SYL.name = addonName
-SYL.version = "0.0.6"
+SYL.version = "0.0.7"
 
 SYL.colors = {
     addon = "|cff33ff99",

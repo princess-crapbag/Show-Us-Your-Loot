@@ -59,15 +59,26 @@ end
 
 -- Snapshot building lives in Core/LootHistorySnapshot.lua; this module only
 -- decides when to take one and holds the result.
+-- A pull needs an identity of its own: lootListID repeats the next time the
+-- same boss is killed, so stored records would collide without this.
+local function EnsureRunID(encounterID, forceNew)
+    local meta = LootHistory.state.encounterMeta[encounterID] or {}
+
+    if forceNew or not meta.runID then
+        meta.runID = time()
+    end
+
+    LootHistory.state.encounterMeta[encounterID] = meta
+
+    return meta
+end
+
 function LootHistory.GetEncounterSnapshot(encounterID)
     if not encounterID then
         return nil
     end
 
-    return Snapshot.Build(
-        encounterID,
-        LootHistory.state.encounterMeta[encounterID]
-    )
+    return Snapshot.Build(encounterID, EnsureRunID(encounterID))
 end
 
 
@@ -152,6 +163,12 @@ local function RunPendingRefresh()
             LootHistory.GetEncounterSnapshot(pendingEncounterID)
 
         pendingEncounterID = nil
+
+        -- Storage is idempotent, so running it on every settled burst costs
+        -- nothing and means a drop is never missed if a later event is lost.
+        if state.currentSnapshot then
+            SYL.LootHistoryStore.RecordSnapshot(state.currentSnapshot)
+        end
     end
 
     if SYL.RefreshDeveloperWindow then
@@ -191,8 +208,17 @@ local EVENT_HANDLERS = {
         ScheduleRefresh(encounterID)
     end,
 
+    -- A fresh pull, so any previous run of this boss stops being the one new
+    -- drops attach to.
     ENCOUNTER_START = function(encounterID, encounterName, difficultyID, groupSize)
         RememberEncounter(encounterID, encounterName, difficultyID, groupSize)
+        EnsureRunID(encounterID, true)
+    end,
+
+    -- Carries a roll identifier rather than an encounter, so this settles the
+    -- encounter already being tracked.
+    LOOT_ROLLS_COMPLETE = function()
+        ScheduleRefresh(LootHistory.state.currentEncounterID)
     end,
 
     ENCOUNTER_END = function(encounterID, encounterName, difficultyID, groupSize)

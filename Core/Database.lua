@@ -2,7 +2,7 @@
 
 local SYL = _G.ShowUsYourLoot
 
-local DATABASE_VERSION = 2
+local DATABASE_VERSION = 3
 
 local function GenerateSeasonID()
     return "season-" .. date("%Y%m%d-%H%M%S")
@@ -20,6 +20,12 @@ local function CreateSeason(name)
         archivedAt = nil,
 
         loot = {},
+
+        -- Group-loot drops captured from Blizzard's Loot History API. Kept
+        -- apart from `loot`, which holds chat-derived item records with a
+        -- different shape and a compatibility alias pointing at it.
+        drops = {},
+
         raids = {},
         players = {},
         bosses = {},
@@ -32,6 +38,7 @@ end
 
 local function EnsureSeasonStructure(season)
     season.loot = season.loot or {}
+    season.drops = season.drops or {}
     season.raids = season.raids or {}
     season.players = season.players or {}
     season.bosses = season.bosses or {}
@@ -61,9 +68,9 @@ local function InitializeSettings()
         ShowUsYourLootDB.settings.announceCaptures = true
     end
 
-    -- Developer tooling stays off unless it is turned on deliberately.
-    if ShowUsYourLootDB.settings.lootHistoryInspector == nil then
-        ShowUsYourLootDB.settings.lootHistoryInspector = false
+    -- Loot History is the primary source, so capture runs by default.
+    if ShowUsYourLootDB.settings.lootHistoryCapture == nil then
+        ShowUsYourLootDB.settings.lootHistoryCapture = true
     end
 end
 
@@ -175,6 +182,38 @@ function SYL.GetAllLoot()
     return allLoot
 end
 
+function SYL.GetActiveDrops()
+    local season = SYL.GetActiveSeason()
+
+    if not season then
+        return {}
+    end
+
+    season.drops = season.drops or {}
+
+    return season.drops
+end
+
+function SYL.GetAllDrops()
+    local allDrops = {}
+
+    local activeSeason = SYL.GetActiveSeason()
+
+    if activeSeason and activeSeason.drops then
+        for _, record in ipairs(activeSeason.drops) do
+            table.insert(allDrops, record)
+        end
+    end
+
+    for _, season in ipairs(SYL.GetArchives()) do
+        for _, record in ipairs(season.drops or {}) do
+            table.insert(allDrops, record)
+        end
+    end
+
+    return allDrops
+end
+
 function SYL.StartNewSeason(name)
     name = name and name:gsub("^%s+", ""):gsub("%s+$", "")
 
@@ -247,6 +286,7 @@ function SYL.GetSeasonSummary(season)
         id = season.id,
         name = season.name,
         lootCount = #(season.loot or {}),
+        dropCount = #(season.drops or {}),
         startedAt = season.startedAt,
         archivedAt = season.archivedAt,
         locked = season.settings

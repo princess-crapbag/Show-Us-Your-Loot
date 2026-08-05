@@ -16,6 +16,7 @@ local function OnAddonLoaded(loadedAddonName)
     end
 
     SYL.DatabaseInitialize()
+    SYL.LootHistoryStore.RebuildIndex()
 
     local activeSeason = SYL.GetActiveSeason()
 
@@ -23,19 +24,25 @@ local function OnAddonLoaded(loadedAddonName)
         "Database ready. Active season: "
         .. activeSeason.name
         .. " — "
+        .. #activeSeason.drops
+        .. " drops, "
         .. #activeSeason.loot
         .. " item records."
     )
 
-    -- The Loot History inspector is a developer tool, so it stays off until
-    -- it is switched on explicitly with /syl dev.
-    if ShowUsYourLootDB.settings.lootHistoryInspector then
+    -- Loot History is the primary source, so capture runs unless it has been
+    -- turned off deliberately. /syl dev only opens the inspector window.
+    if ShowUsYourLootDB.settings.lootHistoryCapture then
         local registeredCount = SYL.LootHistory.Enable()
 
         SYL:DebugPrint(
-            "Loot History inspector enabled for "
+            "Loot History capture watching "
             .. tostring(registeredCount)
             .. " events."
+        )
+    else
+        SYL:Print(
+            "Loot History capture is off. Turn it on with /syl capture."
         )
     end
 end

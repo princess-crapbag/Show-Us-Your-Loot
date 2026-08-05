@@ -143,6 +143,7 @@ function LootHistorySnapshot.Build(encounterID, encounterMeta)
     }
 
     if encounterMeta then
+        snapshot.runID = encounterMeta.runID
         snapshot.encounterName = encounterMeta.name
         snapshot.difficultyID = encounterMeta.difficultyID
         snapshot.groupSize = encounterMeta.groupSize

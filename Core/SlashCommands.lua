@@ -1,227 +1,50 @@
 -- Core/SlashCommands.lua
 --
--- Every /syl command. Each handler stays short and delegates the real work to
+-- Parses /syl input and dispatches it. Each handler stays short and delegates
+-- the real work: chat output to Core/CommandReports.lua, everything else to
 -- the module that owns it.
 
 local SYL = _G.ShowUsYourLoot
 local Utilities = SYL.Utilities
+local Reports = SYL.CommandReports
 
-local RECENT_LIMIT = 10
-local PLAYER_RESULT_LIMIT = 10
-
-local function PrintRecentLoot(limit)
-    local records = SYL.GetActiveLoot()
-    local count = #records
-
-    SYL:Print("Active-season item records: " .. count)
-
-    if count == 0 then
-        print("No item loot has been recorded in this season.")
-        return
-    end
-
-    local startIndex = math.max(1, count - limit + 1)
-
-    for index = startIndex, count do
-        local record = records[index]
-
-        print(
-            index
-            .. ". "
-            .. tostring(record.recipient)
-            .. " — "
-            .. tostring(record.itemLink)
-            .. " — "
-            .. date("%m/%d %I:%M %p", record.timestamp)
-        )
-    end
-end
-
-local function PrintPlayerLoot(searchName)
-    searchName = Utilities.Trim(searchName)
-
-    if not searchName or searchName == "" then
-        SYL:Print("Enter a player name. Example: /syl player Aimee")
-        return
-    end
-
-    local normalizedSearch = string.lower(searchName)
-    local matches = {}
-
-    for _, record in ipairs(SYL.GetActiveLoot()) do
-        local recipient = string.lower(record.recipient or "")
-
-        if recipient:find(normalizedSearch, 1, true) then
-            table.insert(matches, record)
-        end
-    end
-
-    SYL:Print(
-        #matches
-        .. " active-season records found for "
-        .. searchName
-    )
-
-    local startIndex = math.max(1, #matches - PLAYER_RESULT_LIMIT + 1)
-
-    for index = startIndex, #matches do
-        local record = matches[index]
-
-        print(
-            record.recipient
-            .. " — "
-            .. record.itemLink
-            .. " — "
-            .. date("%m/%d %I:%M %p", record.timestamp)
-        )
-    end
-end
-
-local function PrintSeasonStatus()
-    local season = SYL.GetActiveSeason()
-
-    if not season then
-        SYL:Print("No active season exists.")
-        return
-    end
-
-    SYL:Print("Active season: " .. season.name)
-
-    print("Season ID: " .. tostring(season.id))
-    print("Loot records: " .. #(season.loot or {}))
-    print("Started: " .. date("%m/%d/%Y %I:%M %p", season.startedAt))
-    print("Archived seasons: " .. #SYL.GetArchives())
-end
-
-local function PrintArchives()
-    local archives = SYL.GetArchives()
-
-    SYL:Print("Archived seasons: " .. #archives)
-
-    if #archives == 0 then
-        print("No seasons have been archived.")
-        return
-    end
-
-    for index, season in ipairs(archives) do
-        print(
-            index
-            .. ". "
-            .. season.name
-            .. " — "
-            .. #(season.loot or {})
-            .. " items — archived "
-            .. Utilities.FormatDateOnly(
-                season.archivedAt or season.startedAt
-            )
-        )
-    end
-end
-
--- Dumps what the live client actually exposes, so the API surface can be
--- confirmed without opening the developer window.
-local function PrintAPIReport()
-    local report = SYL.LootHistory.GetAPIReport()
-
-    SYL:Print(
-        "Client "
-        .. tostring(report.clientVersion)
-        .. " build "
-        .. tostring(report.clientBuild)
-        .. " (interface "
-        .. tostring(report.interfaceVersion)
-        .. ")"
-    )
-
-    if not report.namespacePresent then
-        print("C_LootHistory is NOT present in this client.")
-        return
-    end
-
-    if type(report.functions) ~= "table" then
-        print(tostring(report.functions))
-        return
-    end
-
-    local names = Utilities.GetSortedKeys(report.functions)
-
-    print("C_LootHistory exposes " .. #names .. " members:")
-
-    for _, name in ipairs(names) do
-        print("  " .. name .. " (" .. report.functions[name] .. ")")
-    end
-
-    for _, enumName in ipairs(Utilities.GetSortedKeys(report.enums)) do
-        local values = report.enums[enumName]
-
-        if type(values) == "table" then
-            local keys = Utilities.GetSortedKeys(values)
-            local pieces = {}
-
-            for _, key in ipairs(keys) do
-                table.insert(pieces, key .. "=" .. tostring(values[key]))
-            end
-
-            print(
-                "Enum." .. enumName .. ": "
-                .. table.concat(pieces, ", ")
-            )
-        else
-            print("Enum." .. enumName .. ": not present")
-        end
-    end
-
-    print(
-        "Events monitored: "
-        .. #report.events.registered
-        .. " (inspector "
-        .. (SYL.LootHistory.IsEnabled() and "on" or "off")
-        .. ")"
-    )
-
-    for _, event in ipairs(
-        Utilities.GetSortedKeys(report.events.unavailable)
-    ) do
-        print("  unavailable: " .. tostring(event))
-    end
-end
-
-local function PrintHelp()
-    SYL:Print("Commands:")
-
-    print("/syl — Open the loot window")
-    print("/syl recent — Show recent active-season loot")
-    print("/syl count — Show active and all-time totals")
-    print("/syl player NAME — Show active-season loot for a player")
-    print("/syl season — Show active-season information")
-    print("/syl rename NAME — Rename the active season")
-    print("/syl archive NEW SEASON NAME — Archive the current season and start a new one")
-    print("/syl archives — List archived seasons")
-    print("/syl dev — Open the Loot History developer window")
-    print("/syl dev off — Stop monitoring Loot History events")
-    print("/syl api — Print the live Loot History API surface")
-    print("/syl debug — Toggle debug messages")
-    print("/syl announce — Toggle capture messages")
-    print("/syl clear — Clear active-season loot")
-end
+local RECENT_LIMIT = Reports.RECENT_LIMIT
 
 local COMMANDS = {}
 
-COMMANDS.help = PrintHelp
+COMMANDS.help = Reports.Help
+COMMANDS.season = Reports.SeasonStatus
+COMMANDS.archives = Reports.Archives
+COMMANDS.api = Reports.APIReport
+COMMANDS.player = Reports.PlayerLoot
 
 COMMANDS.recent = function()
-    PrintRecentLoot(RECENT_LIMIT)
+    Reports.RecentLoot(RECENT_LIMIT)
+end
+
+COMMANDS.drops = function()
+    Reports.Drops(RECENT_LIMIT)
 end
 
 COMMANDS.count = function()
-    SYL:Print("Active season: " .. #SYL.GetActiveLoot() .. " items")
-    print("All-time: " .. #SYL.GetAllLoot() .. " items")
-end
+    local counts = SYL.LootHistoryStore.GetCounts()
 
-COMMANDS.player = PrintPlayerLoot
-COMMANDS.season = PrintSeasonStatus
-COMMANDS.archives = PrintArchives
-COMMANDS.api = PrintAPIReport
+    SYL:Print(
+        "Active season: "
+        .. counts.active
+        .. " drops, "
+        .. #SYL.GetActiveLoot()
+        .. " chat items"
+    )
+
+    print(
+        "All-time: "
+        .. counts.allTime
+        .. " drops, "
+        .. #SYL.GetAllLoot()
+        .. " chat items"
+    )
+end
 
 COMMANDS.rename = function(remainder)
     local success, errorMessage = SYL.RenameActiveSeason(remainder)
@@ -255,44 +78,54 @@ COMMANDS.archive = function(remainder)
         "Archived "
         .. archivedSeason.name
         .. " with "
-        .. #archivedSeason.loot
+        .. #(archivedSeason.drops or {})
+        .. " drops and "
+        .. #(archivedSeason.loot or {})
         .. " loot records."
     )
 
     print("New active season: " .. newSeason.name)
+
+    SYL.LootHistoryStore.RebuildIndex()
 
     if SYL.RefreshMainWindow then
         SYL:RefreshMainWindow()
     end
 end
 
-COMMANDS.dev = function(remainder)
-    local argument =
-        string.lower(Utilities.Trim(remainder) or "")
-
-    if argument == "off" then
-        SYL.LootHistory.Disable()
-        ShowUsYourLootDB.settings.lootHistoryInspector = false
-
-        SYL:Print("Loot History inspector disabled.")
-
-        return
-    end
-
+COMMANDS.dev = function()
+    -- Capture runs on its own; this only opens the inspector window.
     if not SYL.LootHistory.IsEnabled() then
-        local registeredCount = SYL.LootHistory.Enable()
-
-        ShowUsYourLootDB.settings.lootHistoryInspector = true
-
         SYL:Print(
-            "Loot History inspector enabled — monitoring "
-            .. tostring(registeredCount)
-            .. " events."
+            "Loot History capture is off, so the inspector will stay empty. "
+            .. "Turn it on with /syl capture."
         )
     end
 
     if SYL.OpenDeveloperWindow then
         SYL:OpenDeveloperWindow()
+    end
+end
+
+COMMANDS.capture = function()
+    local settings = ShowUsYourLootDB.settings
+
+    settings.lootHistoryCapture = not settings.lootHistoryCapture
+
+    if settings.lootHistoryCapture then
+        local registeredCount = SYL.LootHistory.Enable()
+
+        SYL:Print(
+            "Loot History capture enabled — watching "
+            .. tostring(registeredCount)
+            .. " events."
+        )
+    else
+        SYL.LootHistory.Disable()
+
+        SYL:Print(
+            "Loot History capture disabled. Chat capture still records loot."
+        )
     end
 end
 
@@ -321,12 +154,24 @@ end
 COMMANDS.clear = function()
     local activeSeason = SYL.GetActiveSeason()
 
+    local clearedDrops = #(activeSeason.drops or {})
+    local clearedLoot = #(activeSeason.loot or {})
+
     activeSeason.loot = {}
+    activeSeason.drops = {}
 
     ShowUsYourLootDB.loot = activeSeason.loot
     ShowUsYourLootDB.recentRecordIDs = {}
 
-    SYL:Print("Active-season loot history cleared.")
+    SYL.LootHistoryStore.RebuildIndex()
+
+    SYL:Print(
+        "Active season cleared: "
+        .. clearedDrops
+        .. " drops and "
+        .. clearedLoot
+        .. " chat items removed. Archived seasons are untouched."
+    )
 
     if SYL.RefreshMainWindow then
         SYL:RefreshMainWindow()
@@ -347,7 +192,7 @@ SlashCmdList["SHOWUSYOURLOOT"] = function(input)
         if SYL.OpenMainWindow then
             SYL:OpenMainWindow()
         else
-            PrintRecentLoot(RECENT_LIMIT)
+            Reports.RecentLoot(RECENT_LIMIT)
         end
 
         return
@@ -360,5 +205,5 @@ SlashCmdList["SHOWUSYOURLOOT"] = function(input)
         return
     end
 
-    PrintHelp()
+    Reports.Help()
 end

@@ -23,8 +23,7 @@ Implications worth deciding before building:
   wanted alongside it.
 - Filter options should be derived from the records actually present, not
   a hardcoded list, so a new raid tier populates them automatically.
-- Date multi-select probably means picking raid nights or days rather
-  than arbitrary ranges. Worth confirming which.
+- Date filtering uses arbitrary start/end ranges.
 - Filters need to compose with the existing Active / All-Time / Archive
   views rather than replace them.
 
@@ -37,21 +36,18 @@ Two interaction ideas, possibly both:
 
 Then archive everything selected in one action.
 
-Open questions to settle before implementing:
+Decided:
 
-- **"Archive" currently means something else.** Today it archives an
-  entire *season* — locks it and starts a new one. Archiving individual
-  loot lines is a new concept and needs its own name and semantics, or
-  the two will be confused in the UI.
-- What should archiving a line actually do? Candidates: hide it from the
-  default view, exclude it from fairness/analytics maths, or move it into
-  a separate store. These are different features.
-- Loot records already carry unused `archived` and
-  `excludedFromAnalytics` booleans (set in `Core/LootCapture.lua`), so
-  there is already a home for this without a schema migration.
-- Nothing should ever be deleted, per the project's data philosophy.
-  Archiving must stay reversible, which means the UI needs a way to view
-  and un-archive lines.
+- The per-line action is **Hide**, stored as a `hidden` boolean on the
+  record. "Archive" stays reserved for archiving a whole season, so the
+  two never get confused.
+- Hiding is purely a display state and always reversible. Nothing is
+  deleted, and a "Show hidden" toggle brings lines back.
+- Hidden lines still count for analytics. Excluding a line from fairness
+  maths is a separate concern and keeps its own
+  `excludedFromAnalytics` flag.
+- Date filtering is **arbitrary ranges**, not a list of raid nights.
+- Both a free-text search box **and** multi-select filters, side by side.
 
 ## Relationship to Loot History storage
 
