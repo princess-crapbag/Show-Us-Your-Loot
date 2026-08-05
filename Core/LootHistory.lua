@@ -33,7 +33,8 @@ LootHistory.state = {
     currentLootListID = nil,
     currentSnapshot = nil,
 
-    encounterNames = {},
+    -- encounterID -> { name, difficultyID, groupSize }
+    encounterMeta = {},
 }
 
 -- Thin delegates so callers only ever need SYL.LootHistory.
@@ -65,7 +66,7 @@ function LootHistory.GetEncounterSnapshot(encounterID)
 
     return Snapshot.Build(
         encounterID,
-        LootHistory.state.encounterNames[encounterID]
+        LootHistory.state.encounterMeta[encounterID]
     )
 end
 
@@ -112,54 +113,95 @@ local function RecordEvent(event, ...)
     return entry
 end
 
--- Keeps a friendly boss name for encounter IDs, which the loot history data
--- itself does not appear to carry.
-local function RememberEncounterName(encounterID, name)
-    if encounterID and name and name ~= "" then
-        LootHistory.state.encounterNames[encounterID] = name
-    end
-end
-
-local function RefreshSnapshotFor(encounterID)
+-- The loot history API carries encounterName itself, but not difficulty or
+-- group size, so those are kept from ENCOUNTER_START/ENCOUNTER_END.
+local function RememberEncounter(encounterID, name, difficultyID, groupSize)
     if not encounterID then
         return
     end
 
+    local meta = LootHistory.state.encounterMeta[encounterID] or {}
+
+    if name and name ~= "" then
+        meta.name = name
+    end
+
+    meta.difficultyID = difficultyID or meta.difficultyID
+    meta.groupSize = groupSize or meta.groupSize
+
+    LootHistory.state.encounterMeta[encounterID] = meta
+end
+
+-- A single 25-player boss produced over 200 LOOT_HISTORY_UPDATE_DROP events
+-- in about 50 seconds. Rebuilding every drop and re-rendering the developer
+-- window on each one is wasted work during the busiest moment of a raid, so
+-- bursts collapse into one refresh.
+local REFRESH_DEBOUNCE_SECONDS = 0.5
+
+local refreshPending = false
+local pendingEncounterID
+
+local function RunPendingRefresh()
+    refreshPending = false
+
     local state = LootHistory.state
 
-    state.currentEncounterID = encounterID
-    state.currentSnapshot = LootHistory.GetEncounterSnapshot(encounterID)
+    if pendingEncounterID then
+        state.currentEncounterID = pendingEncounterID
+        state.currentSnapshot =
+            LootHistory.GetEncounterSnapshot(pendingEncounterID)
+
+        pendingEncounterID = nil
+    end
+
+    if SYL.RefreshDeveloperWindow then
+        SYL:RefreshDeveloperWindow()
+    end
+end
+
+local function ScheduleRefresh(encounterID)
+    if encounterID then
+        pendingEncounterID = encounterID
+    end
+
+    if refreshPending then
+        return
+    end
+
+    refreshPending = true
+
+    C_Timer.After(REFRESH_DEBOUNCE_SECONDS, RunPendingRefresh)
 end
 
 local EVENT_HANDLERS = {
     LOOT_HISTORY_UPDATE_ENCOUNTER = function(encounterID)
-        RefreshSnapshotFor(encounterID)
+        ScheduleRefresh(encounterID)
     end,
 
     LOOT_HISTORY_UPDATE_DROP = function(encounterID, lootListID)
         LootHistory.state.currentLootListID = lootListID
-        RefreshSnapshotFor(encounterID)
+        ScheduleRefresh(encounterID)
     end,
 
     LOOT_HISTORY_GO_TO_ENCOUNTER = function(encounterID)
-        RefreshSnapshotFor(encounterID)
+        ScheduleRefresh(encounterID)
     end,
 
     ENCOUNTER_LOOT_RECEIVED = function(encounterID)
-        RefreshSnapshotFor(encounterID)
+        ScheduleRefresh(encounterID)
     end,
 
-    ENCOUNTER_START = function(encounterID, encounterName)
-        RememberEncounterName(encounterID, encounterName)
+    ENCOUNTER_START = function(encounterID, encounterName, difficultyID, groupSize)
+        RememberEncounter(encounterID, encounterName, difficultyID, groupSize)
     end,
 
-    ENCOUNTER_END = function(encounterID, encounterName)
-        RememberEncounterName(encounterID, encounterName)
-        RefreshSnapshotFor(encounterID)
+    ENCOUNTER_END = function(encounterID, encounterName, difficultyID, groupSize)
+        RememberEncounter(encounterID, encounterName, difficultyID, groupSize)
+        ScheduleRefresh(encounterID)
     end,
 
     BOSS_KILL = function(encounterID, name)
-        RememberEncounterName(encounterID, name)
+        RememberEncounter(encounterID, name)
     end,
 }
 
@@ -191,9 +233,9 @@ local function OnEvent(_, event, ...)
         end
     end
 
-    if SYL.RefreshDeveloperWindow then
-        SYL:RefreshDeveloperWindow()
-    end
+    -- Handlers that touch an encounter schedule their own refresh. This one
+    -- keeps the event log on screen current for everything else.
+    ScheduleRefresh(nil)
 end
 
 --------------------------------------------------------------------------

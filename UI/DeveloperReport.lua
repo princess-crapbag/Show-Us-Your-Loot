@@ -117,15 +117,12 @@ local function AppendPlayers(lines, players, playerError)
             .. "]  state="
             .. tostring(player.rollStateText)
             .. "  roll="
-            .. tostring(player.roll)
-            .. "  winner="
-            .. tostring(player.isWinner)
+            .. (player.roll and tostring(player.roll) or "-")
+            .. (player.isWinner and "  WINNER" or "")
+            .. (player.isSelf and "  (you)" or "")
         )
 
-        table.insert(
-            lines,
-            IndentBlock(Serializer.ToText(player.raw, "raw"), 10)
-        )
+        table.insert(lines, "           guid: " .. tostring(player.guid))
     end
 end
 
@@ -144,19 +141,23 @@ local function AppendDrop(lines, drop, position)
 
     table.insert(
         lines,
-        "      isCurrentlyRolling: " .. tostring(drop.isCurrentlyRolling)
+        "      winner: "
+        .. tostring(drop.winnerName)
+        .. "  roll="
+        .. (drop.winnerRoll and tostring(drop.winnerRoll) or "-")
+        .. "  ["
+        .. tostring(drop.winnerClass)
+        .. "]"
     )
-
-    table.insert(lines, "      winner: " .. tostring(drop.winnerName))
 
     table.insert(
         lines,
-        "      playerRollState: " .. tostring(drop.rollStateText)
+        "      winnerGUID: " .. tostring(drop.winnerGUID)
     )
 
     table.insert(
         lines,
-        "      playerListKey: " .. tostring(drop.playerListKey)
+        "      your roll state: " .. tostring(drop.ownRollStateText)
     )
 
     AppendPlayers(lines, drop.players, drop.playerError)
@@ -165,16 +166,6 @@ local function AppendDrop(lines, drop, position)
         lines,
         IndentBlock(Serializer.ToText(drop.raw, "raw drop"), 6)
     )
-
-    if drop.detail then
-        table.insert(
-            lines,
-            IndentBlock(
-                Serializer.ToText(drop.detail, "raw GetSortedInfoForDrop"),
-                6
-            )
-        )
-    end
 
     table.insert(lines, "")
 end
@@ -197,6 +188,14 @@ local function AppendEncounterSection(lines)
     table.insert(
         lines,
         "  encounterName: " .. tostring(snapshot.encounterName)
+    )
+
+    table.insert(
+        lines,
+        "  difficultyID: "
+        .. tostring(snapshot.difficultyID)
+        .. "  groupSize: "
+        .. tostring(snapshot.groupSize)
     )
 
     table.insert(

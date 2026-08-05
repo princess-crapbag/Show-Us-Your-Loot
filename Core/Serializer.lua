@@ -19,10 +19,16 @@ local JSON_ESCAPES = {
     ["\n"] = "\\n",
     ["\r"] = "\\r",
     ["\t"] = "\\t",
+
+    -- A raw pipe is WoW's escape-sequence marker. Left alone, the edit box
+    -- renders |cff...|Hitem:...|h[Name]|h|r as the coloured link text and the
+    -- item ID is lost the moment the JSON is copied out. | is valid JSON
+    -- that decodes back to "|", and the renderer leaves it alone.
+    ["|"] = "\\u007c",
 }
 
 local function EscapeJSONString(text)
-    return (text:gsub('[%c"\\]', function(character)
+    return (text:gsub('[%c"\\|]', function(character)
         return JSON_ESCAPES[character]
             or string.format("\\u%04x", character:byte())
     end))

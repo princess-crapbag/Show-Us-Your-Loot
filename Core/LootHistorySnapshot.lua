@@ -6,8 +6,34 @@
 -- Stateless by design. Core/LootHistory.lua owns the capture state and calls
 -- Build() whenever the client tells it something changed.
 --
--- Every entry keeps Blizzard's own table under `raw` next to the fields we
--- derive from it, because the derived names are still provisional.
+-- CONFIRMED SHAPES (live 12.0.7, build 68974, Rotmire kill)
+--
+-- GetSortedDropsForEncounter(encounterID) -> array of drop tables. Each drop
+-- already carries its full roll list, so GetSortedInfoForDrop returns an
+-- identical table and is only used as a fallback:
+--   allPassed        boolean
+--   currentLeader    roll info captured mid-roll -- NOT the winner, see below
+--   duration         milliseconds the roll ran (330000)
+--   isTied           unreliable; observed true on drops with no tie at all
+--   itemHyperlink    full |cff..|Hitem:..|h[Name]|h|r link
+--   lootListID       number, unique per drop within the encounter
+--   playerRollState  the viewing player's own state, not the winner's
+--   rollInfos        array of per-player roll info
+--   startTime        unix seconds
+--   winner           roll info for the actual winner
+--
+-- Each entry in rollInfos:
+--   playerName   name WITHOUT realm ("Dravok") -- ambiguous across realms
+--   playerGUID   "Player-160-0C155216" -- the only safe identity key
+--   playerClass  class file name ("HUNTER"), usable for class colouring
+--   state        Enum.EncounterLootDropRollState
+--   roll         1-100, ABSENT unless the player actually rolled
+--   isWinner     boolean
+--   isSelf       boolean
+--
+-- GetInfoForEncounter / GetAllEncounterInfos:
+--   { encounterID, encounterName, startTime, duration }
+--   encounterName is present, so boss names do not depend on ENCOUNTER_END.
 
 local SYL = _G.ShowUsYourLoot
 local Utilities = SYL.Utilities
@@ -16,39 +42,6 @@ local API = SYL.LootHistoryAPI
 local LootHistorySnapshot = {}
 SYL.LootHistorySnapshot = LootHistorySnapshot
 
--- The live client exposes no per-player accessor, so roll data has to arrive
--- nested inside the result of GetSortedInfoForDrop. We do not yet know which
--- field carries it: check the likely names first, then fall back to any array
--- of tables, and always report which key was used so the guess can be
--- confirmed or corrected from a real raid.
-local PLAYER_LIST_KEYS = {
-    "rollInfos",
-    "players",
-    "playerInfos",
-    "rolls",
-}
-
-local function FindPlayerList(detail)
-    for _, key in ipairs(PLAYER_LIST_KEYS) do
-        local candidate = detail[key]
-
-        if type(candidate) == "table" and #candidate > 0 then
-            return candidate, key
-        end
-    end
-
-    for key, value in pairs(detail) do
-        if type(value) == "table"
-            and #value > 0
-            and type(value[1]) == "table"
-        then
-            return value, key
-        end
-    end
-
-    return nil, nil
-end
-
 local function BuildPlayerEntry(index, rawPlayer)
     local copied = API.CopyValue(rawPlayer)
 
@@ -56,103 +49,115 @@ local function BuildPlayerEntry(index, rawPlayer)
         index = index,
         raw = copied,
 
-        name = copied.playerName or copied.name,
-        class = copied.playerClass or copied.class,
-        rollState = copied.state or copied.rollState,
-        rollStateText = API.DescribeRollState(
-            copied.state or copied.rollState
-        ),
-        roll = copied.roll or copied.rollValue,
+        name = copied.playerName,
+        guid = copied.playerGUID,
+        class = copied.playerClass,
+
+        rollState = copied.state,
+        rollStateText = API.DescribeRollState(copied.state),
+
+        -- Absent for Pass, Transmog and NoRoll: those players never rolled.
+        roll = copied.roll,
+
         isWinner = copied.isWinner,
+        isSelf = copied.isSelf,
     }
 end
 
--- Returns the raw detail table, the derived player entries, an error string
--- when players could not be found, and the key the players were found under.
-local function BuildDropDetail(encounterID, lootListID)
-    local results, reason =
-        API.SafeCall("GetSortedInfoForDrop", encounterID, lootListID)
-
-    if not results then
-        return nil, {}, reason
-    end
-
-    local detail = results[1]
-
-    if type(detail) ~= "table" then
-        return nil, {}, "no drop detail returned"
-    end
-
-    local copied = API.CopyValue(detail)
-    local rawPlayers, sourceKey = FindPlayerList(copied)
-
-    if not rawPlayers then
-        return copied, {}, "no player list found in drop detail"
-    end
-
+local function BuildPlayerEntries(rollInfos)
     local players = {}
 
-    for index, rawPlayer in ipairs(rawPlayers) do
+    if type(rollInfos) ~= "table" then
+        return players
+    end
+
+    for index, rawPlayer in ipairs(rollInfos) do
         table.insert(players, BuildPlayerEntry(index, rawPlayer))
     end
 
-    return copied, players, nil, sourceKey
+    return players
+end
+
+-- Only called when a drop somehow arrives without its roll list.
+local function FetchDropDetail(encounterID, lootListID)
+    local results = API.SafeCall(
+        "GetSortedInfoForDrop", encounterID, lootListID
+    )
+
+    if not results or type(results[1]) ~= "table" then
+        return nil
+    end
+
+    return API.CopyValue(results[1])
 end
 
 local function BuildDropEntry(encounterID, rawDrop)
     local copied = API.CopyValue(rawDrop)
-    local lootListID = copied.lootListID
+    local rollInfos = copied.rollInfos
 
-    -- playerListKey comes back separately rather than being written into the
-    -- detail table, so the raw dump stays purely Blizzard's own data.
-    local detail, players, playerError, playerListKey =
-        BuildDropDetail(encounterID, lootListID)
+    if type(rollInfos) ~= "table" then
+        local detail = FetchDropDetail(encounterID, copied.lootListID)
 
-    local winner = copied.winner or (detail and detail.winner)
+        rollInfos = detail and detail.rollInfos
+        copied.recoveredFromDetail = detail ~= nil
+    end
+
+    local winner = copied.winner
 
     return {
-        lootListID = lootListID,
+        lootListID = copied.lootListID,
         raw = copied,
-        detail = detail,
 
-        itemHyperlink = copied.itemHyperlink or copied.itemLink,
-        itemID = Utilities.GetItemIDFromLink(
-            copied.itemHyperlink or copied.itemLink
-        ),
+        itemHyperlink = copied.itemHyperlink,
+        itemID = Utilities.GetItemIDFromLink(copied.itemHyperlink),
+        itemName = Utilities.GetItemNameFromLink(copied.itemHyperlink),
+
         allPassed = copied.allPassed,
-        isCurrentlyRolling = copied.isCurrentlyRolling,
+        startTime = copied.startTime,
+        duration = copied.duration,
 
-        winnerName = type(winner) == "table"
-            and (winner.playerName or winner.name)
-            or winner,
+        -- winner is authoritative. currentLeader is a mid-roll snapshot and
+        -- has been observed naming a different player than the eventual
+        -- winner when two players tie on the same roll.
+        winnerName = winner and winner.playerName,
+        winnerGUID = winner and winner.playerGUID,
+        winnerClass = winner and winner.playerClass,
+        winnerRoll = winner and winner.roll,
 
-        rollStateText = API.DescribeRollState(copied.playerRollState),
+        -- The viewing player's own choice on this drop, not the winner's.
+        ownRollStateText = API.DescribeRollState(copied.playerRollState),
 
-        playerListKey = playerListKey,
-        players = players,
-        playerError = playerError,
+        players = BuildPlayerEntries(rollInfos),
     }
 end
 
-function LootHistorySnapshot.Build(encounterID, encounterName)
+function LootHistorySnapshot.Build(encounterID, encounterMeta)
     if not encounterID then
         return nil
     end
 
     local snapshot = {
         encounterID = encounterID,
-        encounterName = encounterName,
         capturedAt = time(),
         drops = {},
     }
 
-    -- Encounter-level detail. Blizzard may well carry the boss name here,
-    -- which would remove our reliance on ENCOUNTER_END for it.
+    if encounterMeta then
+        snapshot.encounterName = encounterMeta.name
+        snapshot.difficultyID = encounterMeta.difficultyID
+        snapshot.groupSize = encounterMeta.groupSize
+    end
+
     local infoResults, infoError =
         API.SafeCall("GetInfoForEncounter", encounterID)
 
-    if infoResults then
+    if infoResults and type(infoResults[1]) == "table" then
         snapshot.encounterInfo = API.CopyValue(infoResults[1])
+
+        -- The API's own name wins over anything we cached from an event.
+        snapshot.encounterName =
+            snapshot.encounterInfo.encounterName
+            or snapshot.encounterName
     else
         snapshot.encounterInfoError = infoError
     end
