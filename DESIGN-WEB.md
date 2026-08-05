@@ -137,3 +137,73 @@ Independent of the decision, and the sensible first step:
    service with all that implies.
 2. Which sync actually matters first — officers merging their data, your
    own devices, or a read-only page for the guild?
+
+## True sync with a hosted page — architecture
+
+Requested 2026-08-05. This section is the concrete version of Option 4.
+
+### The piece that cannot be removed
+
+The addon cannot make a web request, so something on the PC must carry the
+data out. Every design below has three parts and there is no version with
+two:
+
+    WoW  ->  SavedVariables.lua  ->  uploader  ->  API  ->  web page
+
+The uploader is a small background program that watches the file and posts
+it when it changes. SavedVariables is only written on `/reload` or logout,
+so "live" means "within a reload", never mid-pull. Worth setting that
+expectation early: a raider cannot refresh the page mid-fight and see the
+last kill.
+
+### What the uploader does
+
+- Watches `WTF/Account/<ACCOUNT>/SavedVariables/ShowUsYourLoot.lua`
+- Parses it, converts to the schema v1 JSON the addon already produces
+- POSTs to a configured URL with a key identifying the guild
+- Retries on failure and keeps a local copy, so a dropped connection never
+  loses a raid night
+
+It is stack-agnostic: point it at any endpoint. Writing it does not depend
+on choosing a host.
+
+### Merge on the server
+
+Several officers upload. The server merges rather than overwrites, which
+the existing ids already make safe:
+
+- Drops key on `runID-encounterID-lootListID`
+- Raid sessions key on instance, difficulty and date
+- Players key on GUID
+
+Rule: a record with a roll list always beats one without, so a full local
+capture is never replaced by a partial synced header. Otherwise newest
+wins. This is the same rule the in-game sync already follows.
+
+### Hosting options
+
+**Serverless (recommended)** — Cloudflare Workers plus KV, or Supabase.
+Free tier covers a guild comfortably. Real API, real auth, a real URL,
+nothing to patch or keep running.
+
+**Static plus private repo** — uploader commits JSON to a private repo,
+page served from Pages. Free and versioned, but authentication is awkward
+and the data is one misconfiguration away from public.
+
+**A box you rent** — most control, most maintenance. Hard to justify here.
+
+### What this needs that the addon never did
+
+- An account somewhere, and possibly a card on file
+- A decision about who can read the page. Guild loot is not secret, but it
+  is a list of real people and their history, and a public URL is a public
+  URL
+- Someone to keep it alive. An addon that stops being updated still works;
+  a service that stops being paid for disappears
+
+### Open decisions
+
+1. Where does it live? This determines the API and the auth model.
+2. Who can see it — you only, officers, the whole guild, anyone with a
+   link?
+3. Does the uploader run only on your machine, or on every officer's?
