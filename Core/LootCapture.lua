@@ -175,6 +175,14 @@ function LootCapture.HandleChatMessage(message)
 
     item.rawMessage = message
 
+    if not SYL.ItemQuality.ShouldTrackLink(item.itemLink) then
+        SYL:DebugPrint(
+            "Skipped by quality filter: " .. tostring(item.itemLink)
+        )
+
+        return
+    end
+
     local season = SYL.GetActiveSeason()
 
     if not season then

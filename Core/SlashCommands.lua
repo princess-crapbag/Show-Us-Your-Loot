@@ -93,6 +93,12 @@ COMMANDS.archive = function(remainder)
     end
 end
 
+COMMANDS.settings = function()
+    if SYL.OpenSettingsWindow then
+        SYL:OpenSettingsWindow()
+    end
+end
+
 COMMANDS.dev = function()
     -- Capture runs on its own; this only opens the inspector window.
     if not SYL.LootHistory.IsEnabled() then

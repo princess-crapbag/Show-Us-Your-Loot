@@ -85,6 +85,18 @@ function Filters.CountSelected(state, field)
     return count
 end
 
+function Filters.SelectAll(state, field, values)
+    local set = state.selected[field]
+
+    if not set then
+        return
+    end
+
+    for _, value in ipairs(values or {}) do
+        set[value] = true
+    end
+end
+
 function Filters.ClearField(state, field)
     state.selected[field] = {}
 end

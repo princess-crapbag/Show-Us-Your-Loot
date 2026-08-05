@@ -47,6 +47,14 @@ function Selection.Toggle(selection, record)
     Selection.Set(selection, record, not Selection.IsSelected(selection, record))
 end
 
+-- Selects everything currently on the list, which after filtering means
+-- everything the filters matched rather than everything in the season.
+function Selection.SelectAll(selection, records)
+    for _, record in ipairs(records) do
+        Selection.Set(selection, record, true)
+    end
+end
+
 function Selection.Clear(selection)
     selection.ids = {}
     selection.count = 0

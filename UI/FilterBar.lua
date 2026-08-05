@@ -109,6 +109,24 @@ local function CreateDateInput(parent, width, placeholder, state, key, endOfDay,
     return input
 end
 
+-- The word sits outside the box so the placeholder only has to fit the date
+-- format. Packing "From YYYY-MM-DD" inside a 92px box is what made these look
+-- cut off.
+local function CreateDateField(parent, labelText, state, key, endOfDay, onChange, anchorTo)
+    local label = Theme.CreateText(parent, Theme.sizes.rowSmall, "textMuted")
+
+    label:SetText(labelText)
+    label:SetWidth(label:GetStringWidth() + 2)
+    label:SetPoint("LEFT", anchorTo, "RIGHT", 10, 0)
+
+    local input =
+        CreateDateInput(parent, 92, "YYYY-MM-DD", state, key, endOfDay, onChange)
+
+    input:SetPoint("LEFT", label, "RIGHT", 4, 0)
+
+    return input
+end
+
 --------------------------------------------------------------------------
 -- Assembly
 --------------------------------------------------------------------------
@@ -122,7 +140,7 @@ function FilterBar.Create(parent, config)
     bar:SetHeight(BAR_HEIGHT)
     bar.dropdowns = {}
 
-    local search = CreateTextInput(bar, 170, "Search…")
+    local search = CreateTextInput(bar, 150, "Search…")
 
     search:SetPoint("LEFT", 0, 0)
 
@@ -143,7 +161,7 @@ function FilterBar.Create(parent, config)
     for _, field in ipairs(Filters.FIELDS) do
         local dropdown = FilterDropdown.Create(bar, {
             label = Filters.LABELS[field],
-            width = 104,
+            width = 98,
 
             getOptions = function()
                 return Filters.DeriveOptions(
@@ -166,6 +184,20 @@ function FilterBar.Create(parent, config)
                 onChange()
             end,
 
+            onSelectAll = function()
+                Filters.SelectAll(
+                    state,
+                    field,
+                    Filters.DeriveOptions(
+                        config.getRecords(),
+                        config.getFields(),
+                        field
+                    )
+                )
+
+                onChange()
+            end,
+
             onClear = function()
                 Filters.ClearField(state, field)
                 onChange()
@@ -178,19 +210,17 @@ function FilterBar.Create(parent, config)
         previous = dropdown
     end
 
-    local fromInput = CreateDateInput(
-        bar, 92, "From YYYY-MM-DD", state, "dateFrom", false, onChange
+    local fromInput = CreateDateField(
+        bar, "From", state, "dateFrom", false, onChange, previous
     )
 
-    fromInput:SetPoint("LEFT", previous, "RIGHT", CONTROL_GAP, 0)
-
-    local toInput = CreateDateInput(
-        bar, 92, "To YYYY-MM-DD", state, "dateTo", true, onChange
+    local toInput = CreateDateField(
+        bar, "To", state, "dateTo", true, onChange, fromInput
     )
 
-    toInput:SetPoint("LEFT", fromInput, "RIGHT", CONTROL_GAP, 0)
-
-    local clearButton = Theme.CreateButton(bar, 56, BAR_HEIGHT, "Clear", function()
+    -- Anchored to the right edge rather than flowed from the left, so nothing
+    -- widening ahead of it can push it off the bar.
+    local clearButton = Theme.CreateButton(bar, 54, BAR_HEIGHT, "Clear", function()
         Filters.ClearAll(state)
 
         search.editBox:SetText("")
@@ -203,7 +233,7 @@ function FilterBar.Create(parent, config)
         onChange()
     end)
 
-    clearButton:SetPoint("LEFT", toInput, "RIGHT", CONTROL_GAP, 0)
+    clearButton:SetPoint("RIGHT", 0, 0)
 
     bar.Refresh = function(self)
         for _, dropdown in pairs(self.dropdowns) do

@@ -39,7 +39,7 @@ function SelectionBar.Create(parent, view, config)
 
     bar.action:SetPoint("RIGHT", bar.showHidden, "LEFT", -6, 0)
 
-    bar.deselect = Theme.CreateButton(parent, 70, 20, "Deselect", function()
+    bar.deselect = Theme.CreateButton(parent, 78, 20, "Deselect all", function()
         Selection.Clear(view.selection)
 
         onChanged()
@@ -47,8 +47,18 @@ function SelectionBar.Create(parent, view, config)
 
     bar.deselect:SetPoint("RIGHT", bar.action, "LEFT", -6, 0)
 
+    -- Selects what is on the list, which after filtering means what the
+    -- filters matched rather than the whole season.
+    bar.selectAll = Theme.CreateButton(parent, 68, 20, "Select all", function()
+        Selection.SelectAll(view.selection, ListSources.GetFiltered(view))
+
+        onChanged()
+    end)
+
+    bar.selectAll:SetPoint("RIGHT", bar.deselect, "LEFT", -6, 0)
+
     bar.countText = Theme.CreateText(parent, Theme.sizes.subtitle, "accent")
-    bar.countText:SetPoint("RIGHT", bar.deselect, "LEFT", -10, 0)
+    bar.countText:SetPoint("RIGHT", bar.selectAll, "LEFT", -10, 0)
     bar.countText:SetJustifyH("RIGHT")
     bar.countText:Hide()
 
@@ -78,6 +88,13 @@ function SelectionBar.Create(parent, view, config)
     bar.ApplyHidden = function()
         local records = ListSources.GetFiltered(view)
         local count = view.selection.count
+
+        if count == 0 then
+            SYL:Print("Tick some rows first, or use Select all.")
+
+            return
+        end
+
         local hiddenCount = Selection.CountHidden(view.selection, records)
 
         -- A mixed selection hides, because that is what the button offered.
@@ -102,25 +119,36 @@ function SelectionBar.Create(parent, view, config)
         local count = view.selection.count
         local onList = view.mode ~= "archives"
 
-        if onList then
-            self.showHidden:Show()
-
-            self.showHidden.label:SetText(
-                view.showHidden and "Showing hidden" or "Show hidden"
-            )
-
-            Theme.SetTextColor(
-                self.showHidden.label,
-                view.showHidden and "accent" or "textPrimary"
-            )
-        else
-            self.showHidden:Hide()
+        -- Buttons stay put rather than appearing and disappearing, so the row
+        -- does not reflow every time the selection changes.
+        for _, control in ipairs({
+            self.showHidden, self.action, self.deselect, self.selectAll,
+        }) do
+            if onList then
+                control:Show()
+            else
+                control:Hide()
+            end
         end
 
-        if count == 0 or not onList then
+        if not onList then
             self.countText:Hide()
-            self.action:Hide()
-            self.deselect:Hide()
+
+            return
+        end
+
+        self.showHidden.label:SetText(
+            view.showHidden and "Showing hidden" or "Show hidden"
+        )
+
+        Theme.SetTextColor(
+            self.showHidden.label,
+            view.showHidden and "accent" or "textPrimary"
+        )
+
+        if count == 0 then
+            self.countText:Hide()
+            self.action.label:SetText("Hide")
 
             return
         end
@@ -134,8 +162,6 @@ function SelectionBar.Create(parent, view, config)
 
         self.countText:SetText(count .. " selected")
         self.countText:Show()
-        self.action:Show()
-        self.deselect:Show()
     end
 
     return bar

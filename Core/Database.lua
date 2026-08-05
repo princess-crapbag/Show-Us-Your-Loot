@@ -72,6 +72,13 @@ local function InitializeSettings()
     if ShowUsYourLootDB.settings.lootHistoryCapture == nil then
         ShowUsYourLootDB.settings.lootHistoryCapture = true
     end
+
+    -- Every quality is recorded until one is turned off, so a fresh install
+    -- never quietly misses loot.
+    if ShowUsYourLootDB.settings.trackedQualities == nil then
+        ShowUsYourLootDB.settings.trackedQualities =
+            SYL.ItemQuality.GetDefaults()
+    end
 end
 
 local function MigrateOldLootDatabase()

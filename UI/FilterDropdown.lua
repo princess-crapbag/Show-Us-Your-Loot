@@ -165,12 +165,21 @@ local function CreatePanel(button, config)
 
     panel.headerText:SetPoint("TOPLEFT", PANEL_PADDING + 4, -8)
 
-    panel.clearButton = Theme.CreateButton(panel, 46, 16, "Clear", function()
+    panel.noneButton = Theme.CreateButton(panel, 44, 16, "None", function()
         config.onClear()
         RefreshRows(panel)
+        button:UpdateLabel()
     end)
 
-    panel.clearButton:SetPoint("TOPRIGHT", -PANEL_PADDING, -6)
+    panel.noneButton:SetPoint("TOPRIGHT", -PANEL_PADDING, -6)
+
+    panel.allButton = Theme.CreateButton(panel, 44, 16, "All", function()
+        config.onSelectAll()
+        RefreshRows(panel)
+        button:UpdateLabel()
+    end)
+
+    panel.allButton:SetPoint("RIGHT", panel.noneButton, "LEFT", -4, 0)
 
     panel.emptyText =
         Theme.CreateText(panel, Theme.sizes.rowSmall, "textMuted")

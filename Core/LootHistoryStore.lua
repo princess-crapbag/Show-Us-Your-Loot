@@ -210,7 +210,9 @@ function Store.RecordSnapshot(snapshot)
     local added, updated = 0, 0
 
     for _, drop in ipairs(snapshot.drops or {}) do
-        if IsComplete(drop) then
+        if IsComplete(drop)
+            and SYL.ItemQuality.ShouldTrackLink(drop.itemHyperlink)
+        then
             local recordID = BuildRecordID(snapshot, drop)
             local existing = dropIndex[recordID]
 

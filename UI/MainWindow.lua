@@ -312,6 +312,13 @@ local function CreateFooter(parent)
 
     refreshButton:SetPoint("BOTTOMLEFT", 16, 12)
 
+    local settingsButton =
+        Theme.CreateButton(parent, 100, 26, "Settings", function()
+            SYL:OpenSettingsWindow()
+        end)
+
+    settingsButton:SetPoint("LEFT", refreshButton, "RIGHT", 6, 0)
+
     local closeButton =
         Theme.CreateButton(parent, 100, 26, "Close", function()
             frame:Hide()

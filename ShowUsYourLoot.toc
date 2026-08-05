@@ -10,6 +10,7 @@ Main.lua
 Core\Utilities.lua
 Core\Filters.lua
 Core\Serializer.lua
+Core\ItemQuality.lua
 Core\Database.lua
 Core\LootCapture.lua
 Core\LootHistoryAPI.lua
@@ -32,5 +33,6 @@ UI\FilterBar.lua
 UI\SelectionBar.lua
 UI\LootListView.lua
 UI\MainWindow.lua
+UI\SettingsWindow.lua
 UI\DeveloperReport.lua
 UI\DeveloperWindow.lua
