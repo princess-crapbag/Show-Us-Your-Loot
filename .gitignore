@@ -1,2 +1,7 @@
 .claude/
 *.bak
+
+# Local notes that may hold project credentials
+Supabase Project Name*.txt
+*.secret
+.syl-upload.json
