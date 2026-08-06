@@ -53,6 +53,18 @@ CommandList.ENTRIES = {
         description = "Settings, including which qualities to record",
     },
     {
+        command = "due",
+        description = "Who has gone longest without an upgrade",
+    },
+    {
+        command = "tonight",
+        description = "Summary of the raid night in progress",
+    },
+    {
+        command = "bosses",
+        description = "Kills, pulls and drops for every boss",
+    },
+    {
         command = "theme",
         description = "Change the colour scheme",
     },

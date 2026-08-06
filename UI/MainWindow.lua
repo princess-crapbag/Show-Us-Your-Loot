@@ -286,46 +286,17 @@ local function CreateScrollArea(parent)
 end
 
 local function CreateFooter(parent)
-    local separator = Theme.CreateSeparator(parent)
-    separator:SetPoint("BOTTOMLEFT", 16, 44)
-    separator:SetPoint("BOTTOMRIGHT", -16, 44)
-
-    local refreshButton =
-        Theme.CreateButton(parent, 100, 26, "Refresh", function()
+    SYL.MainFooter.Create(parent, {
+        onRefresh = function()
             view.offset = 0
 
             UpdateRows()
-        end)
+        end,
 
-    refreshButton:SetPoint("BOTTOMLEFT", 16, 12)
-
-    local settingsButton =
-        Theme.CreateButton(parent, 100, 26, "Settings", function()
-            SYL:OpenSettingsWindow()
-        end)
-
-    settingsButton:SetPoint("LEFT", refreshButton, "RIGHT", 6, 0)
-
-    local playersButton =
-        Theme.CreateButton(parent, 100, 26, "Players", function()
-            SYL:OpenPlayerWindow()
-        end)
-
-    playersButton:SetPoint("LEFT", settingsButton, "RIGHT", 6, 0)
-
-    local raidsButton =
-        Theme.CreateButton(parent, 100, 26, "Raids", function()
-            SYL:OpenRaidWindow()
-        end)
-
-    raidsButton:SetPoint("LEFT", playersButton, "RIGHT", 6, 0)
-
-    local closeButton =
-        Theme.CreateButton(parent, 100, 26, "Close", function()
+        onClose = function()
             frame:Hide()
-        end)
-
-    closeButton:SetPoint("BOTTOMRIGHT", -16, 12)
+        end,
+    })
 end
 
 local function CreateMainWindow()

@@ -254,6 +254,83 @@ function Reports.APIReport()
     end
 end
 
+-- Answers "who should we favour on the next drop" in chat, which is where it
+-- gets asked. See Core/DueList.lua for what "due" is taken to mean.
+function Reports.Due(limit)
+    local sessions = SYL.GetAllRaids()
+
+    if #sessions == 0 then
+        SYL:Print("No raid nights recorded yet.")
+        SYL:Write(
+            "Attendance comes from the group roster read at each pull, so "
+            .. "this fills in from the next boss you engage."
+        )
+
+        return
+    end
+
+    local entries = SYL.DueList.Build(SYL.GetAllDrops(), sessions)
+
+    entries = SYL.DueList.FilterRecent(entries, sessions)
+    entries = SYL.DueList.Sort(entries)
+
+    if #entries == 0 then
+        SYL:Print("Nobody from the last few nights to rank yet.")
+
+        return
+    end
+
+    SYL:Print("Longest without an upgrade — transmog and greed do not count:")
+
+    for index = 1, math.min(limit or 10, #entries) do
+        local entry = entries[index]
+
+        SYL:Write(
+            "  " .. index .. ". "
+            .. tostring(entry.name)
+            .. " — " .. SYL.DueList.Describe(entry)
+            .. " (" .. entry.nights .. " raided)"
+        )
+    end
+end
+
+function Reports.Bosses(limit)
+    local bosses = SYL.BossStats.Build(SYL.GetAllDrops(), SYL.GetAllRaids())
+
+    if #bosses == 0 then
+        SYL:Print("No bosses recorded yet.")
+
+        return
+    end
+
+    SYL.BossStats.SortByRecent(bosses)
+
+    SYL:Print(#bosses .. " bosses recorded:")
+
+    for index = 1, math.min(limit or 12, #bosses) do
+        local boss = bosses[index]
+        local line = "  " .. tostring(boss.name)
+
+        if boss.difficultyName then
+            line = line .. " (" .. boss.difficultyName .. ")"
+        end
+
+        -- Pulls only exist for kills seen since raid sessions were added, so
+        -- a boss can legitimately show drops and no pulls.
+        if boss.pulls > 0 then
+            line = line .. " — " .. boss.kills .. "/" .. boss.pulls .. " killed"
+        end
+
+        line = line .. ", " .. boss.drops .. " drops"
+
+        if boss.upgrades > 0 then
+            line = line .. " (" .. boss.upgrades .. " upgrades)"
+        end
+
+        SYL:Write(line)
+    end
+end
+
 -- Built from Core/CommandList.lua so this and the minimap menu always agree.
 function Reports.Help()
     SYL:Print("Commands:")

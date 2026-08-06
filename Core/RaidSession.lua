@@ -247,6 +247,13 @@ function RaidSession.GetDurationMinutes(session)
     return math.max(0, math.floor(seconds / 60))
 end
 
+-- The summary lives in Core/RaidSummary.lua and needs to close the night off
+-- once it has reported, so the next pull opens a fresh session rather than
+-- reopening one already summarised.
+function RaidSession.ClearCurrent()
+    currentSessionID = nil
+end
+
 -- Every player seen in any session, with how many nights they were present.
 -- This is the attendance the loot data on its own cannot answer.
 function RaidSession.BuildAttendance(sessions)

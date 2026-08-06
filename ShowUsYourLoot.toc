@@ -2,7 +2,7 @@
 ## Title: Show Us Your Loot
 ## Notes: Tracks loot and provides loot analytics.
 ## Author: Aimee
-## Version: 0.0.7
+## Version: 0.0.8
 ## SavedVariables: ShowUsYourLootDB
 
 Main.lua
@@ -23,6 +23,9 @@ Core\LootHistory.lua
 Core\Sync.lua
 Core\Events.lua
 Core\Analytics.lua
+Core\BossStats.lua
+Core\DueList.lua
+Core\RaidSummary.lua
 Core\Export.lua
 Core\DataExport.lua
 Core\CommandList.lua
@@ -42,12 +45,14 @@ UI\FilterDropdown.lua
 UI\FilterBar.lua
 UI\SelectionBar.lua
 UI\LootListView.lua
+UI\MainFooter.lua
 UI\MainWindow.lua
 UI\DropDetailWindow.lua
 UI\CommandMenu.lua
 UI\MinimapButton.lua
 UI\PlayerWindow.lua
 UI\RaidWindow.lua
+UI\BossWindow.lua
 UI\ItemTooltip.lua
 UI\ExportWindow.lua
 UI\SettingsWindow.lua

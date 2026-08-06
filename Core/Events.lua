@@ -79,9 +79,24 @@ local function OnGuildRosterUpdate()
     SYL:DebugPrint("Guild roster cached: " .. tostring(count) .. " members.")
 end
 
+-- Fires on zoning, including stepping out of the instance at the end of the
+-- night. There is no "raid over" event, so leaving is the closest honest
+-- signal; RaidSession only reports a night that actually had pulls, and only
+-- once.
+local function OnPlayerEnteringWorld()
+    local inInstance, instanceType = IsInInstance()
+
+    if inInstance and (instanceType == "raid" or instanceType == "party") then
+        return
+    end
+
+    SYL.RaidSummary.ReportIfFinished()
+end
+
 local HANDLERS = {
     ADDON_LOADED = OnAddonLoaded,
     PLAYER_LOGIN = OnPlayerLogin,
+    PLAYER_ENTERING_WORLD = OnPlayerEnteringWorld,
     CHAT_MSG_LOOT = OnChatMessageLoot,
     GUILD_ROSTER_UPDATE = OnGuildRosterUpdate,
 }

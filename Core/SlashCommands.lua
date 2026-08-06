@@ -10,6 +10,9 @@ local Reports = SYL.CommandReports
 
 local RECENT_LIMIT = Reports.RECENT_LIMIT
 
+-- Ten fits a raid roster without scrolling chat off the screen.
+local DUE_LIMIT = 10
+
 local COMMANDS = {}
 
 COMMANDS.help = Reports.Help
@@ -102,6 +105,20 @@ end
 COMMANDS.raids = function()
     if SYL.OpenRaidWindow then
         SYL:OpenRaidWindow()
+    end
+end
+
+COMMANDS.due = function()
+    Reports.Due(DUE_LIMIT)
+end
+
+COMMANDS.tonight = function()
+    SYL.RaidSummary.ReportCurrent()
+end
+
+COMMANDS.bosses = function()
+    if SYL.OpenBossWindow then
+        SYL:OpenBossWindow()
     end
 end
 
