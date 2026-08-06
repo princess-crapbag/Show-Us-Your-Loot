@@ -36,8 +36,22 @@ add data. People sign in with Discord and can only read.
    ```
 
    Save that key. It is hashed and cannot be read back, only replaced.
-5. **Project Settings → API**. Copy the **Project URL** and the
-   **anon public** key. The anon key is meant to be public.
+5. Collect two values.
+
+   **Project URL** — Settings, then Data API. Or read it off the dashboard
+   address bar: `.../project/<ref>` means your URL is
+   `https://<ref>.supabase.co`.
+
+   **API key** — Settings, then API Keys. Supabase now shows two systems:
+
+   | Tab | What to take |
+   |---|---|
+   | Publishable and secret | The **Publishable key**, `sb_publishable_...` |
+   | Legacy anon, service_role | Or the **anon** key, if publishable 401s |
+
+   Never use the **Secret key**. It bypasses row level security entirely,
+   so whoever holds it can read and write everything regardless of the
+   policies. It belongs on a server, not in a browser or a config file.
 
 ## 3. Supabase — turn on Discord login  (3 min)
 
@@ -48,8 +62,11 @@ add data. People sign in with Discord and can only read.
 
 ## 4. Uploader  (2 min)
 
-```bash
-python tools/syl_upload.py --configure
+In PowerShell. The full path works from any folder, and the quotes matter
+because the path contains a space:
+
+```powershell
+python "C:\Users\Taylor Swift\Desktop\ShowUsYourLoot\tools\syl_upload.py" --configure
 ```
 
 It asks for four things:
@@ -57,21 +74,21 @@ It asks for four things:
 - Path to `ShowUsYourLoot.lua` — under
   `World of Warcraft/_retail_/WTF/Account/<ACCOUNT>/SavedVariables/`
 - Project URL (step 2.5)
-- anon public key (step 2.5)
+- Publishable key (step 2.5)
 - The guild key you chose in step 2.4
 
 Then test it without waiting:
 
-```bash
-python tools/syl_upload.py --once
+```powershell
+python "C:\Users\Taylor Swift\Desktop\ShowUsYourLoot\tools\syl_upload.py" --once
 ```
 
 Expect something like `sent 5 drops and 0 raid nights -> {'ok': True, ...}`.
 
 To leave it running while you play:
 
-```bash
-python tools/syl_upload.py
+```powershell
+python "C:\Users\Taylor Swift\Desktop\ShowUsYourLoot\tools\syl_upload.py"
 ```
 
 WoW writes SavedVariables on `/reload` and at logout, so data appears
@@ -122,6 +139,12 @@ for using logins instead of a shared password.
   Discord app's redirect list.
 - **`unsupported schemaVersion`** — the addon and schema have drifted; the
   addon writes v1 and the SQL expects v1.
+- **401 or invalid API key** — try the other key tab. Publishable and legacy
+  anon both work. Secret must never be used.
+- **can't open file ...syl_upload.py** — PowerShell was in a different
+  folder. Use the full quoted path rather than a relative one.
+- **function gen_salt does not exist** — run
+  `web/supabase/fix-search-path.sql`.
 
 ## What the dashboard can still do without any of this
 
