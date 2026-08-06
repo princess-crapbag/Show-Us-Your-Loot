@@ -530,7 +530,7 @@ function tryJson(trimmed, full) {
 /* No supabase-js: the page must stay self-contained, so this speaks the
    auth and REST endpoints directly with fetch. */
 
-const CFG = ["sb-url", "sb-anon"];
+const CFG = ["sb-url", "sb-anon", "sb-email"];
 CFG.forEach(id => {
   const saved = localStorage.getItem("syl:" + id);
   if (saved) $("#" + id).value = saved;

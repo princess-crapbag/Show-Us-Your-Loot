@@ -172,8 +172,12 @@ for using logins instead of a shared password.
 - **Failed to fetch** — the page is being served from claude.ai, whose CSP
   blocks outbound requests, or straight off disk as file://. Serve it on
   http://localhost instead.
-- **Email link does nothing** — http://localhost:8000 is not in the
-  Supabase redirect URL list.
+- **Email link signs you in somewhere else** — the redirect URL must match
+  exactly, trailing slash included, or Supabase silently falls back to the
+  Site URL. Add `http://localhost:8000/**` as well, and set Site URL to
+  `http://localhost:8000`.
+- **PGRST301 empty JWT** — the page has no session. The sign-in landed on a
+  different address; see above.
 - **`unsupported schemaVersion`** — the addon and schema have drifted; the
   addon writes v1 and the SQL expects v1.
 - **401 or invalid API key** — try the other key tab. Publishable and legacy
