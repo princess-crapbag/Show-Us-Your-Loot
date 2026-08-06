@@ -151,15 +151,20 @@
     <summary>Or sign in to see synced guild data</summary>
     <div class="cloudbody">
       <p class="muted">
-        Your project details are remembered in this browser only. Signing in
-        uses Discord; you will only see guilds an officer has added you to.
+        Your project details are remembered in this browser only. Sign in by
+        email, or with Discord if it is configured. Either way you will only
+        see guilds an officer has added you to.
       </p>
       <div class="cloudrow">
         <input id="sb-url" placeholder="https://xxxx.supabase.co" autocomplete="off">
         <input id="sb-anon" placeholder="anon public key" autocomplete="off">
-        <button id="sb-login">Sign in with Discord</button>
         <button id="sb-load" class="hide">Load data</button>
         <button id="sb-out" class="hide alt">Sign out</button>
+      </div>
+      <div class="cloudrow" id="sb-signin">
+        <input id="sb-email" type="email" placeholder="you@example.com" autocomplete="email">
+        <button id="sb-magic">Email me a sign-in link</button>
+        <button id="sb-discord" class="alt">Discord</button>
       </div>
       <p class="muted" id="sb-who" style="margin-top:10px"></p>
     </div>
@@ -555,22 +560,59 @@ function token() { return localStorage.getItem("syl:token"); }
 })();
 
 function showSignedIn(on, who) {
-  $("#sb-login").classList.toggle("hide", on);
+  $("#sb-signin").classList.toggle("hide", on);
   $("#sb-load").classList.toggle("hide", !on);
   $("#sb-out").classList.toggle("hide", !on);
   $("#sb-who").textContent = on ? (who || "Signed in.") : "";
 }
 
-$("#sb-login").onclick = () => {
-  const { url } = cfg();
-  if (!url || !cfg().anon) {
-    $("#err").textContent = "Enter the project URL and anon key first.";
+function needsConfig() {
+  const { url, anon } = cfg();
+  if (url && anon) return false;
+  $("#err").textContent = "Enter the project URL and API key first.";
+  $("#err").classList.remove("hide");
+  return true;
+}
+
+const backTo = () => encodeURIComponent(location.origin + location.pathname);
+
+/* Email link. No Discord app, no client secret, no two-factor setup —
+   Supabase sends the mail itself. */
+$("#sb-magic").onclick = async () => {
+  if (needsConfig()) return;
+  const email = $("#sb-email").value.trim();
+  if (!email) {
+    $("#err").textContent = "Enter your email address first.";
     $("#err").classList.remove("hide");
     return;
   }
   saveCfg();
-  const back = encodeURIComponent(location.origin + location.pathname);
-  location.href = `${url}/auth/v1/authorize?provider=discord&redirect_to=${back}`;
+  const { url, anon } = cfg();
+  $("#sb-magic").textContent = "Sending…";
+  try {
+    const res = await fetch(`${url}/auth/v1/otp?redirect_to=${backTo()}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: anon },
+      body: JSON.stringify({ email, create_user: true }),
+    });
+    const text = await res.text();
+    if (!res.ok) throw new Error(`Supabase said ${res.status}: ${text.slice(0, 200)}`);
+    $("#err").classList.add("hide");
+    $("#sb-who").textContent =
+      "Check your email and click the link. Leave this tab open.";
+  } catch (e) {
+    $("#err").textContent = e.message || String(e);
+    $("#err").classList.remove("hide");
+  } finally {
+    $("#sb-magic").textContent = "Email me a sign-in link";
+  }
+};
+
+$("#sb-discord").onclick = () => {
+  if (needsConfig()) return;
+  saveCfg();
+  location.href =
+    `${cfg().url}/auth/v1/authorize?provider=discord&redirect_to=${backTo()}`;
 };
 
 $("#sb-out").onclick = () => {
