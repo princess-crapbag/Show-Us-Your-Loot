@@ -206,8 +206,8 @@
   </div>
 
   <footer>
-    Everything happens in this page. No file is uploaded and nothing leaves
-    your machine.
+    Dropped files are read in this page and never uploaded. Signing in is the
+    exception, and only that: it reads what an officer has already synced.
   </footer>
 </div>
 
@@ -767,8 +767,11 @@ $("#sb-load").onclick = async () => {
     const guilds = await api("syl_guilds?select=id,name");
     if (!guilds.length) {
       throw new Error(
-        "Signed in, but you are not a member of any guild yet. " +
-        "An officer needs to add you in syl_members."
+        "Signed in, but no guild has granted this address access yet. " +
+        "An officer adds it to syl_allowed. Note that the address which " +
+        "counts is the one on the account you signed in with, which for " +
+        "Discord is the Discord account's address, not necessarily the one " +
+        "typed above."
       );
     }
     const [drops, raids] = await Promise.all([
