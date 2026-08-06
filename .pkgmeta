@@ -30,6 +30,7 @@ ignore:
     - DESIGN-WEB.md
     - README-SYNC.md
     - CURSEFORGE.md
+    - SCREENSHOTS.md
     - .pkgmeta
 
     # Named even though it is gitignored, so it cannot ship. A CI build works
