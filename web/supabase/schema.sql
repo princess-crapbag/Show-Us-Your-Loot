@@ -13,7 +13,11 @@
 --   complete an interactive login. It keeps a machine key, checked inside a
 --   SECURITY DEFINER function. That key can only add data, never read it.
 
-create extension if not exists pgcrypto;
+-- Supabase keeps extensions in their own schema, so pgcrypto lands in
+-- `extensions`, not `public`. Every SECURITY DEFINER function below therefore
+-- has to name that schema in its search_path, or crypt() and gen_salt() are
+-- invisible inside it.
+create extension if not exists pgcrypto with schema extensions;
 
 -- ---------------------------------------------------------------------------
 -- Tables
@@ -146,7 +150,7 @@ create or replace function syl_create_guild(p_name text, p_key text)
 returns uuid
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
     v_id uuid;
@@ -163,7 +167,7 @@ create or replace function syl_guild_for_key(p_key text)
 returns uuid
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
     v_id uuid;
@@ -190,7 +194,7 @@ create or replace function syl_upload(p_key text, p_payload jsonb)
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
     v_guild    uuid;
