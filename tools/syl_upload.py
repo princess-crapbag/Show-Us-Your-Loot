@@ -26,6 +26,7 @@ import re
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -250,6 +251,35 @@ def build_payload(db: dict) -> dict:
 # Config and transport
 # ---------------------------------------------------------------------------
 
+def normalise_url(raw: str) -> str:
+    """Reduce whatever was pasted to scheme://host.
+
+    Two things people paste that are not the API root: the Data API URL,
+    which already ends in /rest/v1, and the dashboard URL, which looks like
+    supabase.com/dashboard/project/<ref>. Appending our own path to either
+    produces a 404 from PostgREST, so both are handled here rather than
+    left as a puzzle.
+    """
+    raw = (raw or "").strip().rstrip("/")
+    if not raw:
+        return raw
+
+    if "://" not in raw:
+        raw = "https://" + raw
+
+    parts = urllib.parse.urlparse(raw)
+
+    # Dashboard link: pull the project ref out of the path.
+    if parts.netloc.endswith("supabase.com") and "/project/" in parts.path:
+        segments = [s for s in parts.path.split("/") if s]
+        if "project" in segments:
+            ref = segments[segments.index("project") + 1]
+            return f"https://{ref}.supabase.co"
+
+    # Anything else: keep scheme and host, discard the path.
+    return f"{parts.scheme}://{parts.netloc}"
+
+
 def load_config() -> dict:
     if CONFIG_PATH.exists():
         return json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
@@ -273,9 +303,9 @@ def configure() -> dict:
         "savedvariables": ask(
             "Path to ShowUsYourLoot.lua", "savedvariables", DEFAULT_SAVEDVARS
         ),
-        "supabase_url": ask(
+        "supabase_url": normalise_url(ask(
             "Supabase project URL (https://xxxx.supabase.co)", "supabase_url"
-        ),
+        )),
         "anon_key": ask("Supabase anon key", "anon_key"),
         "guild_key": ask("Your guild key (the shared secret)", "guild_key"),
     }
@@ -292,8 +322,12 @@ def configure() -> dict:
     return config
 
 
+def endpoint(config: dict) -> str:
+    return normalise_url(config["supabase_url"]) + "/rest/v1/rpc/syl_upload"
+
+
 def upload(config: dict, payload: dict) -> dict:
-    url = config["supabase_url"].rstrip("/") + "/rest/v1/rpc/syl_upload"
+    url = endpoint(config)
 
     body = json.dumps({
         "p_key": config["guild_key"],
@@ -345,6 +379,8 @@ def main() -> int:
     parser.add_argument("--configure", action="store_true")
     parser.add_argument("--once", action="store_true",
                         help="upload once and exit")
+    parser.add_argument("--check", action="store_true",
+                        help="show what it will do, send nothing")
     args = parser.parse_args()
 
     config = configure() if args.configure else load_config()
@@ -355,6 +391,18 @@ def main() -> int:
         print("Not configured yet. Run with --configure.")
         print("Missing:", ", ".join(missing))
         return 1
+
+    if args.check:
+        print("SavedVariables :", config["savedvariables"])
+        print("Project URL    :", normalise_url(config["supabase_url"]))
+        print("Will POST to   :", endpoint(config))
+        print("API key        :", config["anon_key"][:14] + "…")
+        print("Guild key      :", "*" * len(config["guild_key"]))
+        if config["anon_key"].startswith("sb_secret"):
+            print()
+            print("  WARNING: that is a secret key. It bypasses row "
+                  "level security. Use the publishable or anon key.")
+        return 0
 
     path = Path(config["savedvariables"])
     if not path.exists():
