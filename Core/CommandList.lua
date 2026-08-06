@@ -53,6 +53,10 @@ CommandList.ENTRIES = {
         description = "Settings, including which qualities to record",
     },
     {
+        command = "theme",
+        description = "Change the colour scheme",
+    },
+    {
         command = "output",
         description = "Send addon messages to the next chat window",
     },

@@ -169,6 +169,25 @@ end
 
 local TOGGLES = {
     {
+        -- Cycles rather than opening a menu, and repaints immediately, so
+        -- picking one is a matter of clicking until it looks right instead of
+        -- reading colour names and guessing.
+        label = "Colour scheme",
+        action = function()
+            local palette =
+                SYL.Theme.Apply(SYL.Palettes.Next(SYL.Theme.paletteKey))
+
+            SYL:Print(
+                "Colour scheme: " .. palette.name .. " — " .. palette.note .. "."
+            )
+        end,
+        describe = function()
+            local palette = SYL.Theme.Current()
+
+            return "Colour scheme: " .. (palette and palette.name or "unknown")
+        end,
+    },
+    {
         label = "Record group loot from Loot History",
         key = "lootHistoryCapture",
 

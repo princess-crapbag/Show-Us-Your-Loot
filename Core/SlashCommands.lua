@@ -131,6 +131,39 @@ COMMANDS.dev = function()
     end
 end
 
+-- With a name, jumps straight to that scheme; without one, cycles. Cycling
+-- is the useful default, since choosing a colour is a matter of looking at it
+-- rather than knowing what it is called.
+COMMANDS.theme = function(argument)
+    local requested = argument and argument:lower():gsub("^%s+", ""):gsub("%s+$", "")
+    local palette
+
+    if requested and requested ~= "" then
+        palette = SYL.Palettes.Get(requested)
+
+        if not palette then
+            local names = {}
+
+            for _, entry in ipairs(SYL.Palettes.list) do
+                names[#names + 1] = entry.key
+            end
+
+            SYL:Print(
+                "No colour scheme called \"" .. requested .. "\". Try: "
+                .. table.concat(names, ", ") .. "."
+            )
+
+            return
+        end
+
+        palette = SYL.Theme.Apply(palette.key)
+    else
+        palette = SYL.Theme.Apply(SYL.Palettes.Next(SYL.Theme.paletteKey))
+    end
+
+    SYL:Print("Colour scheme: " .. palette.name .. " — " .. palette.note .. ".")
+end
+
 COMMANDS.output = function()
     local name = SYL.Output.CycleWindow()
 

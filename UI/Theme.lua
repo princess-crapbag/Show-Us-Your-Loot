@@ -21,41 +21,23 @@ local GetItemInfoInstant =
 local GetItemQualityColor =
     C_Item and C_Item.GetItemQualityColor or _G.GetItemQualityColor
 
--- A dusty rose panel: mid-tone, desaturated enough to read as a neutral that
--- happens to be pink rather than as a candy colour.
+-- The active palette. Populated by Theme.Apply, which runs at load once the
+-- saved setting is known; the starting value keeps the UI safe if anything
+-- draws before then.
+Theme.colors = SYL.Palettes.Get(SYL.Palettes.DEFAULT).colors
+Theme.paletteKey = SYL.Palettes.DEFAULT
+
+-- Anything Theme colours is recorded here so a palette change can repaint it
+-- in place. Without this, switching would only affect windows built after the
+-- change, and the settings window doing the switching would keep its old
+-- colours — the one window guaranteed to be open at the time.
 --
--- The accent stays green, which is the addon's chat colour. Mint against
--- dusty rose is a real pairing, but only while the pink stays muted — a
--- saturated pink here would make the two fight.
---
--- Text carries the same warm bias as the ground, and sits brighter than a
--- dark theme would need, because muted tones lose contrast fast against a
--- panel this light.
-Theme.colors = {
-    -- Red sits well clear of green and blue, with blue above green: that gap
-    -- is what makes it read as rose rather than as a warm grey. An earlier
-    -- pass kept the three channels within 0.06 of each other and looked grey
-    -- no matter how it was described.
-    window = { 0.505, 0.345, 0.395, 0.97 },
-    border = { 0.68, 0.52, 0.575, 1 },
-
-    headerBar = { 0.575, 0.415, 0.465, 1 },
-    separator = { 1, 1, 1, 0.16 },
-
-    -- Deepened so it reads as an accent rather than a highlighter against a
-    -- ground this light.
-    accent = { 0.10, 0.62, 0.38, 1 },
-    accentMuted = { 0.10, 0.62, 0.38, 0.24 },
-
-    rowAlt = { 1, 1, 1, 0.06 },
-    rowHover = { 1, 1, 1, 0.13 },
-
-    button = { 1, 1, 1, 0.13 },
-    buttonHover = { 1, 1, 1, 0.23 },
-
-    textPrimary = { 1, 0.98, 0.985, 1 },
-    textSecondary = { 0.92, 0.85, 0.875, 1 },
-    textMuted = { 0.82, 0.73, 0.76, 1 },
+-- These are strong references, which is fine: frames and their regions live
+-- for the session anyway, and WoW has no way to destroy one.
+local painted = {
+    textures = {},
+    texts = {},
+    windows = {},
 }
 
 Theme.sizes = {
@@ -91,12 +73,17 @@ function Theme.StyleWindow(frame)
     frame:SetBackdrop(WINDOW_BACKDROP)
     frame:SetBackdropColor(unpack(Theme.colors.window))
     frame:SetBackdropBorderColor(unpack(Theme.colors.border))
+
+    painted.windows[frame] = true
 end
 
 function Theme.SetTextColor(fontString, colorKey)
-    local color = Theme.colors[colorKey] or Theme.colors.textPrimary
+    local key = colorKey or "textPrimary"
+    local color = Theme.colors[key] or Theme.colors.textPrimary
 
     fontString:SetTextColor(color[1], color[2], color[3], color[4] or 1)
+
+    painted.texts[fontString] = key
 end
 
 function Theme.CreateText(parent, size, colorKey, layer)
@@ -114,13 +101,67 @@ end
 
 function Theme.CreateSolidTexture(parent, colorKey, layer)
     local texture = parent:CreateTexture(nil, layer or "BACKGROUND")
-    local color = Theme.colors[colorKey] or Theme.colors.separator
+    local key = colorKey or "separator"
+    local color = Theme.colors[key] or Theme.colors.separator
 
     texture:SetColorTexture(
         color[1], color[2], color[3], color[4] or 1
     )
 
+    painted.textures[texture] = key
+
     return texture
+end
+
+--------------------------------------------------------------------------
+-- Switching palette
+--------------------------------------------------------------------------
+
+-- Repaints everything Theme has ever coloured. Rows that draw their own
+-- state — a selected row, a quality coloured item name — repaint themselves
+-- on the refresh that follows, so they are deliberately not touched here.
+function Theme.Apply(key, skipRefresh)
+    local palette = SYL.Palettes.Get(key) or SYL.Palettes.Get(SYL.Palettes.DEFAULT)
+
+    Theme.colors = palette.colors
+    Theme.paletteKey = palette.key
+
+    for texture, colorKey in pairs(painted.textures) do
+        local color = Theme.colors[colorKey]
+
+        if color then
+            texture:SetColorTexture(color[1], color[2], color[3], color[4] or 1)
+        end
+    end
+
+    for fontString, colorKey in pairs(painted.texts) do
+        local color = Theme.colors[colorKey] or Theme.colors.textPrimary
+
+        fontString:SetTextColor(color[1], color[2], color[3], color[4] or 1)
+    end
+
+    for frame in pairs(painted.windows) do
+        frame:SetBackdropColor(unpack(Theme.colors.window))
+        frame:SetBackdropBorderColor(unpack(Theme.colors.border))
+    end
+
+    if ShowUsYourLootDB and ShowUsYourLootDB.settings then
+        ShowUsYourLootDB.settings.palette = palette.key
+    end
+
+    -- Rows paint per record, so the list needs a redraw rather than a
+    -- recolour. RefreshMainWindow already does nothing when the window is
+    -- closed; the guard here is for Apply running at load, before the UI
+    -- files have finished defining it.
+    if not skipRefresh and SYL.RefreshMainWindow then
+        SYL:RefreshMainWindow()
+    end
+
+    return palette
+end
+
+function Theme.Current()
+    return SYL.Palettes.Get(Theme.paletteKey)
 end
 
 -- A one-pixel horizontal rule.

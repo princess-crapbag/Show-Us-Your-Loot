@@ -18,6 +18,10 @@ local function OnAddonLoaded(loadedAddonName)
     SYL.DatabaseInitialize()
     SYL.LootHistoryStore.RebuildIndex()
 
+    -- Before any window is built, so frames are created in the saved colours
+    -- rather than being built in one palette and repainted into another.
+    SYL.Theme.Apply(ShowUsYourLootDB.settings.palette, true)
+
     local activeSeason = SYL.GetActiveSeason()
 
     SYL:Print(

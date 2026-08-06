@@ -95,6 +95,13 @@ local function InitializeSettings()
     if ShowUsYourLootDB.settings.syncEnabled == nil then
         ShowUsYourLootDB.settings.syncEnabled = false
     end
+
+    -- Which colour scheme the window wears. Stored as a key rather than as
+    -- colour values, so editing a palette improves every existing install
+    -- instead of only new ones.
+    if ShowUsYourLootDB.settings.palette == nil then
+        ShowUsYourLootDB.settings.palette = "graphite"
+    end
 end
 
 local function MigrateOldLootDatabase()
