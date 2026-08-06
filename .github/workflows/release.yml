@@ -1,0 +1,39 @@
+name: Release
+
+# Builds the addon zip and uploads it to CurseForge whenever a version tag is
+# pushed. Tag the commit you want released:
+#
+#     git tag v0.0.9
+#     git push origin v0.0.9
+#
+# Requires one repository secret, CF_API_KEY, from the CurseForge account
+# settings under API Tokens. The .toc also needs its X-Curse-Project-ID line,
+# which CurseForge only issues once the project exists — without it the
+# packager builds the zip and has nowhere to send it.
+#
+# Nothing here uploads on an ordinary push. Only tags.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The packager reads the commit history to build the changelog, so
+          # a shallow clone gives it nothing to work with.
+          fetch-depth: 0
+
+      - name: Check the Lua before shipping it
+        run: python tools/syl_check.py
+
+      - name: Package and upload
+        uses: BigWigsMods/packager@master
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+          GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}

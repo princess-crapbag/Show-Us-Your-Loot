@@ -5,3 +5,7 @@
 Supabase Project Name*.txt
 *.secret
 .syl-upload.json
+
+# Python build artefacts from tools/
+__pycache__/
+*.pyc

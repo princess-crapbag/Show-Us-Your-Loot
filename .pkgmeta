@@ -1,0 +1,39 @@
+# Packaging rules for BigWigsMods/packager, which is what builds the zip that
+# goes to CurseForge.
+#
+# The repository root *is* the addon folder — Main.lua and the .toc sit beside
+# Core/ and UI/ — so everything here that is not the addon has to be named or
+# it ships to every player who installs this.
+#
+# What is deliberately excluded and why:
+#
+#   web/          the Supabase dashboard. A web page, not an addon, and it is
+#                 the half that talks to a server. Nothing in game reads it.
+#   tools/        the uploader and the static checker. Developer tooling.
+#   .claude/      editor state.
+#   the notes     working documents, not user documentation.
+#
+# The addon must keep working for someone who installs it and never opens a
+# browser, which is exactly why none of the above belongs in the zip.
+
+package-as: ShowUsYourLoot
+
+enable-nolib-creation: no
+
+ignore:
+    - web
+    - tools
+    - .claude
+    - .github
+    - .gitignore
+    - NOTES.md
+    - DESIGN-WEB.md
+    - README-SYNC.md
+    - .pkgmeta
+
+    # Named even though it is gitignored, so it cannot ship. A CI build works
+    # from a clean checkout and would never see it, but packaging by hand
+    # happens from a working directory that still has it sitting there, and
+    # the cost of being wrong once is a project key published to the world.
+    - Supabase Project Name Show Us Your.txt
+    - .syl-upload.json

@@ -1,9 +1,14 @@
 ## Interface: 120007
 ## Title: Show Us Your Loot
-## Notes: Tracks loot and provides loot analytics.
+## Notes: Loot history, attendance and fairness analytics for group loot.
 ## Author: Aimee
 ## Version: 0.0.8
 ## SavedVariables: ShowUsYourLootDB
+## X-Website: https://github.com/
+## X-License: All Rights Reserved
+# CurseForge issues an X-Curse-Project-ID once the project exists. The release
+# workflow needs that line before it can upload anything:
+# ## X-Curse-Project-ID: 000000
 
 Main.lua
 
