@@ -56,6 +56,16 @@ the range. Both requested behaviours, neither at the cost of linking.
 
 ## Still open
 
+- **Nothing in the addon has been run in game since the Loot History
+  rework.** `python tools/syl_check.py` proves the files parse, that the
+  .toc matches disk, and that every `SYL.Module.Member` reference
+  resolves — it cannot prove behaviour. The next raid is the real test.
+- Officer sync still sends drop headers only, never roll lists, so synced
+  records sit out of the fairness maths. `/syl sync` reports how much of
+  a season that covers. Chunked roll lists or a backfill handshake are
+  the obvious next step and are deliberately not written blind: it is the
+  only code that transmits to other players and needs two clients to
+  test.
 - Nothing here has been exercised in game. The likeliest problems are the
   filter dropdown's frame level and the date boxes' focus handling.
 - Filtering by player on the Drops tab matches the **winner**. Matching
@@ -87,13 +97,20 @@ decision or are large enough to be worth discussing first.
 6. **Player detail window** — click a player to see their full history:
    every drop they rolled on, what they chose, what they won, their
    droughts. Medium effort; mostly a new window over existing data.
-7. **Boss history** — per boss: times killed, what it dropped, who won,
-   which items have never dropped for the guild. Needs a view and some
-   grouping, no new capture.
-8. **A "due" list** — rank guild members by nights attended against
-   upgrades received, so the next reasonable winner is obvious. This is a
-   judgement call encoded as a formula, so the weighting needs agreeing
-   before it is worth building.
+7. **Boss history** — BUILT. Per boss: pulls, kills, drops and upgrades,
+   keyed by encounter *and* difficulty so Heroic and Mythic stay apart.
+   Pulls come from raid sessions and drops from loot records, which are
+   not the same age, so a boss farmed before sessions existed shows a
+   dash rather than a zero. "Which items have never dropped" is still
+   open: it needs a loot table to compare against, which nothing here
+   has.
+8. **A "due" list** — BUILT, with the judgement calls stated at the top
+   of `Core/DueList.lua` rather than buried. Transmog and greed wins do
+   not reset the clock; drought counts nights attended, not days elapsed
+   or items rolled on. The ranking is one comparable number rather than a
+   weighted score, so disagreeing means changing a rule, not retuning
+   constants. **Both calls are open to challenge** — they were made to
+   avoid blocking, not because they are settled.
 9. **Officer sync** — share captured loot between officers over addon
    comms so no one person has to be present for everything. Technically
    possible and genuinely useful, but it is real network traffic to other
