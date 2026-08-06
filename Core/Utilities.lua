@@ -105,6 +105,19 @@ function Utilities.FormatDateTime(timestamp)
     return date("%m/%d/%y %I:%M %p", timestamp)
 end
 
+-- The list columns' version. "08/05/26 12:32 PM" is seventeen characters
+-- against a column that also has to share a row with an item name, and it was
+-- the format, not the width, that made the date column impossible. Dropping
+-- to a 24 hour clock loses the " PM" and three characters with it, and stays
+-- unambiguous.
+function Utilities.FormatDateCompact(timestamp)
+    if not timestamp then
+        return "Unknown"
+    end
+
+    return date("%m/%d/%y %H:%M", timestamp)
+end
+
 -- Difficulty names are long enough to break any column they land in:
 -- "Looking For Raid" is sixteen characters against boss and player names
 -- that are shorter. Every list shows the short form instead.

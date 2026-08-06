@@ -184,7 +184,7 @@ local function FillDropRow(row, record, recordIndex)
         SetWinType(row, record)
     end
 
-    row.dateText:SetText(Utilities.FormatDateTime(record.timestamp))
+    row.dateText:SetText(Utilities.FormatDateCompact(record.timestamp))
 
     return Rows.SetRowItem(row, record.itemLink, record.itemName)
 end
@@ -240,7 +240,7 @@ local function FillLootRow(row, record, recordIndex)
     row.numberText:SetText(recordIndex)
     row.playerText:SetText(record.recipient or "Unknown")
     row.locationText:SetText(FormatLocation(record))
-    row.dateText:SetText(Utilities.FormatDateTime(record.timestamp))
+    row.dateText:SetText(Utilities.FormatDateCompact(record.timestamp))
 
     return Rows.SetRowItem(row, record.itemLink, record.itemName)
 end

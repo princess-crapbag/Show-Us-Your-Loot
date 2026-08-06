@@ -109,8 +109,9 @@ def check_structure(path: Path, code: str, problems: list):
 ROW_INSET = 16 + 34
 
 # The main window's list sits inside a scroll frame rather than being anchored
-# to the window, so its budget is fixed rather than derived.
-SCROLL_USABLE = 748
+# to the window. Its budget is the scroll child, created in MainWindow as
+# WINDOW_WIDTH - 70, with rows laid out from that child's left edge.
+SCROLL_USABLE = 900 - 70
 
 COLUMN_RE = re.compile(
     r'key\s*=\s*"(\w+)"\s*,\s*label\s*=\s*"[^"]*"\s*,\s*'

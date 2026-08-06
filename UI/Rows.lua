@@ -15,34 +15,44 @@ SYL.Rows = Rows
 local ICON_SIZE = Theme.metrics.iconSize
 local ICON_TEXT_GAP = 22
 
--- Widths and gaps must total no more than 748, the usable width inside the
--- scroll frame at the current window size. tools/syl_check.py enforces that,
--- because getting it wrong truncates silently: the text simply ends in an
--- ellipsis and looks like a styling choice rather than a arithmetic mistake.
+-- Widths and gaps must total no more than 830: the scroll child is created as
+-- WINDOW_WIDTH - 70 in MainWindow, and rows are laid out from its left edge.
+-- tools/syl_check.py enforces the total, because getting it wrong truncates
+-- silently — the text simply ends in an ellipsis, which reads as a styling
+-- choice rather than as a column that was never given room.
 --
 -- Sizing is driven by the longest realistic value, not by the header:
 -- "Leggings of the Devouring Advance" for an item, "Sagedin-Proudmoore" for a
--- name, "08/05/26 12:32 PM" for a date. Locations lost a lot of width when
--- difficulty moved to its short form.
+-- name, "08/05/26 12:32" for a date. Two changes bought most of the room
+-- back — difficulty is abbreviated, so locations read "The Voidspire - LFR",
+-- and the date lost its " PM".
+--
+-- ITEM is the column that gets the surplus. It holds the longest values, and
+-- it is also the one worth reading: a truncated boss or winner name is still
+-- recognisable, a truncated item name often is not. The Drops set carries
+-- eight columns rather than six, so its ITEM is necessarily tighter; the drop
+-- detail window is where the full name always shows.
 local COLUMN_SETS = {
     loot = {
         { key = "select", label = "", width = 16, gap = 8 },
         { key = "number", label = "#", width = 30, gap = 8 },
-        { key = "player", label = "PLAYER", width = 140, gap = 8 },
-        { key = "item", label = "ITEM", width = 246, gap = 10 },
-        { key = "location", label = "LOCATION", width = 134, gap = 10 },
-        { key = "date", label = "DATE", width = 122, gap = 10 },
+        { key = "player", label = "PLAYER", width = 146, gap = 8 },
+        { key = "item", label = "ITEM", width = 326, gap = 10 },
+        { key = "location", label = "LOCATION", width = 150, gap = 10 },
+        { key = "date", label = "DATE", width = 100, gap = 10 },
     },
 
     drops = {
         { key = "select", label = "", width = 16, gap = 8 },
         { key = "number", label = "#", width = 30, gap = 8 },
-        { key = "boss", label = "BOSS", width = 124, gap = 8 },
-        { key = "item", label = "ITEM", width = 152, gap = 10 },
-        { key = "winner", label = "WINNER", width = 126, gap = 10 },
-        { key = "wintype", label = "TYPE", width = 62, gap = 8 },
-        { key = "roll", label = "ROLL", width = 40, gap = 8 },
-        { key = "date", label = "DATE", width = 122, gap = 10 },
+        -- BOSS carries the difficulty too ("Imperator Averzian  LFR"), so it
+        -- needs more than a bare name would suggest.
+        { key = "boss", label = "BOSS", width = 152, gap = 8 },
+        { key = "item", label = "ITEM", width = 240, gap = 10 },
+        { key = "winner", label = "WINNER", width = 124, gap = 10 },
+        { key = "wintype", label = "TYPE", width = 56, gap = 8 },
+        { key = "roll", label = "ROLL", width = 38, gap = 8 },
+        { key = "date", label = "DATE", width = 96, gap = 10 },
     },
 }
 

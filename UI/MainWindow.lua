@@ -15,7 +15,7 @@ local ListSources = SYL.ListSources
 local Selection = SYL.Selection
 local LootListView = SYL.LootListView
 
-local WINDOW_WIDTH = 830
+local WINDOW_WIDTH = 900
 local WINDOW_HEIGHT = 596
 local VISIBLE_ROWS = 13
 
