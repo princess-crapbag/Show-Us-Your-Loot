@@ -15,27 +15,34 @@ SYL.Rows = Rows
 local ICON_SIZE = Theme.metrics.iconSize
 local ICON_TEXT_GAP = 22
 
--- Widths and gaps total 748, which is the usable width inside the scroll
--- frame at the current window size.
+-- Widths and gaps must total no more than 748, the usable width inside the
+-- scroll frame at the current window size. tools/syl_check.py enforces that,
+-- because getting it wrong truncates silently: the text simply ends in an
+-- ellipsis and looks like a styling choice rather than a arithmetic mistake.
+--
+-- Sizing is driven by the longest realistic value, not by the header:
+-- "Leggings of the Devouring Advance" for an item, "Sagedin-Proudmoore" for a
+-- name, "08/05/26 12:32 PM" for a date. Locations lost a lot of width when
+-- difficulty moved to its short form.
 local COLUMN_SETS = {
     loot = {
         { key = "select", label = "", width = 16, gap = 8 },
         { key = "number", label = "#", width = 30, gap = 8 },
         { key = "player", label = "PLAYER", width = 140, gap = 8 },
-        { key = "item", label = "ITEM", width = 226, gap = 10 },
-        { key = "location", label = "LOCATION", width = 170, gap = 10 },
-        { key = "date", label = "DATE", width = 110, gap = 10 },
+        { key = "item", label = "ITEM", width = 246, gap = 10 },
+        { key = "location", label = "LOCATION", width = 134, gap = 10 },
+        { key = "date", label = "DATE", width = 122, gap = 10 },
     },
 
     drops = {
         { key = "select", label = "", width = 16, gap = 8 },
         { key = "number", label = "#", width = 30, gap = 8 },
-        { key = "boss", label = "BOSS", width = 130, gap = 8 },
-        { key = "item", label = "ITEM", width = 170, gap = 10 },
-        { key = "winner", label = "WINNER", width = 130, gap = 10 },
+        { key = "boss", label = "BOSS", width = 124, gap = 8 },
+        { key = "item", label = "ITEM", width = 152, gap = 10 },
+        { key = "winner", label = "WINNER", width = 126, gap = 10 },
         { key = "wintype", label = "TYPE", width = 62, gap = 8 },
         { key = "roll", label = "ROLL", width = 40, gap = 8 },
-        { key = "date", label = "DATE", width = 98, gap = 10 },
+        { key = "date", label = "DATE", width = 122, gap = 10 },
     },
 }
 

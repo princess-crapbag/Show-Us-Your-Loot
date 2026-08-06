@@ -104,6 +104,73 @@ def check_structure(path: Path, code: str, problems: list):
             )
 
 
+# Rows are anchored TOPLEFT 16 and TOPRIGHT -34 inside their window, so the
+# space a row actually has is the window width less this.
+ROW_INSET = 16 + 34
+
+# The main window's list sits inside a scroll frame rather than being anchored
+# to the window, so its budget is fixed rather than derived.
+SCROLL_USABLE = 748
+
+COLUMN_RE = re.compile(
+    r'key\s*=\s*"(\w+)"\s*,\s*label\s*=\s*"[^"]*"\s*,\s*'
+    r'width\s*=\s*(\d+)\s*,\s*gap\s*=\s*(\d+)'
+)
+
+
+def check_columns(name: str, code: str, problems: list):
+    """Column widths must fit the space they are drawn in.
+
+    Getting this wrong is invisible in review and nearly invisible in game:
+    the text just ends in an ellipsis, which reads as a styling choice rather
+    than as a column that was never given room. Both list windows shipped
+    overflowing because nobody added up the numbers.
+    """
+    columns = COLUMN_RE.findall(code)
+
+    if not columns:
+        return
+
+    width_match = re.search(r"WINDOW_WIDTH\s*=\s*(\d+)", code)
+
+    if width_match:
+        budget = int(width_match.group(1)) - ROW_INSET
+        needed = sum(int(w) + int(g) for _, w, g in columns)
+
+        if needed > budget:
+            problems.append(
+                f"{name}: columns need {needed}px but the row has "
+                f"{budget}px (window {width_match.group(1)} less "
+                f"{ROW_INSET} inset) — over by {needed - budget}"
+            )
+        return
+
+    # No window of its own: the sets belong to the scrolling main list, and
+    # each one is measured separately. Scoped to COLUMN_SETS so the module
+    # table itself is not read as a set and every column counted twice.
+    sets_match = re.search(r"COLUMN_SETS\s*=\s*\{(.*?)\n\}", code, re.DOTALL)
+
+    if not sets_match:
+        return
+
+    for set_name, body in re.findall(
+        r"(\w+)\s*=\s*\{(.*?)\n    \},", sets_match.group(1), re.DOTALL
+    ):
+        entries = COLUMN_RE.findall(body)
+
+        if not entries:
+            continue
+
+        needed = sum(int(w) + int(g) for _, w, g in entries)
+
+        if needed > SCROLL_USABLE:
+            problems.append(
+                f"{name}: column set '{set_name}' needs {needed}px "
+                f"but the scroll frame has {SCROLL_USABLE}px — over by "
+                f"{needed - SCROLL_USABLE}"
+            )
+
+
 def toc_order() -> list:
     files = []
     for raw in TOC.read_text(encoding="utf-8").splitlines():
@@ -137,7 +204,8 @@ def main() -> int:
         path = ROOT / name
         if not path.exists():
             continue
-        code = strip_code(path.read_text(encoding="utf-8", errors="replace"))
+        raw = path.read_text(encoding="utf-8", errors="replace")
+        code = strip_code(raw)
         bodies[name] = code
 
         lines = len(code.splitlines())
@@ -145,6 +213,10 @@ def main() -> int:
             warnings.append(f"{name}: {lines} lines, over the {MAX_LINES} limit")
 
         check_structure(path, code, problems)
+
+        # Raw source, not the stripped copy: strip_code blanks the inside of
+        # string literals, and the column definitions are mostly strings.
+        check_columns(name, raw, problems)
 
         for m in re.finditer(r"SYL\.([A-Za-z_]\w*)\s*=", code):
             assigned.add(m.group(1))

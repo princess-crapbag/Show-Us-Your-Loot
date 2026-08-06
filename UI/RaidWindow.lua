@@ -12,15 +12,15 @@ local Widgets = SYL.Widgets
 local RaidSession = SYL.RaidSession
 local Utilities = SYL.Utilities
 
-local WINDOW_WIDTH = 660
+local WINDOW_WIDTH = 690
 local ROW_HEIGHT = 24
 local VISIBLE_ROWS = 14
 local LIST_TOP = 116
 
 local COLUMNS = {
     { key = "date", label = "DATE", width = 90, gap = 10 },
-    { key = "instance", label = "INSTANCE", width = 190, gap = 8 },
-    { key = "difficulty", label = "DIFFICULTY", width = 100, gap = 8 },
+    { key = "instance", label = "INSTANCE", width = 214, gap = 8 },
+    { key = "difficulty", label = "DIFF", width = 52, gap = 8 },
     { key = "pulls", label = "PULLS", width = 46, gap = 8 },
     { key = "kills", label = "KILLS", width = 46, gap = 8 },
     { key = "raiders", label = "RAIDERS", width = 58, gap = 8 },
@@ -119,7 +119,10 @@ local function FillRow(row, session)
 
     cells.date:SetText(tostring(session.dateText or "?"))
     cells.instance:SetText(tostring(session.instanceName or "Unknown"))
-    cells.difficulty:SetText(tostring(session.difficultyName or ""))
+    cells.difficulty:SetText(
+        Utilities.ShortDifficulty(session.difficultyID, session.difficultyName)
+        or ""
+    )
     cells.pulls:SetText(pulls)
 
     cells.kills:SetText(kills)

@@ -12,15 +12,15 @@ local Theme = SYL.Theme
 local Widgets = SYL.Widgets
 local BossStats = SYL.BossStats
 
-local WINDOW_WIDTH = 720
+local WINDOW_WIDTH = 776
 local ROW_HEIGHT = 24
 local VISIBLE_ROWS = 14
 local LIST_TOP = 116
 
 local COLUMNS = {
-    { key = "boss", label = "BOSS", width = 168, gap = 10 },
-    { key = "instance", label = "INSTANCE", width = 150, gap = 8 },
-    { key = "difficulty", label = "DIFFICULTY", width = 92, gap = 8 },
+    { key = "boss", label = "BOSS", width = 176, gap = 10 },
+    { key = "instance", label = "INSTANCE", width = 168, gap = 8 },
+    { key = "difficulty", label = "DIFF", width = 52, gap = 8 },
     { key = "kills", label = "KILLS", width = 60, gap = 8 },
     { key = "drops", label = "DROPS", width = 50, gap = 8 },
     { key = "upgrades", label = "UPGRADES", width = 66, gap = 8 },
@@ -108,7 +108,10 @@ local function FillRow(row, boss)
 
     cells.boss:SetText(tostring(boss.name))
     cells.instance:SetText(tostring(boss.instanceName or "Unknown"))
-    cells.difficulty:SetText(tostring(boss.difficultyName or ""))
+    cells.difficulty:SetText(
+        SYL.Utilities.ShortDifficulty(boss.difficultyID, boss.difficultyName)
+        or ""
+    )
 
     -- No pulls recorded is not zero kills. Sessions arrived later than loot
     -- capture, so older bosses genuinely have nothing to report here.

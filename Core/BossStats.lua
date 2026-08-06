@@ -30,12 +30,13 @@ local function BossKey(encounterID, name, difficultyName)
     }, "|")
 end
 
-local function NewBoss(key, name, instanceName, difficultyName)
+local function NewBoss(key, name, instanceName, difficultyName, difficultyID)
     return {
         key = key,
         name = name or "Unknown",
         instanceName = instanceName,
         difficultyName = difficultyName,
+        difficultyID = difficultyID,
 
         pulls = 0,
         kills = 0,
@@ -76,11 +77,12 @@ local function Later(current, candidate)
     return current
 end
 
-local function Ensure(byKey, order, key, name, instanceName, difficultyName)
+local function Ensure(byKey, order, key, name, instanceName, difficultyName,
+                      difficultyID)
     local boss = byKey[key]
 
     if not boss then
-        boss = NewBoss(key, name, instanceName, difficultyName)
+        boss = NewBoss(key, name, instanceName, difficultyName, difficultyID)
         byKey[key] = boss
 
         table.insert(order, boss)
@@ -89,6 +91,7 @@ local function Ensure(byKey, order, key, name, instanceName, difficultyName)
     -- Later records may know a name an earlier one did not.
     boss.instanceName = boss.instanceName or instanceName
     boss.difficultyName = boss.difficultyName or difficultyName
+    boss.difficultyID = boss.difficultyID or difficultyID
 
     return boss
 end
@@ -102,7 +105,8 @@ local function CountEncounters(byKey, order, sessions)
 
             local boss = Ensure(
                 byKey, order, key,
-                encounter.name, session.instanceName, session.difficultyName
+                encounter.name, session.instanceName, session.difficultyName,
+                session.difficultyID
             )
 
             boss.pulls = boss.pulls + 1
@@ -125,7 +129,8 @@ local function CountDrops(byKey, order, drops)
 
             local boss = Ensure(
                 byKey, order, key,
-                drop.encounterName, drop.instanceName, drop.difficultyName
+                drop.encounterName, drop.instanceName, drop.difficultyName,
+                drop.difficultyID
             )
 
             boss.drops = boss.drops + 1

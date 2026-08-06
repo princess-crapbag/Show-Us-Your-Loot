@@ -57,27 +57,10 @@ local function ScheduleCacheRetry()
     end)
 end
 
-local DIFFICULTY_SHORT = {
-    [14] = "N",
-    [15] = "HC",
-    [16] = "M",
-    [17] = "LFR",
-}
-
+-- Kept as a wrapper because the drops rows pass a whole record. The table it
+-- used to own now lives in Utilities, so every list abbreviates identically.
 local function AbbreviateDifficulty(record)
-    local short = DIFFICULTY_SHORT[record.difficultyID]
-
-    if short then
-        return short
-    end
-
-    local name = record.difficultyName
-
-    if name and name ~= "" and name ~= "None" then
-        return name
-    end
-
-    return nil
+    return Utilities.ShortDifficulty(record.difficultyID, record.difficultyName)
 end
 
 --------------------------------------------------------------------------
@@ -90,13 +73,13 @@ local function FormatLocation(record)
         or record.zoneName
         or "Unknown"
 
-    local difficultyName = record.difficultyName
+    -- Short form, or "The Voidspire - Looking For Raid" runs off the end of
+    -- the column and the instance name is what gets cut.
+    local short =
+        Utilities.ShortDifficulty(record.difficultyID, record.difficultyName)
 
-    if difficultyName
-        and difficultyName ~= ""
-        and difficultyName ~= "None"
-    then
-        return instanceName .. " - " .. difficultyName
+    if short then
+        return instanceName .. " - " .. short
     end
 
     return instanceName

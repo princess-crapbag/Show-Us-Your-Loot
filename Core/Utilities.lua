@@ -105,6 +105,50 @@ function Utilities.FormatDateTime(timestamp)
     return date("%m/%d/%y %I:%M %p", timestamp)
 end
 
+-- Difficulty names are long enough to break any column they land in:
+-- "Looking For Raid" is sixteen characters against boss and player names
+-- that are shorter. Every list shows the short form instead.
+local DIFFICULTY_SHORT = {
+    [1] = "5N",
+    [2] = "5H",
+    [8] = "M+",
+    [14] = "N",
+    [15] = "HC",
+    [16] = "M",
+    [17] = "LFR",
+    [23] = "5M",
+    [24] = "TW",
+}
+
+function Utilities.ShortDifficulty(difficultyID, difficultyName)
+    local short = DIFFICULTY_SHORT[difficultyID]
+
+    if short then
+        return short
+    end
+
+    if difficultyName
+        and difficultyName ~= ""
+        and difficultyName ~= "None"
+    then
+        -- An id this does not know yet. Initials beat truncation: "Looking
+        -- For Raid" becomes LFR rather than "Looking Fo…".
+        local initials = ""
+
+        for word in difficultyName:gmatch("%a+") do
+            initials = initials .. word:sub(1, 1):upper()
+        end
+
+        if #initials >= 2 then
+            return initials
+        end
+
+        return difficultyName
+    end
+
+    return nil
+end
+
 function Utilities.FormatClockTime(timestamp)
     if not timestamp then
         return "--:--:--"
