@@ -99,8 +99,12 @@ local function InitializeSettings()
     -- Which colour scheme the window wears. Stored as a key rather than as
     -- colour values, so editing a palette improves every existing install
     -- instead of only new ones.
+    --
+    -- Taken from Palettes rather than repeated here: two copies of a default
+    -- drift, and the one that loses is always the one nobody remembers.
+    -- This runs at ADDON_LOADED, by which point every file has loaded.
     if ShowUsYourLootDB.settings.palette == nil then
-        ShowUsYourLootDB.settings.palette = "graphite"
+        ShowUsYourLootDB.settings.palette = SYL.Palettes.DEFAULT
     end
 end
 

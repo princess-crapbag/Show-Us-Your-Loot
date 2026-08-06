@@ -144,7 +144,10 @@ Palettes.list = {
     },
 }
 
-Palettes.DEFAULT = "graphite"
+-- Nightfall, picked by the person who actually stares at this during raid.
+-- The default matters more than it looks: it is what anyone installing this
+-- sees before they know the setting exists.
+Palettes.DEFAULT = "nightfall"
 
 function Palettes.Get(key)
     for _, palette in ipairs(Palettes.list) do
