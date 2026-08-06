@@ -116,6 +116,10 @@ COMMANDS.tonight = function()
     SYL.RaidSummary.ReportCurrent()
 end
 
+COMMANDS.sync = function()
+    SYL.Sync.ReportStatus()
+end
+
 COMMANDS.bosses = function()
     if SYL.OpenBossWindow then
         SYL:OpenBossWindow()

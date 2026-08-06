@@ -65,6 +65,10 @@ CommandList.ENTRIES = {
         description = "Kills, pulls and drops for every boss",
     },
     {
+        command = "sync",
+        description = "Officer sync status and where drops came from",
+    },
+    {
         command = "theme",
         description = "Change the colour scheme",
     },

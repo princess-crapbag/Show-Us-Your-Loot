@@ -257,3 +257,75 @@ end
 function Sync.IsEnabled()
     return IsEnabled()
 end
+
+-- Counts where the season's drops came from. Synced records are deliberately
+-- second class — they carry no roll list, so the fairness maths skips them —
+-- and there was previously no way to see how much of the history that
+-- affected. A history that looks complete but is half partial gives answers
+-- nobody should trust.
+function Sync.BuildStatus()
+    local status = {
+        enabled = IsEnabled(),
+        registered = registered,
+
+        total = 0,
+        local_ = 0,
+        partial = 0,
+
+        contributors = {},
+        contributorOrder = {},
+    }
+
+    for _, drop in ipairs(SYL.GetActiveDrops()) do
+        status.total = status.total + 1
+
+        if drop.partial then
+            status.partial = status.partial + 1
+
+            local who = drop.recordedBy or "unknown"
+
+            if not status.contributors[who] then
+                status.contributors[who] = 0
+
+                table.insert(status.contributorOrder, who)
+            end
+
+            status.contributors[who] = status.contributors[who] + 1
+        else
+            status.local_ = status.local_ + 1
+        end
+    end
+
+    table.sort(status.contributorOrder, function(left, right)
+        return status.contributors[left] > status.contributors[right]
+    end)
+
+    return status
+end
+
+function Sync.ReportStatus()
+    local status = Sync.BuildStatus()
+
+    SYL:Print(
+        "Officer sync is " .. (status.enabled and "on" or "off")
+        .. ". It sends drop headers to other officers in your raid, never "
+        .. "roll lists and never outside the group."
+    )
+
+    SYL:Write(
+        "  This season: " .. status.total .. " drops — "
+        .. status.local_ .. " recorded here, "
+        .. status.partial .. " received from others."
+    )
+
+    for _, who in ipairs(status.contributorOrder) do
+        SYL:Write("    " .. who .. ": " .. status.contributors[who])
+    end
+
+    if status.partial > 0 then
+        SYL:Write(
+            "  Received drops have no roll list, so they are left out of "
+            .. "player fairness numbers. They still show in the loot list."
+        )
+    end
+end
