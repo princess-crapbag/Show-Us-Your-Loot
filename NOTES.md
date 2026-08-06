@@ -118,3 +118,28 @@ decision or are large enough to be worth discussing first.
 10. **Automatic raid-night summary** — post the night's loot to the chat
     window when the raid ends, ready to paste. Small, but it needs a rule
     for when a night has actually ended.
+
+## Where things stand (end of 2026-08-05)
+
+Confirmed working in game: the addon loads, boss history renders, the theme
+picker works, and Nightfall is the default. Confirmed working end to end in
+the browser: WoW to SavedVariables to uploader to Supabase to dashboard, 5
+drops and 25 players, signed in with Discord.
+
+Next session, roughly in order:
+
+1. **Raid nights is still unproven.** The window has never had data in it —
+   sessions only started recording after the raid that produced the current
+   5 drops, so it shows 0. The next real pull is the first test of
+   RaidSession, the attendance roster, and the end of night summary that
+   fires on leaving the instance.
+2. **The due list has no attendance to rank yet**, for the same reason. It
+   will stay empty until raid nights exist.
+3. **The two judgement calls in DueList.lua are open**: transmog and greed
+   not resetting the drought, and drought counted in nights attended.
+   Neither has been agreed, only assumed.
+4. **Officer sync still has no protocol work** — headers only, no roll
+   lists, no backfill. Needs two clients to test, so it needs a second
+   person more than it needs code.
+5. Sign-in on the dashboard is Discord only in practice. Email magic links
+   are built but the free tier fights them; see README-SYNC.md.
