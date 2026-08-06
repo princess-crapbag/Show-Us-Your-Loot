@@ -166,6 +166,11 @@
         <button id="sb-magic">Email me a sign-in link</button>
         <button id="sb-discord" class="alt">Discord</button>
       </div>
+      <div class="cloudrow" id="sb-coderow">
+        <input id="sb-code" autocomplete="one-time-code"
+               placeholder="paste the sign-in link from the email (or a code)">
+        <button id="sb-verify">Sign in</button>
+      </div>
       <p class="muted" id="sb-who" style="margin-top:10px"></p>
     </div>
   </details>
@@ -548,19 +553,30 @@ function saveCfg() {
 function token() { return localStorage.getItem("syl:token"); }
 
 /* Supabase returns the session in the URL fragment after Discord sends the
-   browser back. Take it, store it, and clean the address bar. */
+   browser back. Take it, store it, and clean the address bar.
+
+   A failed sign-in comes back the same way, as an error in the fragment.
+   That used to be dropped silently, which made a refused link look identical
+   to one that was never clicked — so it is surfaced now. */
 (function captureSession() {
-  if (!location.hash.includes("access_token")) return;
+  if (!location.hash) return;
   const params = new URLSearchParams(location.hash.slice(1));
   const access = params.get("access_token");
+  const failed = params.get("error_description") || params.get("error");
+
   if (access) {
     localStorage.setItem("syl:token", access);
+    history.replaceState(null, "", location.pathname + location.search);
+  } else if (failed) {
+    $("#err").textContent = "Sign-in failed: " + failed.replace(/\+/g, " ");
+    $("#err").classList.remove("hide");
     history.replaceState(null, "", location.pathname + location.search);
   }
 })();
 
 function showSignedIn(on, who) {
   $("#sb-signin").classList.toggle("hide", on);
+  $("#sb-coderow").classList.toggle("hide", on);
   $("#sb-load").classList.toggle("hide", !on);
   $("#sb-out").classList.toggle("hide", !on);
   $("#sb-who").textContent = on ? (who || "Signed in.") : "";
@@ -599,12 +615,78 @@ $("#sb-magic").onclick = async () => {
     if (!res.ok) throw new Error(`Supabase said ${res.status}: ${text.slice(0, 200)}`);
     $("#err").classList.add("hide");
     $("#sb-who").textContent =
-      "Check your email and click the link. Leave this tab open.";
+      "Check your email. Clicking the link works only if it opens in this " +
+      "browser — copying it into the box below always works.";
+    $("#sb-code").focus();
   } catch (e) {
     $("#err").textContent = e.message || String(e);
     $("#err").classList.remove("hide");
   } finally {
     $("#sb-magic").textContent = "Email me a sign-in link";
+  }
+};
+
+/* Sign in without depending on where the email link opens.
+   A magic link only signs in the browser that opens it. Click it on a phone,
+   or in whatever the mail client treats as the default browser, and the
+   session lands somewhere this page cannot read: the account shows as signed
+   in on the server while the page still looks broken. Pasting the link here
+   navigates this browser through it, so the token comes back to this tab.
+
+   A six digit code is accepted too, for anyone whose project has custom SMTP
+   and an email template carrying {{ .Token }}. The stock template on the free
+   tier sends a link only, which is why the link is the path being offered. */
+$("#sb-verify").onclick = async () => {
+  if (needsConfig()) return;
+  const email = $("#sb-email").value.trim();
+  const entry = $("#sb-code").value.trim();
+
+  if (/^https?:\/\//i.test(entry)) {
+    // Following it lands back here with the session in the fragment.
+    location.href = entry;
+    return;
+  }
+
+  const code = entry.replace(/\s/g, "");
+  if (!email || !code) {
+    $("#err").textContent =
+      "Paste the sign-in link from the email, or enter your address and a code.";
+    $("#err").classList.remove("hide");
+    return;
+  }
+  saveCfg();
+  const { url, anon } = cfg();
+  $("#sb-verify").textContent = "Checking…";
+  try {
+    /* Which type a code carries depends on how the account was reached:
+       an established address gets a magiclink token, a brand new one gets a
+       signup token, and current Supabase also accepts the generic "email".
+       The code looks identical in all three cases, so rather than make the
+       person care, try each and keep the one that is accepted. */
+    let data = {}, last = "";
+    for (const type of ["email", "magiclink", "signup"]) {
+      const res = await fetch(`${url}/auth/v1/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: anon },
+        body: JSON.stringify({ email, token: code, type }),
+      });
+      data = await res.json().catch(() => ({}));
+      if (res.ok && data.access_token) break;
+      last = data.error_description || data.msg || `Supabase said ${res.status}`;
+      data = {};
+    }
+    if (!data.access_token) {
+      throw new Error(last + ". Codes are single use and expire — ask for a new one.");
+    }
+    localStorage.setItem("syl:token", data.access_token);
+    $("#sb-code").value = "";
+    $("#err").classList.add("hide");
+    showSignedIn(true, "Signed in as " + email + ".");
+  } catch (e) {
+    $("#err").textContent = e.message || String(e);
+    $("#err").classList.remove("hide");
+  } finally {
+    $("#sb-verify").textContent = "Sign in";
   }
 };
 

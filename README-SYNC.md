@@ -191,3 +191,23 @@ for using logins instead of a shared password.
 
 Drag `ShowUsYourLoot.lua` straight onto it. No project, no login, no
 uploader. The hosted path is additive, never required.
+
+### Signing in
+
+The email carries a link, and a link only signs in **the browser that opens
+it**. Click it on a phone, or in whatever the mail client treats as the
+default browser, and the session is stored there instead. The account then
+shows a successful sign-in on the server while the dashboard still says you
+are signed out — the confusing case this whole section exists for.
+
+So: copy the link out of the email and paste it into the sign-in box on the
+page. That guarantees it opens in the browser you are actually using.
+
+The box also takes a six digit code, but the stock template does not send
+one. Adding `{{ .Token }}` to the email template requires custom SMTP, which
+the free tier does not allow.
+
+**Free tier sends about two emails per hour.** Past that, requesting a link
+fails with `over_email_send_rate_limit` and nothing is sent. If a link seems
+not to arrive, check for that before assuming the link is broken. Configuring
+custom SMTP removes the limit and unlocks template editing at the same time.
