@@ -1,5 +1,9 @@
 -- Show Us Your Loot — Supabase schema
 --
+-- NOTE: access control has since moved from user ids to email addresses.
+-- Run web/supabase/migrate-email-access.sql after this file, or on an
+-- existing project, so officers can be authorised before they first sign in.
+--
 -- Run this once in the Supabase SQL editor (Database → SQL editor → New query).
 --
 -- Security model, two halves, because they have different needs:
