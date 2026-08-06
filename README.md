@@ -1,11 +1,40 @@
 # Show Us Your Loot
 
+> **Alpha.** It records loot correctly and has been run in a real raid, but
+> raid nights, attendance and the due list have not yet had a full night of
+> data through them. Nothing is deleted, so the worst case is a number that
+> reads wrong, not history that disappears.
+
 Loot history, attendance and fairness analytics for guilds running Blizzard's
 default **Group Loot**.
 
 This is not a loot council addon. It does not decide who gets an item, and it
 does not change how loot is awarded. It records what actually happened and
 answers the questions that come up afterwards.
+
+## Installing
+
+Retail only, Interface 120007.
+
+**From a zip:**
+
+1. Close World of Warcraft entirely. Addons are read at launch, and a folder
+   added while the game is running is ignored.
+2. Unzip the file. You should get one folder called `ShowUsYourLoot` with
+   `ShowUsYourLoot.toc` directly inside it — not a folder inside another
+   folder of the same name.
+3. Put that folder in:
+   `World of Warcraft/_retail_/Interface/AddOns/`
+4. Start the game. At the character screen, click **AddOns** (bottom left)
+   and make sure **Show Us Your Loot** is ticked.
+5. Log in and type `/syl`. The window opening means it loaded.
+
+If the window does not open, type `/syl help`. If that prints nothing either,
+the folder is nested one level too deep — check step 2.
+
+**Building the zip yourself:** `python tools/syl_package.py` writes one to
+`dist/`. It reads the same ignore rules the release build uses, so it
+contains exactly what a published version would.
 
 ## What it records
 

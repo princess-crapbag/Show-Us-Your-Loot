@@ -1,8 +1,8 @@
 ## Interface: 120007
 ## Title: Show Us Your Loot
-## Notes: Loot history, attendance and fairness analytics for group loot.
+## Notes: |cff8c8cffALPHA|r Loot history, attendance and fairness analytics for group loot.
 ## Author: Aimee
-## Version: 0.0.8
+## Version: 0.0.9-alpha
 ## SavedVariables: ShowUsYourLootDB
 ## X-Website: https://github.com/
 ## X-License: All Rights Reserved

@@ -9,3 +9,6 @@ Supabase Project Name*.txt
 # Python build artefacts from tools/
 __pycache__/
 *.pyc
+
+# Built addon zips. Reproducible from source, so not worth versioning.
+dist/
