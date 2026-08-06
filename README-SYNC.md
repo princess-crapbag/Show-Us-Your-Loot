@@ -14,12 +14,21 @@ add data. People sign in with Discord and can only read.
 
 ---
 
-## 1. Discord — create an app  (5 min)
+## 1. Discord — create an app  (OPTIONAL, skip it)
+
+Only needed if you specifically want Discord identities. It requires
+two-factor authentication on your Discord account before it will reveal
+the client secret. Email sign-in needs none of this and is the default.
+
+<details><summary>Discord steps, if you want them anyway</summary>
+
 
 1. https://discord.com/developers/applications → **New Application**.
    Name it anything.
 2. **OAuth2** in the sidebar. Copy the **Client ID** and **Client Secret**.
 3. Leave the tab open — you add a redirect URL in step 3.
+
+</details>
 
 ## 2. Supabase — create the project  (5 min)
 
@@ -53,7 +62,30 @@ add data. People sign in with Discord and can only read.
    so whoever holds it can read and write everything regardless of the
    policies. It belongs on a server, not in a browser or a config file.
 
-## 3. Supabase — turn on Discord login  (3 min)
+## 3. Run the page locally  (2 min)
+
+**This step is not optional.** A page served from claude.ai cannot reach
+Supabase: published artifacts run under a Content Security Policy that
+blocks every outbound request. The hosted copy is still fine for dragging
+a SavedVariables file onto, which needs no network at all.
+
+```powershell
+cd "C:\Users\Taylor Swift\Desktop\ShowUsYourLoot\web"
+python -m http.server 8000
+```
+
+Leave that window open and visit <http://localhost:8000>.
+
+Serve it rather than double-clicking the file: opening index.html directly
+gives the page a file:// origin, which browsers distrust for cross-site
+requests. http://localhost is a real origin and works.
+
+Then in Supabase, **Authentication -> URL Configuration -> Redirect URLs**,
+add:
+
+    http://localhost:8000
+
+## 3b. Discord login  (OPTIONAL)
 
 1. **Authentication → Providers → Discord**. Enable it.
 2. Paste the Client ID and Client Secret from step 1.
@@ -96,8 +128,10 @@ within a reload — never mid-pull.
 
 ## 5. Sign in and add yourself  (3 min)
 
-1. Open the dashboard, expand **sign in to see synced guild data**, paste
-   the Project URL and anon key, click **Sign in with Discord**.
+1. At <http://localhost:8000>, expand **sign in to see synced guild data**,
+   paste the Project URL and API key, enter your email and click
+   **Email me a sign-in link**. Click the link in the mail; check spam, as
+   Supabase's default sender often lands there.
 2. You will land back on the page signed in — and with no access yet.
    That is correct: signing in proves who you are, it does not grant
    anything.
@@ -135,8 +169,11 @@ for using logins instead of a shared password.
 - **`unknown key` from the uploader** — the guild key does not match what
   step 2.4 created.
 - **Signed in but no data** — you are not in `syl_members` yet. Step 5.3.
-- **Discord redirect error** — the callback URL from step 3.3 is not in the
-  Discord app's redirect list.
+- **Failed to fetch** — the page is being served from claude.ai, whose CSP
+  blocks outbound requests, or straight off disk as file://. Serve it on
+  http://localhost instead.
+- **Email link does nothing** — http://localhost:8000 is not in the
+  Supabase redirect URL list.
 - **`unsupported schemaVersion`** — the addon and schema have drifted; the
   addon writes v1 and the SQL expects v1.
 - **401 or invalid API key** — try the other key tab. Publishable and legacy
