@@ -6,9 +6,7 @@
 ## SavedVariables: ShowUsYourLootDB
 ## X-Website: https://github.com/
 ## X-License: All Rights Reserved
-# CurseForge issues an X-Curse-Project-ID once the project exists. The release
-# workflow needs that line before it can upload anything:
-# ## X-Curse-Project-ID: 000000
+## X-Curse-Project-ID: 1642383
 
 Main.lua
 

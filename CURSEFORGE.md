@@ -124,18 +124,17 @@ unless you clear it deliberately, and archived seasons are never touched.
 
 ---
 
+## Submitted 2026-08-06
+
+Project ID **1642383**, slug `show-us-your-loot`, already written into the
+`.toc`. The author dashboard is **authors.curseforge.com**, which is a
+separate site from the project pages and hash routed, so links into it look
+like `authors.curseforge.com/#/projects/1642383/files`.
+
+Status on submission was **New**: awaiting a moderator, not visible to
+anyone, and files do not sync across CurseForge until it clears.
+
 ## After the project exists
-
-1. CurseForge issues a **project ID**. Put it in `ShowUsYourLoot.toc`, on its
-   own line under `X-License`:
-
-   ```
-   ## X-Curse-Project-ID: 123456
-   ```
-
-   The commented placeholder is already there. The release workflow builds the
-   zip fine without it and then has nowhere to send it, which looks like a
-   broken build rather than a missing ID.
 
 2. Upload the first file by hand — **Files → Upload File** — rather than
    waiting on automation. Set the release type to **Alpha**.
