@@ -29,6 +29,7 @@ ignore:
     - NOTES.md
     - DESIGN-WEB.md
     - README-SYNC.md
+    - CURSEFORGE.md
     - .pkgmeta
 
     # Named even though it is gitignored, so it cannot ship. A CI build works
