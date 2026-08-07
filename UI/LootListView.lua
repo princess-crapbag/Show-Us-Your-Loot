@@ -115,13 +115,26 @@ local function ClampOffset(view, total)
     return maxOffset
 end
 
+-- The child is sized so that scrolling it to the bottom lands exactly on
+-- maxOffset, rather than from the total number of rows.
+--
+-- WoW clamps a scroll to `childHeight - frameHeight`, so with a child of
+-- `total * rowHeight` the last offset is only reachable when the rows divide
+-- the viewport evenly. Loot rows do — 13 x 28 is exactly 364 — and archive
+-- rows do not, which left the oldest season unreachable by a few pixels.
 local function UpdateScrollRange(view, maxOffset, total)
     local rowHeight = SYL.ScrollArea.RowHeight(view)
-    local visibleRows = SYL.ScrollArea.VisibleRows(view)
 
-    view.scrollChild:SetHeight(
-        math.max(visibleRows * rowHeight, total * rowHeight)
-    )
+    -- Falls back to the row count if the frame has not been laid out yet. A
+    -- height of zero here would size the child short and clip the last rows,
+    -- which is a hard fault to trace back to a first-draw ordering problem.
+    local viewportHeight = view.scrollFrame:GetHeight()
+
+    if not viewportHeight or viewportHeight <= 0 then
+        viewportHeight = SYL.ScrollArea.VisibleRows(view) * rowHeight
+    end
+
+    view.scrollChild:SetHeight(maxOffset * rowHeight + viewportHeight)
 
     view.scrollFrame:SetVerticalScroll(view.offset * rowHeight)
 
@@ -210,6 +223,12 @@ function LootListView.UpdateDropRows(view)
         local recordIndex = total - view.offset - rowIndex + 1
         local row = view.dropRows[rowIndex]
 
+        -- Re-anchored to follow the scroll. The child moves up by
+        -- offset * rowHeight, so a row pinned where it was built slides out
+        -- of the viewport while its contents are being refilled — the two
+        -- cancelling out into fewer and fewer visible rows.
+        Widgets.AnchorRow(row, view.offset + rowIndex, Widgets.ROW_HEIGHT)
+
         if recordIndex >= 1 then
             local record = records[recordIndex]
 
@@ -267,6 +286,8 @@ function LootListView.UpdateLootRows(view)
         local recordIndex = total - view.offset - rowIndex + 1
         local row = view.lootRows[rowIndex]
 
+        Widgets.AnchorRow(row, view.offset + rowIndex, Widgets.ROW_HEIGHT)
+
         if recordIndex >= 1 then
             local record = records[recordIndex]
 
@@ -310,6 +331,10 @@ function LootListView.UpdateArchiveRows(view)
         local row = view.archiveRows[rowIndex]
         local archiveIndex = rowIndex + view.offset
         local season = archives[archiveIndex]
+
+        Widgets.AnchorRow(
+            row, archiveIndex, Widgets.ARCHIVE_ROW_HEIGHT
+        )
 
         if season then
             row.nameText:SetText(season.name or "Unnamed Season")

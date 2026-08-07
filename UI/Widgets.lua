@@ -276,9 +276,16 @@ function Widgets.MakeResizableList(frame, config)
     })
 end
 
+-- `index` is the row's slot within the scroll child, counting from 1 — not
+-- its position on screen. Those are the same thing only at offset 0.
+--
+-- Safe to call again on an existing row, which is what makes a scrolled list
+-- possible: SetPoint adds an anchor rather than replacing one, so without the
+-- clear a re-anchored row keeps every position it has ever held.
 function Widgets.AnchorRow(row, index, height)
     local offset = -((index - 1) * height)
 
+    row:ClearAllPoints()
     row:SetHeight(height)
     row:SetPoint("TOPLEFT", 0, offset)
     row:SetPoint("TOPRIGHT", -20, offset)
