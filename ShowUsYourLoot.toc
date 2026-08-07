@@ -62,6 +62,7 @@ UI\CommandMenu.lua
 UI\MinimapButton.lua
 UI\PlayerWindow.lua
 UI\RaidWindow.lua
+UI\BossTooltip.lua
 UI\BossWindow.lua
 UI\ItemTooltip.lua
 UI\ExportWindow.lua

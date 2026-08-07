@@ -48,6 +48,7 @@ local offset = 0
 local showItems = false
 
 local columnOffset = {}
+local columnWidth = {}
 
 do
     local x = 0
@@ -55,6 +56,7 @@ do
     for _, column in ipairs(COLUMNS) do
         x = x + column.gap
         columnOffset[column.key] = x
+        columnWidth[column.key] = column.width
         x = x + column.width
     end
 end
@@ -116,11 +118,20 @@ local function CreateRow(parent, index)
         row.cells[column.key] = text
     end
 
+    -- Over the count, because the count on its own does not say which items.
+    SYL.BossTooltip.Attach(
+        row, columnOffset.items, columnWidth.items, ROW_HEIGHT
+    )
+
     return row
 end
 
 local function FillRow(row, boss)
     local cells = row.cells
+
+    -- Read by the tooltip. Rows are pooled, so this has to be set every
+    -- refresh rather than captured when the row was built.
+    row.boss = boss
 
     cells.boss:SetText(tostring(boss.name))
     cells.instance:SetText(tostring(boss.instanceName or "Unknown"))

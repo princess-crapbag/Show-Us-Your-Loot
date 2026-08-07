@@ -12,19 +12,29 @@
 --     is what BossStats keys on.
 --   * EJ_SelectEncounter takes a *journalEncounterID*.
 --
--- Passing one where the other belongs silently returns another boss's loot,
--- which is worse than returning nothing. EJ_GetEncounterInfoByIndex returns
--- both, so the bridge is built once by walking the journal and kept in
--- memory.
+-- Lu'ashal is 3454 as an encounter and 2827 in the journal. Passing one where
+-- the other belongs does not fail, it silently returns a different boss's
+-- loot. EJ_GetEncounterInfoByIndex returns both, which is the only bridge
+-- between them.
 --
--- READING THE JOURNAL MOVES IT. EJ_SelectInstance, EJ_SelectEncounter and
--- EJ_SetDifficulty change what the player is looking at. If their journal is
--- open when this runs, it would jump to whatever was queried last, so the
--- selection is saved and put back.
+-- THE INSTANCE HAS TO BE SELECTED, NOT JUST NAMED. EJ_GetEncounterInfoByIndex
+-- takes a journalInstanceID as an optional second argument, but the encounter
+-- list is built from the current selection and passing the id alone returns
+-- nothing. That cost an afternoon: the walk completed, found zero bosses, and
+-- reported success.
+--
+-- TIERS ARE WALKED NEWEST FIRST, AND ONLY AS FAR AS NEEDED. Walking all
+-- thirteen stutters the game for several seconds, and a guild raiding current
+-- content needs exactly one of them. A boss that is not found pulls in the
+-- next tier back, so older seasons still resolve — they just pay for it.
+--
+-- READING THE JOURNAL MOVES IT. Selecting a tier, instance, difficulty or
+-- encounter changes what the player is looking at, so the selection is put
+-- back afterwards.
 --
 -- Everything here is lazy and defensive. A journal that will not load, or an
--- API that has moved, produces an empty table and a debug line rather than an
--- error in the middle of a raid.
+-- API that has moved, produces nothing and a debug line rather than an error
+-- in the middle of a raid.
 
 local SYL = _G.ShowUsYourLoot
 
@@ -34,13 +44,22 @@ SYL.LootTable = LootTable
 local JOURNAL_ADDON = "Blizzard_EncounterJournal"
 
 -- dungeonEncounterID -> { journalEncounterID, journalInstanceID, name }
-local bridge
-local bridgeFailed = false
+local bridge = {}
+
+-- Counts down. nil means the walk has not started; 0 means every tier has
+-- been read and anything still missing is genuinely not a raid boss.
+local nextTier
+local tierCount = 0
+local journalFailed = false
 
 -- "journalEncounterID:difficultyID" -> list of items
 local lootCache = {}
 
 local function Loaded()
+    if journalFailed then
+        return false
+    end
+
     if _G.EncounterJournal then
         return true
     end
@@ -48,17 +67,28 @@ local function Loaded()
     local load = C_AddOns and C_AddOns.LoadAddOn or _G.LoadAddOn
 
     if not load then
+        journalFailed = true
+
         return false
     end
 
     local ok = pcall(load, JOURNAL_ADDON)
 
-    return ok and _G.EncounterJournal ~= nil
+    if not ok or not _G.EncounterJournal then
+        journalFailed = true
+
+        SYL:DebugPrint("The Encounter Journal would not load.")
+
+        return false
+    end
+
+    return true
 end
 
 -- Raids only. Dungeon and delve tables are large, change every season, and
--- nothing in this addon asks about them: drops are recorded per raid night.
-local function WalkTier(map)
+-- nothing here asks about them: drops are recorded per raid night.
+local function WalkSelectedTier()
+    local found = 0
     local index = 1
 
     while true do
@@ -67,6 +97,8 @@ local function WalkTier(map)
         if not journalInstanceID then
             break
         end
+
+        EJ_SelectInstance(journalInstanceID)
 
         local encounterIndex = 1
 
@@ -79,14 +111,16 @@ local function WalkTier(map)
             end
 
             -- Older journal entries predate dungeonEncounterID and return
-            -- nil for it. Those bosses simply have no bridge, which reads
-            -- downstream as "no loot table known" rather than as a wrong one.
-            if dungeonEncounterID then
-                map[dungeonEncounterID] = {
+            -- nil. Those bosses get no bridge, which reads downstream as "no
+            -- loot table known" rather than as a wrong one.
+            if dungeonEncounterID and not bridge[dungeonEncounterID] then
+                bridge[dungeonEncounterID] = {
                     journalEncounterID = journalEncounterID,
                     journalInstanceID = journalInstanceID,
                     name = name,
                 }
+
+                found = found + 1
             end
 
             encounterIndex = encounterIndex + 1
@@ -94,57 +128,111 @@ local function WalkTier(map)
 
         index = index + 1
     end
+
+    return found
 end
 
--- Built once per session and held in memory, never saved: it is derived from
--- client data that changes with every patch, and a stale copy on disk would
--- outlive the patch that made it wrong.
-function LootTable.BuildBridge()
-    if bridge or bridgeFailed then
-        return bridge
-    end
-
+-- Reads one more tier, newest first. Returns false when there are none left.
+local function WalkNextTier()
     if not Loaded() then
-        bridgeFailed = true
-
-        SYL:DebugPrint(
-            "The Encounter Journal would not load, so loot tables are off."
-        )
-
-        return nil
+        return false
     end
 
-    local map = {}
+    if not nextTier then
+        tierCount = EJ_GetNumTiers and EJ_GetNumTiers() or 0
+        nextTier = tierCount
+    end
 
-    local ok = pcall(function()
-        local tiers = EJ_GetNumTiers and EJ_GetNumTiers() or 0
-        local currentTier = EJ_GetCurrentTier and EJ_GetCurrentTier() or nil
+    if nextTier < 1 then
+        return false
+    end
 
-        for tier = 1, tiers do
-            EJ_SelectTier(tier)
-            WalkTier(map)
-        end
+    local tier = nextTier
+    nextTier = nextTier - 1
 
-        if currentTier then
-            EJ_SelectTier(currentTier)
+    local ok, err = pcall(function()
+        local previousTier = EJ_GetCurrentTier and EJ_GetCurrentTier() or nil
+
+        EJ_SelectTier(tier)
+        WalkSelectedTier()
+
+        if previousTier then
+            EJ_SelectTier(previousTier)
         end
     end)
 
     if not ok then
-        bridgeFailed = true
+        SYL:DebugPrint("Journal walk error on tier " .. tier .. ": "
+            .. tostring(err))
+    end
 
-        SYL:DebugPrint("Walking the Encounter Journal failed.")
+    return true
+end
 
+-- The bridge entry for a boss, reading further back through the tiers until
+-- it turns up or they run out.
+local function Find(dungeonEncounterID)
+    if not dungeonEncounterID then
         return nil
     end
 
-    bridge = map
+    if bridge[dungeonEncounterID] then
+        return bridge[dungeonEncounterID]
+    end
 
-    return bridge
+    while WalkNextTier() do
+        if bridge[dungeonEncounterID] then
+            return bridge[dungeonEncounterID]
+        end
+    end
+
+    return nil
 end
 
+-- True once the journal has opened and the newest tier has produced bosses.
+-- An empty result is a failure, not a success: the first version returned the
+-- table either way and only checked for nil, so a walk that found nothing
+-- reported itself as working and every row showed a dash with no explanation.
 function LootTable.IsAvailable()
-    return LootTable.BuildBridge() ~= nil
+    if not Loaded() then
+        return false
+    end
+
+    if not next(bridge) then
+        WalkNextTier()
+    end
+
+    return next(bridge) ~= nil
+end
+
+-- Whether anything has been read already, without reading any more.
+--
+-- IsAvailable walks a tier when it finds nothing, which is the right
+-- behaviour for a button press and the wrong one for a mouseover: hovering a
+-- row must never cost several seconds.
+function LootTable.IsReady()
+    return next(bridge) ~= nil
+end
+
+function LootTable.Describe()
+    if journalFailed then
+        return "the Encounter Journal would not load"
+    end
+
+    local count = 0
+
+    for _ in pairs(bridge) do
+        count = count + 1
+    end
+
+    if count == 0 then
+        return "no bosses read yet"
+    end
+
+    local walked = tierCount - (nextTier or tierCount)
+
+    return count .. " bosses from " .. walked
+        .. (walked == 1 and " tier" or " tiers")
 end
 
 -- The journal shows one difficulty at a time and its loot changes with it,
@@ -163,7 +251,7 @@ local function ReadLoot()
     for index = 1, count do
         local info = C_EncounterJournal.GetLootInfoByIndex(index)
 
-        -- The journal lists an item per armour type for shared tokens, and
+        -- The journal lists an entry per armour type for shared tokens, and
         -- only entries carrying an itemID are usable here.
         if info and info.itemID then
             table.insert(items, {
@@ -182,13 +270,7 @@ end
 -- Returns a list of { itemID, name, link, slot, armorType }, or nil when the
 -- boss is not in the journal.
 function LootTable.GetItems(dungeonEncounterID, difficultyID)
-    local map = LootTable.BuildBridge()
-
-    if not map or not dungeonEncounterID then
-        return nil
-    end
-
-    local entry = map[dungeonEncounterID]
+    local entry = Find(dungeonEncounterID)
 
     if not entry then
         return nil
@@ -248,7 +330,7 @@ end
 -- Matching is by item name, because that is what drop records store
 -- alongside the id and what BossStats already counts by. Returns the missing
 -- items, how many the table holds, and how many have been seen — a caller
--- showing "3 of 11 never dropped" needs all three.
+-- showing "2 of 6" needs all three.
 function LootTable.GetMissing(boss)
     if not boss then
         return nil
