@@ -30,6 +30,7 @@ Core\LootHistory.lua
 Core\Sync.lua
 Core\Events.lua
 Core\Analytics.lua
+Core\PlayerHistory.lua
 Core\LootTable.lua
 Core\BossStats.lua
 Core\DueList.lua
@@ -63,6 +64,7 @@ UI\DropDetailWindow.lua
 UI\CommandMenu.lua
 UI\MinimapButton.lua
 UI\PlayerWindow.lua
+UI\PlayerDetailWindow.lua
 UI\RaidWindow.lua
 UI\BossTooltip.lua
 UI\BossWindow.lua

@@ -111,7 +111,15 @@ local function CreateHeader(parent)
 end
 
 local function CreateRow(parent, index)
-    local row = CreateFrame("Frame", nil, parent)
+    -- A Button rather than a Frame so the row can be clicked through to the
+    -- player's own history.
+    local row = CreateFrame("Button", nil, parent)
+
+    row:SetScript("OnClick", function(self)
+        if self.entry then
+            SYL:OpenPlayerDetail(self.entry)
+        end
+    end)
 
     row:SetHeight(ROW_HEIGHT)
     row:SetPoint("TOPLEFT", 16, -(LIST_TOP + (index - 1) * ROW_HEIGHT))
@@ -138,6 +146,10 @@ end
 
 local function FillRow(row, entry)
     local cells = row.cells
+
+    -- Read by the click handler. Rows are pooled and reused, so this has to
+    -- be set every refresh rather than captured when the row was built.
+    row.entry = entry
 
     cells.name:SetText(tostring(entry.name or "Unknown"))
 
