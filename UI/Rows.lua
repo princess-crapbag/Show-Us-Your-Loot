@@ -2,11 +2,12 @@
 --
 -- Row and column layout for the list views.
 --
--- Column geometry is declared once per view in COLUMN_SETS and shared by both
+-- Column geometry lives in UI/Columns.lua and is shared by both
 -- the header and the rows, so the two can never drift out of alignment.
 
 local SYL = _G.ShowUsYourLoot
 local Theme = SYL.Theme
+local Columns = SYL.Columns
 local Widgets = SYL.Widgets
 
 local Rows = {}
@@ -15,63 +16,18 @@ SYL.Rows = Rows
 local ICON_SIZE = Theme.metrics.iconSize
 local ICON_TEXT_GAP = 22
 
--- Widths and gaps must total no more than 830: the scroll child is created as
--- WINDOW_WIDTH - 70 in MainWindow, and rows are laid out from its left edge.
--- tools/syl_check.py enforces the total, because getting it wrong truncates
--- silently — the text simply ends in an ellipsis, which reads as a styling
--- choice rather than as a column that was never given room.
+-- Width comes from the column definition, never from the caller.
 --
--- Sizing is driven by the longest realistic value, not by the header:
--- "Leggings of the Devouring Advance" for an item, "Sagedin-Proudmoore" for a
--- name, "08/05/26 12:32" for a date. Two changes bought most of the room
--- back — difficulty is abbreviated, so locations read "The Voidspire - LFR",
--- and the date lost its " PM".
---
--- ITEM is the column that gets the surplus. It holds the longest values, and
--- it is also the one worth reading: a truncated boss or winner name is still
--- recognisable, a truncated item name often is not. The Drops set carries
--- eight columns rather than six, so its ITEM is necessarily tighter; the drop
--- detail window is where the full name always shows.
-local COLUMN_SETS = {
-    loot = {
-        { key = "select", label = "", width = 16, gap = 8 },
-        { key = "number", label = "#", width = 30, gap = 8 },
-        { key = "player", label = "PLAYER", width = 146, gap = 8 },
-        { key = "item", label = "ITEM", width = 326, gap = 10 },
-        { key = "location", label = "LOCATION", width = 150, gap = 10 },
-        { key = "date", label = "DATE", width = 100, gap = 10 },
-    },
+-- It used to be a parameter, and every call site carried a literal that was
+-- correct when it was written. The definitions were then retuned twice and
+-- the literals were not, so the headers moved and the text under them did
+-- not: the date column was widened while its text stayed clamped to an older
+-- number and kept its ellipsis. Reading the width from one place is the only
+-- version of this that cannot drift.
+local function PlaceInColumn(element, setKey, key)
+    element:SetPoint("LEFT", Columns.Offset(setKey, key), 0)
 
-    drops = {
-        { key = "select", label = "", width = 16, gap = 8 },
-        { key = "number", label = "#", width = 30, gap = 8 },
-        -- BOSS carries the difficulty too ("Imperator Averzian  LFR"), so it
-        -- needs more than a bare name would suggest.
-        { key = "boss", label = "BOSS", width = 152, gap = 8 },
-        { key = "item", label = "ITEM", width = 240, gap = 10 },
-        { key = "winner", label = "WINNER", width = 124, gap = 10 },
-        { key = "wintype", label = "TYPE", width = 56, gap = 8 },
-        { key = "roll", label = "ROLL", width = 38, gap = 8 },
-        { key = "date", label = "DATE", width = 96, gap = 10 },
-    },
-}
-
-local offsets = {}
-
-for setKey, columns in pairs(COLUMN_SETS) do
-    local x = 0
-
-    offsets[setKey] = {}
-
-    for _, column in ipairs(columns) do
-        x = x + column.gap
-        offsets[setKey][column.key] = x
-        x = x + column.width
-    end
-end
-
-local function PlaceInColumn(element, setKey, key, width)
-    element:SetPoint("LEFT", offsets[setKey][key], 0)
+    local width = Columns.Width(setKey, key)
 
     if width then
         element:SetWidth(width)
@@ -82,8 +38,9 @@ end
 -- Item cell
 --------------------------------------------------------------------------
 
-local function AddItemCell(row, setKey, column)
-    local left = offsets[setKey].item
+local function AddItemCell(row, setKey)
+    local left = Columns.Offset(setKey, "item")
+    local width = Columns.Width(setKey, "item")
 
     row.icon = row:CreateTexture(nil, "ARTWORK")
     row.icon:SetSize(ICON_SIZE, ICON_SIZE)
@@ -94,7 +51,7 @@ local function AddItemCell(row, setKey, column)
 
     row.itemText = Theme.CreateText(row, Theme.sizes.row, "textPrimary")
     row.itemText:SetPoint("LEFT", left + ICON_TEXT_GAP, 0)
-    row.itemText:SetWidth(column.width - ICON_TEXT_GAP)
+    row.itemText:SetWidth(width - ICON_TEXT_GAP)
 end
 
 -- Returns false when the item is not in the client cache yet, so the caller
@@ -147,7 +104,7 @@ local function AddSelectCell(row, setKey, onSelect)
     local box = CreateFrame("Button", nil, row)
 
     box:SetSize(14, 14)
-    box:SetPoint("LEFT", offsets[setKey].select, 0)
+    box:SetPoint("LEFT", Columns.Offset(setKey, "select"), 0)
 
     box.edge = Theme.CreateSolidTexture(box, "border", "BACKGROUND")
     box.edge:SetAllPoints()
@@ -245,20 +202,20 @@ function Rows.CreateLootRow(parent, index, onSelect)
     AddSelectCell(row, "loot", onSelect)
 
     row.numberText = Theme.CreateText(row, Theme.sizes.rowSmall, "textMuted")
-    PlaceInColumn(row.numberText, "loot", "number", 30)
+    PlaceInColumn(row.numberText, "loot", "number")
 
     row.playerText = Theme.CreateText(row, Theme.sizes.row, "textPrimary")
-    PlaceInColumn(row.playerText, "loot", "player", 140)
+    PlaceInColumn(row.playerText, "loot", "player")
 
-    AddItemCell(row, "loot", COLUMN_SETS.loot[4])
+    AddItemCell(row, "loot")
 
     row.locationText =
         Theme.CreateText(row, Theme.sizes.rowSmall, "textSecondary")
 
-    PlaceInColumn(row.locationText, "loot", "location", 170)
+    PlaceInColumn(row.locationText, "loot", "location")
 
     row.dateText = Theme.CreateText(row, Theme.sizes.rowSmall, "textMuted")
-    PlaceInColumn(row.dateText, "loot", "date", 110)
+    PlaceInColumn(row.dateText, "loot", "date")
 
     AttachItemRowScripts(row)
 
@@ -275,24 +232,24 @@ function Rows.CreateDropRow(parent, index, onSelect, onActivate)
     AddSelectCell(row, "drops", onSelect)
 
     row.numberText = Theme.CreateText(row, Theme.sizes.rowSmall, "textMuted")
-    PlaceInColumn(row.numberText, "drops", "number", 30)
+    PlaceInColumn(row.numberText, "drops", "number")
 
     row.bossText = Theme.CreateText(row, Theme.sizes.rowSmall, "textSecondary")
-    PlaceInColumn(row.bossText, "drops", "boss", 150)
+    PlaceInColumn(row.bossText, "drops", "boss")
 
-    AddItemCell(row, "drops", COLUMN_SETS.drops[4])
+    AddItemCell(row, "drops")
 
     row.winnerText = Theme.CreateText(row, Theme.sizes.row, "textPrimary")
-    PlaceInColumn(row.winnerText, "drops", "winner", 130)
+    PlaceInColumn(row.winnerText, "drops", "winner")
 
     row.typeText = Theme.CreateText(row, Theme.sizes.rowSmall, "textSecondary")
-    PlaceInColumn(row.typeText, "drops", "wintype", 62)
+    PlaceInColumn(row.typeText, "drops", "wintype")
 
     row.rollText = Theme.CreateText(row, Theme.sizes.rowSmall, "textSecondary")
-    PlaceInColumn(row.rollText, "drops", "roll", 40)
+    PlaceInColumn(row.rollText, "drops", "roll")
 
     row.dateText = Theme.CreateText(row, Theme.sizes.rowSmall, "textMuted")
-    PlaceInColumn(row.dateText, "drops", "date", 98)
+    PlaceInColumn(row.dateText, "drops", "date")
 
     AttachItemRowScripts(row)
 
@@ -360,11 +317,11 @@ function Rows.CreateColumnHeader(parent, setKey)
     separator:SetPoint("BOTTOMLEFT", 0, 0)
     separator:SetPoint("BOTTOMRIGHT", 0, 0)
 
-    for _, column in ipairs(COLUMN_SETS[setKey]) do
+    for _, column in ipairs(Columns.Get(setKey)) do
         local label =
             Theme.CreateText(header, Theme.sizes.columnHeader, "textMuted")
 
-        label:SetPoint("LEFT", offsets[setKey][column.key], 0)
+        label:SetPoint("LEFT", Columns.Offset(setKey, column.key), 0)
         label:SetWidth(column.width)
         label:SetText(column.label)
     end

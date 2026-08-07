@@ -15,7 +15,13 @@ local Utilities = SYL.Utilities
 
 local WINDOW_WIDTH = 760
 local ROW_HEIGHT = 24
-local VISIBLE_ROWS = 16
+-- Rows the window opens with, the most it will ever build, and how many are
+-- on screen right now.
+local DEFAULT_ROWS = 16
+local MAX_ROWS = 40
+local FOOTER_HEIGHT = 56
+
+local visibleRows = DEFAULT_ROWS
 local LIST_TOP = 150
 
 local COLUMNS = {
@@ -207,7 +213,7 @@ Refresh = function()
 
     local stats = CurrentStats()
     local total = #stats
-    local maxOffset = math.max(0, total - VISIBLE_ROWS)
+    local maxOffset = math.max(0, total - visibleRows)
 
     if offset > maxOffset then
         offset = maxOffset
@@ -226,9 +232,11 @@ Refresh = function()
         .. " with no upgrade"
     )
 
-    for index = 1, VISIBLE_ROWS do
+    for index = 1, visibleRows do
         local entry = stats[index + offset]
-        local row = rows[index]
+        local row = rows[index] or CreateRow(frame, index)
+
+        rows[index] = row
 
         if entry then
             FillRow(row, entry)
@@ -236,6 +244,10 @@ Refresh = function()
         else
             row:Hide()
         end
+    end
+
+    for index = visibleRows + 1, #rows do
+        rows[index]:Hide()
     end
 
     if total == 0 then
@@ -282,33 +294,23 @@ local function CreateWindow()
         return frame
     end
 
-    frame = CreateFrame(
-        "Frame",
-        "ShowUsYourLootPlayerFrame",
-        UIParent,
-        "BackdropTemplate"
-    )
+    frame = Widgets.CreateListWindow({
+        globalName = "ShowUsYourLootPlayerFrame",
+        title = "PLAYERS",
+        key = "players",
 
-    frame:SetSize(WINDOW_WIDTH, LIST_TOP + VISIBLE_ROWS * ROW_HEIGHT + 56)
-    frame:SetPoint("CENTER")
-    frame:SetFrameStrata("DIALOG")
-    frame:SetClampedToScreen(true)
+        width = WINDOW_WIDTH,
+        listTop = LIST_TOP,
+        rowHeight = ROW_HEIGHT,
+        footer = FOOTER_HEIGHT,
+        defaultRows = DEFAULT_ROWS,
+        maxRows = MAX_ROWS,
 
-    Widgets.MakeMovable(frame)
-    Theme.StyleWindow(frame)
-
-    local accentMark = Theme.CreateAccentMark(frame)
-    accentMark:SetPoint("TOPLEFT", 16, -20)
-
-    local title = Theme.CreateText(frame, Theme.sizes.title, "textPrimary")
-    title:SetPoint("LEFT", accentMark, "RIGHT", 8, 0)
-    title:SetText("PLAYERS")
-
-    frame.summaryText =
-        Theme.CreateText(frame, Theme.sizes.subtitle, "textSecondary")
-
-    frame.summaryText:SetPoint("TOPLEFT", 27, -42)
-    frame.summaryText:SetPoint("TOPRIGHT", -16, -42)
+        onRows = function(count)
+            visibleRows = count
+            Refresh()
+        end,
+    })
 
     local hint = Theme.CreateText(frame, Theme.sizes.rowSmall, "textMuted")
     hint:SetPoint("TOPLEFT", 18, -76)
@@ -316,15 +318,10 @@ local function CreateWindow()
         "Upgrades counts Need and offspec wins only. Transmog is listed apart."
     )
 
-    local closeCorner =
-        CreateFrame("Button", nil, frame, "UIPanelCloseButton")
-
-    closeCorner:SetPoint("TOPRIGHT", -6, -6)
-
     CreateFilters(frame)
     CreateHeader(frame)
 
-    for index = 1, VISIBLE_ROWS do
+    for index = 1, DEFAULT_ROWS do
         rows[index] = CreateRow(frame, index)
     end
 
@@ -355,7 +352,7 @@ local function CreateWindow()
 
     frame:SetScript("OnMouseWheel", function(_, delta)
         local total = #CurrentStats()
-        local maxOffset = math.max(0, total - VISIBLE_ROWS)
+        local maxOffset = math.max(0, total - visibleRows)
 
         offset = math.max(0, math.min(maxOffset, offset - delta))
 

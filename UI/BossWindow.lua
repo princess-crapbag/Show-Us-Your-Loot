@@ -14,7 +14,14 @@ local BossStats = SYL.BossStats
 
 local WINDOW_WIDTH = 776
 local ROW_HEIGHT = 24
-local VISIBLE_ROWS = 14
+-- Rows the window opens with, the most it will ever build, and how many
+-- are on screen right now. The pool has a ceiling because a window dragged
+-- to the height of a tall monitor must not build rows without bound.
+local DEFAULT_ROWS = 14
+local MAX_ROWS = 40
+local FOOTER_HEIGHT = 56
+
+local visibleRows = DEFAULT_ROWS
 local LIST_TOP = 116
 
 local COLUMNS = {
@@ -156,7 +163,7 @@ Refresh = function()
 
     local bosses = Bosses()
     local total = #bosses
-    local maxOffset = math.max(0, total - VISIBLE_ROWS)
+    local maxOffset = math.max(0, total - visibleRows)
 
     if offset > maxOffset then
         offset = maxOffset
@@ -179,9 +186,11 @@ Refresh = function()
         .. " drops"
     )
 
-    for index = 1, VISIBLE_ROWS do
+    for index = 1, visibleRows do
         local boss = bosses[index + offset]
-        local row = rows[index]
+        local row = rows[index] or CreateRow(frame, index)
+
+        rows[index] = row
 
         if boss then
             FillRow(row, boss)
@@ -189,6 +198,10 @@ Refresh = function()
         else
             row:Hide()
         end
+    end
+
+    for index = visibleRows + 1, #rows do
+        rows[index]:Hide()
     end
 
     if total == 0 then
@@ -203,33 +216,23 @@ local function CreateWindow()
         return frame
     end
 
-    frame = CreateFrame(
-        "Frame",
-        "ShowUsYourLootBossFrame",
-        UIParent,
-        "BackdropTemplate"
-    )
+    frame = Widgets.CreateListWindow({
+        globalName = "ShowUsYourLootBossFrame",
+        title = "BOSS HISTORY",
+        key = "boss",
 
-    frame:SetSize(WINDOW_WIDTH, LIST_TOP + VISIBLE_ROWS * ROW_HEIGHT + 56)
-    frame:SetPoint("CENTER")
-    frame:SetFrameStrata("DIALOG")
-    frame:SetClampedToScreen(true)
+        width = WINDOW_WIDTH,
+        listTop = LIST_TOP,
+        rowHeight = ROW_HEIGHT,
+        footer = FOOTER_HEIGHT,
+        defaultRows = DEFAULT_ROWS,
+        maxRows = MAX_ROWS,
 
-    Widgets.MakeMovable(frame)
-    Theme.StyleWindow(frame)
-
-    local accentMark = Theme.CreateAccentMark(frame)
-    accentMark:SetPoint("TOPLEFT", 16, -20)
-
-    local title = Theme.CreateText(frame, Theme.sizes.title, "textPrimary")
-    title:SetPoint("LEFT", accentMark, "RIGHT", 8, 0)
-    title:SetText("BOSS HISTORY")
-
-    frame.summaryText =
-        Theme.CreateText(frame, Theme.sizes.subtitle, "textSecondary")
-
-    frame.summaryText:SetPoint("TOPLEFT", 27, -42)
-    frame.summaryText:SetPoint("TOPRIGHT", -16, -42)
+        onRows = function(count)
+            visibleRows = count
+            Refresh()
+        end,
+    })
 
     local hint = Theme.CreateText(frame, Theme.sizes.rowSmall, "textMuted")
     hint:SetPoint("TOPLEFT", 18, -74)
@@ -238,14 +241,9 @@ local function CreateWindow()
         .. "not being recorded yet."
     )
 
-    local closeCorner =
-        CreateFrame("Button", nil, frame, "UIPanelCloseButton")
-
-    closeCorner:SetPoint("TOPRIGHT", -6, -6)
-
     CreateHeader(frame)
 
-    for index = 1, VISIBLE_ROWS do
+    for index = 1, DEFAULT_ROWS do
         rows[index] = CreateRow(frame, index)
     end
 
@@ -269,7 +267,7 @@ local function CreateWindow()
 
     frame:SetScript("OnMouseWheel", function(_, delta)
         local total = #Bosses()
-        local maxOffset = math.max(0, total - VISIBLE_ROWS)
+        local maxOffset = math.max(0, total - visibleRows)
 
         offset = math.max(0, math.min(maxOffset, offset - delta))
 

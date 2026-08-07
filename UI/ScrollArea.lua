@@ -48,6 +48,29 @@ local function MaxOffset(view)
     return math.max(0, TotalCount(view) - ScrollArea.VisibleRows(view))
 end
 
+-- Builds drop and loot rows up to `count`, skipping any that already exist.
+-- Archive rows are left alone: that list is short and its own height.
+function ScrollArea.EnsureRows(view, count)
+    local config = view.rowConfig
+
+    if not config then
+        return
+    end
+
+    for index = 1, count do
+        if not view.dropRows[index] then
+            view.dropRows[index] = Rows.CreateDropRow(
+                view.scrollChild, index, config.onSelect, config.onActivate
+            )
+        end
+
+        if not view.lootRows[index] then
+            view.lootRows[index] =
+                Rows.CreateLootRow(view.scrollChild, index, config.onSelect)
+        end
+    end
+end
+
 local function AttachScrollHandlers(view, onScrolled)
     view.scrollFrame:EnableMouseWheel(true)
 
@@ -103,14 +126,14 @@ function ScrollArea.Create(parent, view, config)
 
     view.scrollFrame:SetScrollChild(view.scrollChild)
 
-    for index = 1, view.visibleRows do
-        view.dropRows[index] = Rows.CreateDropRow(
-            view.scrollChild, index, config.onSelect, config.onActivate
-        )
+    -- Kept so rows can be added later. The window is resizable, and a taller
+    -- window needs rows that did not exist when it was built.
+    view.rowConfig = {
+        onSelect = config.onSelect,
+        onActivate = config.onActivate,
+    }
 
-        view.lootRows[index] =
-            Rows.CreateLootRow(view.scrollChild, index, config.onSelect)
-    end
+    ScrollArea.EnsureRows(view, view.visibleRows)
 
     for index = 1, view.archiveVisibleRows do
         view.archiveRows[index] =

@@ -19,6 +19,12 @@ local WINDOW_WIDTH = 900
 local WINDOW_HEIGHT = 596
 local VISIBLE_ROWS = 13
 
+-- The scroll frame is inset by this much top and bottom, from ScrollArea, so
+-- the rows that fit follow from the window height. MAX_ROWS caps the pool.
+local LIST_TOP_INSET = 180
+local LIST_BOTTOM_INSET = 52
+local MAX_ROWS = 60
+
 local frame
 local buttons = {}
 
@@ -327,6 +333,32 @@ local function CreateMainWindow()
     })
     CreateScrollArea(frame)
     CreateFooter(frame)
+
+    -- Added after the scroll area, because growing the list means building
+    -- rows that belong to it.
+    Widgets.MakeResizableList(frame, {
+        key = "main",
+        minWidth = WINDOW_WIDTH,
+        listTop = LIST_TOP_INSET,
+        rowHeight = Widgets.ROW_HEIGHT,
+        footer = LIST_BOTTOM_INSET,
+        maxRows = MAX_ROWS,
+
+        onRows = function(count)
+            view.visibleRows = count
+
+            SYL.ScrollArea.EnsureRows(view, count)
+
+            -- Everything is hidden first: shrinking the window leaves rows
+            -- on screen that UpdateRows will not revisit, since it only ever
+            -- walks as far as the new count.
+            SYL.LootListView.HideAllRows(view)
+
+            UpdateRows()
+        end,
+    })
+
+    Widgets.RestoreSize(frame, "main")
 
     frame:SetScript("OnShow", function()
         view.offset = 0

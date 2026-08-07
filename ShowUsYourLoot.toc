@@ -4,6 +4,7 @@
 ## Author: Aimee
 ## Version: 0.0.9-alpha
 ## SavedVariables: ShowUsYourLootDB
+## OptionalDeps: RaiderIO
 ## X-Website: https://github.com/
 ## X-License: All Rights Reserved
 ## X-Curse-Project-ID: 1642383
@@ -17,6 +18,9 @@ Core\Serializer.lua
 Core\Guild.lua
 Core\ItemQuality.lua
 Core\Database.lua
+Core\Players.lua
+Core\AltDetect.lua
+Core\RaiderIO.lua
 Core\LootCapture.lua
 Core\RaidSession.lua
 Core\LootHistoryAPI.lua
@@ -33,12 +37,14 @@ Core\Export.lua
 Core\DataExport.lua
 Core\CommandList.lua
 Core\CommandReports.lua
+Core\AltCommands.lua
 Core\SlashCommands.lua
 
 UI\Palettes.lua
 UI\Theme.lua
 UI\Widgets.lua
 UI\TabStrip.lua
+UI\Columns.lua
 UI\Rows.lua
 UI\ListSources.lua
 UI\Selection.lua

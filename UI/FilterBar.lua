@@ -111,7 +111,19 @@ end
 
 -- The word sits outside the box so the placeholder only has to fit the date
 -- format. Packing "From YYYY-MM-DD" inside a 92px box is what made these look
--- cut off.
+-- cut off in the first place.
+--
+-- The box is then measured rather than guessed. 84px was a guess, and at a
+-- twelve pixel inset it left seventy-two for ten characters — right on the
+-- edge, which is why this came back. Measuring the widest string the box ever
+-- holds and adding the inset cannot be off.
+local DATE_PLACEHOLDER = "YYYY-MM-DD"
+
+-- The editbox is inset six pixels each side inside its holder, and a caret
+-- sits at the end of the text.
+local INPUT_INSET = 12
+local CARET_ROOM = 8
+
 local function CreateDateField(parent, labelText, state, key, endOfDay, onChange, anchorTo)
     local label = Theme.CreateText(parent, Theme.sizes.rowSmall, "textMuted")
 
@@ -119,8 +131,16 @@ local function CreateDateField(parent, labelText, state, key, endOfDay, onChange
     label:SetWidth(label:GetStringWidth() + 2)
     label:SetPoint("LEFT", anchorTo, "RIGHT", 10, 0)
 
+    -- A typed date and the placeholder are both ten characters, but zeroes are
+    -- not the widest digits, so the placeholder is measured alongside a worst
+    -- case of real digits.
+    local width = math.max(
+        Theme.MeasureText(Theme.sizes.rowSmall, DATE_PLACEHOLDER),
+        Theme.MeasureText(Theme.sizes.rowSmall, "0000-00-00")
+    ) + INPUT_INSET + CARET_ROOM
+
     local input =
-        CreateDateInput(parent, 84, "YYYY-MM-DD", state, key, endOfDay, onChange)
+        CreateDateInput(parent, width, DATE_PLACEHOLDER, state, key, endOfDay, onChange)
 
     input:SetPoint("LEFT", label, "RIGHT", 4, 0)
 

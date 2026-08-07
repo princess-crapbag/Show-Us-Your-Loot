@@ -99,6 +99,33 @@ function Theme.CreateText(parent, size, colorKey, layer)
     return fontString
 end
 
+-- How wide a string actually renders, rather than how wide it was guessed to
+-- be. Every column and box that has come out truncated was sized from an
+-- estimate of characters times pixels, which is wrong by enough to matter and
+-- wrong by a different amount for every font and locale.
+--
+-- One hidden font string per size, reused, because creating one per call
+-- would leak a region on every layout pass.
+local rulers = {}
+
+function Theme.MeasureText(size, text)
+    size = size or Theme.sizes.row
+
+    local ruler = rulers[size]
+
+    if not ruler then
+        ruler = UIParent:CreateFontString(nil, "OVERLAY")
+        ruler:SetFont(fontPath, size, "")
+        ruler:Hide()
+
+        rulers[size] = ruler
+    end
+
+    ruler:SetText(text or "")
+
+    return math.ceil(ruler:GetStringWidth())
+end
+
 function Theme.CreateSolidTexture(parent, colorKey, layer)
     local texture = parent:CreateTexture(nil, layer or "BACKGROUND")
     local key = colorKey or "separator"
