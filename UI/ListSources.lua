@@ -37,8 +37,14 @@ local LOOT_FIELDS = {
     timestamp = function(record) return record.timestamp end,
 }
 
+-- An archived season holds both kinds of record, and which one is on screen
+-- is a toggle rather than a tab, so the field descriptor has to ask.
+function ListSources.ArchiveShowsDrops(view)
+    return view.mode == "archive" and not view.archiveShowsLoot
+end
+
 function ListSources.GetFields(view)
-    if view.mode == "drops" then
+    if view.mode == "drops" or ListSources.ArchiveShowsDrops(view) then
         return DROP_FIELDS
     end
 
@@ -90,13 +96,74 @@ function ListSources.GetUnfiltered(view)
         return VisibleRecords(SYL.GetAllLoot(), view)
     end
 
+    -- An archived season keeps its drops and its chat loot in separate
+    -- tables, exactly as the active one does. Only the chat loot was ever
+    -- shown here, so archiving a season made its group loot unreachable —
+    -- the records were never lost, just never rendered.
     if view.mode == "archive" then
         local season = SYL.GetArchives()[view.selectedArchiveIndex]
 
-        return VisibleRecords(season and season.loot or {}, view)
+        if not season then
+            return {}
+        end
+
+        if view.archiveShowsLoot then
+            return VisibleRecords(season.loot or {}, view)
+        end
+
+        return VisibleRecords(season.drops or {}, view)
     end
 
     return {}
+end
+
+-- Which table an archive should open on. Drops are the primary record, but a
+-- season archived before drop capture existed has none, and opening it on an
+-- empty list reads as lost history rather than as the wrong toggle.
+function ListSources.DefaultArchiveShowsLoot(archiveIndex)
+    local season = SYL.GetArchives()[archiveIndex]
+
+    return season ~= nil
+        and #(season.drops or {}) == 0
+        and #(season.loot or {}) > 0
+end
+
+-- The line under the title, saying which records are on screen.
+--
+-- Lives here rather than in the window because it answers the same question
+-- GetUnfiltered does — what is this view looking at — and the two drifting
+-- apart would mean a heading that describes a different list to the one
+-- below it. The archive line names its record type for that reason: two
+-- lists under one season name are otherwise indistinguishable.
+function ListSources.DescribeView(view)
+    if view.mode == "drops" then
+        local season = SYL.GetActiveSeason()
+
+        return (season and season.name or "Active Season") .. " — group loot"
+    end
+
+    if view.mode == "active" then
+        local season = SYL.GetActiveSeason()
+
+        return season and season.name or "Active Season"
+    end
+
+    if view.mode == "all" then
+        return "All-Time Loot History"
+    end
+
+    if view.mode == "archives" then
+        return "Archived Seasons"
+    end
+
+    if view.mode == "archive" then
+        local season = SYL.GetArchives()[view.selectedArchiveIndex]
+
+        return (season and season.name or "Archived Season")
+            .. (view.archiveShowsLoot and " — chat loot" or " — group loot")
+    end
+
+    return ""
 end
 
 function ListSources.GetFiltered(view)

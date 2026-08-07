@@ -137,7 +137,7 @@ function SelectionBar.Create(parent, view, config)
         -- Buttons stay put rather than appearing and disappearing, so the row
         -- does not reflow every time the selection changes.
         for _, control in ipairs({
-            self.showHidden, self.allSeasons,
+            self.showHidden,
             self.action, self.deselect, self.selectAll,
         }) do
             if onList then
@@ -145,6 +145,15 @@ function SelectionBar.Create(parent, view, config)
             else
                 control:Hide()
             end
+        end
+
+        -- Widening to every season means nothing when the view is already
+        -- pinned to one archived season, and a button that does nothing
+        -- reads as a broken one.
+        if onList and view.mode ~= "archive" then
+            self.allSeasons:Show()
+        else
+            self.allSeasons:Hide()
         end
 
         if not onList then

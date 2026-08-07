@@ -37,6 +37,11 @@ local view = {
     visibleRows = VISIBLE_ROWS,
     showHidden = false,
     allSeasons = false,
+
+    -- Which of an archived season's two record tables is on screen. Drops
+    -- are the primary record, so they are the default, but a season archived
+    -- before drop capture existed has none and opens on its chat loot.
+    archiveShowsLoot = false,
     filters = Filters.CreateState(),
     selection = Selection.Create(),
     dropRows = {},
@@ -56,44 +61,7 @@ local TABS = {
 --------------------------------------------------------------------------
 
 local function UpdateHeader()
-    if view.mode == "drops" then
-        local season = SYL.GetActiveSeason()
-
-        view.subtitleText:SetText(
-            (season and season.name or "Active Season")
-            .. " — group loot"
-        )
-
-        return
-    end
-
-    if view.mode == "active" then
-        local season = SYL.GetActiveSeason()
-
-        view.subtitleText:SetText(
-            season and season.name or "Active Season"
-        )
-
-        return
-    end
-
-    if view.mode == "all" then
-        view.subtitleText:SetText("All-Time Loot History")
-        return
-    end
-
-    if view.mode == "archives" then
-        view.subtitleText:SetText("Archived Seasons")
-        return
-    end
-
-    if view.mode == "archive" then
-        local season = SYL.GetArchives()[view.selectedArchiveIndex]
-
-        view.subtitleText:SetText(
-            season and season.name or "Archived Season"
-        )
-    end
+    view.subtitleText:SetText(ListSources.DescribeView(view))
 end
 
 local function UpdateTabs()
@@ -105,8 +73,16 @@ local function UpdateTabs()
 
     if view.mode == "archive" then
         buttons.back:Show()
+        buttons.archiveRecords:Show()
+
+        -- Labelled with what it will switch to, so the button says what
+        -- pressing it does rather than where you already are.
+        buttons.archiveRecords.label:SetText(
+            view.archiveShowsLoot and "Show drops" or "Show chat loot"
+        )
     else
         buttons.back:Hide()
+        buttons.archiveRecords:Hide()
     end
 
     -- Archiving acts on the whole season, so it is offered from either of the
@@ -144,7 +120,7 @@ local function UpdateRows()
 
     view.filterBar:Show()
 
-    if view.mode == "drops" then
+    if view.mode == "drops" or ListSources.ArchiveShowsDrops(view) then
         view.dropHeader:Show()
         LootListView.UpdateDropRows(view)
         return
@@ -165,6 +141,11 @@ local function SetMode(mode, archiveIndex)
     view.mode = mode
     view.selectedArchiveIndex = archiveIndex
     view.offset = 0
+
+    if mode == "archive" then
+        view.archiveShowsLoot =
+            ListSources.DefaultArchiveShowsLoot(archiveIndex)
+    end
 
     if view.filterBar then
         view.filterBar:Refresh()
@@ -221,6 +202,24 @@ local function CreateNavigationBar(parent)
         end)
 
     buttons.back:SetPoint("TOPRIGHT", -16, -66)
+
+    buttons.archiveRecords =
+        Theme.CreateButton(parent, 124, 24, "Show chat loot", function()
+            view.archiveShowsLoot = not view.archiveShowsLoot
+            view.offset = 0
+
+            -- The two lists are different records, so a selection made in
+            -- one means nothing in the other.
+            Selection.Clear(view.selection)
+
+            if view.filterBar then
+                view.filterBar:Refresh()
+            end
+
+            UpdateRows()
+        end)
+
+    buttons.archiveRecords:SetPoint("RIGHT", buttons.back, "LEFT", -6, 0)
 end
 
 local function CreateFilterBar(parent)
