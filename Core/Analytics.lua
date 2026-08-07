@@ -83,13 +83,25 @@ function Analytics.BuildPlayerStats(drops)
         -- zero eligible players rather than "we do not know".
         if not drop.excludedFromAnalytics and not drop.partial then
             for _, roll in ipairs(drop.rolls or {}) do
-                local key = roll.guid or roll.name
+                -- Folded to the main, so a raider's alt runs do not read as
+                -- a second person who never wins anything.
+                local key = SYL.Players.ResolveToMain(roll.guid or roll.name)
 
                 if key then
                     local entry = byKey[key]
 
                     if not entry then
                         entry = NewEntry(roll)
+                        entry.key = key
+
+                        local player = SYL.Players.Get(key)
+
+                        if player then
+                            entry.guid = player.guid or entry.guid
+                            entry.name = player.name or entry.name
+                            entry.class = player.class or entry.class
+                        end
+
                         byKey[key] = entry
 
                         table.insert(order, entry)
@@ -158,7 +170,8 @@ function Analytics.BuildPlayerStats(drops)
     local attendance = SYL.RaidSession.BuildAttendance(SYL.GetAllRaids())
 
     for _, member in ipairs(attendance) do
-        local key = member.guid or member.name
+        -- BuildAttendance already folds alts, so this key is a main's.
+        local key = member.key or member.guid or member.name
 
         if key and not byKey[key] then
             local entry = NewEntry(member)
@@ -222,6 +235,14 @@ local COMPARATORS = {
         return (a.lastWinAt or 0) > (b.lastWinAt or 0)
     end,
     drought = function(a, b) return a.droughtDays > b.droughtDays end,
+
+    -- Nothing here computes mplusScore; the players window attaches it from
+    -- Raider.IO before sorting. Without an entry the header would fall back
+    -- to the default comparator and sort by something other than the column
+    -- that was clicked, which looks like the sort is broken.
+    score = function(a, b)
+        return (a.mplusScore or -1) > (b.mplusScore or -1)
+    end,
 }
 
 function Analytics.Sort(stats, key, reversed)

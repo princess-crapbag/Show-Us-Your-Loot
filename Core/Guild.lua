@@ -20,6 +20,8 @@ SYL.Guild = Guild
 local NAME_INDEX = 1
 local RANK_NAME_INDEX = 2
 local RANK_INDEX_INDEX = 3
+local PUBLIC_NOTE_INDEX = 7
+local OFFICER_NOTE_INDEX = 8
 local GUID_INDEX = 17
 
 local byGUID = {}
@@ -65,6 +67,12 @@ function Guild.Refresh()
         local rankIndex = info[RANK_INDEX_INDEX]
         local guid = info[GUID_INDEX]
 
+        -- Both notes return "" rather than nil when the player's rank
+        -- cannot view them, so empty is stored as absent. Nothing here
+        -- writes notes; they are read for alt detection only.
+        local publicNote = info[PUBLIC_NOTE_INDEX]
+        local officerNote = info[OFFICER_NOTE_INDEX]
+
         if type(fullName) == "string" then
             local member = {
                 name = fullName,
@@ -72,6 +80,11 @@ function Guild.Refresh()
                 rank = type(rankName) == "string" and rankName or nil,
                 rankIndex = type(rankIndex) == "number" and rankIndex or nil,
                 guid = type(guid) == "string" and guid or nil,
+
+                publicNote = type(publicNote) == "string"
+                    and publicNote ~= "" and publicNote or nil,
+                officerNote = type(officerNote) == "string"
+                    and officerNote ~= "" and officerNote or nil,
             }
 
             if member.guid then
@@ -79,11 +92,15 @@ function Guild.Refresh()
             end
 
             -- Roll data carries names without a realm, so both spellings are
-            -- indexed for the fallback path.
+            -- indexed for the fallback path. Lowercase copies go in too, so
+            -- a name typed by a person — into a guild note or a slash
+            -- command — matches without them getting the case right.
             byName[fullName] = member
+            byName[fullName:lower()] = member
 
             if member.shortName then
                 byName[member.shortName] = member
+                byName[member.shortName:lower()] = member
             end
 
             added = added + 1
@@ -123,6 +140,24 @@ function Guild.GetRankIndex(guid, name)
     local member = Guild.GetMember(guid, name)
 
     return member and member.rankIndex or nil
+end
+
+-- Every member keyed by GUID. Returned directly rather than copied: callers
+-- iterate it and nothing writes through it, and a 500 member guild is not
+-- worth duplicating on every read.
+function Guild.GetMembers()
+    return byGUID
+end
+
+-- Short name to member, for matching a bare name written in a note against
+-- somebody who is actually in the guild. Case-insensitive, because the
+-- source is whatever a person typed years ago.
+function Guild.FindByShortName(shortName)
+    if type(shortName) ~= "string" or shortName == "" then
+        return nil
+    end
+
+    return byName[shortName] or byName[shortName:lower()]
 end
 
 function Guild.GetMemberCount()

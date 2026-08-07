@@ -135,6 +135,10 @@ function SYL.DatabaseInitialize()
     ShowUsYourLootDB.recentRecordIDs =
         ShowUsYourLootDB.recentRecordIDs or {}
 
+    -- Account level, not per season. An alt mapping is a fact about a
+    -- person, and archiving a season must not forget who somebody is.
+    ShowUsYourLootDB.players = ShowUsYourLootDB.players or {}
+
     local migrated = false
 
     if not ShowUsYourLootDB.activeSeason then
@@ -154,6 +158,10 @@ function SYL.DatabaseInitialize()
     end
 
     ShowUsYourLootDB.databaseVersion = DATABASE_VERSION
+
+    -- The name to GUID index is derived, so it is rebuilt at login rather
+    -- than saved. Every alt lookup by name depends on it.
+    SYL.Players.RebuildIndex()
 
     -- Compatibility alias for the current UI.
     -- Existing code that reads ShowUsYourLootDB.loot will continue working.

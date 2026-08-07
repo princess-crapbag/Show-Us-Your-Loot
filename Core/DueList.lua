@@ -18,6 +18,12 @@
 -- Both are opinions rather than facts. They are in one file, and the ranking
 -- is a single comparable number rather than a weighted score, so disagreeing
 -- means changing one rule here instead of retuning constants.
+--
+-- ALTS: every key is put through Players.ResolveToMain, so a raider who
+-- brings a different character still has one drought. That fold creates a
+-- case this file has to handle on its own — somebody who raids on a main and
+-- an alt the same night is present once, not twice — because counting the
+-- night twice would push them down the list for turning up more.
 
 local SYL = _G.ShowUsYourLoot
 
@@ -44,7 +50,9 @@ local function LastUpgradeByPlayer(drops)
 
             for _, roll in ipairs(drop.rolls or {}) do
                 if roll.isWinner and IsUpgrade(roll.state) then
-                    local key = roll.guid or roll.name
+                    local key = SYL.Players.ResolveToMain(
+                        roll.guid or roll.name
+                    )
 
                     if key then
                         local at = drop.timestamp or 0
@@ -59,7 +67,9 @@ local function LastUpgradeByPlayer(drops)
             end
 
             if not counted and IsUpgrade(drop.winnerState) then
-                local key = drop.winnerGUID or drop.winnerName
+                local key = SYL.Players.ResolveToMain(
+                    drop.winnerGUID or drop.winnerName
+                )
 
                 if key then
                     local at = drop.timestamp or 0
@@ -92,6 +102,23 @@ local function NewEntry(member, key)
     }
 end
 
+-- The roster entry names whichever character turned up. Once alts are folded
+-- the list has to show the person, so identity comes from the registry when
+-- it knows them and falls back to the character as recorded.
+local function Identify(member, key)
+    local player = SYL.Players.Get(key)
+
+    if not player then
+        return member
+    end
+
+    return {
+        guid = player.guid or member.guid,
+        name = player.name or member.name,
+        class = player.class or member.class,
+    }
+end
+
 -- Sessions and drops are passed in so a caller can scope this to one season.
 function DueList.Build(drops, sessions)
     local lastUpgrade = LastUpgradeByPlayer(drops)
@@ -100,11 +127,16 @@ function DueList.Build(drops, sessions)
     for _, session in ipairs(sessions or {}) do
         local startedAt = session.startedAt or 0
 
-        for key, member in pairs(session.roster or {}) do
+        -- One night is one night however many characters of theirs were in
+        -- it. Reset per session, not per player.
+        local countedTonight = {}
+
+        for rawKey, member in pairs(session.roster or {}) do
+            local key = SYL.Players.ResolveToMain(rawKey)
             local entry = byKey[key]
 
             if not entry then
-                entry = NewEntry(member, key)
+                entry = NewEntry(Identify(member, key), key)
                 byKey[key] = entry
 
                 table.insert(order, entry)
@@ -115,16 +147,22 @@ function DueList.Build(drops, sessions)
                 entry.everWon = lastUpgrade[key] ~= nil
             end
 
-            entry.nights = entry.nights + 1
+            if not countedTonight[key] then
+                countedTonight[key] = true
+
+                entry.nights = entry.nights + 1
+
+                -- The night an upgrade was won is not a night without one,
+                -- so the comparison is strict.
+                if not entry.lastUpgradeAt
+                    or startedAt > entry.lastUpgradeAt
+                then
+                    entry.nightsSinceUpgrade = entry.nightsSinceUpgrade + 1
+                end
+            end
 
             if not entry.lastSeenAt or startedAt > entry.lastSeenAt then
                 entry.lastSeenAt = startedAt
-            end
-
-            -- The night an upgrade was won is not a night without one, so the
-            -- comparison is strict.
-            if not entry.lastUpgradeAt or startedAt > entry.lastUpgradeAt then
-                entry.nightsSinceUpgrade = entry.nightsSinceUpgrade + 1
             end
         end
     end

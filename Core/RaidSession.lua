@@ -138,6 +138,11 @@ local function MergeRoster(session, roster, timestamp)
         local key = member.guid or member.fullName
 
         if key then
+            -- Every character seen in a raid enters the registry, which is
+            -- what makes them available to map as an alt later. The session
+            -- roster still stores the character that was actually here.
+            SYL.Players.Touch(member)
+
             local existing = session.roster[key]
 
             if existing then
@@ -256,20 +261,30 @@ end
 
 -- Every player seen in any session, with how many nights they were present.
 -- This is the attendance the loot data on its own cannot answer.
+--
+-- Keys are folded to mains, so this counts people rather than characters.
+-- Pulls still add up across every character they brought — someone who
+-- swapped mid-night fought in all of those pulls — but the night itself
+-- counts once, or turning up on an alt would inflate attendance.
 function RaidSession.BuildAttendance(sessions)
     local byKey = {}
     local order = {}
 
     for _, session in ipairs(sessions or {}) do
-        for key, member in pairs(session.roster or {}) do
+        local countedTonight = {}
+
+        for rawKey, member in pairs(session.roster or {}) do
+            local key = SYL.Players.ResolveToMain(rawKey)
             local entry = byKey[key]
 
             if not entry then
+                local player = SYL.Players.Get(key)
+
                 entry = {
                     key = key,
-                    guid = member.guid,
-                    name = member.name,
-                    class = member.class,
+                    guid = (player and player.guid) or member.guid,
+                    name = (player and player.name) or member.name,
+                    class = (player and player.class) or member.class,
                     nights = 0,
                     encounters = 0,
                     lastSeen = nil,
@@ -280,7 +295,12 @@ function RaidSession.BuildAttendance(sessions)
                 table.insert(order, entry)
             end
 
-            entry.nights = entry.nights + 1
+            if not countedTonight[key] then
+                countedTonight[key] = true
+
+                entry.nights = entry.nights + 1
+            end
+
             entry.encounters = entry.encounters + (member.encounters or 0)
 
             if not entry.lastSeen or (member.lastSeen or 0) > entry.lastSeen then

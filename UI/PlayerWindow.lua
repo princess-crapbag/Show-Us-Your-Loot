@@ -13,7 +13,9 @@ local Widgets = SYL.Widgets
 local Analytics = SYL.Analytics
 local Utilities = SYL.Utilities
 
-local WINDOW_WIDTH = 760
+-- 820 rather than 760: the Raider.IO column needs 54px and the old width had
+-- 34 spare, so fitting it meant widening rather than truncating a name.
+local WINDOW_WIDTH = 820
 local ROW_HEIGHT = 24
 -- Rows the window opens with, the most it will ever build, and how many are
 -- on screen right now.
@@ -27,6 +29,9 @@ local LIST_TOP = 150
 local COLUMNS = {
     { key = "name", label = "PLAYER", width = 130, gap = 10 },
     { key = "rank", label = "GUILD RANK", width = 110, gap = 8 },
+    -- Blank without Raider.IO, and blank for anyone its bundle has not seen.
+    -- Nothing in the fairness maths reads it: it is context, not an input.
+    { key = "score", label = "M+", width = 46, gap = 8 },
     { key = "nights", label = "NIGHTS", width = 50, gap = 8 },
     { key = "eligible", label = "ROLLED ON", width = 66, gap = 8 },
     { key = "upgrades", label = "UPGRADES", width = 68, gap = 8 },
@@ -67,6 +72,9 @@ local function CurrentStats()
     if emptyOnly then
         stats = Analytics.FilterEmptyHanded(stats)
     end
+
+    -- Before the sort, so the M+ column sorts like any other.
+    SYL.RaiderIO.AttachScores(stats)
 
     return Analytics.Sort(stats, sortKey, sortReversed)
 end
@@ -179,6 +187,17 @@ local function FillRow(row, entry)
     -- so on every row would be noise.
     cells.rank:SetText(entry.guildRank or "")
 
+    -- Blank covers three different things — no Raider.IO, a character it has
+    -- never seen, and a genuine zero — and none of them is worth a symbol
+    -- that would read as a number.
+    if entry.mplusScore and entry.mplusScore > 0 then
+        cells.score:SetText(math.floor(entry.mplusScore))
+
+        cells.score:SetTextColor(SYL.RaiderIO.GetScoreColor(entry.mplusScore))
+    else
+        cells.score:SetText("")
+    end
+
     cells.nights:SetText(entry.nights)
     cells.eligible:SetText(entry.eligible)
 
@@ -221,6 +240,10 @@ Refresh = function()
 
     local totals = Analytics.Summarise(stats)
 
+    -- Said out loud, because two characters counted as one person is the
+    -- kind of thing an officer argues with a list about.
+    local folded = SYL.Players.DescribeMappings()
+
     frame.summaryText:SetText(
         total
         .. (total == 1 and " player" or " players")
@@ -230,6 +253,7 @@ Refresh = function()
         .. "  ·  "
         .. totals.emptyHanded
         .. " with no upgrade"
+        .. (folded and ("  ·  " .. folded) or "")
     )
 
     for index = 1, visibleRows do

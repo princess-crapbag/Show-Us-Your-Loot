@@ -120,6 +120,10 @@ COMMANDS.sync = function()
     SYL.Sync.ReportStatus()
 end
 
+COMMANDS.alts = function(remainder)
+    SYL.AltCommands.Handle(remainder)
+end
+
 COMMANDS.bosses = function()
     if SYL.OpenBossWindow then
         SYL:OpenBossWindow()
