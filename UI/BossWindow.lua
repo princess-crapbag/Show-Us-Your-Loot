@@ -12,7 +12,8 @@ local Theme = SYL.Theme
 local Widgets = SYL.Widgets
 local BossStats = SYL.BossStats
 
-local WINDOW_WIDTH = 776
+-- 840 rather than 776 to fit the ITEMS column; the old width had 12px spare.
+local WINDOW_WIDTH = 840
 local ROW_HEIGHT = 24
 -- Rows the window opens with, the most it will ever build, and how many
 -- are on screen right now. The pool has a ceiling because a window dragged
@@ -22,7 +23,8 @@ local MAX_ROWS = 40
 local FOOTER_HEIGHT = 56
 
 local visibleRows = DEFAULT_ROWS
-local LIST_TOP = 116
+-- Pushed down from 116 to make room for the loot table toggle above the list.
+local LIST_TOP = 148
 
 local COLUMNS = {
     { key = "boss", label = "BOSS", width = 176, gap = 10 },
@@ -31,12 +33,19 @@ local COLUMNS = {
     { key = "kills", label = "KILLS", width = 60, gap = 8 },
     { key = "drops", label = "DROPS", width = 50, gap = 8 },
     { key = "upgrades", label = "UPGRADES", width = 66, gap = 8 },
+    -- How much of the journal's loot table this guild has actually seen.
+    { key = "items", label = "ITEMS", width = 62, gap = 8 },
     { key = "last", label = "LAST SEEN", width = 84, gap = 8 },
 }
 
 local frame
 local rows = {}
 local offset = 0
+
+-- Off until asked for. Filling this column means walking every raid tier in
+-- the Encounter Journal, which is a lot of work to do to a window somebody
+-- opened to check last night's kills.
+local showItems = false
 
 local columnOffset = {}
 
@@ -145,6 +154,27 @@ local function FillRow(row, boss)
         Theme.SetTextColor(cells.upgrades, "textPrimary")
     end
 
+    -- Three different blanks, deliberately not the same as a zero: the
+    -- column is switched off, the journal has no table for this boss, or it
+    -- has one and every item in it has dropped.
+    if not showItems then
+        cells.items:SetText("")
+    else
+        local missing, total, seen = SYL.LootTable.GetMissing(boss)
+
+        if not missing then
+            cells.items:SetText("—")
+            Theme.SetTextColor(cells.items, "textMuted")
+        else
+            cells.items:SetText(seen .. "/" .. total)
+
+            Theme.SetTextColor(
+                cells.items,
+                #missing > 0 and "textPrimary" or "accent"
+            )
+        end
+    end
+
     local seenAt = boss.lastKilledAt or boss.lastDropAt
 
     if seenAt then
@@ -238,8 +268,34 @@ local function CreateWindow()
     hint:SetPoint("TOPLEFT", 18, -74)
     hint:SetText(
         "Upgrades counts Need and offspec wins only. A dash means pulls were "
-        .. "not being recorded yet."
+        .. "not being recorded yet. ITEMS is how much of the journal's loot "
+        .. "table has actually dropped."
     )
+
+    frame.itemsButton =
+        Theme.CreateButton(frame, 130, 20, "Loot tables", function()
+            showItems = not showItems
+
+            -- Built on the first press rather than at load. If the journal
+            -- will not open, the column stays dashed and says so once.
+            if showItems and not SYL.LootTable.IsAvailable() then
+                SYL:Print(
+                    "The Encounter Journal is not available, so loot tables "
+                    .. "cannot be read."
+                )
+
+                showItems = false
+            end
+
+            Theme.SetTextColor(
+                frame.itemsButton.label,
+                showItems and "accent" or "textPrimary"
+            )
+
+            Refresh()
+        end)
+
+    frame.itemsButton:SetPoint("TOPLEFT", 18, -106)
 
     CreateHeader(frame)
 

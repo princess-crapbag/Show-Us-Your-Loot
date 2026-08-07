@@ -30,6 +30,7 @@ Core\LootHistory.lua
 Core\Sync.lua
 Core\Events.lua
 Core\Analytics.lua
+Core\LootTable.lua
 Core\BossStats.lua
 Core\DueList.lua
 Core\RaidSummary.lua

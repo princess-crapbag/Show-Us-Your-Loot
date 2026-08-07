@@ -30,13 +30,19 @@ local function BossKey(encounterID, name, difficultyName)
     }, "|")
 end
 
-local function NewBoss(key, name, instanceName, difficultyName, difficultyID)
+local function NewBoss(key, name, instanceName, difficultyName, difficultyID,
+                       encounterID)
     return {
         key = key,
         name = name or "Unknown",
         instanceName = instanceName,
         difficultyName = difficultyName,
         difficultyID = difficultyID,
+
+        -- The encounter id is in the key, but only as text. Kept as a field
+        -- too because Core/LootTable.lua needs it as a number to find the
+        -- boss in the Encounter Journal.
+        encounterID = encounterID,
 
         pulls = 0,
         kills = 0,
@@ -78,11 +84,14 @@ local function Later(current, candidate)
 end
 
 local function Ensure(byKey, order, key, name, instanceName, difficultyName,
-                      difficultyID)
+                      difficultyID, encounterID)
     local boss = byKey[key]
 
     if not boss then
-        boss = NewBoss(key, name, instanceName, difficultyName, difficultyID)
+        boss = NewBoss(
+            key, name, instanceName, difficultyName, difficultyID, encounterID
+        )
+
         byKey[key] = boss
 
         table.insert(order, boss)
@@ -92,6 +101,7 @@ local function Ensure(byKey, order, key, name, instanceName, difficultyName,
     boss.instanceName = boss.instanceName or instanceName
     boss.difficultyName = boss.difficultyName or difficultyName
     boss.difficultyID = boss.difficultyID or difficultyID
+    boss.encounterID = boss.encounterID or encounterID
 
     return boss
 end
@@ -106,7 +116,7 @@ local function CountEncounters(byKey, order, sessions)
             local boss = Ensure(
                 byKey, order, key,
                 encounter.name, session.instanceName, session.difficultyName,
-                session.difficultyID
+                session.difficultyID, encounter.encounterID
             )
 
             boss.pulls = boss.pulls + 1
@@ -130,7 +140,7 @@ local function CountDrops(byKey, order, drops)
             local boss = Ensure(
                 byKey, order, key,
                 drop.encounterName, drop.instanceName, drop.difficultyName,
-                drop.difficultyID
+                drop.difficultyID, drop.encounterID
             )
 
             boss.drops = boss.drops + 1
