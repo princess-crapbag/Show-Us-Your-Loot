@@ -44,6 +44,8 @@ Core\SlashCommands.lua
 UI\Palettes.lua
 UI\Theme.lua
 UI\Widgets.lua
+UI\Toggles.lua
+UI\SortHeader.lua
 UI\TabStrip.lua
 UI\Columns.lua
 UI\Rows.lua

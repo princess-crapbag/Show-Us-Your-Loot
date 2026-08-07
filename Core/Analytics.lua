@@ -196,6 +196,61 @@ function Analytics.BuildPlayerStats(drops)
     return order
 end
 
+-- Adds every guild member who is not already here, with zeroes for the loot
+-- numbers they have not earned.
+--
+-- BuildPlayerStats answers "who has this addon seen", which is people who
+-- rolled on something or turned up to a raid. That is the right default and
+-- the wrong one for looking over a roster: a guild member who has never
+-- raided is exactly who an officer is looking for.
+--
+-- Alts fold in the usual way, so somebody's second character does not appear
+-- as a separate person with no history.
+function Analytics.IncludeGuildRoster(stats)
+    local present = {}
+
+    for _, entry in ipairs(stats) do
+        present[entry.key or ""] = true
+    end
+
+    for guid, member in pairs(SYL.Guild.GetMembers()) do
+        local key = SYL.Players.ResolveToMain(guid)
+
+        if not present[key] then
+            present[key] = true
+
+            local player = SYL.Players.Get(key)
+
+            table.insert(stats, {
+                key = key,
+                guid = guid,
+                name = (player and player.name) or member.shortName,
+                class = player and player.class,
+
+                eligible = 0,
+                nights = 0,
+                pulls = 0,
+
+                wins = 0,
+                needWins = 0,
+                offspecWins = 0,
+                mogWins = 0,
+                greedWins = 0,
+                upgradeWins = 0,
+
+                droughtDays = 0,
+                hasEverWon = false,
+
+                guildRank = member.rank,
+                guildRankIndex = member.rankIndex,
+                inGuild = true,
+            })
+        end
+    end
+
+    return stats
+end
+
 -- Players who turned up and left with nothing. Transmog and greed wins do not
 -- rescue someone from this list, since neither is an upgrade.
 function Analytics.FilterEmptyHanded(stats)

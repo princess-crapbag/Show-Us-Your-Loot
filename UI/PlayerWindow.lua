@@ -42,13 +42,14 @@ local COLUMNS = {
 
 local frame
 local rows = {}
-local headerLabels = {}
+local header
 
 local sortKey = "upgrades"
 local sortReversed = false
 local offset = 0
 local guildOnly = false
 local emptyOnly = false
+local wholeGuild = false
 
 local columnOffset = {}
 
@@ -64,6 +65,12 @@ end
 
 local function CurrentStats()
     local stats = Analytics.BuildPlayerStats(SYL.GetActiveDrops())
+
+    -- Before the filters, so "guild only" and "no upgrade yet" apply to the
+    -- roster too rather than to the loot history alone.
+    if wholeGuild then
+        Analytics.IncludeGuildRoster(stats)
+    end
 
     if guildOnly then
         stats = Analytics.FilterGuildOnly(stats)
@@ -82,66 +89,25 @@ end
 local Refresh
 
 local function CreateHeader(parent)
-    local header = CreateFrame("Frame", nil, parent)
+    header = SYL.SortHeader.Create(parent, {
+        columns = COLUMNS,
+        offsets = columnOffset,
+        top = LIST_TOP,
 
-    header:SetHeight(22)
-    header:SetPoint("TOPLEFT", 16, -(LIST_TOP - 24))
-    header:SetPoint("TOPRIGHT", -34, -(LIST_TOP - 24))
+        getSort = function()
+            return sortKey, sortReversed
+        end,
 
-    header.background =
-        Theme.CreateSolidTexture(header, "headerBar", "BACKGROUND")
-
-    header.background:SetAllPoints()
-
-    local separator = Theme.CreateSeparator(header)
-    separator:SetPoint("BOTTOMLEFT", 0, 0)
-    separator:SetPoint("BOTTOMRIGHT", 0, 0)
-
-    for _, column in ipairs(COLUMNS) do
-        local button = CreateFrame("Button", nil, header)
-
-        button:SetPoint("LEFT", columnOffset[column.key], 0)
-        button:SetSize(column.width, 22)
-
-        local label =
-            Theme.CreateText(button, Theme.sizes.columnHeader, "textMuted")
-
-        label:SetAllPoints()
-        label:SetText(column.label)
-
-        button:SetScript("OnClick", function()
-            -- Clicking the active column flips it; a new column starts in its
-            -- natural direction.
-            if sortKey == column.key then
-                sortReversed = not sortReversed
-            else
-                sortKey = column.key
-                sortReversed = false
-            end
-
+        onSort = function(key, reversed)
+            sortKey = key
+            sortReversed = reversed
             offset = 0
 
             Refresh()
-        end)
-
-        headerLabels[column.key] = label
-    end
+        end,
+    })
 
     return header
-end
-
-local function UpdateHeaderLabels()
-    for _, column in ipairs(COLUMNS) do
-        local label = headerLabels[column.key]
-
-        if sortKey == column.key then
-            label:SetText(column.label .. (sortReversed and "  ^" or "  v"))
-            Theme.SetTextColor(label, "accent")
-        else
-            label:SetText(column.label)
-            Theme.SetTextColor(label, "textMuted")
-        end
-    end
 end
 
 local function CreateRow(parent, index)
@@ -228,7 +194,7 @@ Refresh = function()
         return
     end
 
-    UpdateHeaderLabels()
+    header.UpdateLabels()
 
     local stats = CurrentStats()
     local total = #stats
@@ -282,35 +248,41 @@ Refresh = function()
 end
 
 local function CreateFilters(parent)
+    local Toggles = SYL.Toggles
+
     frame.guildButton =
-        Theme.CreateButton(parent, 110, 20, "Guild only", function()
-            guildOnly = not guildOnly
+        Toggles.Create(parent, 110, "Guild only", function(on)
+            guildOnly = on
             offset = 0
-
-            Theme.SetTextColor(
-                frame.guildButton.label,
-                guildOnly and "accent" or "textPrimary"
-            )
-
             Refresh()
         end)
 
     frame.guildButton:SetPoint("TOPLEFT", 18, -108)
 
     frame.emptyButton =
-        Theme.CreateButton(parent, 140, 20, "No upgrade yet", function()
-            emptyOnly = not emptyOnly
+        Toggles.Create(parent, 140, "No upgrade yet", function(on)
+            emptyOnly = on
             offset = 0
-
-            Theme.SetTextColor(
-                frame.emptyButton.label,
-                emptyOnly and "accent" or "textPrimary"
-            )
-
             Refresh()
         end)
 
     frame.emptyButton:SetPoint("LEFT", frame.guildButton, "RIGHT", 6, 0)
+
+    -- Everyone in the guild, including those who have never raided, which is
+    -- the only way to see a roster rather than a loot history.
+    frame.rosterButton =
+        Toggles.Create(parent, 120, "Whole guild", function(on)
+            wholeGuild = on
+            offset = 0
+
+            if on then
+                SYL.AltDetect.EnsureGuildMembers()
+            end
+
+            Refresh()
+        end)
+
+    frame.rosterButton:SetPoint("LEFT", frame.emptyButton, "RIGHT", 6, 0)
 end
 
 local function CreateWindow()
