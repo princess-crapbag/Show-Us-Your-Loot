@@ -45,6 +45,10 @@ CommandList.ENTRIES = {
         description = "Raid nights, kills and who was there",
     },
     {
+        command = "alts",
+        description = "Which characters count as the same person",
+    },
+    {
         command = "export",
         description = "Copyable raid night or season summary",
     },
@@ -75,6 +79,10 @@ CommandList.ENTRIES = {
     {
         command = "output",
         description = "Send addon messages to the next chat window",
+    },
+    {
+        command = "resetwindows",
+        description = "Put every window back to its default size and centre",
     },
     { command = "capture", description = "Toggle Loot History capture" },
     { command = "dev", description = "Open the developer window" },

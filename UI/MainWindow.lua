@@ -324,6 +324,7 @@ local function CreateMainWindow()
 
     Widgets.MakeMovable(frame)
     Theme.StyleWindow(frame)
+    Widgets.CloseOnEscape(frame)
 
     CreateTitleBar(frame)
     CreateNavigationBar(frame)

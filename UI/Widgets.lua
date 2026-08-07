@@ -30,6 +30,33 @@ function Widgets.CreatePanelButton(parent, width, height, text, onClick)
     return Theme.CreateButton(parent, width, height, text, onClick)
 end
 
+-- Escape closes the window, the way every other panel in the game behaves.
+--
+-- UISpecialFrames is Blizzard's list of frames Escape may close, and it holds
+-- global names rather than frames, so anything registered here has to have
+-- been created with one. Every window in this addon has one.
+--
+-- Registering twice would close and reopen on a single press, so this checks
+-- first. Windows are created once and kept, but that is a property of the
+-- current code rather than a guarantee.
+function Widgets.CloseOnEscape(frame)
+    local name = frame and frame:GetName()
+
+    if not name then
+        return false
+    end
+
+    for _, existing in ipairs(UISpecialFrames) do
+        if existing == name then
+            return false
+        end
+    end
+
+    table.insert(UISpecialFrames, name)
+
+    return true
+end
+
 --------------------------------------------------------------------------
 -- Resizing
 --------------------------------------------------------------------------
@@ -69,7 +96,31 @@ local function RememberSize(key, width, height)
     }
 end
 
+-- Default sizes, recorded so a window that has been dragged too big can be
+-- put back. Keyed the same way the saved sizes are.
+local defaultSizes = {}
+
+-- The screen, in the same units frame sizes are measured in. UIParent already
+-- accounts for UI scale, so this is what actually fits.
+local function ScreenSize()
+    local width = UIParent:GetWidth() or 1920
+    local height = UIParent:GetHeight() or 1080
+
+    return width, height
+end
+
 function Widgets.RestoreSize(frame, key)
+    -- Called while the frame is still the size its window declared, so this
+    -- is the one moment "default" is knowable. Both CreateListWindow and the
+    -- main window come through here, so recording it here covers both.
+    if key then
+        defaultSizes[key] = {
+            frame = frame,
+            width = frame:GetWidth(),
+            height = frame:GetHeight(),
+        }
+    end
+
     local sizes = ShowUsYourLootDB
         and ShowUsYourLootDB.settings
         and ShowUsYourLootDB.settings.windowSizes
@@ -77,12 +128,46 @@ function Widgets.RestoreSize(frame, key)
     local saved = sizes and sizes[key]
 
     if saved and saved.width and saved.height then
-        frame:SetSize(saved.width, saved.height)
+        -- Clamped on the way in as well as on the way out. A size saved
+        -- before the bounds existed, or on a larger monitor, would otherwise
+        -- restore a window bigger than the screen it is now on — and the
+        -- grip that would fix it is off the bottom right corner.
+        local maxWidth, maxHeight = ScreenSize()
+
+        frame:SetSize(
+            math.min(saved.width, maxWidth),
+            math.min(saved.height, maxHeight)
+        )
 
         return true
     end
 
     return false
+end
+
+-- Puts every resizable window back to the size its code declared and forgets
+-- what was saved. Returns how many it changed.
+function Widgets.ResetSizes()
+    if ShowUsYourLootDB and ShowUsYourLootDB.settings then
+        ShowUsYourLootDB.settings.windowSizes = {}
+    end
+
+    local reset = 0
+
+    for _, entry in pairs(defaultSizes) do
+        if entry.frame then
+            entry.frame:SetSize(entry.width, entry.height)
+
+            -- Centred as well, because a window big enough to need this is
+            -- usually also somewhere unhelpful.
+            entry.frame:ClearAllPoints()
+            entry.frame:SetPoint("CENTER")
+        end
+
+        reset = reset + 1
+    end
+
+    return reset
 end
 
 -- Drag the bottom right corner to resize. config takes minWidth, minHeight,
@@ -98,11 +183,18 @@ function Widgets.MakeResizable(frame, config)
 
     frame:SetResizable(true)
 
+    -- An upper bound as well as a lower one. Dragged past the screen edge,
+    -- the grip goes with it: the corner you would grab to make the window
+    -- smaller is the corner that is now off the monitor, and the only way
+    -- back is a slash command. Capped at the screen so that cannot happen.
+    local maxWidth, maxHeight = ScreenSize()
+
     -- SetResizeBounds replaced SetMinResize; still guarded, because a client
     -- that has neither would otherwise error at window creation and take the
-    -- whole window with it.
+    -- whole window with it. SetMinResize had no maximum, so old clients keep
+    -- the old behaviour.
     if frame.SetResizeBounds then
-        frame:SetResizeBounds(minWidth, minHeight)
+        frame:SetResizeBounds(minWidth, minHeight, maxWidth, maxHeight)
     elseif frame.SetMinResize then
         frame:SetMinResize(minWidth, minHeight)
     end
@@ -271,6 +363,8 @@ function Widgets.CreateListWindow(config)
 
     local closeCorner = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
     closeCorner:SetPoint("TOPRIGHT", -6, -6)
+
+    Widgets.CloseOnEscape(frame)
 
     return frame
 end

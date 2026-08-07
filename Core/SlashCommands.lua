@@ -124,6 +124,30 @@ COMMANDS.alts = function(remainder)
     SYL.AltCommands.Handle(remainder)
 end
 
+-- The way back from a window dragged past the edge of the screen, where the
+-- grip that would shrink it is off the monitor with it.
+COMMANDS.resetwindows = function()
+    local reset = SYL.Widgets.ResetSizes()
+
+    -- Saved sizes are cleared either way. Only windows opened this session
+    -- can be resized on the spot, so zero is a normal answer rather than a
+    -- failure, and saying so stops it reading as one.
+    if reset == 0 then
+        SYL:Print(
+            "Saved window sizes cleared. Every window will open at its "
+            .. "default size."
+        )
+
+        return
+    end
+
+    SYL:Print(
+        reset
+        .. (reset == 1 and " open window" or " open windows")
+        .. " put back to the default size and centred. Saved sizes cleared."
+    )
+end
+
 COMMANDS.bosses = function()
     if SYL.OpenBossWindow then
         SYL:OpenBossWindow()

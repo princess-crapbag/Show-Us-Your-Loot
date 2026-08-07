@@ -309,6 +309,7 @@ local function CreateSettingsWindow()
 
     Widgets.MakeMovable(frame)
     Theme.StyleWindow(frame)
+    Widgets.CloseOnEscape(frame)
 
     local accentMark = Theme.CreateAccentMark(frame)
     accentMark:SetPoint("TOPLEFT", 16, -20)
