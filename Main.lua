@@ -8,7 +8,34 @@ local addonName, SYL = ...
 _G.ShowUsYourLoot = SYL
 
 SYL.name = addonName
-SYL.version = "0.0.7"
+
+-- Read from the .toc rather than written here. Two copies drifted apart
+-- almost immediately — this said 0.0.7 while the .toc said 0.0.9-alpha, and
+-- the wrong one was being stamped onto every export by DataExport and
+-- LootHistoryAPI, so saved data claimed to come from a version that never
+-- produced it.
+--
+-- It also matters for releases: the packager rewrites the .toc's version from
+-- the git tag when it builds the zip, so anything hardcoded here would ship
+-- reporting whatever was last typed by hand.
+local function ReadVersion()
+    local get = C_AddOns and C_AddOns.GetAddOnMetadata
+        or _G.GetAddOnMetadata
+
+    if not get then
+        return "unknown"
+    end
+
+    local ok, value = pcall(get, addonName, "Version")
+
+    if ok and type(value) == "string" and value ~= "" then
+        return value
+    end
+
+    return "unknown"
+end
+
+SYL.version = ReadVersion()
 
 SYL.colors = {
     addon = "|cff33ff99",
