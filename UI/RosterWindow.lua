@@ -46,7 +46,10 @@ local frame
 local rows = {}
 local offset = 0
 local header
-local teamOnly = false
+-- Opens on the raid team. The window exists to plan a night, and a list of
+-- four hundred guild members is the thing you widen to occasionally rather
+-- than the thing you start from.
+local teamOnly = true
 -- The size of the last list drawn, so the scrollbar knows its range without
 -- rebuilding the roster every time it asks.
 local lastTotal = 0
@@ -149,6 +152,7 @@ Refresh = function()
     lastTotal = total
     lastRoster = roster
 
+    SYL.RosterControls.UpdateFilters(frame, teamOnly)
     SYL.RosterControls.UpdateCoverage(frame, roster)
     SYL.RosterControls.UpdateRoles(frame, roster)
 
@@ -186,6 +190,19 @@ Refresh = function()
         rows[index]:Hide()
     end
 
+    -- An empty team on first use is not an error, and saying so beats an
+    -- empty window that looks like the roster failed to load.
+    if total == 0 and teamOnly then
+        frame.emptyText:SetText(
+            "Nobody is on the raid team yet. Press Whole guild, tick the "
+            .. "people who raid, and Add to team."
+        )
+    else
+        frame.emptyText:SetText(
+            "Not in a guild, or the roster has not loaded."
+        )
+    end
+
     frame.emptyText:SetShown(total == 0)
 
     -- Guarded because a resize can drive a redraw while the window is still
@@ -193,52 +210,6 @@ Refresh = function()
     if frame.scrollBar then
         frame.scrollBar:Update()
     end
-end
-
-local function CreateSummary()
-    frame.coverageText =
-        Theme.CreateText(frame, Theme.sizes.row, "textPrimary")
-
-    frame.coverageText:SetPoint("TOPLEFT", 18, -74)
-
-    frame.missingText = Theme.CreateText(frame, Theme.sizes.row, "warning")
-    frame.missingText:SetPoint("TOPLEFT", 18, -96)
-    frame.missingText:SetPoint("TOPRIGHT", -16, -96)
-    frame.missingText:SetJustifyH("LEFT")
-
-    frame.rolesText =
-        Theme.CreateText(frame, Theme.sizes.rowSmall, "textSecondary")
-
-    frame.rolesText:SetPoint("TOPLEFT", 18, -120)
-
-    local hint = Theme.CreateText(frame, Theme.sizes.rowSmall, "textMuted")
-    hint:SetPoint("TOPLEFT", 18, -142)
-    hint:SetPoint("TOPRIGHT", -16, -142)
-    hint:SetJustifyH("LEFT")
-    hint:SetText(
-        "Click TEAM to mark somebody as raiding, ROLE to set what they play."
-        .. " A role in brackets is what the game reported, not a choice."
-    )
-
-    frame.teamButton =
-        SYL.Toggles.Create(frame, 130, "Raid team only", function(on)
-            teamOnly = on
-            offset = 0
-
-            Refresh()
-        end)
-
-    frame.teamButton:SetPoint("TOPLEFT", 18, -170)
-
-    frame.search = SYL.SearchBox.Create(frame, 180, "Search names…",
-        function(text)
-            searchText = text
-            offset = 0
-
-            Refresh()
-        end)
-
-    frame.search:SetPoint("LEFT", frame.teamButton, "RIGHT", 8, 0)
 end
 
 local function CreateWindow()
@@ -265,8 +236,8 @@ local function CreateWindow()
     })
 
     SYL.RosterControls.Create(frame, {
-        onTeamOnly = function(on)
-            teamOnly = on
+        onTeamOnly = function()
+            teamOnly = not teamOnly
             offset = 0
             Refresh()
         end,
@@ -330,6 +301,7 @@ local function CreateWindow()
     frame.emptyText:SetPoint("CENTER", 0, -20)
     frame.emptyText:SetJustifyH("CENTER")
     frame.emptyText:SetText("Not in a guild, or the roster has not loaded.")
+    frame.emptyText:SetWidth(WINDOW_WIDTH - 80)
     frame.emptyText:Hide()
 
     local footerRule = Theme.CreateSeparator(frame)

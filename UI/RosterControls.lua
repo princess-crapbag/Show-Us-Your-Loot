@@ -17,6 +17,16 @@ local Theme = SYL.Theme
 local RosterControls = {}
 SYL.RosterControls = RosterControls
 
+-- The button says which list you are on rather than what pressing it does,
+-- because the two states are both destinations here.
+function RosterControls.UpdateFilters(frame, teamOnly)
+    frame.teamButton.label:SetText(teamOnly and "Raid team" or "Whole guild")
+
+    Theme.SetTextColor(
+        frame.teamButton.label, teamOnly and "accent" or "textPrimary"
+    )
+end
+
 function RosterControls.UpdateRoles(frame, roster)
     local counts = SYL.RaidTeam.CountRoles(roster)
 
@@ -76,12 +86,17 @@ local function CreateSummary(frame, handlers)
     hint:SetPoint("TOPRIGHT", -16, -142)
     hint:SetJustifyH("LEFT")
     hint:SetText(
-        "Tick names to act on several at once. Click ROLE to set what "
-        .. "somebody plays; a role in brackets is what the game reported."
+        "Whole guild to add people. Tick names to act on several at once, "
+        .. "and click ROLE to set what somebody plays."
     )
 
+    -- The raid team is what this window is for, so it opens on it. Adding
+    -- somebody means widening to the guild deliberately, which is the rarer
+    -- action and the one worth a click.
     frame.teamButton =
-        SYL.Toggles.Create(frame, 130, "Raid team only", handlers.onTeamOnly)
+        Theme.CreateButton(frame, 130, 20, "Raid team", function()
+            handlers.onTeamOnly()
+        end)
 
     frame.teamButton:SetPoint("TOPLEFT", 18, -170)
 
