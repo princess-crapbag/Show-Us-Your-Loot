@@ -473,3 +473,9 @@ being drawn and then hidden — a feature that is off should cost nothing.
 Candidates for toggles, from the reviews: raid buff coverage, the Raider.IO
 column, boss loot tables, officer sync, personal-loot counting, the
 developer window, capture announcements.
+
+## Triage from the five-reviewer pass — see HANDOFF.md
+
+The full list of findings, Aimee's outstanding requests, and the traps that
+have already cost time live in **HANDOFF.md**, written for a session
+starting fresh. Nothing in it has been agreed; it is a menu, not a plan.
