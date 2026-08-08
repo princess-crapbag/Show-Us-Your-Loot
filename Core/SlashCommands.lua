@@ -108,6 +108,30 @@ COMMANDS.raids = function()
     end
 end
 
+COMMANDS.roster = function()
+    if SYL.OpenRosterWindow then
+        SYL:OpenRosterWindow()
+    end
+end
+
+COMMANDS.personalloot = function()
+    local settings = ShowUsYourLootDB.settings
+
+    settings.countPersonalLoot = not settings.countPersonalLoot
+
+    if settings.countPersonalLoot then
+        SYL:Print(
+            "Gear taken without a roll now resets a drought — the vault, a "
+            .. "Mythic+ chest, the catalyst."
+        )
+    else
+        SYL:Print(
+            "Only group-loot wins reset a drought now. The due list will "
+            .. "not see gear that arrived without a roll."
+        )
+    end
+end
+
 COMMANDS.due = function()
     Reports.Due(DUE_LIMIT)
 end

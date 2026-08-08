@@ -24,6 +24,7 @@ local BUTTONS = {
     { label = "Settings", open = "OpenSettingsWindow" },
     { label = "Players", open = "OpenPlayerWindow" },
     { label = "Raids", open = "OpenRaidWindow" },
+    { label = "Roster", open = "OpenRosterWindow" },
     { label = "Bosses", open = "OpenBossWindow" },
 }
 

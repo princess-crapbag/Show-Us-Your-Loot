@@ -45,6 +45,10 @@ CommandList.ENTRIES = {
         description = "Raid nights, kills and who was there",
     },
     {
+        command = "roster",
+        description = "Potential raiders, their classes and missing buffs",
+    },
+    {
         command = "alts",
         description = "Which characters count as the same person",
     },
@@ -85,6 +89,10 @@ CommandList.ENTRIES = {
         description = "Put every window back to its default size and centre",
     },
     { command = "capture", description = "Toggle Loot History capture" },
+    {
+        command = "personalloot",
+        description = "Count gear taken without a roll towards droughts",
+    },
     { command = "dev", description = "Open the developer window" },
     { command = "api", description = "Print the live Loot History API" },
     { command = "debug", description = "Toggle debug messages" },

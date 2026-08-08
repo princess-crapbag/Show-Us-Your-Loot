@@ -77,6 +77,12 @@ local function ReadGroupRoster()
                     name = name,
                     fullName = fullName,
                     class = classFile,
+
+                    -- What the group has them queued as. Remembered as a
+                    -- starting point for the roster window; a role chosen
+                    -- by hand always wins.
+                    role = UnitGroupRolesAssigned
+                        and UnitGroupRolesAssigned(unit) or nil,
                 })
             end
         end
@@ -153,6 +159,7 @@ local function MergeRoster(session, roster, timestamp)
             -- what makes them available to map as an alt later. The session
             -- roster still stores the character that was actually here.
             SYL.Players.Touch(member)
+            SYL.RaidTeam.RememberDetectedRole(member.guid, member.role)
 
             local existing = session.roster[key]
 

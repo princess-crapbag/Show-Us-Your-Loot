@@ -269,7 +269,9 @@ function Reports.Due(limit)
         return
     end
 
-    local entries = SYL.DueList.Build(SYL.GetAllDrops(), sessions)
+    local entries = SYL.DueList.Build(
+        SYL.GetAllDrops(), sessions, SYL.GetAllLoot()
+    )
 
     entries = SYL.DueList.FilterRecent(entries, sessions)
     entries = SYL.DueList.Sort(entries)
@@ -290,6 +292,27 @@ function Reports.Due(limit)
             .. tostring(entry.name)
             .. " — " .. SYL.DueList.Describe(entry)
             .. " (" .. entry.nights .. " raided)"
+        )
+    end
+
+    -- What went into these numbers, said out loud. A ranking that quietly
+    -- changed what counts is one somebody will argue with and be right to.
+    local settings = ShowUsYourLootDB.settings
+
+    if settings and settings.countPersonalLoot then
+        SYL:Write(
+            "  Gear taken without a roll — the vault, a Mythic+ chest, the "
+            .. "catalyst — resets a drought too. /syl personalloot to turn "
+            .. "that off."
+        )
+    end
+
+    local pending = SYL.DueList.pendingItems or 0
+
+    if pending > 0 then
+        SYL:Write(
+            "  " .. pending .. " item(s) are not cached yet and were left "
+            .. "out. Run this again once they load."
         )
     end
 end

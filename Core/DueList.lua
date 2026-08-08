@@ -119,10 +119,47 @@ local function Identify(member, key)
     }
 end
 
+-- Gear that arrived without a roll counts too, when the setting allows it.
+--
+-- The due list reads roll history, and in current retail a large share of
+-- gearing never touches a roll: the vault, a Mythic+ chest, a catalyst
+-- conversion. Somebody taking a mythic-track vault item every week appeared
+-- here as though they had received nothing, which is not a small error in a
+-- list whose only job is to say who has gone without.
+--
+-- PersonalLoot subtracts the overlap first, because a group-loot win also
+-- prints a chat loot line and counting both would double every raid drop.
+local function MergePersonalLoot(lastUpgrade, lootRecords, drops)
+    if not ShowUsYourLootDB
+        or not ShowUsYourLootDB.settings
+        or not ShowUsYourLootDB.settings.countPersonalLoot
+    then
+        return lastUpgrade, 0
+    end
+
+    local entries, pending = SYL.PersonalLoot.Build(lootRecords, drops)
+    local last = SYL.PersonalLoot.LastByPlayer(entries)
+
+    for key, at in pairs(last) do
+        if not lastUpgrade[key] or at > lastUpgrade[key] then
+            lastUpgrade[key] = at
+        end
+    end
+
+    return lastUpgrade, pending
+end
+
 -- Sessions and drops are passed in so a caller can scope this to one season.
-function DueList.Build(drops, sessions)
+function DueList.Build(drops, sessions, lootRecords)
     local lastUpgrade = LastUpgradeByPlayer(drops)
     local byKey, order = {}, {}
+
+    local pendingItems
+
+    lastUpgrade, pendingItems =
+        MergePersonalLoot(lastUpgrade, lootRecords, drops)
+
+    DueList.pendingItems = pendingItems
 
     -- Dungeons are not raid nights. A Mythic+ run used to open one and put
     -- its five people in the roster, so a guild that runs keys together was
@@ -144,10 +181,21 @@ function DueList.Build(drops, sessions)
 
                 table.insert(order, entry)
 
-                -- The roster is keyed by GUID, and so is the loot data, so
-                -- the two line up without name matching.
-                entry.lastUpgradeAt = lastUpgrade[key]
-                entry.everWon = lastUpgrade[key] ~= nil
+                -- The roster is keyed by GUID, and so is the drop data, so
+                -- the two line up without name matching. Chat loot carries
+                -- no GUID, so personal gear is also indexed by short name
+                -- and checked as a fallback.
+                local byName =
+                    lastUpgrade[SYL.PersonalLoot.NameKey(member.name) or ""]
+
+                local at = lastUpgrade[key]
+
+                if byName and (not at or byName > at) then
+                    at = byName
+                end
+
+                entry.lastUpgradeAt = at
+                entry.everWon = at ~= nil
             end
 
             if not countedTonight[key] then

@@ -1,0 +1,381 @@
+-- UI/RosterWindow.lua
+--
+-- Who could be brought, what they play, and which raid buffs nobody covers.
+--
+-- The players window answers questions about people who have already raided.
+-- This one is about who *could* — the guild roster knows the class of every
+-- member whether or not this addon has seen them loot anything, which makes
+-- "we have no Mage" answerable before the raid rather than after.
+--
+-- Guild rank cannot say who raids. Officers who do not raid hold the highest
+-- rank and trials who do hold the lowest, so team membership and role are
+-- marked by hand and kept on the player registry. Drawing a row lives in
+-- UI/RosterRows.lua; this file decides who is on the list.
+--
+-- Missing buffs are named rather than counted. "7 of 9 covered" is the wrong
+-- shape of answer: the useful part is which two.
+
+local SYL = _G.ShowUsYourLoot
+local Theme = SYL.Theme
+local Widgets = SYL.Widgets
+
+local WINDOW_WIDTH = 900
+local ROW_HEIGHT = 22
+local DEFAULT_ROWS = 14
+local MAX_ROWS = 40
+local FOOTER_HEIGHT = 56
+local LIST_TOP = 210
+
+local visibleRows = DEFAULT_ROWS
+
+-- SELECT is a checkbox, ROLE and TEAM are clicked rather than read, so each
+-- gets a hit area of its own.
+local COLUMNS = {
+    { key = "select", label = "", width = 20, gap = 10 },
+    { key = "name", label = "NAME", width = 140, gap = 8 },
+    { key = "class", label = "CLASS", width = 110, gap = 8 },
+    { key = "role", label = "ROLE", width = 74, gap = 8 },
+    { key = "team", label = "TEAM", width = 56, gap = 8 },
+    { key = "main", label = "ALT OF", width = 100, gap = 8 },
+    { key = "rank", label = "GUILD RANK", width = 96, gap = 8 },
+    { key = "nights", label = "NIGHTS", width = 56, gap = 8 },
+    { key = "score", label = "M+", width = 48, gap = 8 },
+}
+
+local frame
+local rows = {}
+local offset = 0
+local header
+local teamOnly = false
+-- The size of the last list drawn, so the scrollbar knows its range without
+-- rebuilding the roster every time it asks.
+local lastTotal = 0
+-- The list as last drawn, so the bulk actions can find the checked entries
+-- without rebuilding and re-sorting the whole roster.
+local lastRoster = {}
+
+local sortKey = "name"
+local sortReversed = false
+local searchText = ""
+
+local columnOffset = {}
+local columnWidth = {}
+
+do
+    local x = 0
+
+    for _, column in ipairs(COLUMNS) do
+        x = x + column.gap
+        columnOffset[column.key] = x
+        columnWidth[column.key] = column.width
+        x = x + column.width
+    end
+end
+
+local Refresh
+
+-- Checked characters, keyed by GUID. Survives sorting and searching, so you
+-- can find three people by name one at a time and act on all of them.
+local selected = {}
+local selectedCount = 0
+
+local function SetSelected(entry, isSelected)
+    local was = selected[entry.guid] and true or false
+
+    if was == isSelected then
+        return
+    end
+
+    selected[entry.guid] = isSelected or nil
+    selectedCount = selectedCount + (isSelected and 1 or -1)
+
+    Refresh()
+end
+
+local function ClearSelection()
+    selected = {}
+    selectedCount = 0
+end
+
+-- The checked entries, rebuilt from the roster so callers get names and
+-- classes rather than bare GUIDs.
+local function SelectedEntries(roster)
+    local kept = {}
+
+    for _, entry in ipairs(roster) do
+        if selected[entry.guid] then
+            table.insert(kept, entry)
+        end
+    end
+
+    return kept
+end
+
+local rowConfig = {
+    columns = COLUMNS,
+    offsets = columnOffset,
+    widths = columnWidth,
+    rowHeight = ROW_HEIGHT,
+    listTop = LIST_TOP,
+
+    onChanged = function()
+        Refresh()
+    end,
+
+    onSelect = SetSelected,
+}
+
+Refresh = function()
+    if not frame then
+        return
+    end
+
+    header.UpdateLabels()
+
+    local roster = SYL.RosterData.Build()
+
+    -- Coverage is about whoever is on screen. Once a team is marked, "what
+    -- are we missing" is a question about the team — asking it of every alt
+    -- and social in the guild reports everything covered and means nothing.
+    if teamOnly then
+        roster = SYL.RaidTeam.Filter(roster)
+    end
+
+    roster = SYL.RosterData.Search(roster, searchText)
+    roster = SYL.RosterData.Sort(roster, sortKey, sortReversed)
+
+    local total = #roster
+
+    lastTotal = total
+    lastRoster = roster
+
+    SYL.RosterControls.UpdateCoverage(frame, roster)
+    SYL.RosterControls.UpdateRoles(frame, roster)
+
+    local maxOffset = math.max(0, total - visibleRows)
+
+    if offset > maxOffset then
+        offset = maxOffset
+    end
+
+    frame.summaryText:SetText(
+        total
+        .. (teamOnly and " on the raid team" or
+            (total == 1 and " guild member" or " guild members"))
+        .. "  ·  " .. SYL.RaidTeam.Count() .. " marked as raiding"
+        .. (selectedCount > 0
+            and ("  ·  " .. selectedCount .. " ticked") or "")
+    )
+
+    for index = 1, visibleRows do
+        local entry = roster[index + offset]
+        local row = rows[index]
+            or SYL.RosterRows.Create(frame, index, rowConfig)
+
+        rows[index] = row
+
+        if entry then
+            SYL.RosterRows.Fill(row, entry, selected[entry.guid])
+            row:Show()
+        else
+            row:Hide()
+        end
+    end
+
+    for index = visibleRows + 1, #rows do
+        rows[index]:Hide()
+    end
+
+    frame.emptyText:SetShown(total == 0)
+
+    -- Guarded because a resize can drive a redraw while the window is still
+    -- being built, before the bar exists.
+    if frame.scrollBar then
+        frame.scrollBar:Update()
+    end
+end
+
+local function CreateSummary()
+    frame.coverageText =
+        Theme.CreateText(frame, Theme.sizes.row, "textPrimary")
+
+    frame.coverageText:SetPoint("TOPLEFT", 18, -74)
+
+    frame.missingText = Theme.CreateText(frame, Theme.sizes.row, "warning")
+    frame.missingText:SetPoint("TOPLEFT", 18, -96)
+    frame.missingText:SetPoint("TOPRIGHT", -16, -96)
+    frame.missingText:SetJustifyH("LEFT")
+
+    frame.rolesText =
+        Theme.CreateText(frame, Theme.sizes.rowSmall, "textSecondary")
+
+    frame.rolesText:SetPoint("TOPLEFT", 18, -120)
+
+    local hint = Theme.CreateText(frame, Theme.sizes.rowSmall, "textMuted")
+    hint:SetPoint("TOPLEFT", 18, -142)
+    hint:SetPoint("TOPRIGHT", -16, -142)
+    hint:SetJustifyH("LEFT")
+    hint:SetText(
+        "Click TEAM to mark somebody as raiding, ROLE to set what they play."
+        .. " A role in brackets is what the game reported, not a choice."
+    )
+
+    frame.teamButton =
+        SYL.Toggles.Create(frame, 130, "Raid team only", function(on)
+            teamOnly = on
+            offset = 0
+
+            Refresh()
+        end)
+
+    frame.teamButton:SetPoint("TOPLEFT", 18, -170)
+
+    frame.search = SYL.SearchBox.Create(frame, 180, "Search names…",
+        function(text)
+            searchText = text
+            offset = 0
+
+            Refresh()
+        end)
+
+    frame.search:SetPoint("LEFT", frame.teamButton, "RIGHT", 8, 0)
+end
+
+local function CreateWindow()
+    if frame then
+        return frame
+    end
+
+    frame = Widgets.CreateListWindow({
+        globalName = "ShowUsYourLootRosterFrame",
+        title = "RAID ROSTER",
+        key = "roster",
+
+        width = WINDOW_WIDTH,
+        listTop = LIST_TOP,
+        rowHeight = ROW_HEIGHT,
+        footer = FOOTER_HEIGHT,
+        defaultRows = DEFAULT_ROWS,
+        maxRows = MAX_ROWS,
+
+        onRows = function(count)
+            visibleRows = count
+            Refresh()
+        end,
+    })
+
+    SYL.RosterControls.Create(frame, {
+        onTeamOnly = function(on)
+            teamOnly = on
+            offset = 0
+            Refresh()
+        end,
+
+        onSearch = function(text)
+            searchText = text
+            offset = 0
+            Refresh()
+        end,
+
+        getSelected = function()
+            return SelectedEntries(lastRoster)
+        end,
+
+        onClearSelection = ClearSelection,
+        onChanged = function() Refresh() end,
+    })
+
+    frame.scrollBar = SYL.ListScrollBar.Create(frame, {
+        top = LIST_TOP,
+        bottom = FOOTER_HEIGHT,
+
+        getMax = function()
+            return math.max(0, lastTotal - visibleRows)
+        end,
+
+        getOffset = function()
+            return offset
+        end,
+
+        onScroll = function(value)
+            offset = value
+
+            Refresh()
+        end,
+    })
+
+    header = SYL.SortHeader.Create(frame, {
+        columns = COLUMNS,
+        offsets = columnOffset,
+        top = LIST_TOP,
+
+        getSort = function()
+            return sortKey, sortReversed
+        end,
+
+        onSort = function(key, reversed)
+            sortKey = key
+            sortReversed = reversed
+            offset = 0
+
+            Refresh()
+        end,
+    })
+
+    for index = 1, DEFAULT_ROWS do
+        rows[index] = SYL.RosterRows.Create(frame, index, rowConfig)
+    end
+
+    frame.emptyText = Theme.CreateText(frame, Theme.sizes.title, "textMuted")
+    frame.emptyText:SetPoint("CENTER", 0, -20)
+    frame.emptyText:SetJustifyH("CENTER")
+    frame.emptyText:SetText("Not in a guild, or the roster has not loaded.")
+    frame.emptyText:Hide()
+
+    local footerRule = Theme.CreateSeparator(frame)
+    footerRule:SetPoint("BOTTOMLEFT", 16, 44)
+    footerRule:SetPoint("BOTTOMRIGHT", -16, 44)
+
+    local closeButton = Theme.CreateButton(frame, 100, 26, "Close", function()
+        frame:Hide()
+    end)
+
+    closeButton:SetPoint("BOTTOMRIGHT", -16, 12)
+
+    frame:EnableMouseWheel(true)
+
+    frame:SetScript("OnMouseWheel", function(_, delta)
+        local maxOffset = math.max(0, lastTotal - visibleRows)
+
+        offset = math.max(0, math.min(maxOffset, offset - delta))
+
+        Refresh()
+    end)
+
+    frame:SetScript("OnShow", function()
+        -- The roster goes stale, and a window about who is in the guild
+        -- should not be showing who was in it at login.
+        SYL.Guild.Request()
+
+        -- Team and role live on the player registry, and a guild member who
+        -- has never raided is not in it — so marking them did nothing at
+        -- all. In a large guild that is almost everybody.
+        SYL.RosterData.EnsureRegistry()
+
+        Refresh()
+    end)
+
+    frame:Hide()
+
+    return frame
+end
+
+function SYL:OpenRosterWindow()
+    local window = CreateWindow()
+
+    if window:IsShown() then
+        window:Hide()
+    else
+        window:Show()
+    end
+end

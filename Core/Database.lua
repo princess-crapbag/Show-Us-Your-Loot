@@ -96,6 +96,15 @@ local function InitializeSettings()
         ShowUsYourLootDB.settings.syncEnabled = false
     end
 
+    -- Whether gear that arrived without a roll — the vault, a Mythic+ chest,
+    -- a catalyst conversion — resets somebody's drought. On, because leaving
+    -- it off means the due list cannot see a whole channel of gearing and
+    -- reports raiders as starved who are not. It is a setting rather than a
+    -- rule because it changes the number the addon exists to produce.
+    if ShowUsYourLootDB.settings.countPersonalLoot == nil then
+        ShowUsYourLootDB.settings.countPersonalLoot = true
+    end
+
     -- Which colour scheme the window wears. Stored as a key rather than as
     -- colour values, so editing a palette improves every existing install
     -- instead of only new ones.

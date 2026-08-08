@@ -22,6 +22,9 @@ local RANK_NAME_INDEX = 2
 local RANK_INDEX_INDEX = 3
 local PUBLIC_NOTE_INDEX = 7
 local OFFICER_NOTE_INDEX = 8
+-- The locale-independent name ("DEATHKNIGHT"), not the display one, since it
+-- is used as a key for class colours and buff lookups.
+local CLASS_FILE_INDEX = 11
 local GUID_INDEX = 17
 
 local byGUID = {}
@@ -72,6 +75,7 @@ function Guild.Refresh()
         -- writes notes; they are read for alt detection only.
         local publicNote = info[PUBLIC_NOTE_INDEX]
         local officerNote = info[OFFICER_NOTE_INDEX]
+        local classFile = info[CLASS_FILE_INDEX]
 
         if type(fullName) == "string" then
             local member = {
@@ -80,6 +84,11 @@ function Guild.Refresh()
                 rank = type(rankName) == "string" and rankName or nil,
                 rankIndex = type(rankIndex) == "number" and rankIndex or nil,
                 guid = type(guid) == "string" and guid or nil,
+
+                -- The guild roster knows the class of every member, raider
+                -- or not, which is what makes a roster of *potential*
+                -- raiders answerable rather than only those already seen.
+                class = type(classFile) == "string" and classFile or nil,
 
                 publicNote = type(publicNote) == "string"
                     and publicNote ~= "" and publicNote or nil,

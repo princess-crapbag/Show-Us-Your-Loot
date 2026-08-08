@@ -32,7 +32,11 @@ Core\Events.lua
 Core\Analytics.lua
 Core\PlayerHistory.lua
 Core\LootTable.lua
+Core\RaidTeam.lua
+Core\RosterData.lua
+Core\RaidBuffs.lua
 Core\BossStats.lua
+Core\PersonalLoot.lua
 Core\DueList.lua
 Core\RaidSummary.lua
 Core\Export.lua
@@ -46,6 +50,8 @@ UI\Palettes.lua
 UI\Theme.lua
 UI\Widgets.lua
 UI\Toggles.lua
+UI\SearchBox.lua
+UI\ListScrollBar.lua
 UI\SortHeader.lua
 UI\TabStrip.lua
 UI\Columns.lua
@@ -67,6 +73,9 @@ UI\MinimapButton.lua
 UI\PlayerWindow.lua
 UI\PlayerDetailWindow.lua
 UI\RaidWindow.lua
+UI\RosterRows.lua
+UI\RosterControls.lua
+UI\RosterWindow.lua
 UI\BossTooltip.lua
 UI\BossWindow.lua
 UI\ItemTooltip.lua
