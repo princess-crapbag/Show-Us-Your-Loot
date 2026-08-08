@@ -10,7 +10,23 @@ a wipe rather than a stack trace, so these are the checks worth having:
                             defined by a file the .toc loads earlier.
   3. Missing members      — SYL.Module.Member used but never assigned anywhere.
   4. .toc against disk    — files listed but absent, or present but unlisted.
-  5. Size limit           — the project's own 400 line rule.
+  5. Size limit           — the project's own 400 line rule, which a file may
+                            opt out of by saying why.
+
+The size rule is a question, not a verdict: "is this file doing more than one
+job?". Usually the answer is yes and the fix is to split it. Sometimes it is
+no, and then the file should simply be allowed to be long.
+
+What it must never do is cost a comment. Deleting reasoning to get under a
+line count makes the code worse to satisfy a number, and that happened twice
+before this escape hatch existed. A file opts out with a line in its header:
+
+    -- syl-check: size-exempt — one long table, splitting it would hide it
+
+The reason is required and is printed on every run, so an exemption is a
+claim somebody made and can be argued with, rather than a way to go quiet.
+An exemption on a file that has since come back under the limit is reported
+too, so they do not accumulate.
 
 Run: python tools/syl_check.py
 """
@@ -28,6 +44,22 @@ MAX_LINES = 400
 OPENERS = ("do", "if", "for", "while", "function")
 # `end` closes these; `elseif`/`else` do not open or close.
 BLOCK_RE = re.compile(r"\b(function|if|do|for|while|end|repeat|until|then|else|elseif)\b")
+
+
+# Read from the raw source, not the stripped copy: strip_code blanks comments
+# and the marker lives in one. Header only, so a mention further down — in a
+# note about the rule, say — cannot exempt a file by accident.
+SIZE_EXEMPT_RE = re.compile(r"--\s*syl-check:\s*size-exempt\b[\s\-—:]*(.*)")
+HEADER_LINES = 40
+
+
+def size_exemption(raw: str):
+    """Return (exempt, reason). reason is None when none was given."""
+    for line in raw.splitlines()[:HEADER_LINES]:
+        match = SIZE_EXEMPT_RE.search(line)
+        if match:
+            return True, (match.group(1).strip() or None)
+    return False, None
 
 
 def strip_code(text: str):
@@ -183,7 +215,7 @@ def toc_order() -> list:
 
 
 def main() -> int:
-    problems, warnings = [], []
+    problems, warnings, exemptions = [], [], []
     listed = toc_order()
 
     on_disk = {
@@ -210,8 +242,26 @@ def main() -> int:
         bodies[name] = code
 
         lines = len(code.splitlines())
-        if lines > MAX_LINES:
+        exempt, reason = size_exemption(raw)
+
+        if lines > MAX_LINES and not exempt:
             warnings.append(f"{name}: {lines} lines, over the {MAX_LINES} limit")
+        elif lines > MAX_LINES and not reason:
+            # Opting out without saying why is how the rule quietly stops
+            # meaning anything.
+            warnings.append(
+                f"{name}: claims a size exemption but gives no reason"
+            )
+        elif exempt and lines > MAX_LINES:
+            # ASCII only in this file's own output: the console here is not
+            # UTF-8 and an em dash arrives as a replacement character, which
+            # reads as a bug in the checker.
+            exemptions.append(f"{name}: {lines} lines - {reason}")
+        elif exempt:
+            warnings.append(
+                f"{name}: claims a size exemption but is {lines} lines, "
+                f"under the {MAX_LINES} limit, so drop the marker"
+            )
 
         check_structure(path, code, problems)
 
@@ -281,6 +331,13 @@ def main() -> int:
         print(f"WARNINGS ({len(warnings)})")
         for w in sorted(set(warnings)):
             print("  ", w)
+        print()
+    # Printed every run rather than only when something is wrong. An
+    # exemption nobody sees is an exemption nobody revisits.
+    if exemptions:
+        print(f"SIZE EXEMPTIONS ({len(exemptions)})")
+        for e in sorted(set(exemptions)):
+            print("  ", e)
         print()
     if not problems and not warnings:
         print("Nothing found.")
