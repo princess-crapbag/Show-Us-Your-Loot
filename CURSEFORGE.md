@@ -155,8 +155,20 @@ The workflow in `.github/workflows/release.yml` already does this. It needs:
 Then a release is:
 
 ```
-git tag v0.0.9-alpha
-git push origin v0.0.9-alpha
+git tag v0.1.0-alpha
+git push origin v0.1.0-alpha
 ```
+
+The `-alpha` suffix is not decoration: the packager reads it and marks the
+file Alpha on CurseForge. Confirmed on the v0.1.0-alpha run, which uploaded
+as `12.0.7 alpha`. A tag without it publishes as a full release.
+
+**Bump `## Version:` in the .toc to match, in the same commit as the tag.**
+The packager rewrites that line in the zip it builds, so CurseForge is always
+right — but it never touches the working copy. Anyone running the addon from
+a checkout, which includes a symlinked development install, reads the .toc
+and sees whatever was last typed there. That drifted once already: v0.1.0
+shipped while the .toc still said 0.0.9-alpha, so the game reported a version
+that had not existed for a while.
 
 None of that is needed to get one officer running. That is a zip.
