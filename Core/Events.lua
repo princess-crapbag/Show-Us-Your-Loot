@@ -46,7 +46,8 @@ local function OnAddonLoaded(loadedAddonName)
         )
     else
         SYL:Print(
-            "Loot History capture is off. Turn it on with /syl capture."
+            "Loot History capture is off — no roll data will be recorded. "
+            .. "Attendance still is. Turn capture on with /syl capture."
         )
     end
 end
@@ -73,10 +74,50 @@ local function OnChatMessageLoot(message)
     SYL.LootCapture.HandleChatMessage(message)
 end
 
+-- Names the recipient outright, so it settles any loot line the chat patterns
+-- could not read. Registered here rather than with the loot-history events
+-- because it is used for attribution, which must keep working when capture is
+-- off.
+local function OnEncounterLootReceived(
+    encounterID, itemID, itemLink, quantity, playerName
+)
+    SYL.LootCapture.NoteEncounterLoot(
+        encounterID, itemID, itemLink, quantity, playerName
+    )
+end
+
 local function OnGuildRosterUpdate()
     local count = SYL.Guild.Refresh()
 
     SYL:DebugPrint("Guild roster cached: " .. tostring(count) .. " members.")
+end
+
+-- Attendance is not a loot feature and must not be switched off by one.
+--
+-- These forwarders used to live inside LootHistory's handler table, which is
+-- only registered by LootHistory.Enable(). Turning loot capture off with
+-- /syl capture therefore stopped raid nights being recorded at all — no
+-- sessions, no roster, no attendance, and no message saying so. The due list
+-- simply started returning nothing and looked broken rather than disabled.
+--
+-- Registered here, unconditionally, with everything else the addon always
+-- watches. LootHistory still registers the same two events for its own
+-- purposes; two frames watching one event is how the API is meant to be used
+-- and each gets its own callback.
+local function OnEncounterStart(encounterID, encounterName, difficultyID)
+    SYL.RaidSession.OnEncounterStart(
+        encounterID, encounterName, difficultyID
+    )
+end
+
+-- The roster has to be read while everyone is still grouped, which is why
+-- this is synchronous rather than folded into a refresh.
+local function OnEncounterEnd(
+    encounterID, encounterName, difficultyID, groupSize, success
+)
+    SYL.RaidSession.OnEncounterEnd(
+        encounterID, encounterName, difficultyID, groupSize, success
+    )
 end
 
 -- Fires on zoning, including stepping out of the instance at the end of the
@@ -99,6 +140,9 @@ local HANDLERS = {
     PLAYER_ENTERING_WORLD = OnPlayerEnteringWorld,
     CHAT_MSG_LOOT = OnChatMessageLoot,
     GUILD_ROSTER_UPDATE = OnGuildRosterUpdate,
+    ENCOUNTER_START = OnEncounterStart,
+    ENCOUNTER_END = OnEncounterEnd,
+    ENCOUNTER_LOOT_RECEIVED = OnEncounterLootReceived,
 }
 
 for event in pairs(HANDLERS) do

@@ -142,8 +142,11 @@ local function BuildQualitySection(parent)
 
         local red, green, blue = GetItemQualityColor(quality)
 
+        -- The whole point of this row is that it is the colour it names, so
+        -- it must survive a palette change rather than being repainted back
+        -- to plain text.
         if red then
-            row.label:SetTextColor(red, green, blue)
+            Theme.SetCustomTextColor(row.label, red, green, blue)
         end
 
         row.isChecked = function()

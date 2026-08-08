@@ -93,6 +93,25 @@ RosterData.COMPARATORS = {
         return (a.rankIndex or 99) < (b.rankIndex or 99)
     end,
     nights = function(a, b) return a.nights > b.nights end,
+
+    -- ALT OF had no comparator at all, so clicking it sorted by name and put
+    -- the arrow on the wrong column. Alts group under whoever they belong to;
+    -- characters that are nobody's alt sort last, because an empty cell at
+    -- the top of a list looks like missing data rather than an answer.
+    main = function(a, b)
+        local left = a.mainName or ""
+        local right = b.mainName or ""
+
+        if (left == "") ~= (right == "") then
+            return right == ""
+        end
+
+        if left ~= right then
+            return left < right
+        end
+
+        return tostring(a.name) < tostring(b.name)
+    end,
     score = function(a, b)
         return (a.mplusScore or -1) > (b.mplusScore or -1)
     end,

@@ -31,7 +31,9 @@ local visibleRows = DEFAULT_ROWS
 -- SELECT is a checkbox, ROLE and TEAM are clicked rather than read, so each
 -- gets a hit area of its own.
 local COLUMNS = {
-    { key = "select", label = "", width = 20, gap = 10 },
+    -- Not sortable: it is a tickbox, it has no label to click, and there is
+    -- nothing to order a roster by.
+    { key = "select", label = "", width = 20, gap = 10, sortable = false },
     { key = "name", label = "NAME", width = 140, gap = 8 },
     { key = "class", label = "CLASS", width = 110, gap = 8 },
     { key = "role", label = "ROLE", width = 74, gap = 8 },
@@ -53,9 +55,9 @@ local teamOnly = true
 -- The size of the last list drawn, so the scrollbar knows its range without
 -- rebuilding the roster every time it asks.
 local lastTotal = 0
--- The list as last drawn, so the bulk actions can find the checked entries
--- without rebuilding and re-sorting the whole roster.
-local lastRoster = {}
+-- The whole roster before the team filter, the search and the sort — which is
+-- what the bulk actions have to read. See SelectedEntries.
+local lastFullRoster = {}
 
 local sortKey = "name"
 local sortReversed = false
@@ -102,10 +104,20 @@ end
 
 -- The checked entries, rebuilt from the roster so callers get names and
 -- classes rather than bare GUIDs.
-local function SelectedEntries(roster)
+--
+-- FROM THE WHOLE ROSTER, NOT THE VISIBLE ONE. Ticks are kept by GUID
+-- precisely so somebody can search three names one at a time and act on all
+-- three, and this read them back out of the *filtered* list — so every tick
+-- made under a search that no longer matches was quietly dropped on the way
+-- to the action, and then cleared. The button reported how many it had done,
+-- so the two people it skipped left no trace at all.
+--
+-- Searching narrows what you can see and tick. It does not un-tick anything,
+-- and neither does switching between the team and the whole guild.
+local function SelectedEntries()
     local kept = {}
 
-    for _, entry in ipairs(roster) do
+    for _, entry in ipairs(lastFullRoster) do
         if selected[entry.guid] then
             table.insert(kept, entry)
         end
@@ -137,6 +149,10 @@ Refresh = function()
 
     local roster = SYL.RosterData.Build()
 
+    -- Kept before anything narrows it, so a tick made under one search is
+    -- still there to act on under another.
+    lastFullRoster = roster
+
     -- Coverage is about whoever is on screen. Once a team is marked, "what
     -- are we missing" is a question about the team — asking it of every alt
     -- and social in the guild reports everything covered and means nothing.
@@ -150,7 +166,6 @@ Refresh = function()
     local total = #roster
 
     lastTotal = total
-    lastRoster = roster
 
     SYL.RosterControls.UpdateFilters(frame, teamOnly)
     SYL.RosterControls.UpdateCoverage(frame, roster)
@@ -248,9 +263,7 @@ local function CreateWindow()
             Refresh()
         end,
 
-        getSelected = function()
-            return SelectedEntries(lastRoster)
-        end,
+        getSelected = SelectedEntries,
 
         onClearSelection = ClearSelection,
         onChanged = function() Refresh() end,

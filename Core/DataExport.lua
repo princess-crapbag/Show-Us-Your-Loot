@@ -57,6 +57,7 @@ local function CopyDrop(record)
         itemID = record.itemID,
         itemName = record.itemName,
         itemLink = record.itemLink,
+        itemLevel = record.itemLevel,
 
         winnerName = record.winnerName,
         winnerGUID = record.winnerGUID,

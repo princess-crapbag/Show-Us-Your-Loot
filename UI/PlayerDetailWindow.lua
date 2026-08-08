@@ -136,8 +136,8 @@ local function UpdateHeaderText(entry, totals)
     local classColor = Theme.GetClassColor(entry.class)
 
     if classColor then
-        frame.nameText:SetTextColor(
-            classColor[1], classColor[2], classColor[3]
+        Theme.SetCustomTextColor(
+            frame.nameText, classColor[1], classColor[2], classColor[3]
         )
     else
         Theme.SetTextColor(frame.nameText, "textPrimary")

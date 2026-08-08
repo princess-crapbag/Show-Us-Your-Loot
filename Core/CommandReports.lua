@@ -302,8 +302,13 @@ function Reports.Due(limit)
     if settings and settings.countPersonalLoot then
         SYL:Write(
             "  Gear taken without a roll — the vault, a Mythic+ chest, the "
-            .. "catalyst — resets a drought too. /syl personalloot to turn "
-            .. "that off."
+            .. "catalyst — resets a drought too, when it was received in a "
+            .. "group. /syl personalloot to turn that off."
+        )
+    else
+        SYL:Write(
+            "  Only group-loot wins count. Gear taken without a roll is not "
+            .. "in these numbers — /syl personalloot."
         )
     end
 
@@ -313,6 +318,19 @@ function Reports.Due(limit)
         SYL:Write(
             "  " .. pending .. " item(s) are not cached yet and were left "
             .. "out. Run this again once they load."
+        )
+    end
+
+    -- The gap is not a rounding error and saying so is the difference between
+    -- a number somebody trusts and one they should not.
+    local unobserved = SYL.DueList.unobservedItems or 0
+
+    if unobserved > 0 then
+        SYL:Write(
+            "  " .. unobserved .. " item(s) arrived outside a group and were "
+            .. "left out. Your client only sees other people's loot while "
+            .. "you are grouped with them, so counting those would only ever "
+            .. "count yours."
         )
     end
 end

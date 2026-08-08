@@ -30,12 +30,11 @@ local SYL = _G.ShowUsYourLoot
 local DueList = {}
 SYL.DueList = DueList
 
-local NEED_MAIN = 0
-local NEED_OFF = 1
-
-local function IsUpgrade(state)
-    return state == NEED_MAIN or state == NEED_OFF
-end
+-- The rule stated at the top of this file — only Need and offspec reset a
+-- clock — now lives with the roll states themselves, so the type column and
+-- the boss stats answer it identically instead of each keeping their own copy
+-- of Blizzard's numbering.
+local IsUpgrade = SYL.LootHistoryAPI.IsUpgradeState
 
 -- When each player last won something that counts as gear.
 local function LastUpgradeByPlayer(drops)
@@ -129,15 +128,21 @@ end
 --
 -- PersonalLoot subtracts the overlap first, because a group-loot win also
 -- prints a chat loot line and counting both would double every raid drop.
+-- Off by default, because one client can only see its owner's solo loot and
+-- counting it inverts this list against whoever runs the addon. PersonalLoot
+-- narrows what it returns to records captured while grouped for the same
+-- reason; see the note above ObservableForEveryone there.
 local function MergePersonalLoot(lastUpgrade, lootRecords, drops)
     if not ShowUsYourLootDB
         or not ShowUsYourLootDB.settings
         or not ShowUsYourLootDB.settings.countPersonalLoot
     then
-        return lastUpgrade, 0
+        return lastUpgrade, 0, 0
     end
 
-    local entries, pending = SYL.PersonalLoot.Build(lootRecords, drops)
+    local entries, pending, unobserved =
+        SYL.PersonalLoot.Build(lootRecords, drops)
+
     local last = SYL.PersonalLoot.LastByPlayer(entries)
 
     for key, at in pairs(last) do
@@ -146,7 +151,7 @@ local function MergePersonalLoot(lastUpgrade, lootRecords, drops)
         end
     end
 
-    return lastUpgrade, pending
+    return lastUpgrade, pending, unobserved
 end
 
 -- Sessions and drops are passed in so a caller can scope this to one season.
@@ -154,22 +159,32 @@ function DueList.Build(drops, sessions, lootRecords)
     local lastUpgrade = LastUpgradeByPlayer(drops)
     local byKey, order = {}, {}
 
-    local pendingItems
+    local pendingItems, unobservedItems
 
-    lastUpgrade, pendingItems =
+    lastUpgrade, pendingItems, unobservedItems =
         MergePersonalLoot(lastUpgrade, lootRecords, drops)
 
     DueList.pendingItems = pendingItems
+    DueList.unobservedItems = unobservedItems
 
     -- Dungeons are not raid nights. A Mythic+ run used to open one and put
     -- its five people in the roster, so a guild that runs keys together was
     -- being ranked partly on dungeon attendance.
+    -- One night is one night however many characters of theirs were in it,
+    -- and however many difficulties the night passed through. Keyed by night
+    -- rather than reset per session: a Heroic clear followed by Mythic pulls
+    -- is two sessions, and counting both moved nightsSinceUpgrade — the only
+    -- key this list ranks on — twice as fast for everyone who stayed for
+    -- both. See RaidSession.NightKey.
+    local countedOn = {}
+
     for _, session in ipairs(SYL.RaidSession.RaidsOnly(sessions)) do
         local startedAt = session.startedAt or 0
+        local nightKey = SYL.RaidSession.NightKey(session)
 
-        -- One night is one night however many characters of theirs were in
-        -- it. Reset per session, not per player.
-        local countedTonight = {}
+        countedOn[nightKey] = countedOn[nightKey] or {}
+
+        local countedTonight = countedOn[nightKey]
 
         for rawKey, member in pairs(session.roster or {}) do
             local key = SYL.Players.ResolveToMain(rawKey)
@@ -251,8 +266,25 @@ function DueList.FilterRecent(entries, sessions, withinNights)
     -- night, so a cutoff computed from dungeon sessions too is measured
     -- against a clock nothing on this list runs on: three keys after raid
     -- pushed the cutoff past the last raid and emptied the whole list.
+    --
+    -- One entry per night for the same reason, or a guild that runs Heroic
+    -- and Mythic every Tuesday reaches "the last three nights" in a night and
+    -- a half, and everybody who missed this week vanishes off the list.
+    local earliest = {}
+
     for _, session in ipairs(SYL.RaidSession.RaidsOnly(sessions)) do
-        table.insert(recent, session.startedAt or 0)
+        local key = SYL.RaidSession.NightKey(session)
+        local startedAt = session.startedAt or 0
+
+        -- The night's own start, so somebody recorded in its later half is
+        -- still inside the cutoff that night sets.
+        if key and (not earliest[key] or startedAt < earliest[key]) then
+            earliest[key] = startedAt
+        end
+    end
+
+    for _, startedAt in pairs(earliest) do
+        table.insert(recent, startedAt)
     end
 
     table.sort(recent, function(left, right) return left > right end)

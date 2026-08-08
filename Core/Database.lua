@@ -97,12 +97,28 @@ local function InitializeSettings()
     end
 
     -- Whether gear that arrived without a roll — the vault, a Mythic+ chest,
-    -- a catalyst conversion — resets somebody's drought. On, because leaving
-    -- it off means the due list cannot see a whole channel of gearing and
-    -- reports raiders as starved who are not. It is a setting rather than a
-    -- rule because it changes the number the addon exists to produce.
+    -- a catalyst conversion — resets somebody's drought.
+    --
+    -- OFF, and this was the hardest default in the addon to get right.
+    --
+    -- The argument for on is real: a large share of retail gearing never
+    -- touches a roll, so with this off the due list is blind to a whole
+    -- channel and reports raiders as starved who are not.
+    --
+    -- The argument for off is that the data cannot support it, and defaults
+    -- to a bias that runs one way. CHAT_MSG_LOOT only ever sees your own
+    -- loot plus your current group's. Nobody claims a vault while standing
+    -- next to the officer running this addon, so with it on the only vault
+    -- claims in the database are the officer's own. Their drought resets
+    -- every week and nobody else's ever does, and the officer sinks to the
+    -- bottom of a list they wrote. That is worse than being blind: it is
+    -- confidently wrong, in a direction that looks like modesty.
+    --
+    -- So it stays a setting, because for a guild where everybody runs the
+    -- addon and syncs, on is the better answer. It just cannot be the
+    -- default until the sync can fill the gap (see F8/E8 in HANDOFF.md).
     if ShowUsYourLootDB.settings.countPersonalLoot == nil then
-        ShowUsYourLootDB.settings.countPersonalLoot = true
+        ShowUsYourLootDB.settings.countPersonalLoot = false
     end
 
     -- Which colour scheme the window wears. Stored as a key rather than as
@@ -143,6 +159,7 @@ function SYL.DatabaseInitialize()
     ShowUsYourLootDB.archives = ShowUsYourLootDB.archives or {}
     ShowUsYourLootDB.recentRecordIDs =
         ShowUsYourLootDB.recentRecordIDs or {}
+
 
     -- Account level, not per season. An alt mapping is a fact about a
     -- person, and archiving a season must not forget who somebody is.

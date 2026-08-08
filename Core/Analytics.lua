@@ -16,10 +16,7 @@ local SYL = _G.ShowUsYourLoot
 local Analytics = {}
 SYL.Analytics = Analytics
 
-local NEED_MAIN = 0
-local NEED_OFF = 1
-local TRANSMOG = 2
-local GREED = 3
+local STATE = SYL.LootHistoryAPI.ROLL_STATE
 
 local SECONDS_PER_DAY = 86400
 
@@ -49,13 +46,13 @@ end
 local function CountWin(entry, roll)
     entry.wins = entry.wins + 1
 
-    if roll.state == NEED_MAIN then
+    if roll.state == STATE.NeedMainSpec then
         entry.needWins = entry.needWins + 1
-    elseif roll.state == NEED_OFF then
+    elseif roll.state == STATE.NeedOffSpec then
         entry.offspecWins = entry.offspecWins + 1
-    elseif roll.state == TRANSMOG then
+    elseif roll.state == STATE.Transmog then
         entry.mogWins = entry.mogWins + 1
-    elseif roll.state == GREED then
+    elseif roll.state == STATE.Greed then
         entry.greedWins = entry.greedWins + 1
     end
 end
@@ -147,8 +144,14 @@ function Analytics.BuildPlayerStats(drops)
 
         entry.upgradeWins = entry.needWins + entry.offspecWins
 
-        entry.guildRank = SYL.Guild.GetRank(entry.guid, entry.name)
-        entry.guildRankIndex = SYL.Guild.GetRankIndex(entry.guid, entry.name)
+        -- Through the person rather than the character, so a raider who
+        -- brought an alt is not reported at the alt's rank.
+        local ranked = SYL.Guild.GetMemberForPlayer(
+            entry.key, entry.guid, entry.name
+        )
+
+        entry.guildRank = ranked and ranked.rank or nil
+        entry.guildRankIndex = ranked and ranked.rankIndex or nil
         entry.inGuild = entry.guildRank ~= nil
 
         -- Days since their last upgrade, or since first seen if they have
@@ -183,7 +186,12 @@ function Analytics.BuildPlayerStats(drops)
             entry.upgradeWins = 0
             entry.droughtDays = 0
             entry.hasEverWon = false
-            entry.guildRank = SYL.Guild.GetRank(member.guid, member.name)
+            local ranked = SYL.Guild.GetMemberForPlayer(
+                key, member.guid, member.name
+            )
+
+            entry.guildRank = ranked and ranked.rank or nil
+            entry.guildRankIndex = ranked and ranked.rankIndex or nil
             entry.inGuild = entry.guildRank ~= nil
             entry.nightsSeen = nil
 
@@ -213,13 +221,26 @@ function Analytics.IncludeGuildRoster(stats)
         present[entry.key or ""] = true
     end
 
-    for guid, member in pairs(SYL.Guild.GetMembers()) do
+    -- Sorted rather than raw pairs(). Several of a person's characters fold
+    -- onto one key here and the first one reached wins, so hash order decided
+    -- which character's details the row showed — and hash order changes as
+    -- the roster table is rebuilt. Sorting makes the choice repeatable; the
+    -- rank lookup below makes it correct.
+    local members = SYL.Guild.GetMembers()
+
+    for _, guid in ipairs(SYL.Utilities.GetSortedKeys(members)) do
+        local member = members[guid]
         local key = SYL.Players.ResolveToMain(guid)
 
         if not present[key] then
             present[key] = true
 
             local player = SYL.Players.Get(key)
+
+            -- The person's rank, which is their main's, not whichever alt
+            -- happened to be reached first.
+            local ranked = SYL.Guild.GetMemberForPlayer(key, guid, member.name)
+                or member
 
             table.insert(stats, {
                 key = key,
@@ -241,8 +262,8 @@ function Analytics.IncludeGuildRoster(stats)
                 droughtDays = 0,
                 hasEverWon = false,
 
-                guildRank = member.rank,
-                guildRankIndex = member.rankIndex,
+                guildRank = ranked.rank,
+                guildRankIndex = ranked.rankIndex,
                 inGuild = true,
             })
         end

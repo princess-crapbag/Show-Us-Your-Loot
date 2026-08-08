@@ -88,7 +88,7 @@ function Rows.SetRowItem(row, itemLink, fallbackName)
         return false
     end
 
-    row.itemText:SetTextColor(color[1], color[2], color[3])
+    Theme.SetCustomTextColor(row.itemText, color[1], color[2], color[3])
 
     return true
 end
@@ -179,7 +179,12 @@ local function AttachItemRowScripts(row)
     -- opens the row's detail, where a view provides one.
     row:SetScript("OnClick", function(self)
         if self.itemLink and IsModifiedClick("CHATLINK") then
-            ChatEdit_InsertLink(self.itemLink)
+            -- Normalised on the way out rather than on the way in, so
+            -- records captured before the colour wrapper was kept still
+            -- paste a usable link.
+            ChatEdit_InsertLink(
+                SYL.Utilities.NormalizeItemLink(self.itemLink)
+            )
 
             return
         end

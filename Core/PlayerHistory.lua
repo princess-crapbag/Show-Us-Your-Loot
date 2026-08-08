@@ -20,10 +20,7 @@ local SYL = _G.ShowUsYourLoot
 local PlayerHistory = {}
 SYL.PlayerHistory = PlayerHistory
 
-local NEED_MAIN = 0
-local NEED_OFF = 1
-local TRANSMOG = 2
-local GREED = 3
+local STATE = SYL.LootHistoryAPI.ROLL_STATE
 
 -- Drops are passed in so a caller can scope this to a season or to
 -- everything, the same way BossStats and DueList take theirs.
@@ -108,13 +105,13 @@ function PlayerHistory.Summarise(entries)
         if entry.won then
             totals.won = totals.won + 1
 
-            if entry.state == NEED_MAIN then
+            if entry.state == STATE.NeedMainSpec then
                 totals.needWins = totals.needWins + 1
-            elseif entry.state == NEED_OFF then
+            elseif entry.state == STATE.NeedOffSpec then
                 totals.offspecWins = totals.offspecWins + 1
-            elseif entry.state == TRANSMOG then
+            elseif entry.state == STATE.Transmog then
                 totals.mogWins = totals.mogWins + 1
-            elseif entry.state == GREED then
+            elseif entry.state == STATE.Greed then
                 totals.greedWins = totals.greedWins + 1
             end
         elseif entry.roll then

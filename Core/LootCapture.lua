@@ -18,8 +18,13 @@ local DUPLICATE_WINDOW_SECONDS = 30
 local DUPLICATE_TIME_BUCKET_SECONDS = 2
 
 local function ExtractItemInformation(message)
+    -- The colour wrapper first. A link without its |cff… prefix and closing
+    -- |r displays correctly but cannot be pasted into chat, and that is the
+    -- form that was being stored. The bare fragment stays as a fallback for
+    -- any line that genuinely arrives without colour codes.
     local itemLink =
-        message:match("(|Hitem:.-|h%[.-%]|h)")
+        message:match("(|c%x+|Hitem:.-|h%[.-%]|h|r)")
+        or message:match("(|Hitem:.-|h%[.-%]|h)")
 
     if not itemLink then
         return nil
@@ -39,18 +44,11 @@ local function ExtractItemInformation(message)
     }
 end
 
-local function DetermineRecipient(message)
-    if message:find("^You ") then
-        return Utilities.GetPlayerFullName()
-    end
-
-    local recipient =
-        message:match("^(.+) receives loot:")
-        or message:match("^(.+) receives item:")
-        or message:match("^(.+) receives bonus loot:")
-
-    return Utilities.NormalizePlayerName(recipient)
-end
+-- Reading the sentence is its own problem and lives in Core/LootMessages.lua,
+-- which builds its patterns from the client's own format strings so the
+-- parser is right in every locale.
+local DetermineRecipient = SYL.LootMessages.DetermineRecipient
+local WasCreated = SYL.LootMessages.WasCreated
 
 -- Chat can deliver the same loot line more than once. Bucketing the timestamp
 -- lets two deliveries a moment apart collapse onto the same identity.
@@ -94,7 +92,70 @@ local function IsDuplicate(recordID)
     return false
 end
 
-local function BuildRecord(recordID, season, recipient, item, timestamp)
+--------------------------------------------------------------------------
+-- Encounter loot, as a second opinion
+--------------------------------------------------------------------------
+--
+-- ENCOUNTER_LOOT_RECEIVED carries the recipient as a name argument rather
+-- than inside a sentence, so it needs no parsing and cannot be wrong about
+-- who got something. It only fires for boss loot, so it cannot replace chat
+-- capture — the vault, world drops and crafting all arrive without it.
+--
+-- It is used as a backstop rather than as a second writer. Recording from
+-- both would mean two records for every boss drop unless the two were
+-- reconciled, and a duplicate in the fairness maths is a worse failure than
+-- the one being fixed. So chat stays the only thing that writes, and this
+-- supplies the name when the sentence could not be read, plus the encounter
+-- id, which chat never carries at all.
+local HINT_WINDOW_SECONDS = 15
+
+local encounterLootHints = {}
+
+local function ForgetStaleHints(now)
+    for itemID, hint in pairs(encounterLootHints) do
+        if now - hint.at > HINT_WINDOW_SECONDS then
+            encounterLootHints[itemID] = nil
+        end
+    end
+end
+
+function LootCapture.NoteEncounterLoot(
+    encounterID, itemID, itemLink, quantity, playerName
+)
+    if not itemID then
+        return
+    end
+
+    local now = time()
+
+    ForgetStaleHints(now)
+
+    encounterLootHints[itemID] = {
+        encounterID = encounterID,
+        playerName = playerName,
+        at = now,
+    }
+end
+
+local function HintFor(itemID, timestamp)
+    if not itemID then
+        return nil
+    end
+
+    local hint = encounterLootHints[itemID]
+
+    if not hint then
+        return nil
+    end
+
+    if math.abs(timestamp - hint.at) > HINT_WINDOW_SECONDS then
+        return nil
+    end
+
+    return hint
+end
+
+local function BuildRecord(recordID, season, recipient, item, timestamp, hint)
     local location = Utilities.GetLocationInformation()
 
     return {
@@ -109,6 +170,12 @@ local function BuildRecord(recordID, season, recipient, item, timestamp)
         itemID = item.itemID,
         itemName = item.itemName,
         quantity = item.quantity,
+
+        -- nil when the client had not cached the item yet. Recorded rather
+        -- than derived later because an item level is a fact about the moment
+        -- it dropped, and a piece upgraded with crests afterwards would read
+        -- back higher than it was won at.
+        itemLevel = Utilities.GetItemLevel(item.itemLink),
 
         timestamp = timestamp,
         dateText = date("%Y-%m-%d", timestamp),
@@ -131,6 +198,14 @@ local function BuildRecord(recordID, season, recipient, item, timestamp)
         -- Which pipeline produced this record. Loot History records will
         -- carry a different source once they become the primary path.
         source = "CHAT_MSG_LOOT",
+
+        -- Chat says nothing about which boss dropped it. When the encounter
+        -- event named the same item moments ago, that is the boss.
+        encounterID = hint and hint.encounterID or nil,
+
+        -- Recorded at capture time in the locale that produced the line, so
+        -- nothing downstream has to re-read English out of the raw message.
+        created = item.created or nil,
 
         -- Vault rewards arrive through the same chat channel as everything
         -- else and look identical afterwards, so the one moment they can be
@@ -200,8 +275,29 @@ function LootCapture.HandleChatMessage(message)
         return
     end
 
-    local recipient = DetermineRecipient(message)
     local timestamp = time()
+
+    item.created = WasCreated(message)
+
+    local hint = HintFor(item.itemID, timestamp)
+    local recipient = DetermineRecipient(message)
+
+    -- The encounter event names the recipient outright, so it settles any
+    -- line the sentence patterns could not read.
+    if not recipient and hint then
+        recipient = Utilities.NormalizePlayerName(hint.playerName)
+    end
+
+    -- Dropping the record is the lesser error. Filing it under a fabricated
+    -- name puts a player in the due list who does not exist, and every real
+    -- raider's share is measured against them.
+    if not recipient or recipient == "" then
+        SYL:DebugPrint(
+            "No recipient could be read from: " .. tostring(message)
+        )
+
+        return
+    end
 
     local recordID =
         CreateRecordID(recipient, item.itemID, timestamp, message)
@@ -215,7 +311,7 @@ function LootCapture.HandleChatMessage(message)
     end
 
     local record =
-        BuildRecord(recordID, season, recipient, item, timestamp)
+        BuildRecord(recordID, season, recipient, item, timestamp, hint)
 
     table.insert(season.loot, record)
 

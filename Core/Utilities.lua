@@ -89,12 +89,67 @@ function Utilities.GetItemIDFromLink(itemLink)
     return tonumber(itemLink:match("|?H?item:(%d+)"))
 end
 
+-- A link the chat box will accept.
+--
+-- Chat capture stored only the |Hitem:…|h[Name]|h part, dropping the |cff…
+-- colour prefix and the |r that closes it. That renders fine in a font string,
+-- which is why it went unnoticed, but shift-clicking such a row inserted a
+-- broken link into chat: the recipient sees raw escape codes rather than an
+-- item, which for an addon whose whole subject is items is not a small thing.
+--
+-- The client can rebuild it, since the item id inside the fragment is intact.
+-- Uncached items have no answer yet and keep what they had, which is no worse
+-- than before and fixes itself on the next hover.
+function Utilities.NormalizeItemLink(itemLink)
+    if type(itemLink) ~= "string" or itemLink == "" then
+        return itemLink
+    end
+
+    if itemLink:find("|c", 1, true) then
+        return itemLink
+    end
+
+    local _, fullLink = C_Item.GetItemInfo(itemLink)
+
+    return fullLink or itemLink
+end
+
 function Utilities.GetItemNameFromLink(itemLink)
     if type(itemLink) ~= "string" then
         return nil
     end
 
     return itemLink:match("%[(.-)%]")
+end
+
+-- The effective item level of a link, or nil when the client has not cached
+-- the item yet.
+--
+-- Nothing recorded an item level, so every acquisition weighed the same: a
+-- Champion piece out of a +7 and a Myth piece out of the vault both counted
+-- as "they got something", and the due list ranked a raider who took one of
+-- each below a raider who took two Veteran rings. This stores the number.
+-- What the fairness maths does with it is a separate decision and has
+-- deliberately not been made here — changing how the ranking is weighted is
+-- not a bug fix, and it should not arrive as a side effect of one.
+--
+-- Crest upgrades stay invisible regardless. Spending crests fires no loot
+-- event of any kind, so an item that goes from Champion 1 to Champion 8 is
+-- unobservable from here; only its level at the moment it dropped is known.
+function Utilities.GetItemLevel(itemLink)
+    if type(itemLink) ~= "string" or itemLink == "" then
+        return nil
+    end
+
+    local success, level = pcall(function()
+        return C_Item.GetDetailedItemLevelInfo(itemLink)
+    end)
+
+    if not success then
+        return nil
+    end
+
+    return level
 end
 
 function Utilities.FormatDateTime(timestamp)
@@ -131,6 +186,11 @@ local DIFFICULTY_SHORT = {
     [17] = "LFR",
     [23] = "5M",
     [24] = "TW",
+    [33] = "TW",
+    [151] = "LFR TW",
+    [205] = "Fol",
+    [208] = "Delve",
+    [220] = "Story",
 }
 
 function Utilities.ShortDifficulty(difficultyID, difficultyName)
@@ -179,14 +239,54 @@ local RAID_DIFFICULTIES = {
     [9] = true,                 -- 40 player
     [14] = true, [15] = true, [16] = true,
     [17] = true,                -- LFR
+    [18] = true,                -- Event, 40 player
     [33] = true,                -- Timewalking raid
+    [151] = true,               -- Timewalking LFR
+    [220] = true,               -- Story
 }
 
 local DUNGEON_DIFFICULTIES = {
     [1] = true, [2] = true,     -- Normal and Heroic
     [8] = true,                 -- Mythic Keystone
+    [19] = true,                -- Event, 5 player
     [23] = true,                -- Mythic
     [24] = true,                -- Timewalking
+    [205] = true,               -- Follower
+}
+
+-- Delves are the one that mattered. GetInstanceInfo reports them as
+-- "scenario", which nothing here handled, so every delve drop was filed as
+-- world loot alongside a quest reward picked up in Dornogal. A delve is
+-- instanced content that awards gear on a track, and calling it "world" put
+-- it in the one bucket the fairness maths ignores hardest.
+--
+-- Torghast and the Visions are in here for the same reason: instanced, not a
+-- raid, not a dungeon, and previously answering "other".
+local SCENARIO_DIFFICULTIES = {
+    [11] = true, [12] = true,   -- Heroic and Normal scenario
+    [20] = true,                -- Event scenario
+    [152] = true,               -- Visions of N'Zoth
+    [167] = true,               -- Torghast
+    [208] = true,               -- Delves
+}
+
+-- Raid content that is not a raid team's night.
+--
+-- IsRaidContent decides whether a session opens, and instanceType wins over
+-- the difficulty, so anything flagged "raid" by the client opened a night —
+-- including a Story clear done alone on a Tuesday, which then sat in the
+-- attendance history as a one-person raid and moved everybody's drought.
+--
+-- These are all scaled or off-schedule versions of a raid: real raid content
+-- by instance type, but never the thing the roster is being measured on. They
+-- still classify as "raid" for the loot list, because that is where the item
+-- came from — only attendance excludes them.
+local NOT_A_RAID_NIGHT = {
+    [18] = true,                -- Event
+    [33] = true,                -- Timewalking raid
+    [151] = true,               -- Timewalking LFR
+    [205] = true,               -- Follower
+    [220] = true,               -- Story
 }
 
 function Utilities.GetContentType(instanceType, difficultyID)
@@ -198,9 +298,13 @@ function Utilities.GetContentType(instanceType, difficultyID)
         return "dungeon"
     end
 
+    if instanceType == "scenario" then
+        return "scenario"
+    end
+
     -- No instanceType stored, so fall back to the difficulty. Anything in
-    -- neither set — scenarios, arenas, an id this does not know yet —
-    -- answers "other" rather than being guessed into one of them.
+    -- none of the sets — arenas, an id this does not know yet — answers
+    -- "other" rather than being guessed into one of them.
     if RAID_DIFFICULTIES[difficultyID] then
         return "raid"
     end
@@ -209,12 +313,22 @@ function Utilities.GetContentType(instanceType, difficultyID)
         return "dungeon"
     end
 
+    if SCENARIO_DIFFICULTIES[difficultyID] then
+        return "scenario"
+    end
+
     return "other"
 end
 
 -- Convenience for the places that only care whether something counts towards
 -- raid attendance, which is the question the due list is really asking.
+--
+-- Deliberately narrower than GetContentType: see NOT_A_RAID_NIGHT above.
 function Utilities.IsRaidContent(instanceType, difficultyID)
+    if NOT_A_RAID_NIGHT[difficultyID] then
+        return false
+    end
+
     return Utilities.GetContentType(instanceType, difficultyID) == "raid"
 end
 

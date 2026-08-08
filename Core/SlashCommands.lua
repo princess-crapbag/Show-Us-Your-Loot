@@ -122,7 +122,10 @@ COMMANDS.personalloot = function()
     if settings.countPersonalLoot then
         SYL:Print(
             "Gear taken without a roll now resets a drought — the vault, a "
-            .. "Mythic+ chest, the catalyst."
+            .. "Mythic+ chest, the catalyst — but only when it was received "
+            .. "while grouped. Your client cannot see anybody else's solo "
+            .. "loot, so counting yours would put you at the bottom of your "
+            .. "own list."
         )
     else
         SYL:Print(

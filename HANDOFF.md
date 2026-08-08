@@ -40,7 +40,8 @@ See CURSEFORGE.md.
 ### Working here
 
 - `python tools/syl_check.py` after every change. There is no Lua
-  interpreter on this machine and no tests.
+  interpreter on this machine and, apart from `tools/test_lootmessages.py`
+  (§4A), no tests.
 - **The checker is a regex heuristic, not a parser.** It validates
   `SYL.Module.Member` references, block balance, .toc-against-disk and
   column widths. It passed clean through four crash-level bugs in one day.
@@ -78,8 +79,13 @@ wrong numbers found by review"):
   emptied the due list
 - `LootFeed.DropType` defaulted unknown roll states to "need"
 
+**Then the whole A list was fixed** — see §4A. Twenty-one items across
+thirty-six files.
+
 **Untested in game.** No raid night has ever gone through the fairness maths.
-The next raid is ~2 weeks out.
+The next raid is ~2 weeks out. That was true before the A-list pass and is
+still true after it: the A fixes changed how several numbers are computed and
+not one of them has been watched happening.
 
 ---
 
@@ -106,7 +112,51 @@ She will pick from §4 too. These are hers, unprompted.
 
 Aimee is choosing from this list. **Do not start any of it unprompted.**
 
-### A. Wrong numbers and crashes — outstanding
+### A. Wrong numbers and crashes — ALL FIXED, 2026-08-08
+
+A1–A21 are done and on GitHub. Nothing has shipped to CurseForge. **None of
+it has been in a raid**, and the fairness maths has still never run on a real
+night — see §2.
+
+Four judgement calls were made while fixing these. They are decisions, not
+findings, and they can be reversed:
+
+- **`countPersonalLoot` now defaults OFF** (A1). One client cannot see
+  anybody's solo loot but its own, so counting it put the officer at the
+  bottom of their own due list. When it is on, only gear received while
+  grouped is counted, which is the largest subset where coverage is even.
+  `/syl due` reports how many records were left out. The full reasoning is in
+  `Database.lua` next to the default.
+- **The quality floor for "did they get geared" is now epic** (A13), because
+  every gear track a raider chases awards epics and blue is levelling gear.
+  Tabards and shirts are excluded outright.
+- **Crafted items never count as gear received** (A2). A create line says an
+  item was made, never that the maker kept it, and the two errors are not
+  symmetric.
+- **Item level is now recorded but changes no ranking** (A14). Storing it was
+  the bug; weighting the due list by it is a policy decision and is still
+  Aimee's to make. Crest upgrades remain invisible and always will be — they
+  fire no loot event of any kind.
+
+Two files took a size exemption rather than being split: `LootHistory.lua`
+and `RaidSession.lua`. Both say why in their headers.
+
+`Core/LootMessages.lua` is new — the locale-aware chat parser, split out of
+`LootCapture.lua`. There are **real tests for it**, the first in this project,
+and they found two bugs that reading the code did not:
+
+```bash
+python -m venv .venv && .venv/Scripts/python -m pip install lupa
+```
+
+Then `.venv/Scripts/python tools/test_lootmessages.py`. It embeds a Lua
+interpreter and reads the parsing block straight out of the addon, so it
+cannot drift from the code. Six locales, exits non-zero on failure. See G1 —
+this is not a substitute for the checker knowing about module globals.
+
+<details>
+<summary>The original A-list, for reference</summary>
+
 
 | # | Item |
 |---|---|
@@ -131,6 +181,8 @@ Aimee is choosing from this list. **Do not start any of it unprompted.**
 | A19 | Missing difficulty IDs: Story, Follower, Event, Timewalking LFR. A solo Story clear opens a one-person raid night |
 | A20 | Roll-state constants hardcoded in three files while `LootHistoryAPI` reverse-maps the live enum |
 | A21 | Click-catchers never `RegisterForClicks`, so they swallow right-clicks; both panels float over the game after their window closes |
+
+</details>
 
 ### B. Performance
 

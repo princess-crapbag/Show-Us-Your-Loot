@@ -110,6 +110,15 @@ function AltDetect.EnsureGuildMembers()
                 guid = guid,
                 name = member.shortName,
                 fullName = member.name,
+
+                -- The guild roster is the only source that knows the class of
+                -- a member who has never been in a raid, and this is the one
+                -- place it reaches the registry. Leaving it out meant every
+                -- guild member who had not yet raided appeared in the roster
+                -- window with no class colour and no icon — which is most of
+                -- a large guild, and exactly the people that window was
+                -- rebuilt to show.
+                class = member.class,
             })
 
             if not existing then
@@ -121,6 +130,50 @@ function AltDetect.EnsureGuildMembers()
     return added
 end
 
+-- Both notes, best answer wins.
+--
+-- This read `officerNote or publicNote`, so a single character in somebody's
+-- officer note hid their public note completely. Officer notes are where
+-- guilds keep raid roles, trial dates and reminders — "Trial 12/3", "resto
+-- OS", "on holiday" — none of which name a main, and all of which were
+-- enough to stop the public note that said "Alt of Aimee" from ever being
+-- read. The more thoroughly a guild used its officer notes, the fewer alts
+-- this found.
+--
+-- An explicit form outranks a loose one wherever it appears, because "alt of
+-- Aimee" in a public note is better evidence than a bare "Aimee" in an
+-- officer note. Between two matches of equal strength the officer note wins,
+-- being the one only officers can edit.
+local function ReadNotes(member)
+    local best
+
+    local function consider(note, from)
+        if not note then
+            return
+        end
+
+        local candidate, explicit = AltDetect.ParseNote(note)
+
+        if not candidate then
+            return
+        end
+
+        if not best or (explicit and not best.explicit) then
+            best = {
+                candidate = candidate,
+                explicit = explicit,
+                note = note,
+                from = from,
+            }
+        end
+    end
+
+    consider(member.officerNote, "officer note")
+    consider(member.publicNote, "public note")
+
+    return best
+end
+
 -- Proposals, never applied. Each carries enough to be shown to a human and
 -- accepted or ignored.
 function AltDetect.Scan()
@@ -129,10 +182,12 @@ function AltDetect.Scan()
     local proposals = {}
 
     for guid, member in pairs(SYL.Guild.GetMembers()) do
-        local note = member.officerNote or member.publicNote
-        local from = member.officerNote and "officer note" or "public note"
+        local read = ReadNotes(member)
 
-        local candidate, explicit = AltDetect.ParseNote(note)
+        local candidate = read and read.candidate
+        local explicit = read and read.explicit
+        local note = read and read.note
+        local from = read and read.from
 
         if candidate then
             local main = SYL.Guild.FindByShortName(candidate)

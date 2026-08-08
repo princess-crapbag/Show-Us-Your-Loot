@@ -164,9 +164,16 @@ Refresh = function()
         kills = kills + RaidSession.GetKillCount(session)
     end
 
+    -- Rows are sessions and the count is nights, and those differ: a Tuesday
+    -- that cleared Heroic and then pulled Mythic is two rows of one night.
+    -- The rows stay split because they describe different runs; the number
+    -- has to say nights, because that is the word next to it and the unit
+    -- every attendance figure in the addon is measured in.
+    local nights = RaidSession.CountNights(sessions)
+
     frame.summaryText:SetText(
-        total
-        .. (total == 1 and " raid night" or " raid nights")
+        nights
+        .. (nights == 1 and " raid night" or " raid nights")
         .. "  ·  "
         .. kills
         .. " boss kills"

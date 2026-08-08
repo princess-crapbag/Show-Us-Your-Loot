@@ -27,10 +27,7 @@ local Utilities = SYL.Utilities
 local LootFeed = {}
 SYL.LootFeed = LootFeed
 
-local NEED_MAIN = 0
-local NEED_OFF = 1
-local TRANSMOG = 2
-local GREED = 3
+local STATE = SYL.LootHistoryAPI.ROLL_STATE
 
 -- Ordered for the filter dropdown. Rolled types first, since those are the
 -- ones with a roll list behind them.
@@ -58,10 +55,10 @@ LootFeed.ROLLED = {
 }
 
 local ROLL_STATE_TYPES = {
-    [NEED_MAIN] = "need",
-    [NEED_OFF] = "offspec",
-    [TRANSMOG] = "mog",
-    [GREED] = "greed",
+    [STATE.NeedMainSpec] = "need",
+    [STATE.NeedOffSpec] = "offspec",
+    [STATE.Transmog] = "mog",
+    [STATE.Greed] = "greed",
 }
 
 local function DropType(drop)
@@ -76,35 +73,32 @@ local function DropType(drop)
 end
 
 -- Chat records carry no roll, so the type is inferred from where and how the
--- item arrived. This is honest guesswork and the categories are deliberately
--- coarse: better a right answer at "personal" than a confident wrong one at
--- "vault".
-local function LootTypeOf(record)
-    -- Crafting prints through the same channel as looting. The capture path
-    -- keeps the raw line precisely so this stays answerable.
-    local raw = record.rawMessage or ""
+-- item arrived. That inference lives in PersonalLoot, because the fairness
+-- maths has to make the same call and previously did not make it at all.
+local LootTypeOf = SYL.PersonalLoot.LootTypeOf
 
-    if raw:find("create", 1, true) or raw:find("Create", 1, true) then
-        return "crafted"
+-- One spelling per person.
+--
+-- The two sources disagree: the loot history gives "Aimee" and chat gives
+-- "Aimee-Draenor" for the same character on the same night. The list showed
+-- both, and the Player filter listed both as separate options — so filtering
+-- to a raider hid half their loot, silently, and the half it hid depended on
+-- which pipeline had captured it.
+--
+-- The registry knows which characters exist and refuses to answer when a bare
+-- name is ambiguous across realms. That refusal is kept: an unresolvable name
+-- keeps its realm suffix and stays its own entry, because two people really
+-- called Aimee are two people, and merging them would be a worse error than
+-- listing them twice.
+local function DisplayName(name)
+    if type(name) ~= "string" or name == "" then
+        return name
     end
 
-    -- Set at capture time, when the weekly rewards frame was open. Records
-    -- written before that existed have no flag and fall through to the
-    -- location test below, so old vault items read as world rather than
-    -- being wrongly claimed.
-    if record.fromVault then
-        return "vault"
-    end
+    local guid = SYL.Players.GUIDForName(name)
+    local player = guid and SYL.Players.Get(guid)
 
-    local contentType = Utilities.GetContentType(
-        record.instanceType, record.difficultyID
-    )
-
-    if contentType == "raid" or contentType == "dungeon" then
-        return "personal"
-    end
-
-    return "world"
+    return (player and player.name) or name
 end
 
 local function WhereOf(record)
@@ -134,7 +128,7 @@ local function FromDrop(drop)
         record = drop,
         drop = drop,
 
-        player = drop.winnerName,
+        player = DisplayName(drop.winnerName),
         itemLink = drop.itemLink,
         itemName = drop.itemName,
         itemID = drop.itemID,
@@ -159,7 +153,7 @@ local function FromLoot(record)
         source = "loot",
         record = record,
 
-        player = record.recipient,
+        player = DisplayName(record.recipient),
         itemLink = record.itemLink,
         itemName = record.itemName,
         itemID = record.itemID,

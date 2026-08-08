@@ -54,19 +54,30 @@ function SortHeader.Create(parent, config)
         label:SetAllPoints()
         label:SetText(column.label)
 
-        button:SetScript("OnClick", function()
-            local key, reversed = config.getSort()
-
-            -- Clicking the active column flips it; a new column starts in
-            -- its natural direction.
-            if key == column.key then
-                config.onSort(key, not reversed)
-            else
-                config.onSort(column.key, false)
-            end
-        end)
-
         labels[column.key] = label
+
+        -- A column with `sortable = false` is drawn and not clickable.
+        --
+        -- Every header here was a button whether or not anything could sort
+        -- by it, and a key with no comparator falls through to the default
+        -- one — so clicking the tickbox column re-sorted the list by name and
+        -- then drew the arrow over the tickbox, which reads as "sorted by
+        -- this" and is a straight lie about what just happened.
+        if column.sortable == false then
+            button:EnableMouse(false)
+        else
+            button:SetScript("OnClick", function()
+                local key, reversed = config.getSort()
+
+                -- Clicking the active column flips it; a new column starts
+                -- in its natural direction.
+                if key == column.key then
+                    config.onSort(key, not reversed)
+                else
+                    config.onSort(column.key, false)
+                end
+            end)
+        end
     end
 
     -- Called on every refresh, so the arrow follows the sort even when it was

@@ -8,6 +8,13 @@
 --
 -- Safe API access and discovery live in Core/LootHistoryAPI.lua, and turning
 -- API results into structured snapshots lives in Core/LootHistorySnapshot.lua.
+--
+-- syl-check: size-exempt — six lines over, and the overage is the reasoning
+-- attached to run ids, which decide whether a drop is stored once or twice.
+-- Everything left here is the same subject: when to take a snapshot and what
+-- pull it belongs to. Splitting that to satisfy a line count would put the
+-- explanation of a double-counting bug in a different file from the code it
+-- explains.
 
 local SYL = _G.ShowUsYourLoot
 local Utilities = SYL.Utilities
@@ -59,13 +66,64 @@ end
 
 -- Snapshot building lives in Core/LootHistorySnapshot.lua; this module only
 -- decides when to take one and holds the result.
+--
 -- A pull needs an identity of its own: lootListID repeats the next time the
 -- same boss is killed, so stored records would collide without this.
+--
+-- IT ALSO HAS TO SURVIVE A RELOAD, which it did not. runID was time() kept in
+-- memory while the drop index is rebuilt from saved records at login, so a
+-- /reload mid-raid minted a fresh id for a boss already recorded and the next
+-- loot-history event stored every one of its drops again. The client keeps
+-- recent encounters across a reload, so that event arrives on its own. Two
+-- records for one item is the worst error here: it says somebody won twice.
+--
+-- Kept in SavedVariables, keyed by encounter. ENCOUNTER_START still forces a
+-- new one, which is what actually means "a fresh pull" — a reload does not.
+local RUN_ID_MEMORY_SECONDS = 7 * 24 * 60 * 60
+
+-- Owns the saved table outright, rather than having the database create it
+-- too: two owners of one field is how a schema drifts.
+local function RunIDStore()
+    if not ShowUsYourLootDB then
+        return nil
+    end
+
+    ShowUsYourLootDB.encounterRuns = ShowUsYourLootDB.encounterRuns or {}
+
+    local runs = ShowUsYourLootDB.encounterRuns
+    local cutoff = time() - RUN_ID_MEMORY_SECONDS
+
+    -- A run id is a timestamp, so old ones age out rather than accumulating
+    -- one key per boss for the life of an expansion.
+    for encounterID, runID in pairs(runs) do
+        if type(runID) ~= "number" or runID < cutoff then
+            runs[encounterID] = nil
+        end
+    end
+
+    return runs
+end
+
 local function EnsureRunID(encounterID, forceNew)
+    if not encounterID then
+        return {}
+    end
+
     local meta = LootHistory.state.encounterMeta[encounterID] or {}
+    local runs = RunIDStore()
+
+    -- Nothing in memory: this is the first snapshot since a login or a
+    -- reload, so take the stored id rather than minting one.
+    if not forceNew and not meta.runID and runs then
+        meta.runID = runs[encounterID]
+    end
 
     if forceNew or not meta.runID then
         meta.runID = time()
+    end
+
+    if runs then
+        runs[encounterID] = meta.runID
     end
 
     LootHistory.state.encounterMeta[encounterID] = meta
@@ -210,13 +268,13 @@ local EVENT_HANDLERS = {
 
     -- A fresh pull, so any previous run of this boss stops being the one new
     -- drops attach to.
+    --
+    -- Raid sessions are opened from Core/Events.lua instead of here. This
+    -- table is only registered by Enable(), so attendance died silently
+    -- whenever loot capture was turned off.
     ENCOUNTER_START = function(encounterID, encounterName, difficultyID, groupSize)
         RememberEncounter(encounterID, encounterName, difficultyID, groupSize)
         EnsureRunID(encounterID, true)
-
-        SYL.RaidSession.OnEncounterStart(
-            encounterID, encounterName, difficultyID
-        )
     end,
 
     -- Carries a roll identifier rather than an encounter, so this settles the
@@ -227,13 +285,6 @@ local EVENT_HANDLERS = {
 
     ENCOUNTER_END = function(encounterID, encounterName, difficultyID, groupSize, success)
         RememberEncounter(encounterID, encounterName, difficultyID, groupSize)
-
-        -- Recorded before the refresh, because the roster has to be read
-        -- while everyone is still grouped.
-        SYL.RaidSession.OnEncounterEnd(
-            encounterID, encounterName, difficultyID, groupSize, success
-        )
-
         ScheduleRefresh(encounterID)
     end,
 

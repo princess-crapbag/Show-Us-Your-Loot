@@ -108,6 +108,12 @@ local function BuildRecord(recordID, snapshot, drop, season, location)
         itemName = drop.itemName,
         itemLink = drop.itemHyperlink,
 
+        -- nil while the item is uncached; UpdateRecord fills it in on a later
+        -- pass. Recorded at the drop rather than read back later, because a
+        -- piece upgraded with crests afterwards would report the level it
+        -- reached rather than the one it was won at.
+        itemLevel = Utilities.GetItemLevel(drop.itemHyperlink),
+
         winnerName = drop.winnerName,
         winnerGUID = drop.winnerGUID,
         winnerClass = drop.winnerClass,
@@ -152,6 +158,12 @@ local function UpdateRecord(record, drop)
     record.winnerRoll = drop.winnerRoll or record.winnerRoll
     record.winnerState = drop.winnerState or record.winnerState
     record.allPassed = drop.allPassed or record.allPassed
+
+    -- A boss fires hundreds of these, so an item uncached on the first pass
+    -- has almost always resolved by a later one.
+    if not record.itemLevel then
+        record.itemLevel = Utilities.GetItemLevel(drop.itemHyperlink)
+    end
 
     if drop.winnerGUID or drop.winnerName then
         record.winnerGuildRank =

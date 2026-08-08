@@ -139,6 +139,33 @@ function Guild.IsMember(guid, name)
     return Guild.GetMember(guid, name) ~= nil
 end
 
+-- The guild record for a *person* rather than for a character.
+--
+-- Anywhere alts are folded, several guild members collapse onto one row, and
+-- the row still has to show one rank. Taking it from whichever character the
+-- caller happened to be holding meant the answer depended on hash order:
+-- somebody whose main is a Raider and whose bank alt is an Initiate showed
+-- one rank on Tuesday and the other on Wednesday, with nothing having
+-- changed. Rank is the field officers use to decide who is on the team, so a
+-- number that flips on its own is worse than no number.
+--
+-- The main's rank is the person's rank. A main who is not in the guild — a
+-- cross-realm raider whose alt is — falls back to the character actually
+-- known, because a real rank beats no rank.
+function Guild.GetMemberForPlayer(key, fallbackGUID, fallbackName)
+    local main = SYL.Players and SYL.Players.Get(key)
+
+    if main then
+        local member = Guild.GetMember(main.guid, main.fullName or main.name)
+
+        if member then
+            return member
+        end
+    end
+
+    return Guild.GetMember(fallbackGUID, fallbackName)
+end
+
 function Guild.GetRank(guid, name)
     local member = Guild.GetMember(guid, name)
 

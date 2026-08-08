@@ -33,6 +33,12 @@ local function GetCatcher()
     catcher:EnableMouse(true)
     catcher:Hide()
 
+    -- Any button, not just the left one. A Button only fires OnClick for
+    -- LeftButtonUp unless told otherwise, while EnableMouse makes it eat
+    -- every click either way — so with the menu open, every right-click in
+    -- the game vanished into a transparent full-screen frame.
+    catcher:RegisterForClicks("AnyUp")
+
     catcher:SetScript("OnClick", function()
         CommandMenu.Close()
     end)
@@ -146,6 +152,25 @@ local function AnchorToButton(menu, button)
     )
 end
 
+-- The menu is parented to UIParent so it can sit above everything, which
+-- also means nothing hides it when the window it was opened from closes: the
+-- panel and its full-screen catcher were left floating over the game with no
+-- way back to them except pressing where the button used to be.
+--
+-- Hiding a frame fires OnHide on its visible children, so the button that
+-- opened the menu reports its own window closing. Hooked once per button.
+local function CloseWithOwner(button)
+    if button.symlMenuHooked then
+        return
+    end
+
+    button.symlMenuHooked = true
+
+    button:HookScript("OnHide", function()
+        CommandMenu.Close()
+    end)
+end
+
 function CommandMenu.Toggle(button)
     local menu = CreatePanel()
 
@@ -154,6 +179,7 @@ function CommandMenu.Toggle(button)
         return
     end
 
+    CloseWithOwner(button)
     AnchorToButton(menu, button)
 
     local catcherFrame = GetCatcher()

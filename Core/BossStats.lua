@@ -16,8 +16,7 @@ local SYL = _G.ShowUsYourLoot
 local BossStats = {}
 SYL.BossStats = BossStats
 
-local NEED_MAIN = 0
-local NEED_OFF = 1
+local API = SYL.LootHistoryAPI
 
 -- Bosses are keyed by encounter and difficulty together. The same boss on
 -- Heroic and on Mythic is two different problems for a raid team, and folding
@@ -159,9 +158,7 @@ local function CountDrops(byKey, order, drops)
 
             -- Counted from the winning roll rather than from the drop, since
             -- a synced record carries a winner state but no roll list.
-            local state = drop.winnerState
-
-            if state == NEED_MAIN or state == NEED_OFF then
+            if API.IsUpgradeState(drop.winnerState) then
                 boss.upgrades = boss.upgrades + 1
             end
         end

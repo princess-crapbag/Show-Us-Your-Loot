@@ -61,6 +61,50 @@ LootHistoryAPI.CANDIDATE_ENUMS = {
 
 local rollStateNames
 
+-- The roll states, in one place.
+--
+-- Five files each declared their own `local NEED_MAIN = 0` next to a comment
+-- explaining what it meant, while this file was already reverse-mapping the
+-- live enum two directories away. Six copies of a number Blizzard owns is six
+-- chances to disagree, and the disagreement would be silent: a due list that
+-- counts state 1 as an upgrade and a type column that calls it Greed both
+-- look fine on their own.
+--
+-- Read from the live Enum, with the observed 12.0.7 numbering as the fallback
+-- for a client that has not defined it yet. Named after Blizzard's own keys so
+-- the mapping is checkable against `/syl api` output rather than against
+-- memory.
+local function EnumState(key, fallback)
+    if type(Enum) == "table"
+        and type(Enum.EncounterLootDropRollState) == "table"
+        and type(Enum.EncounterLootDropRollState[key]) == "number"
+    then
+        return Enum.EncounterLootDropRollState[key]
+    end
+
+    return fallback
+end
+
+LootHistoryAPI.ROLL_STATE = {
+    NeedMainSpec = EnumState("NeedMainSpec", 0),
+    NeedOffSpec = EnumState("NeedOffSpec", 1),
+    Transmog = EnumState("Transmog", 2),
+    Greed = EnumState("Greed", 3),
+    NoRoll = EnumState("NoRoll", 4),
+    Pass = EnumState("Pass", 5),
+}
+
+-- Whether a win counts as gear for the fairness maths.
+--
+-- This is DueList's judgement call — only Need and offspec reset a drought —
+-- and it is exported rather than repeated so that the type column, the boss
+-- stats and the night summary all answer it the same way. Changing the rule
+-- means changing it here.
+function LootHistoryAPI.IsUpgradeState(state)
+    return state == LootHistoryAPI.ROLL_STATE.NeedMainSpec
+        or state == LootHistoryAPI.ROLL_STATE.NeedOffSpec
+end
+
 function LootHistoryAPI.IsAvailable()
     return type(C_LootHistory) == "table"
 end
@@ -134,12 +178,12 @@ end
 -- Short labels for display. A transmog win is not the same as a main-spec
 -- upgrade, so the distinction has to survive all the way to the UI.
 local SHORT_STATE_NAMES = {
-    [0] = "Need",
-    [1] = "Need OS",
-    [2] = "Mog",
-    [3] = "Greed",
-    [4] = "No roll",
-    [5] = "Pass",
+    [LootHistoryAPI.ROLL_STATE.NeedMainSpec] = "Need",
+    [LootHistoryAPI.ROLL_STATE.NeedOffSpec] = "Need OS",
+    [LootHistoryAPI.ROLL_STATE.Transmog] = "Mog",
+    [LootHistoryAPI.ROLL_STATE.Greed] = "Greed",
+    [LootHistoryAPI.ROLL_STATE.NoRoll] = "No roll",
+    [LootHistoryAPI.ROLL_STATE.Pass] = "Pass",
 }
 
 function LootHistoryAPI.ShortRollState(value)

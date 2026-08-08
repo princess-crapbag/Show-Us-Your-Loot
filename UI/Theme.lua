@@ -86,6 +86,21 @@ function Theme.SetTextColor(fontString, colorKey)
     painted.texts[fontString] = key
 end
 
+-- A colour the palette does not own: item quality, class, a Mythic+ score.
+--
+-- Setting these raw was the bug. Every such font string had been through
+-- SetTextColor at least once — at creation, if nothing else — so it stayed on
+-- the repaint list under a palette key it no longer wore, and changing theme
+-- flattened purple item names and class-coloured raiders back to plain text.
+--
+-- Deregistering states the truth: this string's colour is not the palette's
+-- business. Rows are reused, so a later SetTextColor puts it back on the list.
+function Theme.SetCustomTextColor(fontString, red, green, blue, alpha)
+    fontString:SetTextColor(red, green, blue, alpha or 1)
+
+    painted.texts[fontString] = nil
+end
+
 function Theme.CreateText(parent, size, colorKey, layer)
     local fontString =
         parent:CreateFontString(nil, layer or "OVERLAY")
@@ -144,9 +159,13 @@ end
 -- Switching palette
 --------------------------------------------------------------------------
 
--- Repaints everything Theme has ever coloured. Rows that draw their own
--- state — a selected row, a quality coloured item name — repaint themselves
--- on the refresh that follows, so they are deliberately not touched here.
+-- Repaints everything Theme has ever coloured.
+--
+-- Only what the palette owns. Colours that come from somewhere else — item
+-- quality, class, a Mythic+ score — are set through SetCustomTextColor, which
+-- takes the string off this list precisely so that changing theme does not
+-- flatten them. The main window redraws below and would have restored its own
+-- rows, but every other window would have stayed grey until a /reload.
 function Theme.Apply(key, skipRefresh)
     local palette = SYL.Palettes.Get(key) or SYL.Palettes.Get(SYL.Palettes.DEFAULT)
 

@@ -121,7 +121,9 @@ function RosterRows.Fill(row, entry, isSelected)
     local classColor = Theme.GetClassColor(entry.class)
 
     if classColor then
-        cells.name:SetTextColor(classColor[1], classColor[2], classColor[3])
+        Theme.SetCustomTextColor(
+            cells.name, classColor[1], classColor[2], classColor[3]
+        )
     else
         Theme.SetTextColor(cells.name, "textPrimary")
     end
@@ -164,7 +166,9 @@ function RosterRows.Fill(row, entry, isSelected)
 
     if entry.mplusScore and entry.mplusScore > 0 then
         cells.score:SetText(math.floor(entry.mplusScore))
-        cells.score:SetTextColor(SYL.RaiderIO.GetScoreColor(entry.mplusScore))
+        Theme.SetCustomTextColor(
+            cells.score, SYL.RaiderIO.GetScoreColor(entry.mplusScore)
+        )
     else
         cells.score:SetText("")
     end

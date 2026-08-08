@@ -21,6 +21,7 @@ Core\Database.lua
 Core\Players.lua
 Core\AltDetect.lua
 Core\RaiderIO.lua
+Core\LootMessages.lua
 Core\LootCapture.lua
 Core\RaidSession.lua
 Core\LootHistoryAPI.lua

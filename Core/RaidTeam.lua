@@ -111,11 +111,29 @@ function RaidTeam.SetRole(key, role)
     return true
 end
 
+-- What this player was actually assigned, ignoring what the game guessed.
+--
+-- GetRole answers "what role should I show", which falls back to the detected
+-- one. That is right for display and wrong for cycling: see below.
+function RaidTeam.GetChosenRole(key)
+    local player = Record(key)
+
+    return player and player.raidRole or nil
+end
+
 -- Cycles Tank, Healer, DPS, then back to unset. Unset is a real state and
 -- has to be reachable: it means nobody has said, which is different from
 -- somebody saying DPS.
+--
+-- This cycles the CHOSEN role, not the displayed one, and the difference was
+-- a dead button for most of a raid. It used to read GetRole, which falls back
+-- to whatever the game detected. For anyone the game assigned DAMAGER that
+-- returned "DPS" with nothing chosen, so the cycle jumped straight to the end
+-- of the list, wrote nil, and the next read fell back to "DPS" again —
+-- clicking did nothing, permanently, for four fifths of a raid group. Tanks
+-- and healers worked, which is exactly why it survived being tried.
 function RaidTeam.CycleRole(key)
-    local current = RaidTeam.GetRole(key)
+    local current = RaidTeam.GetChosenRole(key)
     local nextRole
 
     if not current then
@@ -123,7 +141,12 @@ function RaidTeam.CycleRole(key)
     else
         for index, role in ipairs(RaidTeam.ROLES) do
             if role == current then
+                -- nil at the end of the list is deliberate: that is unset,
+                -- and it is the step that returns the row to the game's own
+                -- answer.
                 nextRole = RaidTeam.ROLES[index + 1]
+
+                break
             end
         end
     end

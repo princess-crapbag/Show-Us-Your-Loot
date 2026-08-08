@@ -10,6 +10,12 @@
 --
 -- Sessions live in activeSeason.raids, a table the database has always
 -- created and never used.
+--
+-- syl-check: size-exempt — one night is a surprisingly contested idea, and
+-- the reasons live next to the code that acts on them. Sessions, the roster
+-- read, night identity and attendance are the same subject: split them and
+-- the next person to fix a counting bug has to find three files to know what
+-- a night is. The overage is comment.
 
 local SYL = _G.ShowUsYourLoot
 local Utilities = SYL.Utilities
@@ -21,6 +27,13 @@ local currentSessionID
 
 -- One session per instance, difficulty and day. Re-entering the same raid the
 -- same evening continues the night rather than starting a second one.
+--
+-- Difficulty stays in the key deliberately. A guild that clears Heroic and
+-- then pushes Mythic has done two different things and the record should say
+-- so — the encounters, the kills and the group size all differ. What must not
+-- happen is that being there for both counts as two nights of attendance,
+-- and that is fixed where nights are counted rather than by throwing the
+-- distinction away here. See NightKey.
 local function BuildSessionID(location, timestamp)
     return table.concat({
         "raid",
@@ -258,6 +271,50 @@ function RaidSession.IsRaidSession(session)
     )
 end
 
+-- One evening in one raid, whatever difficulties it passed through.
+--
+-- Sessions are keyed by difficulty as well as date, so a night that cleared
+-- Heroic and then pulled Mythic is two of them. Every count of "nights
+-- attended" iterated sessions, so turning up to both halves of one Tuesday
+-- registered as twice the attendance of somebody who came to one — and
+-- nightsSinceUpgrade, the sole ranking key of the due list, moved twice as
+-- fast for them. The people most likely to be there for both are the raiders
+-- who never miss, so the error landed hardest on exactly the wrong people.
+--
+-- Fixed at read time rather than by merging the sessions, for the same reason
+-- dungeon sessions are filtered rather than deleted: the record of what
+-- happened stays intact and the numbers correct themselves on existing
+-- history instead of only on nights recorded from now on.
+--
+-- dateText is preferred over recomputing from startedAt because a raid that
+-- runs past midnight already has one, written when the session opened.
+function RaidSession.NightKey(session)
+    if not session then
+        return nil
+    end
+
+    return table.concat({
+        tostring(session.instanceID or 0),
+        session.dateText or date("%Y-%m-%d", session.startedAt or 0),
+    }, "-")
+end
+
+-- How many distinct nights a list of sessions represents.
+function RaidSession.CountNights(sessions)
+    local seen, total = {}, 0
+
+    for _, session in ipairs(RaidSession.RaidsOnly(sessions)) do
+        local key = RaidSession.NightKey(session)
+
+        if key and not seen[key] then
+            seen[key] = true
+            total = total + 1
+        end
+    end
+
+    return total
+end
+
 -- The raid nights out of a list that also holds dungeon ones.
 function RaidSession.RaidsOnly(sessions)
     local kept = {}
@@ -315,8 +372,16 @@ function RaidSession.BuildAttendance(sessions)
     local byKey = {}
     local order = {}
 
+    -- Keyed by night rather than reset per session, so a Heroic clear and the
+    -- Mythic pulls after it on the same evening are one night present.
+    local countedOn = {}
+
     for _, session in ipairs(RaidSession.RaidsOnly(sessions)) do
-        local countedTonight = {}
+        local nightKey = RaidSession.NightKey(session)
+
+        countedOn[nightKey] = countedOn[nightKey] or {}
+
+        local countedTonight = countedOn[nightKey]
 
         for rawKey, member in pairs(session.roster or {}) do
             local key = SYL.Players.ResolveToMain(rawKey)

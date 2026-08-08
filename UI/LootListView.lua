@@ -152,8 +152,8 @@ local function FillFeedRow(row, entry, index)
         and Theme.GetClassColor(entry.drop.winnerClass)
 
     if classColor then
-        row.playerText:SetTextColor(
-            classColor[1], classColor[2], classColor[3]
+        Theme.SetCustomTextColor(
+            row.playerText, classColor[1], classColor[2], classColor[3]
         )
     else
         Theme.SetTextColor(row.playerText, "textPrimary")

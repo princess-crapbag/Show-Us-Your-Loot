@@ -15,8 +15,7 @@ local SYL = _G.ShowUsYourLoot
 local RaidSummary = {}
 SYL.RaidSummary = RaidSummary
 
-local NEED_MAIN = 0
-local NEED_OFF = 1
+local API = SYL.LootHistoryAPI
 
 -- Drops carry no session id — they predate sessions entirely — so a night
 -- claims the drops that fall inside its own span. The tail allowance covers
@@ -56,10 +55,9 @@ function RaidSummary.Build(session)
     local wonBy = {}
 
     for _, drop in ipairs(drops) do
-        local state = drop.winnerState
         local key = drop.winnerGUID or drop.winnerName
 
-        if state == NEED_MAIN or state == NEED_OFF then
+        if API.IsUpgradeState(drop.winnerState) then
             upgrades = upgrades + 1
 
             if key then

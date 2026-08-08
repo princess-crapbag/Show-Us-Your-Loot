@@ -103,7 +103,9 @@ local function FillRollRow(row, roll)
     local classColor = Theme.GetClassColor(roll.class)
 
     if classColor then
-        row.nameText:SetTextColor(classColor[1], classColor[2], classColor[3])
+        Theme.SetCustomTextColor(
+            row.nameText, classColor[1], classColor[2], classColor[3]
+        )
     else
         Theme.SetTextColor(row.nameText, "textPrimary")
     end
@@ -145,10 +147,18 @@ local function UpdateHeaderText()
         frame.icon:Hide()
     end
 
+    -- Records written before item level was captured have none, and the
+    -- client can usually answer for them now. Read rather than written back:
+    -- what is shown is the level today, and only a stored one is the level it
+    -- dropped at, so the saved record is left alone.
+    local itemLevel = record.itemLevel
+        or Utilities.GetItemLevel(record.itemLink)
+
     frame.bossText:SetText(
         tostring(record.encounterName or "Unknown boss")
         .. (record.difficultyName and (" · " .. record.difficultyName) or "")
         .. (record.instanceName and ("  ·  " .. record.instanceName) or "")
+        .. (itemLevel and ("  ·  ilvl " .. itemLevel) or "")
     )
 
     frame.dateText:SetText(Utilities.FormatDateTime(record.timestamp))
@@ -166,7 +176,8 @@ local function UpdateHeaderText()
         local classColor = Theme.GetClassColor(record.winnerClass)
 
         if classColor then
-            frame.outcomeText:SetTextColor(
+            Theme.SetCustomTextColor(
+                frame.outcomeText,
                 classColor[1], classColor[2], classColor[3]
             )
         else

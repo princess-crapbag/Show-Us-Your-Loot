@@ -34,6 +34,16 @@ local function GetCatcher()
     catcher:EnableMouse(true)
     catcher:Hide()
 
+    -- Any button, not just the left one.
+    --
+    -- A Button fires OnClick for LeftButtonUp only unless it is told
+    -- otherwise, but EnableMouse means it eats every click regardless. So a
+    -- right-click anywhere on the screen with a dropdown open was swallowed
+    -- whole: the menu stayed open, and the right-click never reached the
+    -- world underneath it. With a full-screen catcher that is every
+    -- right-click in the game.
+    catcher:RegisterForClicks("AnyUp")
+
     catcher:SetScript("OnClick", function()
         FilterDropdown.CloseAll()
     end)
@@ -281,6 +291,17 @@ function FilterDropdown.Create(parent, config)
             Theme.SetTextColor(self.label, "textPrimary")
         end
     end
+
+    -- The panel sits on UIParent so it can draw above the window it belongs
+    -- to, which also means closing that window left the panel and its
+    -- full-screen catcher floating over the game. Hiding a frame fires
+    -- OnHide on its visible children, so the button reports its own window
+    -- closing on its behalf.
+    button:HookScript("OnHide", function(self)
+        if openPanel and openPanel == self.panel then
+            FilterDropdown.CloseAll()
+        end
+    end)
 
     button:SetScript("OnClick", function(self)
         if not self.panel then
