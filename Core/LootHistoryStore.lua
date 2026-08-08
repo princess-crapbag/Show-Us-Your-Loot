@@ -98,6 +98,11 @@ local function BuildRecord(recordID, snapshot, drop, season, location)
         instanceName = location.instanceName,
         zoneName = location.zoneName,
 
+        -- Stored so raid loot can be told from dungeon loot later. Records
+        -- written before this have none, and Utilities.GetContentType falls
+        -- back to the difficulty id for those.
+        instanceType = location.instanceType,
+
         lootListID = drop.lootListID,
         itemID = drop.itemID,
         itemName = drop.itemName,

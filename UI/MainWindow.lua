@@ -42,6 +42,10 @@ local view = {
     -- are the primary record, so they are the default, but a season archived
     -- before drop capture existed has none and opens on its chat loot.
     archiveShowsLoot = false,
+
+    -- Raid, dungeon or both. "all" so nothing already recorded vanishes on
+    -- update; narrowing is the officer's choice, not one made for them.
+    contentScope = "all",
     filters = Filters.CreateState(),
     selection = Selection.Create(),
     dropRows = {},
@@ -179,32 +183,24 @@ local function CreateTitleBar(parent)
 end
 
 local function CreateNavigationBar(parent)
-    view.tabStrip = SYL.TabStrip.Create(parent, TABS, function(key)
-        SetMode(key, nil)
-    end, 14, -66)
+    view.tabStrip, buttons = SYL.MainNav.Create(parent, {
+        tabs = TABS,
 
-    local separator = Theme.CreateSeparator(parent)
-    separator:SetPoint("TOPLEFT", 16, -92)
-    separator:SetPoint("TOPRIGHT", -16, -92)
+        onTab = function(key)
+            SetMode(key, nil)
+        end,
 
-    buttons.archiveSeason =
-        Theme.CreateButton(parent, 120, 24, "Archive Season", function()
+        onArchive = function()
             SYL.ArchivePopup.Show(function()
                 SetMode("active", nil)
             end)
-        end)
+        end,
 
-    buttons.archiveSeason:SetPoint("TOPRIGHT", -16, -66)
-
-    buttons.back =
-        Theme.CreateButton(parent, 130, 24, "Back to Archives", function()
+        onBack = function()
             SetMode("archives", nil)
-        end)
+        end,
 
-    buttons.back:SetPoint("TOPRIGHT", -16, -66)
-
-    buttons.archiveRecords =
-        Theme.CreateButton(parent, 124, 24, "Show chat loot", function()
+        onSwapRecords = function()
             view.archiveShowsLoot = not view.archiveShowsLoot
             view.offset = 0
 
@@ -217,9 +213,8 @@ local function CreateNavigationBar(parent)
             end
 
             UpdateRows()
-        end)
-
-    buttons.archiveRecords:SetPoint("RIGHT", buttons.back, "LEFT", -6, 0)
+        end,
+    })
 end
 
 local function CreateFilterBar(parent)

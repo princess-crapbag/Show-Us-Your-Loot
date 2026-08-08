@@ -59,6 +59,7 @@ UI\FilterBar.lua
 UI\SelectionBar.lua
 UI\LootListView.lua
 UI\MainFooter.lua
+UI\MainNav.lua
 UI\MainWindow.lua
 UI\DropDetailWindow.lua
 UI\CommandMenu.lua

@@ -3,6 +3,24 @@
 What changed, for the person installing it. The commit history explains why;
 this says what you will notice.
 
+## Unreleased
+
+### Added
+
+- **Raid loot and dungeon loot can be told apart.** A button on the drops
+  list cycles between all content, raids only and dungeons only. It works on
+  history recorded before this, because the difficulty already says which is
+  which even where nothing else did.
+
+### Fixed
+
+- **Dungeons were being recorded as raid nights.** Any instance opened one, so
+  every Mythic+ run added a five-person raid night to attendance. The due list
+  ranks by nights attended, so a guild that runs keys together was partly
+  ranked on dungeons. New nights are raids only, and existing dungeon
+  sessions are left in the database but no longer counted — a counting bug is
+  not a reason to delete history.
+
 ## 0.1.0-alpha
 
 ### Added

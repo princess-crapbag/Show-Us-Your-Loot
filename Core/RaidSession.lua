@@ -94,6 +94,16 @@ local function EnsureSession(timestamp)
         return nil
     end
 
+    -- And only inside a raid. inInstance is true for dungeons too, so every
+    -- Mythic+ run was opening a raid night and putting its five people into
+    -- the attendance roster. The due list ranks by nights attended, so a
+    -- guild that runs keys together was being ranked partly on dungeons.
+    if not Utilities.IsRaidContent(
+        location.instanceType, location.difficultyID
+    ) then
+        return nil
+    end
+
     local sessionID = BuildSessionID(location, timestamp)
     local session = FindSession(sessionID)
 
@@ -110,6 +120,7 @@ local function EnsureSession(timestamp)
 
         instanceID = location.instanceID,
         instanceName = location.instanceName,
+        instanceType = location.instanceType,
         difficultyID = location.difficultyID,
         difficultyName = location.difficultyName,
 
@@ -226,6 +237,33 @@ function RaidSession.OnEncounterEnd(encounterID, encounterName, difficultyID, gr
     session.pendingEncounter = nil
 end
 
+-- Sessions recorded before dungeons were excluded are still in the database,
+-- and deleting history to fix a counting bug is the wrong trade. They are
+-- filtered at read time instead, so the numbers correct themselves and the
+-- record of what happened stays intact.
+function RaidSession.IsRaidSession(session)
+    if not session then
+        return false
+    end
+
+    return Utilities.IsRaidContent(
+        session.instanceType, session.difficultyID
+    )
+end
+
+-- The raid nights out of a list that also holds dungeon ones.
+function RaidSession.RaidsOnly(sessions)
+    local kept = {}
+
+    for _, session in ipairs(sessions or {}) do
+        if RaidSession.IsRaidSession(session) then
+            table.insert(kept, session)
+        end
+    end
+
+    return kept
+end
+
 function RaidSession.GetCurrent()
     if not currentSessionID then
         return nil
@@ -270,7 +308,7 @@ function RaidSession.BuildAttendance(sessions)
     local byKey = {}
     local order = {}
 
-    for _, session in ipairs(sessions or {}) do
+    for _, session in ipairs(RaidSession.RaidsOnly(sessions)) do
         local countedTonight = {}
 
         for rawKey, member in pairs(session.roster or {}) do

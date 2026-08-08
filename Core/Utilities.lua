@@ -162,6 +162,62 @@ function Utilities.ShortDifficulty(difficultyID, difficultyName)
     return nil
 end
 
+-- Raid or dungeon, which the addon had no way of telling apart.
+--
+-- This matters more than a filter: RaidSession opened a night for anything
+-- inside an instance, so a Mythic+ run recorded a five person raid night and
+-- inflated attendance and the drought numbers that rank the due list.
+--
+-- GetInstanceInfo's instanceType is the authority — "raid" or "party" — but
+-- it was never stored, so records written before this cannot be asked. The
+-- difficulty id answers for those: dungeon and raid difficulties come from
+-- disjoint sets and every record has one.
+local RAID_DIFFICULTIES = {
+    [3] = true, [4] = true,     -- 10 and 25 player, legacy
+    [5] = true, [6] = true,     -- 10 and 25 player heroic, legacy
+    [7] = true,                 -- LFR, legacy
+    [9] = true,                 -- 40 player
+    [14] = true, [15] = true, [16] = true,
+    [17] = true,                -- LFR
+    [33] = true,                -- Timewalking raid
+}
+
+local DUNGEON_DIFFICULTIES = {
+    [1] = true, [2] = true,     -- Normal and Heroic
+    [8] = true,                 -- Mythic Keystone
+    [23] = true,                -- Mythic
+    [24] = true,                -- Timewalking
+}
+
+function Utilities.GetContentType(instanceType, difficultyID)
+    if instanceType == "raid" then
+        return "raid"
+    end
+
+    if instanceType == "party" then
+        return "dungeon"
+    end
+
+    -- No instanceType stored, so fall back to the difficulty. Anything in
+    -- neither set — scenarios, arenas, an id this does not know yet —
+    -- answers "other" rather than being guessed into one of them.
+    if RAID_DIFFICULTIES[difficultyID] then
+        return "raid"
+    end
+
+    if DUNGEON_DIFFICULTIES[difficultyID] then
+        return "dungeon"
+    end
+
+    return "other"
+end
+
+-- Convenience for the places that only care whether something counts towards
+-- raid attendance, which is the question the due list is really asking.
+function Utilities.IsRaidContent(instanceType, difficultyID)
+    return Utilities.GetContentType(instanceType, difficultyID) == "raid"
+end
+
 function Utilities.FormatClockTime(timestamp)
     if not timestamp then
         return "--:--:--"

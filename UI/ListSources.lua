@@ -51,6 +51,35 @@ function ListSources.GetFields(view)
     return LOOT_FIELDS
 end
 
+-- Raid loot and dungeon loot are the same shape and different questions. A
+-- Mythic+ drop has no bearing on who is due in the raid, and mixing them
+-- makes the loot list unreadable for the guild that runs both.
+--
+-- Records written before instanceType was stored fall back to the difficulty
+-- id inside GetContentType, so this works on existing history rather than
+-- only on what is captured from now on.
+local function InScope(records, view)
+    local scope = view.contentScope
+
+    if not scope or scope == "all" then
+        return records
+    end
+
+    local kept = {}
+
+    for _, record in ipairs(records) do
+        local contentType = SYL.Utilities.GetContentType(
+            record.instanceType, record.difficultyID
+        )
+
+        if contentType == scope then
+            table.insert(kept, record)
+        end
+    end
+
+    return kept
+end
+
 -- Hidden records are a display state, never a deletion, so they come back the
 -- moment the toggle is flipped.
 local function VisibleRecords(records, view)
@@ -76,10 +105,10 @@ function ListSources.GetUnfiltered(view)
     -- being a tab of its own, so it works for drops and chat loot alike.
     if view.mode == "drops" then
         if view.allSeasons then
-            return VisibleRecords(SYL.GetAllDrops(), view)
+            return InScope(VisibleRecords(SYL.GetAllDrops(), view), view)
         end
 
-        return VisibleRecords(SYL.GetActiveDrops(), view)
+        return InScope(VisibleRecords(SYL.GetActiveDrops(), view), view)
     end
 
     if view.mode == "active" then
@@ -111,7 +140,7 @@ function ListSources.GetUnfiltered(view)
             return VisibleRecords(season.loot or {}, view)
         end
 
-        return VisibleRecords(season.drops or {}, view)
+        return InScope(VisibleRecords(season.drops or {}, view), view)
     end
 
     return {}

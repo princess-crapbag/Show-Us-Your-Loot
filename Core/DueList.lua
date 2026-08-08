@@ -124,7 +124,10 @@ function DueList.Build(drops, sessions)
     local lastUpgrade = LastUpgradeByPlayer(drops)
     local byKey, order = {}, {}
 
-    for _, session in ipairs(sessions or {}) do
+    -- Dungeons are not raid nights. A Mythic+ run used to open one and put
+    -- its five people in the roster, so a guild that runs keys together was
+    -- being ranked partly on dungeon attendance.
+    for _, session in ipairs(SYL.RaidSession.RaidsOnly(sessions)) do
         local startedAt = session.startedAt or 0
 
         -- One night is one night however many characters of theirs were in

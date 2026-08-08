@@ -33,6 +33,33 @@ function SelectionBar.Create(parent, view, config)
 
     bar.showHidden:SetPoint("TOPRIGHT", -16, -128)
 
+    -- Three states rather than two, so it cycles instead of toggling. A
+    -- Mythic+ drop says nothing about who is due in the raid, and a guild
+    -- that runs both had them interleaved with no way to separate them.
+    local SCOPES = { "all", "raid", "dungeon" }
+
+    bar.contentScope =
+        Theme.CreateButton(parent, 110, 20, "All content", function()
+            local current = view.contentScope or "all"
+            local nextIndex = 1
+
+            for index, scope in ipairs(SCOPES) do
+                if scope == current then
+                    nextIndex = (index % #SCOPES) + 1
+                end
+            end
+
+            view.contentScope = SCOPES[nextIndex]
+
+            Selection.Clear(view.selection)
+
+            view.offset = 0
+
+            onChanged()
+        end)
+
+    bar.contentScope:SetPoint("RIGHT", bar.showHidden, "LEFT", -6, 0)
+
     -- Not selection, but this is the row of list controls in practice, and
     -- Show hidden already sits here for the same reason.
     bar.allSeasons =
@@ -46,7 +73,7 @@ function SelectionBar.Create(parent, view, config)
             onChanged()
         end)
 
-    bar.allSeasons:SetPoint("RIGHT", bar.showHidden, "LEFT", -6, 0)
+    bar.allSeasons:SetPoint("RIGHT", bar.contentScope, "LEFT", -6, 0)
 
     bar.action = Theme.CreateButton(parent, 70, 20, "Hide", function()
         bar:ApplyHidden()
@@ -154,6 +181,30 @@ function SelectionBar.Create(parent, view, config)
             self.allSeasons:Show()
         else
             self.allSeasons:Hide()
+        end
+
+        -- Only drop records carry an instance type or a difficulty, so the
+        -- scope has nothing to sort chat loot by.
+        local onDrops = view.mode == "drops"
+            or ListSources.ArchiveShowsDrops(view)
+
+        if onDrops then
+            local scope = view.contentScope or "all"
+
+            self.contentScope.label:SetText(
+                scope == "raid" and "Raids only"
+                or scope == "dungeon" and "Dungeons only"
+                or "All content"
+            )
+
+            Theme.SetTextColor(
+                self.contentScope.label,
+                scope == "all" and "textPrimary" or "accent"
+            )
+
+            self.contentScope:Show()
+        else
+            self.contentScope:Hide()
         end
 
         if not onList then
