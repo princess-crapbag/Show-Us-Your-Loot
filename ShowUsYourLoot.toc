@@ -37,6 +37,7 @@ Core\RosterData.lua
 Core\RaidBuffs.lua
 Core\BossStats.lua
 Core\PersonalLoot.lua
+Core\LootFeed.lua
 Core\DueList.lua
 Core\RaidSummary.lua
 Core\Export.lua

@@ -83,10 +83,11 @@ function Selection.ApplyHidden(selection, records, hidden)
 
     for _, record in ipairs(records) do
         if Selection.IsSelected(selection, record) then
-            local current = record.hidden and true or false
+            local target = HideTarget(record)
+            local current = target.hidden and true or false
 
             if current ~= hidden then
-                record.hidden = hidden or nil
+                target.hidden = hidden or nil
                 changed = changed + 1
             end
         end
@@ -97,11 +98,20 @@ end
 
 -- Counts how many of the selected records are currently hidden, which decides
 -- whether the bulk action should read Hide or Unhide.
+-- The merged list passes joined entries rather than raw records, and hidden
+-- lives on the record underneath: the entry is rebuilt on every draw, so a
+-- flag written to it would last until the next refresh and no longer.
+local function HideTarget(record)
+    return record.record or record
+end
+
 function Selection.CountHidden(selection, records)
     local hidden = 0
 
     for _, record in ipairs(records) do
-        if Selection.IsSelected(selection, record) and record.hidden then
+        if Selection.IsSelected(selection, record)
+            and HideTarget(record).hidden
+        then
             hidden = hidden + 1
         end
     end

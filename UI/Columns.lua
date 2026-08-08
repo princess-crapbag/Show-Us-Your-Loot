@@ -26,30 +26,21 @@ SYL.Columns = Columns
 -- and the date lost its " PM".
 --
 -- ITEM is the column that gets the surplus. It holds the longest values, and
--- it is also the one worth reading: a truncated boss or winner name is still
--- recognisable, a truncated item name often is not. The Drops set carries
--- eight columns rather than six, so its ITEM is necessarily tighter; the drop
--- detail window is where the full name always shows.
+-- it is also the one worth reading: a truncated player name is still
+-- recognisable, a truncated item name often is not. The detail window is
+-- where the full name always shows.
 local COLUMN_SETS = {
-    loot = {
+    -- The merged list: everything anybody received, rolled or awarded. TYPE
+    -- carries what the two old tabs used to say by being separate tabs, and
+    -- says it per row instead — which is the only way a single list can hold
+    -- both without losing the distinction.
+    feed = {
         { key = "select", label = "", width = 16, gap = 8 },
         { key = "number", label = "#", width = 30, gap = 8 },
-        { key = "player", label = "PLAYER", width = 146, gap = 8 },
-        { key = "item", label = "ITEM", width = 326, gap = 10 },
-        { key = "location", label = "LOCATION", width = 150, gap = 10 },
-        { key = "date", label = "DATE", width = 100, gap = 10 },
-    },
-
-    drops = {
-        { key = "select", label = "", width = 16, gap = 8 },
-        { key = "number", label = "#", width = 30, gap = 8 },
-        -- BOSS carries the difficulty too ("Imperator Averzian  LFR"), so it
-        -- needs more than a bare name would suggest.
-        { key = "boss", label = "BOSS", width = 152, gap = 8 },
-        { key = "item", label = "ITEM", width = 240, gap = 10 },
-        { key = "winner", label = "WINNER", width = 124, gap = 10 },
-        { key = "wintype", label = "TYPE", width = 56, gap = 8 },
-        { key = "roll", label = "ROLL", width = 38, gap = 8 },
+        { key = "player", label = "PLAYER", width = 130, gap = 8 },
+        { key = "item", label = "ITEM", width = 250, gap = 10 },
+        { key = "wintype", label = "TYPE", width = 76, gap = 8 },
+        { key = "location", label = "WHERE", width = 150, gap = 10 },
         { key = "date", label = "DATE", width = 96, gap = 10 },
     },
 }
@@ -59,8 +50,8 @@ local COLUMN_SETS = {
 -- wrong by enough to matter, and by a different amount per font and locale.
 --
 -- So it is measured at load against the widest date that can appear, and any
--- shortfall is taken from ITEM, which is the column with room to give in both
--- sets. Totals stay exactly as they were, which keeps the layout inside the
+-- shortfall is taken from ITEM, which is the column with room to give.
+-- Totals stay exactly as they were, which keeps the layout inside the
 -- budget tools/syl_check.py enforces.
 local WIDEST_DATE = "00/00/00 00:00"
 local DATE_PADDING = 10

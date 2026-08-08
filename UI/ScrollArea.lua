@@ -58,15 +58,10 @@ function ScrollArea.EnsureRows(view, count)
     end
 
     for index = 1, count do
-        if not view.dropRows[index] then
-            view.dropRows[index] = Rows.CreateDropRow(
+        if not view.feedRows[index] then
+            view.feedRows[index] = Rows.CreateFeedRow(
                 view.scrollChild, index, config.onSelect, config.onActivate
             )
-        end
-
-        if not view.lootRows[index] then
-            view.lootRows[index] =
-                Rows.CreateLootRow(view.scrollChild, index, config.onSelect)
         end
     end
 end

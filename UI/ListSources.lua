@@ -13,42 +13,18 @@ local Filters = SYL.Filters
 local ListSources = {}
 SYL.ListSources = ListSources
 
-local DROP_FIELDS = {
-    player = function(record) return record.winnerName end,
-    item = function(record) return record.itemName end,
-    location = function(record) return record.instanceName end,
-    timestamp = function(record) return record.timestamp end,
-
-    wintype = function(record)
-        if record.allPassed then
-            return "All passed"
-        end
-
-        return SYL.LootHistoryAPI.ShortRollState(record.winnerState)
-    end,
+-- The merged list holds both kinds of record joined into one shape, so it
+-- reads its own fields rather than either original descriptor.
+local FEED_FIELDS = {
+    player = function(entry) return entry.player end,
+    item = function(entry) return entry.itemName end,
+    location = function(entry) return entry.where end,
+    timestamp = function(entry) return entry.timestamp end,
+    wintype = function(entry) return entry.typeLabel end,
 }
-
-local LOOT_FIELDS = {
-    player = function(record) return record.recipient end,
-    item = function(record) return record.itemName end,
-    location = function(record)
-        return record.instanceName or record.zoneName
-    end,
-    timestamp = function(record) return record.timestamp end,
-}
-
--- An archived season holds both kinds of record, and which one is on screen
--- is a toggle rather than a tab, so the field descriptor has to ask.
-function ListSources.ArchiveShowsDrops(view)
-    return view.mode == "archive" and not view.archiveShowsLoot
-end
 
 function ListSources.GetFields(view)
-    if view.mode == "drops" or ListSources.ArchiveShowsDrops(view) then
-        return DROP_FIELDS
-    end
-
-    return LOOT_FIELDS
+    return FEED_FIELDS
 end
 
 -- Raid loot and dungeon loot are the same shape and different questions. A
@@ -65,22 +41,22 @@ end
 -- Records written before instanceType was stored fall back to the difficulty
 -- id inside GetContentType, so this works on existing history rather than
 -- only on what is captured from now on.
-local function InScope(records, view)
+local function InScope(entries, view)
     local scope = view.contentScope
 
     if not scope or scope == "all" then
-        return records
+        return entries
     end
 
     local kept = {}
 
-    for _, record in ipairs(records) do
+    for _, entry in ipairs(entries) do
         local contentType = SYL.Utilities.GetContentType(
-            record.instanceType, record.difficultyID
+            entry.instanceType, entry.difficultyID
         )
 
         if contentType == scope then
-            table.insert(kept, record)
+            table.insert(kept, entry)
         end
     end
 
@@ -89,94 +65,57 @@ end
 
 -- Chat capture records everything: reagents, gold, quest items, and three
 -- hundred of them bury the dozen that are gear somebody actually received.
---
--- This is the same filter the due list uses, so what is on screen and what
--- resets a drought are the same set rather than two ideas of "personal
--- loot" that drift. Group-loot wins are subtracted, because winning a roll
--- also prints a loot line and those already have their own tab.
---
--- Order is taken from the original list rather than from the filter, which
--- sorts newest first: the loot list reads its array oldest to newest and
--- would otherwise show the whole thing upside down.
-local function GearOnly(records, view)
+-- The same test the due list uses, so the list and the maths agree.
+local function GearOnly(entries, view)
     if not view.gearOnly then
-        return records
-    end
-
-    local entries = SYL.PersonalLoot.Build(records, SYL.GetAllDrops())
-    local wanted = {}
-
-    for _, entry in ipairs(entries) do
-        wanted[entry.record] = true
+        return entries
     end
 
     local kept = {}
 
-    for _, record in ipairs(records) do
-        if wanted[record] then
-            table.insert(kept, record)
+    for _, entry in ipairs(entries) do
+        -- A rolled item is always kept: somebody rolled Need on it, which is
+        -- a stronger statement than any guess about its item class.
+        if SYL.LootFeed.ROLLED[entry.typeKey]
+            or SYL.PersonalLoot.IsTrackableGear(entry) == true
+        then
+            table.insert(kept, entry)
         end
     end
 
     return kept
 end
 
--- Hidden records are a display state, never a deletion, so they come back the
--- moment the toggle is flipped.
-local function VisibleRecords(records, view)
-    if view.showHidden then
-        return records
-    end
+-- Hidden is a display state, never a deletion, and the two states are
+-- separate lists rather than one containing the other.
+--
+-- Showing hidden rows *alongside* visible ones was the wrong shape: the list
+-- got longer, the ticked row was still there dimmed, and there was no way to
+-- see what had been set aside without reading opacity. Hidden now shows only
+-- hidden, which makes it a place you go rather than a filter you loosen.
+--
+-- The flag lives on the underlying record rather than on the joined entry,
+-- which is rebuilt on every draw.
+local function VisibleEntries(entries, view)
+    local wantHidden = view.showHidden and true or false
+    local kept = {}
 
-    local visible = {}
+    for _, entry in ipairs(entries) do
+        local isHidden = entry.record.hidden and true or false
 
-    for _, record in ipairs(records) do
-        if not record.hidden then
-            table.insert(visible, record)
+        if isHidden == wantHidden then
+            table.insert(kept, entry)
         end
     end
 
-    return visible
+    return kept
 end
 
 -- Everything in scope before filtering. Dropdown options are derived from
 -- this, so choosing one filter never empties the other dropdowns.
 function ListSources.GetUnfiltered(view)
-    -- allSeasons widens whichever dataset the tab is showing, rather than
-    -- being a tab of its own, so it works for drops and chat loot alike.
-    if view.mode == "drops" then
-        if view.allSeasons then
-            return InScope(VisibleRecords(SYL.GetAllDrops(), view), view)
-        end
+    local drops, loot
 
-        return InScope(VisibleRecords(SYL.GetActiveDrops(), view), view)
-    end
-
-    if view.mode == "active" then
-        if view.allSeasons then
-            return InScope(
-                GearOnly(VisibleRecords(SYL.GetAllLoot(), view), view), view
-            )
-        end
-
-        local season = SYL.GetActiveSeason()
-
-        return InScope(
-            GearOnly(VisibleRecords(season and season.loot or {}, view), view),
-            view
-        )
-    end
-
-    if view.mode == "all" then
-        return InScope(
-            GearOnly(VisibleRecords(SYL.GetAllLoot(), view), view), view
-        )
-    end
-
-    -- An archived season keeps its drops and its chat loot in separate
-    -- tables, exactly as the active one does. Only the chat loot was ever
-    -- shown here, so archiving a season made its group loot unreachable —
-    -- the records were never lost, just never rendered.
     if view.mode == "archive" then
         local season = SYL.GetArchives()[view.selectedArchiveIndex]
 
@@ -184,27 +123,21 @@ function ListSources.GetUnfiltered(view)
             return {}
         end
 
-        if view.archiveShowsLoot then
-            return InScope(
-                GearOnly(VisibleRecords(season.loot or {}, view), view), view
-            )
-        end
+        drops, loot = season.drops or {}, season.loot or {}
+    elseif view.allSeasons then
+        -- allSeasons widens the list rather than being a tab of its own,
+        -- which is what made the old All-Time tab redundant.
+        drops, loot = SYL.GetAllDrops(), SYL.GetAllLoot()
+    else
+        local season = SYL.GetActiveSeason()
 
-        return InScope(VisibleRecords(season.drops or {}, view), view)
+        drops = SYL.GetActiveDrops()
+        loot = season and season.loot or {}
     end
 
-    return {}
-end
+    local entries = SYL.LootFeed.Build(drops, loot)
 
--- Which table an archive should open on. Drops are the primary record, but a
--- season archived before drop capture existed has none, and opening it on an
--- empty list reads as lost history rather than as the wrong toggle.
-function ListSources.DefaultArchiveShowsLoot(archiveIndex)
-    local season = SYL.GetArchives()[archiveIndex]
-
-    return season ~= nil
-        and #(season.drops or {}) == 0
-        and #(season.loot or {}) > 0
+    return InScope(GearOnly(VisibleEntries(entries, view), view), view)
 end
 
 -- The line under the title, saying which records are on screen.
@@ -215,20 +148,14 @@ end
 -- below it. The archive line names its record type for that reason: two
 -- lists under one season name are otherwise indistinguishable.
 function ListSources.DescribeView(view)
-    if view.mode == "drops" then
-        local season = SYL.GetActiveSeason()
+    if view.mode == "feed" then
+        if view.allSeasons then
+            return "Every season"
+        end
 
-        return (season and season.name or "Active Season") .. " — group loot"
-    end
-
-    if view.mode == "active" then
         local season = SYL.GetActiveSeason()
 
         return season and season.name or "Active Season"
-    end
-
-    if view.mode == "all" then
-        return "All-Time Loot History"
     end
 
     if view.mode == "archives" then
@@ -238,11 +165,32 @@ function ListSources.DescribeView(view)
     if view.mode == "archive" then
         local season = SYL.GetArchives()[view.selectedArchiveIndex]
 
-        return (season and season.name or "Archived Season")
-            .. (view.archiveShowsLoot and " — chat loot" or " — group loot")
+        return season and season.name or "Archived Season"
     end
 
     return ""
+end
+
+-- How many records in scope are hidden right now.
+--
+-- Hiding was invisible: the count dropped by one and the row vanished into a
+-- list where several other copies of the same item were still sitting, which
+-- reads as the button not working rather than as it working on exactly the
+-- row that was ticked.
+function ListSources.CountHiddenInScope(view)
+    if view.showHidden then
+        return 0
+    end
+
+    -- Asked of the same scope with the switch flipped, so the number always
+    -- describes the list it is printed above.
+    view.showHidden = true
+
+    local hidden = #ListSources.GetUnfiltered(view)
+
+    view.showHidden = false
+
+    return hidden
 end
 
 function ListSources.GetFiltered(view)

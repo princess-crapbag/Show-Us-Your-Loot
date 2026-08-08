@@ -22,7 +22,6 @@ SYL.MainNav = MainNav
 --   onTab(key)    a tab was chosen
 --   onArchive()   archive the active season
 --   onBack()      leave an archived season
---   onSwapRecords() switch between an archive's drops and its chat loot
 --
 -- Returns the tab strip and a table of the buttons, which the window shows
 -- and hides as the view changes.
@@ -53,13 +52,6 @@ function MainNav.Create(parent, config)
         end)
 
     buttons.back:SetPoint("TOPRIGHT", -16, -66)
-
-    buttons.archiveRecords =
-        Theme.CreateButton(parent, 124, 24, "Show chat loot", function()
-            config.onSwapRecords()
-        end)
-
-    buttons.archiveRecords:SetPoint("RIGHT", buttons.back, "LEFT", -6, 0)
 
     return tabStrip, buttons
 end

@@ -194,62 +194,37 @@ end
 -- Row builders
 --------------------------------------------------------------------------
 
-function Rows.CreateLootRow(parent, index, onSelect)
-    local row = CreateFrame("Button", nil, parent)
-
-    Widgets.AnchorRow(row, index, Widgets.ROW_HEIGHT)
-    Widgets.AddRowBackgrounds(row, index)
-    AddSelectCell(row, "loot", onSelect)
-
-    row.numberText = Theme.CreateText(row, Theme.sizes.rowSmall, "textMuted")
-    PlaceInColumn(row.numberText, "loot", "number")
-
-    row.playerText = Theme.CreateText(row, Theme.sizes.row, "textPrimary")
-    PlaceInColumn(row.playerText, "loot", "player")
-
-    AddItemCell(row, "loot")
-
-    row.locationText =
-        Theme.CreateText(row, Theme.sizes.rowSmall, "textSecondary")
-
-    PlaceInColumn(row.locationText, "loot", "location")
-
-    row.dateText = Theme.CreateText(row, Theme.sizes.rowSmall, "textMuted")
-    PlaceInColumn(row.dateText, "loot", "date")
-
-    AttachItemRowScripts(row)
-
-    return row
-end
-
-function Rows.CreateDropRow(parent, index, onSelect, onActivate)
+-- The merged list's row. Shaped like the drop row because it has to hold
+-- both kinds of record: a rolled item shows its type and opens its roll
+-- list, an awarded one shows how it arrived and opens a detail window that
+-- says there was no roll.
+function Rows.CreateFeedRow(parent, index, onSelect, onActivate)
     local row = CreateFrame("Button", nil, parent)
 
     row.onActivate = onActivate
 
     Widgets.AnchorRow(row, index, Widgets.ROW_HEIGHT)
     Widgets.AddRowBackgrounds(row, index)
-    AddSelectCell(row, "drops", onSelect)
+    AddSelectCell(row, "feed", onSelect)
 
     row.numberText = Theme.CreateText(row, Theme.sizes.rowSmall, "textMuted")
-    PlaceInColumn(row.numberText, "drops", "number")
+    PlaceInColumn(row.numberText, "feed", "number")
 
-    row.bossText = Theme.CreateText(row, Theme.sizes.rowSmall, "textSecondary")
-    PlaceInColumn(row.bossText, "drops", "boss")
+    row.playerText = Theme.CreateText(row, Theme.sizes.row, "textPrimary")
+    PlaceInColumn(row.playerText, "feed", "player")
 
-    AddItemCell(row, "drops")
-
-    row.winnerText = Theme.CreateText(row, Theme.sizes.row, "textPrimary")
-    PlaceInColumn(row.winnerText, "drops", "winner")
+    AddItemCell(row, "feed")
 
     row.typeText = Theme.CreateText(row, Theme.sizes.rowSmall, "textSecondary")
-    PlaceInColumn(row.typeText, "drops", "wintype")
+    PlaceInColumn(row.typeText, "feed", "wintype")
 
-    row.rollText = Theme.CreateText(row, Theme.sizes.rowSmall, "textSecondary")
-    PlaceInColumn(row.rollText, "drops", "roll")
+    row.locationText =
+        Theme.CreateText(row, Theme.sizes.rowSmall, "textSecondary")
+
+    PlaceInColumn(row.locationText, "feed", "location")
 
     row.dateText = Theme.CreateText(row, Theme.sizes.rowSmall, "textMuted")
-    PlaceInColumn(row.dateText, "drops", "date")
+    PlaceInColumn(row.dateText, "feed", "date")
 
     AttachItemRowScripts(row)
 

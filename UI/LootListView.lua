@@ -1,6 +1,6 @@
 -- UI/LootListView.lua
 --
--- Renders drop rows, chat-loot rows and archive rows into an already-built
+-- Renders the merged loot list and the archive list into an already-built
 -- window. The window passes its own state in as `view`, so this file holds no
 -- state of its own and can later be reused by a second window.
 
@@ -20,7 +20,8 @@ local function BindRow(view, row, record, recordIndex)
     row.recordIndex = recordIndex
 
     Rows.SetRowSelected(row, Selection.IsSelected(view.selection, record))
-    Rows.SetRowHidden(row, record.hidden)
+    -- Joined entries keep hidden on the record underneath.
+    Rows.SetRowHidden(row, (record.record or record).hidden)
 end
 
 local function ReleaseRow(row)
@@ -57,33 +58,9 @@ local function ScheduleCacheRetry()
     end)
 end
 
--- Kept as a wrapper because the drops rows pass a whole record. The table it
--- used to own now lives in Utilities, so every list abbreviates identically.
-local function AbbreviateDifficulty(record)
-    return Utilities.ShortDifficulty(record.difficultyID, record.difficultyName)
-end
-
 --------------------------------------------------------------------------
 -- Shared helpers
 --------------------------------------------------------------------------
-
-local function FormatLocation(record)
-    local instanceName =
-        record.instanceName
-        or record.zoneName
-        or "Unknown"
-
-    -- Short form, or "The Voidspire - Looking For Raid" runs off the end of
-    -- the column and the instance name is what gets cut.
-    local short =
-        Utilities.ShortDifficulty(record.difficultyID, record.difficultyName)
-
-    if short then
-        return instanceName .. " - " .. short
-    end
-
-    return instanceName
-end
 
 local function SetEmptyState(view, isEmpty, message)
     if isEmpty then
@@ -97,11 +74,25 @@ end
 local function DescribeCount(view, shown, singular, plural)
     local total = #ListSources.GetUnfiltered(view)
 
+    local text
+
     if shown == total then
-        return shown .. " " .. (shown == 1 and singular or plural)
+        text = shown .. " " .. (shown == 1 and singular or plural)
+    else
+        text = shown .. " of " .. total .. " " .. plural
     end
 
-    return shown .. " of " .. total .. " " .. plural
+    -- Said out loud, because a hidden row leaves no trace otherwise. The
+    -- count drops by one and the row disappears into a list that may hold
+    -- several more copies of the same item, which reads as the button having
+    -- done nothing.
+    local hidden = ListSources.CountHiddenInScope(view)
+
+    if hidden > 0 then
+        text = text .. "  ·  " .. hidden .. " hidden"
+    end
+
+    return text
 end
 
 local function ClampOffset(view, total)
@@ -145,140 +136,45 @@ local function UpdateScrollRange(view, maxOffset, total)
 end
 
 --------------------------------------------------------------------------
--- Drops
+-- The merged list
 --------------------------------------------------------------------------
 
 -- A win type is not decoration: a transmog win is not an upgrade, so it is
--- muted rather than shown with the same weight as a Need win.
-local function SetWinType(row, record)
-    local short = SYL.LootHistoryAPI.ShortRollState(record.winnerState)
+-- muted rather than shown with the same weight as a Need win. Awarded items
+-- are muted for a different reason — nobody chose anything.
+local STRONG_TYPES = { need = true, offspec = true }
 
-    row.typeText:SetText(short or "")
+local function FillFeedRow(row, entry, index)
+    row.numberText:SetText(index)
+    row.playerText:SetText(entry.player or "Unknown")
 
-    if record.winnerState == 0 or record.winnerState == 1 then
-        Theme.SetTextColor(row.typeText, "textPrimary")
-    else
-        Theme.SetTextColor(row.typeText, "textMuted")
-    end
-end
+    local classColor = entry.drop
+        and Theme.GetClassColor(entry.drop.winnerClass)
 
-local function FillDropRow(row, record, recordIndex)
-    row.numberText:SetText(recordIndex)
-
-    local difficulty = AbbreviateDifficulty(record)
-
-    row.bossText:SetText(
-        tostring(record.encounterName or "Unknown boss")
-        .. (difficulty and ("  " .. difficulty) or "")
-    )
-
-    if record.allPassed then
-        row.winnerText:SetText("all passed")
-        Theme.SetTextColor(row.winnerText, "textMuted")
-        row.rollText:SetText("")
-        row.typeText:SetText("")
-    else
-        row.winnerText:SetText(tostring(record.winnerName or "Unknown"))
-
-        local classColor = Theme.GetClassColor(record.winnerClass)
-
-        if classColor then
-            row.winnerText:SetTextColor(
-                classColor[1], classColor[2], classColor[3]
-            )
-        else
-            Theme.SetTextColor(row.winnerText, "textPrimary")
-        end
-
-        row.rollText:SetText(
-            record.winnerRoll and tostring(record.winnerRoll) or "—"
+    if classColor then
+        row.playerText:SetTextColor(
+            classColor[1], classColor[2], classColor[3]
         )
-
-        SetWinType(row, record)
+    else
+        Theme.SetTextColor(row.playerText, "textPrimary")
     end
 
-    row.dateText:SetText(Utilities.FormatDateCompact(record.timestamp))
+    row.typeText:SetText(entry.typeLabel or "")
 
-    return Rows.SetRowItem(row, record.itemLink, record.itemName)
-end
-
-function LootListView.UpdateDropRows(view)
-    local records = ListSources.GetFiltered(view)
-    local total = #records
-
-    view.countText:SetText(DescribeCount(view, total, "drop", "drops"))
-
-    -- Dungeons are permanently empty here and that is not a fault. Retail
-    -- awards dungeon and Mythic+ gear as personal loot, with no need or
-    -- greed roll, so the loot history has nothing to record however many
-    -- keys were run. Saying so beats leaving somebody to conclude the addon
-    -- is broken. Legacy content can still be run on group loot, so the
-    -- filter stays rather than being removed.
-    local dungeonScope = view.contentScope == "dungeon"
-
-    SetEmptyState(
-        view,
-        total == 0,
-        dungeonScope
-            and "Retail dungeons award personal loot, with no roll, so "
-                .. "nothing reaches this list. Dungeon gear is on the Chat "
-                .. "Loot tab — press Gear only there."
-            or ListSources.IsFiltering(view)
-            and "No drops match these filters."
-            or "No drops recorded yet. They are captured on group-loot rolls."
+    Theme.SetTextColor(
+        row.typeText,
+        STRONG_TYPES[entry.typeKey] and "textPrimary" or "textMuted"
     )
 
-    local maxOffset = ClampOffset(view, total)
-    local allCached = true
+    row.locationText:SetText(entry.where or "")
+    row.dateText:SetText(Utilities.FormatDateCompact(entry.timestamp))
 
-    for rowIndex = 1, view.visibleRows do
-        local recordIndex = total - view.offset - rowIndex + 1
-        local row = view.dropRows[rowIndex]
-
-        -- Re-anchored to follow the scroll. The child moves up by
-        -- offset * rowHeight, so a row pinned where it was built slides out
-        -- of the viewport while its contents are being refilled — the two
-        -- cancelling out into fewer and fewer visible rows.
-        Widgets.AnchorRow(row, view.offset + rowIndex, Widgets.ROW_HEIGHT)
-
-        if recordIndex >= 1 then
-            local record = records[recordIndex]
-
-            if not FillDropRow(row, record, recordIndex) then
-                allCached = false
-            end
-
-            BindRow(view, row, record, recordIndex)
-
-            row:Show()
-        else
-            ReleaseRow(row)
-        end
-    end
-
-    if not allCached then
-        ScheduleCacheRetry()
-    end
-
-    UpdateScrollRange(view, maxOffset, total)
+    return Rows.SetRowItem(row, entry.itemLink, entry.itemName)
 end
 
---------------------------------------------------------------------------
--- Chat loot
---------------------------------------------------------------------------
-
-local function FillLootRow(row, record, recordIndex)
-    row.numberText:SetText(recordIndex)
-    row.playerText:SetText(record.recipient or "Unknown")
-    row.locationText:SetText(FormatLocation(record))
-    row.dateText:SetText(Utilities.FormatDateCompact(record.timestamp))
-
-    return Rows.SetRowItem(row, record.itemLink, record.itemName)
-end
-
-function LootListView.UpdateLootRows(view)
-    local records = ListSources.GetFiltered(view)
-    local total = #records
+function LootListView.UpdateFeedRows(view)
+    local entries = ListSources.GetFiltered(view)
+    local total = #entries
 
     view.countText:SetText(DescribeCount(view, total, "item", "items"))
 
@@ -286,28 +182,27 @@ function LootListView.UpdateLootRows(view)
         view,
         total == 0,
         ListSources.IsFiltering(view)
-            and "No loot matches these filters."
-            or "No loot has been recorded in this view."
+            and "Nothing matches these filters."
+            or "No loot recorded yet."
     )
 
     local maxOffset = ClampOffset(view, total)
     local allCached = true
 
-    -- Rows read newest first, so row 1 shows the most recent record.
     for rowIndex = 1, view.visibleRows do
-        local recordIndex = total - view.offset - rowIndex + 1
-        local row = view.lootRows[rowIndex]
+        local entryIndex = total - view.offset - rowIndex + 1
+        local row = view.feedRows[rowIndex]
 
         Widgets.AnchorRow(row, view.offset + rowIndex, Widgets.ROW_HEIGHT)
 
-        if recordIndex >= 1 then
-            local record = records[recordIndex]
+        if entryIndex >= 1 then
+            local entry = entries[entryIndex]
 
-            if not FillLootRow(row, record, recordIndex) then
+            if not FillFeedRow(row, entry, entryIndex) then
                 allCached = false
             end
 
-            BindRow(view, row, record, recordIndex)
+            BindRow(view, row, entry, entryIndex)
 
             row:Show()
         else
@@ -377,11 +272,7 @@ function LootListView.UpdateArchiveRows(view)
 end
 
 function LootListView.HideAllRows(view)
-    for _, row in ipairs(view.dropRows) do
-        row:Hide()
-    end
-
-    for _, row in ipairs(view.lootRows) do
+    for _, row in ipairs(view.feedRows) do
         row:Hide()
     end
 

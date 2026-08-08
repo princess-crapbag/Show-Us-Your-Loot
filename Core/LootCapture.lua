@@ -132,6 +132,13 @@ local function BuildRecord(recordID, season, recipient, item, timestamp)
         -- carry a different source once they become the primary path.
         source = "CHAT_MSG_LOOT",
 
+        -- Vault rewards arrive through the same chat channel as everything
+        -- else and look identical afterwards, so the one moment they can be
+        -- told apart is while the frame that handed them over is still open.
+        -- Guarded because the frame only exists once its addon has loaded.
+        fromVault = (_G.WeeklyRewardsFrame
+            and _G.WeeklyRewardsFrame:IsShown()) or nil,
+
         archived = false,
         excludedFromAnalytics = false,
 

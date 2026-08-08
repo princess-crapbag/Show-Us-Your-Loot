@@ -30,38 +30,34 @@ local buttons = {}
 
 -- Shared with LootListView, which reads it but never owns it.
 local view = {
-    -- Drops are the primary record now, so the window opens on them.
-    mode = "drops",
+    mode = "feed",
     selectedArchiveIndex = nil,
     offset = 0,
     visibleRows = VISIBLE_ROWS,
     showHidden = false,
     allSeasons = false,
 
-    -- Which of an archived season's two record tables is on screen. Drops
-    -- are the primary record, so they are the default, but a season archived
-    -- before drop capture existed has none and opens on its chat loot.
-    archiveShowsLoot = false,
-
     -- Raid, dungeon or both. "all" so nothing already recorded vanishes on
     -- update; narrowing is the officer's choice, not one made for them.
     contentScope = "all",
 
-    -- Chat loot narrowed to gear somebody actually received. Off for the
-    -- same reason: hiding three hundred records without being asked is how
-    -- an update looks like data loss.
+    -- Narrowed to gear somebody actually received. Off for the same
+    -- reason: hiding three hundred records without being asked is how an
+    -- update looks like data loss.
     gearOnly = false,
     filters = Filters.CreateState(),
     selection = Selection.Create(),
-    dropRows = {},
-    lootRows = {},
+    feedRows = {},
     archiveRows = {},
 }
 
+-- Two tabs, not four. Drops and Chat Loot described how a record was
+-- captured rather than what it was, and every raid win appeared on both. The
+-- merged list holds them together with the type on each row, and All-Time
+-- became redundant the moment "All seasons" applied to one list instead of
+-- to whichever tab you happened to be on.
 local TABS = {
-    { key = "drops", label = "Drops" },
-    { key = "active", label = "Chat Loot" },
-    { key = "all", label = "All-Time" },
+    { key = "feed", label = "Loot" },
     { key = "archives", label = "Archives" },
 }
 
@@ -82,21 +78,13 @@ local function UpdateTabs()
 
     if view.mode == "archive" then
         buttons.back:Show()
-        buttons.archiveRecords:Show()
-
-        -- Labelled with what it will switch to, so the button says what
-        -- pressing it does rather than where you already are.
-        buttons.archiveRecords.label:SetText(
-            view.archiveShowsLoot and "Show drops" or "Show chat loot"
-        )
     else
         buttons.back:Hide()
-        buttons.archiveRecords:Hide()
     end
 
-    -- Archiving acts on the whole season, so it is offered from either of the
-    -- active-season views.
-    if view.mode == "drops" or view.mode == "active" then
+    -- Archiving acts on the whole season, so it is offered from the list
+    -- but not from the archive browser.
+    if view.mode == "feed" then
         buttons.archiveSeason:Show()
     else
         buttons.archiveSeason:Hide()
@@ -114,8 +102,7 @@ local function UpdateRows()
     UpdateTabs()
     view.selectionBar:Update()
 
-    view.dropHeader:Hide()
-    view.lootHeader:Hide()
+    view.feedHeader:Hide()
 
     -- Nothing on the archive list is filterable, so the bar would only be
     -- misleading there.
@@ -129,14 +116,8 @@ local function UpdateRows()
 
     view.filterBar:Show()
 
-    if view.mode == "drops" or ListSources.ArchiveShowsDrops(view) then
-        view.dropHeader:Show()
-        LootListView.UpdateDropRows(view)
-        return
-    end
-
-    view.lootHeader:Show()
-    LootListView.UpdateLootRows(view)
+    view.feedHeader:Show()
+    LootListView.UpdateFeedRows(view)
 end
 
 local function SetMode(mode, archiveIndex)
@@ -150,11 +131,6 @@ local function SetMode(mode, archiveIndex)
     view.mode = mode
     view.selectedArchiveIndex = archiveIndex
     view.offset = 0
-
-    if mode == "archive" then
-        view.archiveShowsLoot =
-            ListSources.DefaultArchiveShowsLoot(archiveIndex)
-    end
 
     if view.filterBar then
         view.filterBar:Refresh()
@@ -197,7 +173,7 @@ local function CreateNavigationBar(parent)
 
         onArchive = function()
             SYL.ArchivePopup.Show(function()
-                SetMode("active", nil)
+                SetMode("feed", nil)
             end)
         end,
 
@@ -205,20 +181,6 @@ local function CreateNavigationBar(parent)
             SetMode("archives", nil)
         end,
 
-        onSwapRecords = function()
-            view.archiveShowsLoot = not view.archiveShowsLoot
-            view.offset = 0
-
-            -- The two lists are different records, so a selection made in
-            -- one means nothing in the other.
-            Selection.Clear(view.selection)
-
-            if view.filterBar then
-                view.filterBar:Refresh()
-            end
-
-            UpdateRows()
-        end,
     })
 end
 
@@ -261,14 +223,9 @@ local function CreateScrollArea(parent)
     view.emptyText:Hide()
 
     -- 6px below the action row, which ends at 148.
-    view.dropHeader = Rows.CreateColumnHeader(parent, "drops")
-    view.dropHeader:SetPoint("TOPLEFT", 16, -154)
-    view.dropHeader:SetPoint("TOPRIGHT", -34, -154)
-
-    view.lootHeader = Rows.CreateColumnHeader(parent, "loot")
-    view.lootHeader:SetPoint("TOPLEFT", 16, -154)
-    view.lootHeader:SetPoint("TOPRIGHT", -34, -154)
-    view.lootHeader:Hide()
+    view.feedHeader = Rows.CreateColumnHeader(parent, "feed")
+    view.feedHeader:SetPoint("TOPLEFT", 16, -154)
+    view.feedHeader:SetPoint("TOPRIGHT", -34, -154)
 
     SYL.ScrollArea.Create(parent, view, {
         childWidth = WINDOW_WIDTH - 70,
@@ -280,8 +237,8 @@ local function CreateScrollArea(parent)
             view.selectionBar:OnRowSelect(row, isShift)
         end,
 
-        onActivate = function(record)
-            SYL:OpenDropDetail(record)
+        onActivate = function(entry)
+            SYL:OpenDropDetail(SYL.LootFeed.ToDetailRecord(entry))
         end,
 
         onArchiveView = function(archiveIndex)

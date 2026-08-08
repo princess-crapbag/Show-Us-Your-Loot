@@ -199,11 +199,6 @@ function SelectionBar.Create(parent, view, config)
             self.allSeasons:Hide()
         end
 
-        -- Only drop records carry an instance type or a difficulty, so the
-        -- scope has nothing to sort chat loot by.
-        local onDrops = view.mode == "drops"
-            or ListSources.ArchiveShowsDrops(view)
-
         -- Shown on both lists, not only on drops. Retail dungeons award
         -- personal loot with no rolls, so dungeon gear never reaches the
         -- drops list at all — it arrives as chat loot, which makes that the
@@ -227,9 +222,9 @@ function SelectionBar.Create(parent, view, config)
             self.contentScope:Hide()
         end
 
-        -- The mirror of content scope: that one sorts drops, this one sorts
-        -- chat loot, and neither means anything on the other's list.
-        if onList and not onDrops then
+        -- Both apply to the one list now: content scope sorts by where an
+        -- item came from, this by whether it is gear at all.
+        if onList then
             self.gearOnly.label:SetText(
                 view.gearOnly and "Gear only" or "Everything"
             )
@@ -251,7 +246,7 @@ function SelectionBar.Create(parent, view, config)
         end
 
         self.showHidden.label:SetText(
-            view.showHidden and "Showing hidden" or "Show hidden"
+            view.showHidden and "Hidden only" or "Show hidden"
         )
 
         Theme.SetTextColor(
