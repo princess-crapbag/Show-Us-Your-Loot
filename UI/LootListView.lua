@@ -208,10 +208,22 @@ function LootListView.UpdateDropRows(view)
 
     view.countText:SetText(DescribeCount(view, total, "drop", "drops"))
 
+    -- Dungeons are permanently empty here and that is not a fault. Retail
+    -- awards dungeon and Mythic+ gear as personal loot, with no need or
+    -- greed roll, so the loot history has nothing to record however many
+    -- keys were run. Saying so beats leaving somebody to conclude the addon
+    -- is broken. Legacy content can still be run on group loot, so the
+    -- filter stays rather than being removed.
+    local dungeonScope = view.contentScope == "dungeon"
+
     SetEmptyState(
         view,
         total == 0,
-        ListSources.IsFiltering(view)
+        dungeonScope
+            and "Retail dungeons award personal loot, with no roll, so "
+                .. "nothing reaches this list. Dungeon gear is on the Chat "
+                .. "Loot tab — press Gear only there."
+            or ListSources.IsFiltering(view)
             and "No drops match these filters."
             or "No drops recorded yet. They are captured on group-loot rolls."
     )

@@ -60,6 +60,22 @@ function SelectionBar.Create(parent, view, config)
 
     bar.contentScope:SetPoint("RIGHT", bar.showHidden, "LEFT", -6, 0)
 
+    -- Chat capture takes everything, so the tab is mostly reagents and gold
+    -- with the gear somebody actually received buried in it. This is the
+    -- same filter the due list uses, so the list and the maths agree.
+    bar.gearOnly =
+        Theme.CreateButton(parent, 100, 20, "Gear only", function()
+            view.gearOnly = not view.gearOnly
+
+            Selection.Clear(view.selection)
+
+            view.offset = 0
+
+            onChanged()
+        end)
+
+    bar.gearOnly:SetPoint("RIGHT", bar.contentScope, "LEFT", -6, 0)
+
     -- Not selection, but this is the row of list controls in practice, and
     -- Show hidden already sits here for the same reason.
     bar.allSeasons =
@@ -73,7 +89,7 @@ function SelectionBar.Create(parent, view, config)
             onChanged()
         end)
 
-    bar.allSeasons:SetPoint("RIGHT", bar.contentScope, "LEFT", -6, 0)
+    bar.allSeasons:SetPoint("RIGHT", bar.gearOnly, "LEFT", -6, 0)
 
     bar.action = Theme.CreateButton(parent, 70, 20, "Hide", function()
         bar:ApplyHidden()
@@ -188,7 +204,11 @@ function SelectionBar.Create(parent, view, config)
         local onDrops = view.mode == "drops"
             or ListSources.ArchiveShowsDrops(view)
 
-        if onDrops then
+        -- Shown on both lists, not only on drops. Retail dungeons award
+        -- personal loot with no rolls, so dungeon gear never reaches the
+        -- drops list at all — it arrives as chat loot, which makes that the
+        -- list where separating raid from dungeon actually does something.
+        if onList then
             local scope = view.contentScope or "all"
 
             self.contentScope.label:SetText(
@@ -205,6 +225,23 @@ function SelectionBar.Create(parent, view, config)
             self.contentScope:Show()
         else
             self.contentScope:Hide()
+        end
+
+        -- The mirror of content scope: that one sorts drops, this one sorts
+        -- chat loot, and neither means anything on the other's list.
+        if onList and not onDrops then
+            self.gearOnly.label:SetText(
+                view.gearOnly and "Gear only" or "Everything"
+            )
+
+            Theme.SetTextColor(
+                self.gearOnly.label,
+                view.gearOnly and "accent" or "textPrimary"
+            )
+
+            self.gearOnly:Show()
+        else
+            self.gearOnly:Hide()
         end
 
         if not onList then

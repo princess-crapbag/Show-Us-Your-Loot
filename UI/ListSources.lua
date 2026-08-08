@@ -53,7 +53,14 @@ end
 
 -- Raid loot and dungeon loot are the same shape and different questions. A
 -- Mythic+ drop has no bearing on who is due in the raid, and mixing them
--- makes the loot list unreadable for the guild that runs both.
+-- makes the list unreadable for a guild that runs both.
+--
+-- This matters most on the chat-loot side, which is not where it looks like
+-- it should. Retail dungeons award personal loot: there are no need or greed
+-- rolls, so the loot history has nothing to record and the drops list is
+-- correctly empty of dungeons no matter how many keys were run. Dungeon gear
+-- arrives as chat loot, so that is the list the raid/dungeon split has to
+-- work on.
 --
 -- Records written before instanceType was stored fall back to the difficulty
 -- id inside GetContentType, so this works on existing history rather than
@@ -73,6 +80,40 @@ local function InScope(records, view)
         )
 
         if contentType == scope then
+            table.insert(kept, record)
+        end
+    end
+
+    return kept
+end
+
+-- Chat capture records everything: reagents, gold, quest items, and three
+-- hundred of them bury the dozen that are gear somebody actually received.
+--
+-- This is the same filter the due list uses, so what is on screen and what
+-- resets a drought are the same set rather than two ideas of "personal
+-- loot" that drift. Group-loot wins are subtracted, because winning a roll
+-- also prints a loot line and those already have their own tab.
+--
+-- Order is taken from the original list rather than from the filter, which
+-- sorts newest first: the loot list reads its array oldest to newest and
+-- would otherwise show the whole thing upside down.
+local function GearOnly(records, view)
+    if not view.gearOnly then
+        return records
+    end
+
+    local entries = SYL.PersonalLoot.Build(records, SYL.GetAllDrops())
+    local wanted = {}
+
+    for _, entry in ipairs(entries) do
+        wanted[entry.record] = true
+    end
+
+    local kept = {}
+
+    for _, record in ipairs(records) do
+        if wanted[record] then
             table.insert(kept, record)
         end
     end
@@ -113,16 +154,23 @@ function ListSources.GetUnfiltered(view)
 
     if view.mode == "active" then
         if view.allSeasons then
-            return VisibleRecords(SYL.GetAllLoot(), view)
+            return InScope(
+                GearOnly(VisibleRecords(SYL.GetAllLoot(), view), view), view
+            )
         end
 
         local season = SYL.GetActiveSeason()
 
-        return VisibleRecords(season and season.loot or {}, view)
+        return InScope(
+            GearOnly(VisibleRecords(season and season.loot or {}, view), view),
+            view
+        )
     end
 
     if view.mode == "all" then
-        return VisibleRecords(SYL.GetAllLoot(), view)
+        return InScope(
+            GearOnly(VisibleRecords(SYL.GetAllLoot(), view), view), view
+        )
     end
 
     -- An archived season keeps its drops and its chat loot in separate
@@ -137,7 +185,9 @@ function ListSources.GetUnfiltered(view)
         end
 
         if view.archiveShowsLoot then
-            return VisibleRecords(season.loot or {}, view)
+            return InScope(
+                GearOnly(VisibleRecords(season.loot or {}, view), view), view
+            )
         end
 
         return InScope(VisibleRecords(season.drops or {}, view), view)

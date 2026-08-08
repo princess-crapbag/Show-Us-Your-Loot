@@ -46,6 +46,11 @@ local view = {
     -- Raid, dungeon or both. "all" so nothing already recorded vanishes on
     -- update; narrowing is the officer's choice, not one made for them.
     contentScope = "all",
+
+    -- Chat loot narrowed to gear somebody actually received. Off for the
+    -- same reason: hiding three hundred records without being asked is how
+    -- an update looks like data loss.
+    gearOnly = false,
     filters = Filters.CreateState(),
     selection = Selection.Create(),
     dropRows = {},

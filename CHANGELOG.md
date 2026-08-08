@@ -7,10 +7,24 @@ this says what you will notice.
 
 ### Added
 
-- **Raid loot and dungeon loot can be told apart.** A button on the drops
-  list cycles between all content, raids only and dungeons only. It works on
-  history recorded before this, because the difficulty already says which is
-  which even where nothing else did.
+- **Gear you were given, not just gear you rolled for.** Retail hands out a
+  lot of loot with no roll at all: the Great Vault, the catalyst, and every
+  dungeon and Mythic+ item, which are personal loot. None of it went through
+  a group-loot roll, so none of it was in the drop history — and the due list
+  could not see it. Press **Gear only** on the Chat Loot tab to see it, and
+  it now resets a drought like any other upgrade. `/syl personalloot` turns
+  that off if you would rather rank on raid rolls alone.
+- **Raid loot and dungeon loot can be told apart.** A button cycles between
+  all content, raids only and dungeons only. It works on history recorded
+  before this, because the difficulty already says which is which even where
+  nothing else did.
+- **A raid roster.** Everyone in the guild, with class, rank, nights raided
+  and Mythic+ score, and — the point of it — which raid buffs nobody covers.
+  Tick names to add them to the raid team, set what they play, or map several
+  at once as alts of one main. Team and role are per character, because you
+  bring a character rather than a person.
+- **Click a player** in the players window for their whole record: every drop
+  they could have had, what they chose, and what they got.
 
 ### Fixed
 
