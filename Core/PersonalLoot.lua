@@ -53,6 +53,22 @@ end
 
 PersonalLoot.NameKey = NameKey
 
+-- Gear is decided by item class, not by whether it reports an equip slot.
+--
+-- The slot test was the first attempt and it leaked badly: crafting reagents,
+-- essences and reward containers came through as gear because a non
+-- equippable item does not reliably report an empty slot — some return
+-- INVTYPE_NON_EQUIP_IGNORE, which is not the empty string and is not the one
+-- constant that was being checked for. Epic-quality reagents then sailed
+-- through the quality test as well.
+--
+-- Class is unambiguous: weapons and armour are gear, and a reagent is class
+-- Tradeskill however good it is. The slot is kept as a second check, because
+-- tabards and cosmetic pieces are armour without being anything a raider was
+-- waiting on.
+local WEAPON_CLASS = (Enum and Enum.ItemClass and Enum.ItemClass.Weapon) or 2
+local ARMOR_CLASS = (Enum and Enum.ItemClass and Enum.ItemClass.Armor) or 4
+
 -- nil rather than false when the item is not cached yet, so a caller can tell
 -- "not gear" from "cannot say yet" and try again on the next refresh.
 local function IsTrackableGear(record)
@@ -62,9 +78,10 @@ local function IsTrackableGear(record)
         return false
     end
 
-    local _, _, quality, _, _, _, _, _, equipSlot = C_Item.GetItemInfo(link)
+    local _, _, quality, _, _, _, _, _, equipSlot, _, _, classID =
+        C_Item.GetItemInfo(link)
 
-    if quality == nil then
+    if quality == nil or classID == nil then
         return nil
     end
 
@@ -72,13 +89,22 @@ local function IsTrackableGear(record)
         return false
     end
 
-    -- Everything wearable reports a slot. Reagents, consumables and mounts
-    -- report an empty one.
-    return equipSlot ~= nil and equipSlot ~= "" and equipSlot ~= "INVTYPE_NON_EQUIP"
+    if classID ~= WEAPON_CLASS and classID ~= ARMOR_CLASS then
+        return false
+    end
+
+    return equipSlot ~= nil
+        and equipSlot ~= ""
+        and not equipSlot:find("NON_EQUIP", 1, true)
 end
 
 -- Index of the drops already recorded, so the overlap can be subtracted
 -- without comparing every chat record against every drop.
+--
+-- Public, because the merged loot list needs the same answer for a different
+-- reason: it wants every chat record that is not already a drop, gear or
+-- otherwise. Two definitions of "this line is that roll" would drift, and the
+-- one that lost would be whichever nobody was looking at.
 local function IndexDrops(drops)
     local byItem = {}
 
@@ -126,6 +152,10 @@ end
 -- Returns the acquisitions, and how many records could not be judged because
 -- the client has not cached the item yet. The caller shows the second number
 -- rather than pretending the first is complete.
+PersonalLoot.IsTrackableGear = IsTrackableGear
+PersonalLoot.IndexDrops = IndexDrops
+PersonalLoot.MatchesADrop = MatchesADrop
+
 function PersonalLoot.Build(lootRecords, drops)
     local dropIndex = IndexDrops(drops)
 
