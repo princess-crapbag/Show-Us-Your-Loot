@@ -14,7 +14,9 @@ SYL.FilterDropdown = FilterDropdown
 
 local VISIBLE_OPTIONS = 12
 local OPTION_HEIGHT = 20
+-- Header row plus the search field beneath it.
 local PANEL_HEADER = 26
+local SEARCH_HEIGHT = 22
 local PANEL_PADDING = 6
 
 local openPanel
@@ -58,8 +60,8 @@ local function CreateOptionRow(panel, index)
     local row = CreateFrame("Button", nil, panel)
 
     row:SetHeight(OPTION_HEIGHT)
-    row:SetPoint("TOPLEFT", PANEL_PADDING, -(PANEL_HEADER + (index - 1) * OPTION_HEIGHT))
-    row:SetPoint("TOPRIGHT", -PANEL_PADDING, -(PANEL_HEADER + (index - 1) * OPTION_HEIGHT))
+    row:SetPoint("TOPLEFT", PANEL_PADDING, -(PANEL_HEADER + SEARCH_HEIGHT + (index - 1) * OPTION_HEIGHT))
+    row:SetPoint("TOPRIGHT", -PANEL_PADDING, -(PANEL_HEADER + SEARCH_HEIGHT + (index - 1) * OPTION_HEIGHT))
 
     row.highlight = Theme.CreateSolidTexture(row, "rowHover", "BACKGROUND")
     row.highlight:SetAllPoints()
@@ -89,8 +91,30 @@ local function CreateOptionRow(panel, index)
     return row
 end
 
-local function RefreshRows(panel)
+-- Two hundred item names do not fit in twelve rows, and scrolling to find
+-- one you already know the name of is the wrong tool. The field narrows the
+-- options rather than the list, so it composes with ticking several.
+local function MatchingOptions(panel)
     local options = panel.config.getOptions() or {}
+    local needle = (panel.searchText or ""):lower()
+
+    if needle == "" then
+        return options
+    end
+
+    local kept = {}
+
+    for _, value in ipairs(options) do
+        if tostring(value):lower():find(needle, 1, true) then
+            table.insert(kept, value)
+        end
+    end
+
+    return kept
+end
+
+local function RefreshRows(panel)
+    local options = MatchingOptions(panel)
     local total = #options
 
     local maxOffset = math.max(0, total - VISIBLE_OPTIONS)
@@ -127,6 +151,7 @@ local function RefreshRows(panel)
     panel.headerText:SetText(
         total
         .. (total == 1 and " option" or " options")
+        .. ((panel.searchText or "") ~= "" and " matching" or "")
         .. (count > 0 and ("  ·  " .. count .. " selected") or "")
     )
 
@@ -146,7 +171,8 @@ local function CreatePanel(button, config)
 
     panel:SetWidth(math.max(config.width, 190))
     panel:SetHeight(
-        PANEL_HEADER + VISIBLE_OPTIONS * OPTION_HEIGHT + PANEL_PADDING * 2
+        PANEL_HEADER + SEARCH_HEIGHT
+        + VISIBLE_OPTIONS * OPTION_HEIGHT + PANEL_PADDING * 2
     )
 
     panel:SetPoint("TOPLEFT", button, "BOTTOMLEFT", 0, -2)
@@ -180,6 +206,22 @@ local function CreatePanel(button, config)
     end)
 
     panel.allButton:SetPoint("RIGHT", panel.noneButton, "LEFT", -4, 0)
+
+    panel.searchText = ""
+
+    panel.search = SYL.SearchBox.Create(
+        panel, panel:GetWidth() - PANEL_PADDING * 2, "Type to narrow…",
+        function(text)
+            panel.searchText = text
+
+            -- The list is about to get shorter under the scroll position.
+            panel.offset = 0
+
+            RefreshRows(panel)
+        end
+    )
+
+    panel.search:SetPoint("TOPLEFT", PANEL_PADDING, -PANEL_HEADER + 2)
 
     panel.emptyText =
         Theme.CreateText(panel, Theme.sizes.rowSmall, "textMuted")
@@ -254,6 +296,8 @@ function FilterDropdown.Create(parent, config)
         end
 
         self.panel.offset = 0
+
+        FilterDropdown.ResetSearch(self.panel)
 
         RefreshRows(self.panel)
 
