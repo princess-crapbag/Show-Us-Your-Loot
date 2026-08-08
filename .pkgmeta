@@ -20,6 +20,16 @@ package-as: ShowUsYourLoot
 
 enable-nolib-creation: no
 
+# Without this the packager writes the changelog from the commit messages
+# between tags. Those are written for whoever maintains this and explain why a
+# change exists and what was rejected on the way — which is the wrong thing to
+# put in front of somebody who just wants to know whether to update.
+#
+# A manual changelog always wins over the generated one.
+manual-changelog:
+    filename: CHANGELOG.md
+    markup-type: markdown
+
 ignore:
     - web
     - tools

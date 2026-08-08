@@ -163,6 +163,13 @@ The `-alpha` suffix is not decoration: the packager reads it and marks the
 file Alpha on CurseForge. Confirmed on the v0.1.0-alpha run, which uploaded
 as `12.0.7 alpha`. A tag without it publishes as a full release.
 
+**Write the CHANGELOG.md entry before tagging.** `.pkgmeta` points the
+packager at it, and a manual changelog always beats the generated one. Left
+empty, CurseForge would show the commit messages between the two tags —
+written for whoever maintains this, full of reasoning and rejected
+alternatives, and the wrong thing to hand somebody deciding whether to
+update. Write what they will notice, not why it exists.
+
 **Bump `## Version:` in the .toc to match, in the same commit as the tag.**
 The packager rewrites that line in the zip it builds, so CurseForge is always
 right — but it never touches the working copy. Anyone running the addon from
