@@ -69,7 +69,10 @@ local function DropType(drop)
         return "passed"
     end
 
-    return ROLL_STATE_TYPES[drop.winnerState] or "need"
+    -- NoRoll, Pass and nil are not Need wins. Defaulting them to need
+    -- overstated Need in the type column while DueList correctly refused to
+    -- count them, so the list and the maths disagreed about one record.
+    return ROLL_STATE_TYPES[drop.winnerState] or "personal"
 end
 
 -- Chat records carry no roll, so the type is inferred from where and how the

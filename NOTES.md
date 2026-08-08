@@ -405,3 +405,71 @@ follows from Phase 2. Nothing has been tested against a second client or
 a live raid, and the likeliest disappointment is the note patterns not
 matching how this guild actually writes them — `/syl alts scan` changes
 nothing, so it is safe to run and read.
+
+## How the competition is built (researched 2026-08-08)
+
+Read from source where possible rather than from descriptions.
+
+### RCLootCouncil — the one worth copying from
+
+Ace3-based, and organised as **nine modules loaded from Modules/Modules.xml**:
+lootFrame, versionCheck, votingFrame, sessionFrame, options, History/
+lootHistory, History/CSVImport, TradeUI, Sync. Core is separate from
+modules, and Classes/ splits Data, Services and Utils.
+
+The important lesson is the shape, not the framework: **features are modules
+with their own file and their own enable state**, not branches inside one
+window. That is what makes "turn this off" possible at all.
+
+**Its loot history UI** uses lib-st (LibScrollingTable) rather than
+hand-rolled rows. Columns are declared as data:
+
+    { name = _G.NAME, width = 100, sortnext = 3, defaultsort = 1 }
+
+with optional `comparesort` and `DoCellUpdate` per column. Sorting,
+tie-breaking to another column, and per-cell rendering are all declarative.
+Ours hand-builds rows and hardcodes sort comparators per window — three
+windows now carry near-identical sorting code.
+
+**Its filtering is three dimensions at once**: response (Need/Greed/Pass/
+autopass/status), class, and a single selected name plus a single selected
+date. Name and date are not dropdowns — they are **two small scrolling tables
+beside the main one**, and clicking a row in either restricts the main table.
+That is a better fit for "which of my raiders" than our multi-select
+dropdown, and worth stealing.
+
+Its data is stored **hierarchically**, `data[date][playerName] = { entries }`,
+which makes date and player grouping free. Ours is a flat array swept per
+draw.
+
+**TradeUI is a whole module** and is the closest thing to the trade-window
+advisor four reviewers asked for. It registers `TRADE_SHOW`, `TRADE_CLOSED`,
+`TRADE_ACCEPT_UPDATE` and `UI_INFO_MESSAGE`, watches for
+`LE_GAME_ERR_TRADE_COMPLETE` to confirm a trade landed, reads the target from
+`TradeFrameRecipientNameText:GetText()`, and runs a 5-minute repeating timer
+to expire items past the two-hour window. That is the event set to copy.
+
+### The others
+
+- **WoWAudit** is a website with a companion addon. Roster, vault, wishlists
+  and attendance live server-side. Competing with it in-game is a losing
+  fight; NOTES Phases 3-5 are its core product.
+- **Raider.IO** ships a static data bundle and exposes GetProfile to other
+  addons. We already consume it correctly.
+- **MRT** is a large suite where the loot log is one module among many.
+
+### Modules, the ElvUI way
+
+ElvUI's appeal is that every module can be switched off and the rest keeps
+working. Same principle here, and RCLootCouncil already proves the file
+layout: one feature, one file, one enable flag, checked at load and honoured
+at runtime.
+
+**Decided direction:** a registry where each feature declares a key, a
+default, and what it costs when on. Settings gets a Features list. Windows
+and commands for a disabled feature do not register at all, rather than
+being drawn and then hidden — a feature that is off should cost nothing.
+
+Candidates for toggles, from the reviews: raid buff coverage, the Raider.IO
+column, boss loot tables, officer sync, personal-loot counting, the
+developer window, capture announcements.

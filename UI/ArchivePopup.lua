@@ -21,13 +21,13 @@ StaticPopupDialogs[DIALOG_KEY] = {
     editBoxWidth = 240,
 
     OnShow = function(self)
-        self.EditBox:SetText("New Season")
-        self.EditBox:HighlightText()
-        self.EditBox:SetFocus()
+        self.editBox:SetText("New Season")
+        self.editBox:HighlightText()
+        self.editBox:SetFocus()
     end,
 
     OnAccept = function(self)
-        local newSeasonName = self.EditBox:GetText()
+        local newSeasonName = self.editBox:GetText()
 
         if not newSeasonName or newSeasonName == "" then
             newSeasonName = "New Season"

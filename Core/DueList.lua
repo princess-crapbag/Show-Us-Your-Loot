@@ -247,7 +247,11 @@ function DueList.FilterRecent(entries, sessions, withinNights)
 
     local recent = {}
 
-    for _, session in ipairs(sessions or {}) do
+    -- Raids only, the same as Build. lastSeenAt can only ever hold a raid
+    -- night, so a cutoff computed from dungeon sessions too is measured
+    -- against a clock nothing on this list runs on: three keys after raid
+    -- pushed the cutoff past the last raid and emptied the whole list.
+    for _, session in ipairs(SYL.RaidSession.RaidsOnly(sessions)) do
         table.insert(recent, session.startedAt or 0)
     end
 

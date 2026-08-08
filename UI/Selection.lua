@@ -78,6 +78,13 @@ end
 
 -- Returns how many records actually changed, so the caller can report
 -- honestly rather than echoing the selection size.
+-- The merged list passes joined entries rather than raw records, and hidden
+-- lives on the record underneath: the entry is rebuilt on every draw, so a
+-- flag written to it would last until the next refresh and no longer.
+local function HideTarget(record)
+    return record.record or record
+end
+
 function Selection.ApplyHidden(selection, records, hidden)
     local changed = 0
 
@@ -98,13 +105,6 @@ end
 
 -- Counts how many of the selected records are currently hidden, which decides
 -- whether the bulk action should read Hide or Unhide.
--- The merged list passes joined entries rather than raw records, and hidden
--- lives on the record underneath: the entry is rebuilt on every draw, so a
--- flag written to it would last until the next refresh and no longer.
-local function HideTarget(record)
-    return record.record or record
-end
-
 function Selection.CountHidden(selection, records)
     local hidden = 0
 

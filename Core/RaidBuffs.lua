@@ -95,7 +95,7 @@ RaidBuffs.LIST = {
         key = "battleres",
         name = "Battle resurrection",
         category = RaidBuffs.UTILITY,
-        classes = { "DRUID", "DEATHKNIGHT", "WARLOCK" },
+        classes = { "DRUID", "DEATHKNIGHT", "WARLOCK", "PALADIN" },
     },
 }
 
