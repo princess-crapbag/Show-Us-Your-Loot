@@ -22,7 +22,7 @@ an upgrade, who turned up, and what each boss has given.
 - **CurseForge:** project 1642383, live at **v0.2.0-alpha**
 - **`main` is 5 commits ahead of that tag.** Everything after it is on GitHub
   and in Aimee's game, and has reached no user.
-- 87 Lua files in the .toc, 8 test suites in `tools/`, all run before a
+- 87 Lua files in the .toc, 7 test suites in `tools/`, all run before a
   release by `.github/workflows/release.yml`.
 
 **Aimee runs the addon from a symlink**, `Interface/AddOns/ShowUsYourLoot ->
@@ -67,6 +67,19 @@ Alpha rather than a full release. See CURSEFORGE.md.
 - **It is a regex heuristic, not a parser.** It passed clean through four
   crash-level bugs in one day. A clean run means "nothing obvious", not "this
   works".
+- **It exits 0 on warnings, and a broken cross-module call is a warning.**
+  `SYL.PlayerRows.Build never assigned` — the shape a rename leaves behind when
+  a call site is missed — prints, and `syl_check` still returns success. So the
+  "Check the Lua before shipping it" step in `release.yml` cannot block a
+  release on it. Verified by renaming a call and reading the exit code.
+  Whether to make warnings fatal is a judgement about the false-positive rate:
+  it currently reports zero across the addon, and caught a deliberately broken
+  reference exactly, which is evidence it could be. Not changed, because that
+  is a decision about the release pipeline.
+- **Check whether syl_check already covers it before writing a new tool.** A
+  `test_references.py` was written and committed to catch unresolved
+  `SYL.Module.Member` calls; `syl_check` had done that since before this file
+  existed, and says so three lines above. It was reverted in the next commit.
 - **What it still cannot see:** a local used before its declaration.
   `HideTarget`, called twenty lines above the `local function` that defined
   it, was a nil global and shipped. `luacheck` with a WoW globals definition
