@@ -90,10 +90,15 @@ Alpha rather than a full release. See CURSEFORGE.md.
   python -m venv .venv && .venv/Scripts/python -m pip install lupa
   ```
 
-  Then `.venv/Scripts/python tools/test_lootmessages.py`, and the same for
-  `test_migrations`, `test_lootsort`, `test_windowplacement`,
-  `test_syncchunks`. Each reads its Lua straight out of the addon, so they
-  cannot drift from the code. All five exit non-zero on failure.
+  There are seven: `test_duelist`, `test_lootmessages`, `test_lootsort`,
+  `test_migrations`, `test_syncchunks`, `test_syntax`, `test_windowplacement`.
+  Each reads its Lua straight out of the addon, so they cannot drift from the
+  code, and each exits non-zero on failure. `release.yml` runs the lot before
+  it builds a zip, so a failing suite blocks a release — unlike `syl_check`,
+  which does not (see above).
+
+  `test_duelist` is the one to extend when the fairness maths changes. It is
+  the only test of the number the whole addon is named after.
 - **400-line limit is a warning, not an error.** A file opts out with
   `-- syl-check: size-exempt — reason` in its first 40 lines. Three files do,
   and each says why. **Never delete a comment to get under it** — that
