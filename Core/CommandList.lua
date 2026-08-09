@@ -113,6 +113,10 @@ CommandList.ENTRIES = {
     { developer = true, command = "api", description = "Print the live Loot History API" },
     { developer = true, command = "debug", description = "Toggle debug messages" },
     { command = "announce", description = "Toggle capture messages" },
+    {
+        command = "scope",
+        description = "Show the raid team, the guild, or everyone",
+    },
     { command = "clear", description = "Clear active-season drops and loot" },
 }
 

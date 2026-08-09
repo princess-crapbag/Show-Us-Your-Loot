@@ -11,7 +11,8 @@ local SYL = _G.ShowUsYourLoot
 
 -- 4: countPersonalLoot's default flipped to off. See MigrateSettings.
 -- 5: syncEnabled became the "sync" feature.
-local DATABASE_VERSION = 5
+-- 6: announceCaptures' default flipped to off. See MigrateAnnounceDefault.
+local DATABASE_VERSION = 6
 
 local function GenerateSeasonID()
     return "season-" .. date("%Y%m%d-%H%M%S")
@@ -73,8 +74,23 @@ local function InitializeSettings()
         ShowUsYourLootDB.settings.debug = false
     end
 
+    -- OFF. The addon is silent unless it is asked something.
+    --
+    -- This is the only thing here that speaks unprompted, in the channel
+    -- people actually read, and it fires once per gear drop — which in a full
+    -- clear is a wall of text nobody asked for, arriving fastest exactly when
+    -- chat is busiest. It has already been narrowed once, from every quality
+    -- down to gear, and that was the wrong axis: the problem is not which
+    -- items it announces, it is that a recording tool has no business
+    -- narrating. Everything it would say is in the loot list a click away,
+    -- and it is still recorded either way.
+    --
+    -- Aimee's reason, which is the one that decides it: a raider who installs
+    -- this to be counted did not agree to a running commentary, and an addon
+    -- that talks too much gets uninstalled before it has enough data to be
+    -- worth anything.
     if ShowUsYourLootDB.settings.announceCaptures == nil then
-        ShowUsYourLootDB.settings.announceCaptures = true
+        ShowUsYourLootDB.settings.announceCaptures = false
     end
 
     -- Loot History is the primary source, so capture runs by default.
@@ -142,65 +158,6 @@ local function InitializeSettings()
     end
 end
 
--- A default that changed after people had already saved the old one.
---
--- InitializeSettings only fills in what is nil, which is right: a setting
--- somebody chose must survive an update. But countPersonalLoot was never
--- chosen by anybody. It defaulted on, and in the version that shipped it the
--- only way to reach it was a slash command nothing pointed at — so an install
--- with it on has it on because of the old default, not because of a decision.
---
--- Leaving it alone would mean the correction reached every install except the
--- ones it was written for. It counted almost entirely the addon owner's own
--- loot, which moved them to the bottom of their own due list.
---
--- Once, on the version bump, and said out loud. Changing a saved setting
--- quietly is its own kind of wrong, and this one changes a number they may
--- have been quoting to their raid.
-local function MigrateSettings(storedVersion)
-    -- Guarded against the version this migration was introduced at, NOT
-    -- against DATABASE_VERSION. Written the second way it re-fires on every
-    -- later bump: somebody who migrated to 4, decided they wanted the setting
-    -- after all and turned it back on would have it taken away again by the
-    -- next unrelated schema change. A migration runs once, at its own
-    -- boundary, and every one below owns its own number.
-    --
-    -- No stored version is a fresh install, not an upgrade: it should take
-    -- the new default from InitializeSettings without being told anything.
-    if type(storedVersion) ~= "number" or storedVersion >= 4 then
-        return false
-    end
-
-    if ShowUsYourLootDB.settings.countPersonalLoot ~= true then
-        return false
-    end
-
-    ShowUsYourLootDB.settings.countPersonalLoot = false
-
-    return true
-end
-
--- syncEnabled moved into the feature registry, and it is the one switch here
--- that decides whether the addon talks to other players.
---
--- Carried across rather than defaulted, in both directions. Somebody who
--- turned sync on chose that and should not find it off after an update;
--- somebody who never touched it should not find it on. The old setting is
--- left in place rather than deleted, so a downgrade still reads it.
-local function MigrateSyncFeature(storedVersion)
-    if type(storedVersion) ~= "number" or storedVersion >= 5 then
-        return
-    end
-
-    local wasEnabled = ShowUsYourLootDB.settings.syncEnabled == true
-
-    ShowUsYourLootDB.features = ShowUsYourLootDB.features or {}
-
-    if ShowUsYourLootDB.features.sync == nil then
-        ShowUsYourLootDB.features.sync = wasEnabled
-    end
-end
-
 local function MigrateOldLootDatabase()
     local oldLoot = ShowUsYourLootDB.loot
 
@@ -228,9 +185,12 @@ function SYL.DatabaseInitialize()
 
     InitializeSettings()
 
-    local settingChanged = MigrateSettings(storedVersion)
+    local settingChanged = SYL.Migrations.MigrateSettings(storedVersion)
 
-    MigrateSyncFeature(storedVersion)
+    local announceChanged =
+        SYL.Migrations.MigrateAnnounceDefault(storedVersion)
+
+    SYL.Migrations.MigrateSyncFeature(storedVersion)
 
     ShowUsYourLootDB.archives = ShowUsYourLootDB.archives or {}
     ShowUsYourLootDB.recentRecordIDs =
@@ -286,6 +246,14 @@ function SYL.DatabaseInitialize()
             .. "Your client only sees other people's loot while you are "
             .. "grouped with them, so counting it mostly counted yours. Turn "
             .. "it back on in Settings, or with /syl personalloot."
+        )
+    end
+
+    if announceChanged then
+        SYL:Print(
+            "Loot is no longer announced in chat as it is recorded. It is "
+            .. "still recorded — the addon just does not say so every time. "
+            .. "Turn it back on in Settings, or with /syl announce."
         )
     end
 end

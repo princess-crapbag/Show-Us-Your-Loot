@@ -20,9 +20,9 @@ an upgrade, who turned up, and what each boss has given.
 
 - **Repo:** https://github.com/princess-crapbag/Show-Us-Your-Loot (public)
 - **CurseForge:** project 1642383, live at **v0.2.0-alpha**
-- **`main` is 4 commits ahead of that tag.** Everything after it is on GitHub
+- **`main` is 5 commits ahead of that tag.** Everything after it is on GitHub
   and in Aimee's game, and has reached no user.
-- 83 Lua files in the .toc, 5 test suites in `tools/`.
+- 87 Lua files in the .toc, 5 test suites in `tools/`.
 
 **Aimee runs the addon from a symlink**, `Interface/AddOns/ShowUsYourLoot ->
 Desktop/ShowUsYourLoot`. Edits are live in game immediately; only a `/reload`
@@ -34,7 +34,9 @@ is needed. There is no build step for local testing.
 
 Three passes have now changed how attendance is counted, how droughts are
 measured, what counts as an upgrade, when things are recomputed and what is on
-screen. Not one of those changes has been watched happening with real data.
+screen. A fourth has changed *who is on the list at all* — it now defaults to
+the ten players marked as the raid team. Not one of those changes has been
+watched happening with real data.
 
 The next raid is the single highest-value event for this project. Running
 `/syl due` before and after that night will say more than another review pass
@@ -113,13 +115,17 @@ Everything except these is done.
 | F9 | Droptimizer import | Cannot be done in the addon — see below |
 | F10 | Re-take the screenshots | Waiting on UI work settling |
 
-**F7 is blocked earlier than it looks.** It is recorded as needing a
-public-read decision on Supabase RLS. It needs one before that: **the roster
-is not uploaded at all.** `Core/DataExport.lua` sends seasons — drops, chat
-loot, raid nights with their per-night rosters. The raid *team* — who is
-marked as raiding, their roles, the alt mappings — lives in
-`ShowUsYourLootDB.players`, which is account level and never leaves the
-machine. There is nothing on the server to link to.
+**F7 is blocked earlier than it looks, and not on the roster existing.** The
+raid team is real and in use — Aimee has ten players marked, and both the due
+list and the players window now default to showing only them. What is missing
+is on the *server* side: `Core/DataExport.lua` sends seasons — drops, chat
+loot, raid nights with their per-night rosters — and nothing else. Team
+membership, roles and alt mappings live in `ShowUsYourLootDB.players`, which
+is account level and never leaves the machine, so there is nothing on the
+server for a link to point at.
+
+(An earlier draft of this file said "the roster is not uploaded at all",
+which read as though no roster existed. It does. Only the upload does not.)
 
 Two decisions, in order. First: should team, role and alt data be uploaded at
 all? That is officers' judgements about people, which is a different category
@@ -231,6 +237,25 @@ The price is that a change needs a `/reload`, and the toggle says so.
 **D1–D6 were kept, not cut.** Five reviewers wanted them deleted; they became
 default-on toggles instead. "Some guilds do not want this" and "nobody wants
 this" are different claims and only the first was argued.
+
+**Lists of people default to the raid team, then the guild, then everyone.**
+`Core/Audience.lua`, shared by the due window, the players window and
+`/syl due`. The due list is built from raid-night rosters, which are whoever
+was in the group — a pug seen once and given nothing outranks a raider of two
+years, because one night without an upgrade is still a drought. The default is
+computed rather than written down: team only if a team is marked, guild only
+if in one. A correct default that opens an empty window is not a correct
+default. Team membership is per character but every list folds alts, so the
+test is "any of this person's characters", or marking somebody's raiding alt
+would hide them.
+
+**The addon does not talk unless asked.** `announceCaptures` defaults off and
+migrates existing installs off; the load banner in `Main.lua` is gone, since
+`ADDON_LOADED` prints a better line a moment later. It had already been
+narrowed once from every quality down to gear, which was the wrong axis: the
+problem was not which items it announced but that a recording tool was
+narrating at all. Everything it said is in the loot list, and it is recorded
+either way.
 
 ---
 

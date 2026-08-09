@@ -82,6 +82,14 @@ function SYL:DebugPrint(message)
     end
 end
 
--- Printed before saved settings exist, so this one goes to the default
--- frame regardless of the chosen output window.
-print("|cff33ff99Show Us Your Loot loaded!|r")
+-- Deliberately silent here.
+--
+-- This file used to print "Show Us Your Loot loaded!" the moment it ran, and
+-- ADDON_LOADED prints "Ready. …" a fraction of a second later — two lines at
+-- every single login, the first of which says nothing the second does not.
+-- The banner was also the only message that could not be moved into a chat
+-- window of its own, because it ran before the setting that chooses one
+-- existed.
+--
+-- If load fails, the absence of the Ready line says so just as well as a
+-- missing banner would. See Core/Events.lua.

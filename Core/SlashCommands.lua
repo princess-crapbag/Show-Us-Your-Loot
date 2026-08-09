@@ -275,6 +275,23 @@ COMMANDS.announce = function()
     )
 end
 
+-- Cycles raid team, guild, everyone. The same setting the due and players
+-- windows read, so changing it here moves both.
+COMMANDS.scope = function()
+    local scope = SYL.Audience.Cycle()
+
+    SYL:Print(
+        "Showing " .. SYL.Audience.Note(scope) .. "."
+    )
+
+    if scope == "team" and SYL.RaidTeam.Count() == 0 then
+        SYL:Write(
+            "  Nobody is marked as being on the team yet, so this will look "
+            .. "empty. Open the roster and tick the TEAM column."
+        )
+    end
+end
+
 COMMANDS.clear = function()
     local activeSeason = SYL.GetActiveSeason()
 

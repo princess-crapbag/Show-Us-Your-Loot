@@ -14,15 +14,21 @@
 -- RECENT RAIDERS ONLY by default: somebody who has not raided in a month is
 -- not due in a sense an officer can act on, and leaving them at the top is
 -- how a list stops being read. The toggle widens it.
+--
+-- RAID TEAM ONLY by default, for the same reason one step further out. This
+-- list is built from raid night rosters, and a raid night roster is whoever
+-- was in the group — pugs included. A pug seen once and given nothing sorts
+-- straight to the top, above raiders of two years, because the ranking is
+-- nights-without-an-upgrade and one night without is still a drought. The
+-- scope is shared with the players window and lives in Core/Audience.lua.
 
 local SYL = _G.ShowUsYourLoot
 local Theme = SYL.Theme
 local Widgets = SYL.Widgets
-local Utilities = SYL.Utilities
 
 -- 660, not 640: syl_check measures a row as the window less a 50px inset,
--- and the columns total 608. Shaving the status column to fit would truncate
--- the sentence that explains the number beside it.
+-- and UI/DueRows.lua's columns total 608. Shaving the status column to fit
+-- would truncate the sentence that explains the number beside it.
 local WINDOW_WIDTH = 660
 local ROW_HEIGHT = 24
 local DEFAULT_ROWS = 14
@@ -36,23 +42,16 @@ local LIST_TOP = 140
 -- disagree about who is on the list.
 local RECENT_NIGHTS = 3
 
-local COLUMNS = {
-    { key = "name", label = "PLAYER", width = 140, gap = 10 },
-    { key = "dry", label = "DRY NIGHTS", width = 84, gap = 8 },
-    { key = "nights", label = "RAIDED", width = 60, gap = 8 },
-    { key = "last", label = "LAST UPGRADE", width = 104, gap = 8 },
-    { key = "status", label = "", width = 178, gap = 8 },
-}
-
 local frame
 local rows = {}
 local offset = 0
 local recentOnly = true
 
-local columnOffset = Widgets.ColumnOffsets(COLUMNS)
-
 local Refresh
 
+-- Returns the list, and how many people were on it before the audience scope
+-- narrowed it. The second number is what tells an empty window whether there
+-- is no data or only nobody in scope, which need different sentences.
 local function Entries()
     local sessions = SYL.GetAllRaids()
 
@@ -64,110 +63,14 @@ local function Entries()
         entries = SYL.DueList.FilterRecent(entries, sessions, RECENT_NIGHTS)
     end
 
-    return SYL.DueList.Sort(entries)
-end
+    -- After the recency filter rather than before it, so widening the scope
+    -- and widening the date range stay two separate presses that each do one
+    -- thing.
+    local beforeScope = #entries
 
-local function CreateHeader(parent)
-    local header = CreateFrame("Frame", nil, parent)
+    entries = SYL.Audience.Filter(entries, SYL.Audience.Get())
 
-    header:SetHeight(22)
-    header:SetPoint("TOPLEFT", 16, -(LIST_TOP - 24))
-    header:SetPoint("TOPRIGHT", -34, -(LIST_TOP - 24))
-
-    header.background =
-        Theme.CreateSolidTexture(header, "headerBar", "BACKGROUND")
-
-    header.background:SetAllPoints()
-
-    local separator = Theme.CreateSeparator(header)
-    separator:SetPoint("BOTTOMLEFT", 0, 0)
-    separator:SetPoint("BOTTOMRIGHT", 0, 0)
-
-    for _, column in ipairs(COLUMNS) do
-        local label =
-            Theme.CreateText(header, Theme.sizes.columnHeader, "textMuted")
-
-        label:SetPoint("LEFT", columnOffset[column.key], 0)
-        label:SetWidth(column.width)
-        label:SetText(column.label)
-    end
-end
-
-local function CreateRow(parent, index)
-    -- A Button so a row opens that player's full history, the same way the
-    -- players window does. "Why are they top of this list" is the immediate
-    -- next question and the answer already has a window.
-    local row = CreateFrame("Button", nil, parent)
-
-    row:SetHeight(ROW_HEIGHT)
-    row:SetPoint("TOPLEFT", 16, -(LIST_TOP + (index - 1) * ROW_HEIGHT))
-    row:SetPoint("TOPRIGHT", -34, -(LIST_TOP + (index - 1) * ROW_HEIGHT))
-
-    row:SetScript("OnClick", function(self)
-        if self.entry then
-            SYL:OpenPlayerDetail(self.entry)
-        end
-    end)
-
-    if index % 2 == 0 then
-        row.stripe = Theme.CreateSolidTexture(row, "rowAlt", "BACKGROUND")
-        row.stripe:SetAllPoints()
-    end
-
-    row.cells = {}
-
-    for _, column in ipairs(COLUMNS) do
-        local text = Theme.CreateText(row, Theme.sizes.rowSmall, "textPrimary")
-
-        text:SetPoint("LEFT", columnOffset[column.key], 0)
-        text:SetWidth(column.width)
-
-        row.cells[column.key] = text
-    end
-
-    return row
-end
-
-local function FillRow(row, entry, rank)
-    local cells = row.cells
-
-    -- Read by the click handler. Rows are pooled, so this is set per refresh
-    -- rather than captured when the row was built.
-    row.entry = entry
-
-    cells.name:SetText(tostring(entry.name or "Unknown"))
-
-    local classColor = Theme.GetClassColor(entry.class)
-
-    if classColor then
-        Theme.SetCustomTextColor(
-            cells.name, classColor[1], classColor[2], classColor[3]
-        )
-    else
-        Theme.SetTextColor(cells.name, "textPrimary")
-    end
-
-    cells.dry:SetText(entry.nightsSinceUpgrade)
-
-    -- The top three are the answer to "who next", so they are the only ones
-    -- worth colouring. Everything below is context.
-    Theme.SetTextColor(
-        cells.dry, rank <= 3 and "accent" or "textPrimary"
-    )
-
-    cells.nights:SetText(entry.nights)
-    Theme.SetTextColor(cells.nights, "textMuted")
-
-    if entry.lastUpgradeAt then
-        cells.last:SetText(Utilities.FormatDateOnly(entry.lastUpgradeAt))
-        Theme.SetTextColor(cells.last, "textSecondary")
-    else
-        cells.last:SetText("never")
-        Theme.SetTextColor(cells.last, "textMuted")
-    end
-
-    cells.status:SetText(SYL.DueList.Describe(entry))
-    Theme.SetTextColor(cells.status, "textMuted")
+    return SYL.DueList.Sort(entries), beforeScope
 end
 
 -- What went into the numbers, said out loud, exactly as `/syl due` does. A
@@ -176,6 +79,7 @@ end
 local function DescribeBasis(total)
     local parts = {
         total .. (total == 1 and " raider" or " raiders"),
+        SYL.Audience.Note(),
     }
 
     if recentOnly then
@@ -225,7 +129,7 @@ Refresh = function()
         return
     end
 
-    local entries = Entries()
+    local entries, beforeScope = Entries()
     local total = #entries
     local maxOffset = math.max(0, total - visibleRows)
 
@@ -241,21 +145,33 @@ Refresh = function()
     frame.gapsText:SetShown(gaps ~= nil)
 
     frame.recentButton.label:SetText(
-        recentOnly and "Recent raiders" or "Everyone"
+        recentOnly and "Recent raiders" or "All dates"
     )
 
     Theme.SetTextColor(
         frame.recentButton.label, recentOnly and "accent" or "textPrimary"
     )
 
+    local scope = SYL.Audience.Get()
+
+    frame.audienceButton.label:SetText(SYL.Audience.Label(scope))
+
+    -- Accented while narrowed, plain at "Everyone", which is the same grammar
+    -- the recency button uses: coloured means something is being left out.
+    Theme.SetTextColor(
+        frame.audienceButton.label,
+        scope == "everyone" and "textPrimary" or "accent"
+    )
+
     for index = 1, visibleRows do
         local entry = entries[index + offset]
-        local row = rows[index] or CreateRow(frame, index)
+        local row = rows[index]
+            or SYL.DueRows.Create(frame, index, LIST_TOP, ROW_HEIGHT)
 
         rows[index] = row
 
         if entry then
-            FillRow(row, entry, index + offset)
+            SYL.DueRows.Fill(row, entry, index + offset)
             row:Show()
         else
             row:Hide()
@@ -269,7 +185,15 @@ Refresh = function()
     -- An empty list here has two very different causes and they need
     -- different answers: nothing recorded at all, or nobody recent enough.
     if total == 0 then
-        if #SYL.GetAllRaids() == 0 then
+        -- Three causes, three different fixes, and telling them apart is the
+        -- whole job of this message: nothing recorded, nobody recent, or
+        -- nobody in scope. Scope is checked first because it is the one the
+        -- addon just did to itself.
+        local scoped = SYL.Audience.ExplainEmpty(scope, beforeScope)
+
+        if scoped then
+            frame.emptyText:SetText(scoped)
+        elseif #SYL.GetAllRaids() == 0 then
             frame.emptyText:SetText(
                 "No raid nights recorded yet. Attendance is read from the "
                 .. "group at each pull, so this fills in from the next boss "
@@ -279,7 +203,7 @@ Refresh = function()
             frame.emptyText:SetText(
                 "Nobody has raided in the last "
                 .. RECENT_NIGHTS
-                .. " nights. Press Recent raiders to see everyone."
+                .. " nights. Press Recent raiders to see every date."
             )
         end
     end
@@ -338,17 +262,37 @@ local function CreateWindow()
 
     SYL.Tooltips.Attach(
         frame.recentButton,
-        "Recent raiders / Everyone",
+        "Recent raiders / All dates",
         "Recent means anyone in the last " .. RECENT_NIGHTS .. " raid "
         .. "nights. Somebody who has not raided in a month is not due in a "
         .. "sense you can act on, but they are still counted — press this to "
         .. "see them."
     )
 
-    CreateHeader(frame)
+    frame.audienceButton =
+        Theme.CreateButton(frame, 120, 20, "Raid team", function()
+            SYL.Audience.Cycle()
+            offset = 0
+
+            Refresh()
+        end)
+
+    frame.audienceButton:SetPoint("LEFT", frame.recentButton, "RIGHT", 8, 0)
+
+    SYL.Tooltips.Attach(
+        frame.audienceButton,
+        "Raid team / Guild / Everyone",
+        "This list is built from who was in the group at each pull, which "
+        .. "includes pugs. A pug seen once and given nothing ranks above a "
+        .. "raider of two years, because one night without an upgrade is "
+        .. "still a drought. Press to widen to the guild, then to everyone. "
+        .. "Shared with the players window."
+    )
+
+    SYL.DueRows.CreateHeader(frame, LIST_TOP)
 
     for index = 1, DEFAULT_ROWS do
-        rows[index] = CreateRow(frame, index)
+        rows[index] = SYL.DueRows.Create(frame, index, LIST_TOP, ROW_HEIGHT)
     end
 
     frame.emptyText = Theme.CreateText(frame, Theme.sizes.row, "textMuted")

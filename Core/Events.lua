@@ -105,13 +105,28 @@ local function OnEncounterLootReceived(
     )
 end
 
+-- GUILD_ROSTER_UPDATE fires on every roster tick and on every member logging
+-- in or out, which in a busy guild is constantly. Printing the count each time
+-- buried every other debug line under the same sentence repeating, so debug
+-- mode was unusable for the one thing it exists for.
+--
+-- Only a change is worth a line. The refresh itself still runs every time,
+-- because that is the point of the event.
+local lastGuildCount
+
 local function OnGuildRosterUpdate()
     local count = SYL.Guild.Refresh()
 
     -- The roster window builds from this, and caches what it built.
     SYL.RosterData.Invalidate()
 
-    SYL:DebugPrint("Guild roster cached: " .. tostring(count) .. " members.")
+    if count ~= lastGuildCount then
+        lastGuildCount = count
+
+        SYL:DebugPrint(
+            "Guild roster cached: " .. tostring(count) .. " members."
+        )
+    end
 end
 
 -- Attendance is not a loot feature and must not be switched off by one.

@@ -204,15 +204,29 @@ function Reports.Due(limit)
     )
 
     entries = SYL.DueList.FilterRecent(entries, sessions)
+
+    -- The same scope the due window is showing, or the two disagree about who
+    -- is on the list and there is no way to tell which one is lying.
+    local scope = SYL.Audience.Get()
+    local beforeScope = #entries
+
+    entries = SYL.Audience.Filter(entries, scope)
     entries = SYL.DueList.Sort(entries)
 
     if #entries == 0 then
-        SYL:Print("Nobody from the last few nights to rank yet.")
+        SYL:Print(
+            SYL.Audience.ExplainEmpty(scope, beforeScope)
+            or "Nobody from the last few nights to rank yet."
+        )
 
         return
     end
 
-    SYL:Print("Longest without an upgrade — transmog and greed do not count:")
+    SYL:Print(
+        "Longest without an upgrade — "
+        .. SYL.Audience.Note(scope)
+        .. ", transmog and greed do not count:"
+    )
 
     for index = 1, math.min(limit or 10, #entries) do
         local entry = entries[index]

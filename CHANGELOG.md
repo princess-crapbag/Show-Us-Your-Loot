@@ -24,9 +24,29 @@ this says what you will notice.
   side by side. Drag a window and the addon stops rearranging that one.
 - **Officer sync can send messages longer than 255 bytes.** Groundwork only:
   what it sends is unchanged, still drop headers and never roll lists.
+- **Show the raid team, the guild, or everyone.** A button on the due list and
+  the players window switches between the three, and `/syl scope` does the
+  same from chat. Both windows share the one setting.
 
 ### Changed
 
+- **The due list and the players window now open on your raid team.** They
+  used to open on everyone the addon had ever seen, which includes anybody
+  you pugged a raid or a key with — and somebody seen once who won nothing
+  ranks *above* a raider of two years, because one night without an upgrade
+  is still a drought. If nobody is marked as being on the team they open on
+  your guild instead, and if you are not in a guild, on everyone. Mark the
+  team in the roster window's TEAM column.
+- **Loot is no longer announced in chat as it is recorded.** It is still
+  recorded — the addon just does not say so every time, and a full clear no
+  longer fills your chat with lines nobody asked for. Turn it back on in
+  Settings or with `/syl announce`. Existing installs are switched off once,
+  with a message saying so.
+- **"Guild only" on the players window is now part of the scope button**, and
+  "Whole guild" is called **Include non-raiders**, which is what it does: it
+  adds guild members with no recorded history to the list.
+- **One line at login instead of two.** "Show Us Your Loot loaded!" said
+  nothing the "Ready." line a moment later does not.
 - **The Refresh button is gone.** Every window already redraws when it opens
   and whenever anything changes, so it was a button that did nothing you
   could see.

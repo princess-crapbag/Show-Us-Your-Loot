@@ -18,6 +18,7 @@ Core\Serializer.lua
 Core\Guild.lua
 Core\ItemQuality.lua
 Core\Features.lua
+Core\Migrations.lua
 Core\Database.lua
 Core\Seasons.lua
 Core\Players.lua
@@ -38,6 +39,7 @@ Core\PlayerHistory.lua
 Core\EncounterJournal.lua
 Core\LootTable.lua
 Core\RaidTeam.lua
+Core\Audience.lua
 Core\RosterData.lua
 Core\RaidBuffs.lua
 Core\BossStats.lua
@@ -79,9 +81,11 @@ UI\MainWindow.lua
 UI\DropDetailWindow.lua
 UI\CommandMenu.lua
 UI\MinimapButton.lua
+UI\PlayerRows.lua
 UI\PlayerWindow.lua
 UI\PlayerDetailWindow.lua
 UI\RaidWindow.lua
+UI\DueRows.lua
 UI\DueWindow.lua
 UI\RosterRows.lua
 UI\RosterControls.lua

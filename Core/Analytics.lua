@@ -286,18 +286,6 @@ function Analytics.FilterEmptyHanded(stats)
     return empty
 end
 
-function Analytics.FilterGuildOnly(stats)
-    local members = {}
-
-    for _, entry in ipairs(stats) do
-        if entry.inGuild then
-            table.insert(members, entry)
-        end
-    end
-
-    return members
-end
-
 local COMPARATORS = {
     name = function(a, b) return tostring(a.name) < tostring(b.name) end,
     rank = function(a, b)
