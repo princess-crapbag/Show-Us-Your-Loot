@@ -9,7 +9,8 @@
 
 local SYL = _G.ShowUsYourLoot
 
-local DATABASE_VERSION = 3
+-- 4: countPersonalLoot's default flipped to off. See MigrateSettings.
+local DATABASE_VERSION = 4
 
 local function GenerateSeasonID()
     return "season-" .. date("%Y%m%d-%H%M%S")
@@ -140,6 +141,37 @@ local function InitializeSettings()
     end
 end
 
+-- A default that changed after people had already saved the old one.
+--
+-- InitializeSettings only fills in what is nil, which is right: a setting
+-- somebody chose must survive an update. But countPersonalLoot was never
+-- chosen by anybody. It defaulted on, and in the version that shipped it the
+-- only way to reach it was a slash command nothing pointed at — so an install
+-- with it on has it on because of the old default, not because of a decision.
+--
+-- Leaving it alone would mean the correction reached every install except the
+-- ones it was written for. It counted almost entirely the addon owner's own
+-- loot, which moved them to the bottom of their own due list.
+--
+-- Once, on the version bump, and said out loud. Changing a saved setting
+-- quietly is its own kind of wrong, and this one changes a number they may
+-- have been quoting to their raid.
+local function MigrateSettings(storedVersion)
+    -- No stored version is a fresh install, not an upgrade: it should take
+    -- the new default from InitializeSettings without being told anything.
+    if type(storedVersion) ~= "number" or storedVersion >= DATABASE_VERSION then
+        return false
+    end
+
+    if ShowUsYourLootDB.settings.countPersonalLoot ~= true then
+        return false
+    end
+
+    ShowUsYourLootDB.settings.countPersonalLoot = false
+
+    return true
+end
+
 local function MigrateOldLootDatabase()
     local oldLoot = ShowUsYourLootDB.loot
 
@@ -161,7 +193,13 @@ end
 function SYL.DatabaseInitialize()
     ShowUsYourLootDB = ShowUsYourLootDB or {}
 
+    -- Read before anything writes it, since the migration below is the only
+    -- thing that can tell an upgrade from a first run.
+    local storedVersion = ShowUsYourLootDB.databaseVersion
+
     InitializeSettings()
+
+    local settingChanged = MigrateSettings(storedVersion)
 
     ShowUsYourLootDB.archives = ShowUsYourLootDB.archives or {}
     ShowUsYourLootDB.recentRecordIDs =
@@ -208,6 +246,15 @@ function SYL.DatabaseInitialize()
         SYL:Print(
             "Existing loot was moved into the active season: "
             .. ShowUsYourLootDB.activeSeason.name
+        )
+    end
+
+    if settingChanged then
+        SYL:Print(
+            "Gear taken without a roll no longer counts towards droughts. "
+            .. "Your client only sees other people's loot while you are "
+            .. "grouped with them, so counting it mostly counted yours. Turn "
+            .. "it back on in Settings, or with /syl personalloot."
         )
     end
 end

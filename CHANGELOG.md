@@ -48,10 +48,12 @@ corrected when it is read.
   Your drought reset every week and nobody else's did, which quietly moved you
   to the bottom of your own due list.
 
-  If you had it on before this update it stays on, because it is your setting
-  to make. It is now in **Settings**, and when it is on only gear received
-  while you were in a group is counted, which keeps the comparison even.
-  `/syl due` says how many records were left out.
+  **If you were running the previous version this is turned off for you on
+  update**, and the addon says so when it does. It was never reachable from
+  the interface before now, so nobody chose it — it was on because it
+  defaulted on. It is in **Settings** from this version, and when it is on
+  only gear received while you were in a group is counted, which keeps the
+  comparison even. `/syl due` says how many records were left out.
 - **The ROLLED ON column is now ELIGIBLE**, because that is what it counts.
   Appearing on a roll list is not the same as rolling — a pass puts you on it
   too — and it is a number an officer would otherwise quote in a loot dispute
