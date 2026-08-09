@@ -100,22 +100,77 @@ not one of them has been watched happening.
 
 ## 3. Aimee's outstanding requests
 
-She will pick from §4 too. These are hers, unprompted.
+**F1-F6 and F8 are done, 2026-08-09.** D7, D8 and D9 were taken as cuts at
+the same time; D1-D6 are keeps and became feature toggles, which is what F6
+was for.
 
-| # | Item | Notes |
+| # | Item | State |
 |---|---|---|
-| F1 | Hide **all copies** of an item, or choose one vs all | Hiding one Dawn Crystal leaves the other two |
-| F2 | **Delete selected**, or an "ignore" flag excluding a record from every count | For when capture is wrong |
-| F3 | **Windows should not overlap** when opened | See C3 — it is worse than overlap |
-| F4 | **Sort the main list by column** — Player, Item, Where | `SortHeader.lua` exists and is reusable |
-| F5 | **`/syl output` does not persist** the chosen chat window | Setting is stored but not reapplied on load |
-| F6 | **Modular enable/disable, ElvUI-style** | Her explicit ask. See §5 |
-| F7 | **Roster shareable as a link** outside the addon | Needs a public-read decision on Supabase RLS |
-| F8 | **Chunked sync** | Blocks NOTES Phases 2/3/5/6. 250-byte cap in Sync.lua |
-| F9 | **Droptimizer import** | Verify Raidbots exposes report JSON before designing |
-| F10 | **Re-take screenshot 4** | Shows the old Players window, pre-M+ column |
+| F1 | Hide all copies of an item | Done — Shift on Hide or Ignore |
+| F2 | Delete selected, or an ignore flag | Done as **ignore**, not delete — see below |
+| F3 | Windows should not overlap | Done — laid out as a set, not one at a time |
+| F4 | Sort the main list by column | Done |
+| F5 | `/syl output` does not persist | Done — it stored an index, not a window |
+| F6 | Modular enable/disable | Done — `Core/Features.lua`, five toggles |
+| F7 | Roster shareable as a link | **Blocked, and not on what §4 said** |
+| F8 | Chunked sync | Done as transport only — see below |
+| F9 | Droptimizer import | **Cannot be done in the addon** |
+| F10 | Re-take screenshot 4 | Aimee is doing this |
 
----
+**F2 is an ignore flag rather than a delete.** `excludedFromAnalytics` already
+existed on every record and was already honoured everywhere; nothing had been
+able to set it. Ignore does everything a delete would do to the numbers and
+stays reversible, and the addon's one promise about your data is that it does
+not remove things. A hard delete can be added on top if it is wanted.
+
+**F8 is the transport and nothing else.** Payloads of any size now split and
+reassemble, which is what unblocks NOTES phases 2/3/5/6. What is actually sent
+has deliberately not changed: still drop headers, still no roll lists. Sending
+more is a decision to take on purpose rather than inherit from a roomier pipe.
+
+### F7 is blocked on something upstream of the RLS question
+
+§4 said this needs "a public-read decision on Supabase RLS". It needs one
+before that: **the roster is not uploaded at all.** `Core/DataExport.lua`
+exports seasons — drops, chat loot and raid nights with their per-night
+rosters. The raid *team* — who is marked as raiding, their roles, the alt
+mappings — lives in `ShowUsYourLootDB.players`, which is account level and
+never leaves the machine. There is nothing on the server to share a link to.
+
+So it is two decisions, in order:
+
+1. **Should team, role and alt data be uploaded?** That is a different
+   category from loot history: it is officers' judgements about people, not a
+   record of what dropped.
+2. **Then**, should a link make it readable without a login? The clean
+   mechanism is the one `syl_upload` already uses — a SECURITY DEFINER
+   function keyed on a share token, so the tables are never opened to `anon`
+   and revoking is deleting a token. That is a much better shape than a public
+   read policy.
+
+Not built, because both are Aimee's calls and the first one has not been made.
+
+### F9 cannot be an in-game import
+
+**WoW addons cannot make HTTP requests.** There is no API for it, so the addon
+cannot fetch a Raidbots report however the endpoint is shaped. That is the
+whole answer and it does not depend on verification.
+
+For completeness: `https://www.raidbots.com/reports/<id>/data.json` answers
+**403**, not 404, which suggests the route exists and is behind bot
+protection; `simbot/report/<id>` returns the app shell for any id, so it
+proves nothing. Neither could be confirmed properly from here.
+
+That leaves two shapes, and both are somebody's decision rather than a fix:
+
+- **Paste into the addon.** A Droptimizer report is hundreds of kilobytes.
+  Pasting that into a WoW edit box is not realistic, and a trimmed paste means
+  asking the user to do the trimming.
+- **Fetch it outside the game.** `tools/syl_upload.py` already runs outside
+  WoW and already talks to Supabase. It could fetch a report by id and the web
+  dashboard could join it against the loot history. This is the only version
+  that works — and it makes F9 a web feature, which is worth knowing before
+  starting it, given D4.
 
 ## 4. Reviewer findings, triaged
 

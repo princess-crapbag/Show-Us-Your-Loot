@@ -30,6 +30,7 @@ Core\LootHistoryAPI.lua
 Core\LootHistorySnapshot.lua
 Core\LootHistoryStore.lua
 Core\LootHistory.lua
+Core\SyncTransport.lua
 Core\Sync.lua
 Core\Events.lua
 Core\Analytics.lua

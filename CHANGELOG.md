@@ -22,6 +22,8 @@ this says what you will notice.
 - **Windows no longer open on top of each other.** They are laid out as a set
   and centred as a group, so opening the loot list and the due list puts them
   side by side. Drag a window and the addon stops rearranging that one.
+- **Officer sync can send messages longer than 255 bytes.** Groundwork only:
+  what it sends is unchanged, still drop headers and never roll lists.
 
 ### Changed
 
