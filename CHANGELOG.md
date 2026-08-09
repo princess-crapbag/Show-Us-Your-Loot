@@ -57,6 +57,13 @@ this says what you will notice.
 
 ### Fixed
 
+- **A Timewalking raid could wipe somebody's drought.** Raid nights have never
+  counted Timewalking, Story, Follower or Event difficulties — but *wins* were
+  counted from everywhere, so a Timewalking raid on a Tuesday reset the clock
+  without adding a night. A raider two months dry showed zero dry nights and
+  dropped off the list the list exists to build. Upgrades now count only from
+  content that would have counted as a night. Ordinary LFR is unaffected: it
+  is group loot with real rolls and counts on both sides, as it always did.
 - **The chosen output window was remembered by position, not by identity.**
   Deleting any chat window shifts the ones below it, so the addon started
   writing into whichever window had moved into that slot. It remembers the

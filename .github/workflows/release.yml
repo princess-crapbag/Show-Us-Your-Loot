@@ -44,18 +44,21 @@ jobs:
       - name: Check the Lua before shipping it
         run: python tools/syl_check.py
 
-      # A syntax error in any one file means the game refuses to load it and
-      # the addon then fails somewhere else entirely. syl_check matches blocks
-      # and catches most of it; this actually parses every file, and also
-      # catches a file that was added but never listed in the .toc.
+      # The test suites, all of which run the shipped Lua rather than a copy
+      # of it: every file in the .toc parses, the migrations do the right
+      # thing to every state an install can be in, and a drought is only
+      # reset by content that counts as a raid night.
       #
       # lupa ships manylinux wheels, so this is a download rather than a
-      # build. If it ever starts costing releases, delete both steps — the
-      # test still runs locally.
-      - name: Parse every file listed in the .toc
+      # build. If it ever starts costing releases, drop both steps — the
+      # tests still run locally.
+      - name: Run the tests
         run: |
           python -m pip install --quiet lupa
-          python tools/test_syntax.py
+          for suite in tools/test_*.py; do
+            echo "--- $suite"
+            python "$suite" || exit 1
+          done
 
       - name: Package and upload
         uses: BigWigsMods/packager@master

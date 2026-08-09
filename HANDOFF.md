@@ -22,7 +22,8 @@ an upgrade, who turned up, and what each boss has given.
 - **CurseForge:** project 1642383, live at **v0.2.0-alpha**
 - **`main` is 5 commits ahead of that tag.** Everything after it is on GitHub
   and in Aimee's game, and has reached no user.
-- 87 Lua files in the .toc, 5 test suites in `tools/`.
+- 87 Lua files in the .toc, 7 test suites in `tools/`, all run before a
+  release by `.github/workflows/release.yml`.
 
 **Aimee runs the addon from a symlink**, `Interface/AddOns/ShowUsYourLoot ->
 Desktop/ShowUsYourLoot`. Edits are live in game immediately; only a `/reload`
@@ -163,6 +164,23 @@ They are tracked in git now and excluded from the zip in `.pkgmeta`. They are
 uploaded to the CurseForge page by hand, so the repo never pushes them — but
 the live project page currently shows v0.1.0-alpha's interface beside a
 v0.2.0-alpha download.
+
+### The same asymmetry still exists on the personal-loot path
+
+`Core/DueList.lua` now only lets an upgrade reset a clock if it came from
+content that counts as a raid night. `MergePersonalLoot`, in the same file,
+does not: `Core/PersonalLoot.lua` classifies with `GetContentType` and accepts
+**raid, dungeon and scenario alike**, so a delve, a Mythic+ chest or a
+Timewalking vault item still resets a raid drought.
+
+That is arguably deliberate — the setting is called "gear taken without a roll
+counts", and a vault item is real gear however it arrived. It is also
+inconsistent with the drops path as of this commit, and the two feed the same
+number. Decide it deliberately rather than let the discrepancy stand by
+accident.
+
+It is **off by default** (`countPersonalLoot`), so nobody is affected until
+they turn it on. That is the only reason this is a note rather than a fix.
 
 ### Strategy — none of this is started
 

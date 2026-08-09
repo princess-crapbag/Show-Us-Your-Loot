@@ -36,12 +36,45 @@ SYL.DueList = DueList
 -- of Blizzard's numbering.
 local IsUpgrade = SYL.LootHistoryAPI.IsUpgradeState
 
+-- Whether a win from this drop is allowed to reset somebody's clock.
+--
+-- THE SUM HAD THE EXCLUSION ON ONE SIDE ONLY, and it silently wiped
+-- droughts. Nights come from RaidSession.RaidsOnly, which drops Timewalking
+-- raids, Story mode, Timewalking LFR, Event and Follower difficulties — see
+-- NOT_A_RAID_NIGHT in Core/Utilities.lua. Upgrades came from every drop ever
+-- recorded, with no such test.
+--
+-- So a Timewalking raid — group loot, real Need rolls, epic gear, and
+-- explicitly not a raid night — set lastUpgradeAt to that evening for
+-- everyone who won. The comparison below is `startedAt > lastUpgradeAt`, so
+-- every genuine raid night before it then stopped counting, and a raider who
+-- had gone two months without an upgrade showed zero dry nights on the
+-- strength of a Timewalking win. The list exists to surface exactly that
+-- person, and this hid them.
+--
+-- The rule is now the same on both sides: an upgrade resets your clock only
+-- if it came from content that would have counted as a night.
+local function CountsTowardsDrought(drop)
+    -- Records written before the location was stored carry neither field.
+    -- Treating unknown as "not a raid" would erase the upgrade history of
+    -- everything captured before that, so unknown counts. The drops list is
+    -- group loot only and retail dungeons award personal loot, so nothing
+    -- much else can be in there anyway.
+    if not drop.instanceType and not drop.difficultyID then
+        return true
+    end
+
+    return SYL.Utilities.IsRaidContent(
+        drop.instanceType, drop.difficultyID
+    )
+end
+
 -- When each player last won something that counts as gear.
 local function LastUpgradeByPlayer(drops)
     local lastUpgrade = {}
 
     for _, drop in ipairs(drops or {}) do
-        if not drop.excludedFromAnalytics then
+        if not drop.excludedFromAnalytics and CountsTowardsDrought(drop) then
             -- Prefer the roll list, which names the winner and their state
             -- together. Synced records have no roll list, so fall back to the
             -- header the sync does carry.
