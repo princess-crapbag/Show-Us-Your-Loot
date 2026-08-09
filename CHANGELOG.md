@@ -3,139 +3,120 @@
 What changed, for the person installing it. The commit history explains why;
 this says what you will notice.
 
-## Unreleased
+## 0.2.0-alpha
+
+A large update. Several of these change the numbers the addon reports, so
+they are worth reading before your next raid night. Nothing is deleted by any
+of it — history recorded under the old behaviour stays, and the counting is
+corrected when it is read.
 
 ### Added
 
-- **Gear you were given, not just gear you rolled for.** Retail hands out a
-  lot of loot with no roll at all: the Great Vault, the catalyst, and every
-  dungeon and Mythic+ item, which are personal loot. None of it went through
-  a group-loot roll, so none of it was in the drop history. Press **Gear
-  only** on the Chat Loot tab to see it.
-
-  It does **not** count towards the due list unless you turn it on with `/syl
-  personalloot`, and it is worth knowing why before you do. Your client only
-  ever sees other people's loot while you are grouped with them — nobody
-  claims their vault standing next to you — so with it on, the only vault
-  claims in the database are your own. Your drought resets every week and
-  nobody else's does, and you sink to the bottom of your own list. With it
-  on, only gear received while you were in a group is counted, which keeps
-  the comparison even, and `/syl due` says how many items were left out.
-- **Raid loot and dungeon loot can be told apart.** A button cycles between
-  all content, raids only and dungeons only. It works on history recorded
-  before this, because the difficulty already says which is which even where
-  nothing else did.
+- **A window for who is due.** The question this addon exists to answer was
+  chat-only. There is now a **Due** button, first in the footer: dry nights,
+  nights attended, when each raider last took an upgrade, and above the list a
+  line saying what went into those numbers. Click a row for that raider's
+  whole history.
 - **A raid roster.** Everyone in the guild, with class, rank, nights raided
   and Mythic+ score, and — the point of it — which raid buffs nobody covers.
   Tick names to add them to the raid team, set what they play, or map several
   at once as alts of one main. Team and role are per character, because you
   bring a character rather than a person.
-- **Click a player** in the players window for their whole record: every drop
-  they could have had, what they chose, and what they got.
-
-- **A window for who is due.** The headline question was chat-only: ten lines
-  from `/syl due`, gone as soon as anyone spoke. There is now a Due button,
-  first in the footer. It shows the dry-night count, how many nights each
-  raider has attended, when they last took an upgrade, and — above the list —
-  what went into those numbers, including how many records were left out and
-  why. Clicking a row opens that raider's whole history.
-- **Controls explain themselves.** Roughly two dozen buttons had no
-  explanation anywhere: not on screen, not in the README, not in `/syl help`.
-  "All content", "Gear only" and "All seasons" all narrow or widen the same
-  list in different ways, and the only way to find out which was to press one
-  and watch what changed. They all have tooltips now.
-- **Settings has the setting that changes the headline number.** Counting
-  gear taken without a roll was reachable only through a slash command.
+- **Gear you were given, not just gear you rolled for.** A lot of retail
+  gearing never touches a roll: the Great Vault, the catalyst, and every
+  dungeon and Mythic+ item. Press **Gear only** to see it. Whether it counts
+  towards droughts is a setting — see *Changed* below.
+- **Raid loot and dungeon loot can be told apart.** A button cycles between
+  all content, raids only and dungeons only. It works on history recorded
+  before this update.
+- **Item level is recorded** on every drop from now on, and shown in the drop
+  detail window.
+- **Tooltips on the controls.** Roughly two dozen buttons had no explanation
+  anywhere. "All content", "Gear only" and "All seasons" all narrow or widen
+  the same list in different ways, and the only way to find out which was to
+  press one and see what changed.
+- **Empty lists say why they are empty**, including the thing nobody could
+  have known: recording starts when you install the addon and cannot be
+  backfilled.
 
 ### Changed
 
-- **Archive Season moved to the Archives tab** and is no longer the loudest
-  button in the window. It ends the season, which is a once-a-tier action,
-  and it was sitting top right on the loot list where a new user would find
-  it first.
-- **`/syl help` shows the ten commands you would actually use**, with
-  `/syl help all` for the rest. A typo used to print all twenty-nine.
-- **Windows raise instead of hiding when they are buried.** Every window
-  opens at the same size in the same place, so a footer button could "toggle"
-  something already open and completely covered — which hid it, changing
-  nothing you could see. They also cascade now instead of stacking exactly.
-- **The addon is faster with a season's worth of history.** The loot list was
-  rebuilt up to five times per redraw; the roster was rebuilt on every
-  keystroke in its search box; the item tooltip re-scanned and re-sorted
-  every drop you own on every hover, including mousing across your bags. All
-  three are built once and kept until something changes them.
+- **Gear taken without a roll no longer counts towards droughts by default.**
+  This is the most important line here. Your client only ever sees other
+  people's loot while you are grouped with them — nobody claims their vault
+  standing next to you — so counting it counted almost entirely *your* gear.
+  Your drought reset every week and nobody else's did, which quietly moved you
+  to the bottom of your own due list.
+
+  If you had it on before this update it stays on, because it is your setting
+  to make. It is now in **Settings**, and when it is on only gear received
+  while you were in a group is counted, which keeps the comparison even.
+  `/syl due` says how many records were left out.
+- **The ROLLED ON column is now ELIGIBLE**, because that is what it counts.
+  Appearing on a roll list is not the same as rolling — a pass puts you on it
+  too — and it is a number an officer would otherwise quote in a loot dispute
+  and be wrong.
 - **Only gear is announced in chat.** Every quality is still recorded, but a
   Mythic+ run no longer repeats every grey and reagent back at you.
+- **Archive Season moved to the Archives tab** and is quieter. It ends the
+  season, which is a once-a-tier action, and it was sitting top right on the
+  loot list where a new user finds it first.
+- **`/syl help` shows the ten commands you would actually use**, with
+  `/syl help all` for the rest. A typo used to print all twenty-nine.
+- **Windows raise instead of hiding when they are buried**, and no longer open
+  exactly on top of each other.
+- **Faster with a season of history**, most noticeably when scrolling the loot
+  list, typing in the roster search, and hovering items in your bags.
 
 ### Fixed
 
 - **The filter dropdowns did not open.** Player, Item, Location and Win type
-  all threw an error the moment you clicked them, from the moment they gained
-  their own search box. Nothing in the window was filterable in the meantime.
-- **Hovering a dungeon boss froze the game for seconds.** It read the
-  Encounter Journal looking for a boss that cannot be in it, gave up, and did
-  the same thing again the next time your mouse crossed the row.
-- **An open dropdown swallowed every right-click in the game.**
-- **Officer sync sent five messages back to back** when a boss dropped five
-  items, in the busiest second of a raid, which is exactly when the server
-  throws them away. They are queued now.
-- **The addon only worked in English.** Loot lines were matched against the
-  literal English "receives loot:", so on any other client nothing matched and
-  every record was filed under one invented player called "Unknown". The
-  patterns are now built from the client's own strings, so it reads Korean and
-  Russian as well as it reads English. A line it genuinely cannot read is
-  skipped rather than credited to nobody.
+  all threw an error when clicked, so nothing in the window could be filtered.
+- **The addon only worked in English.** Loot lines were matched against
+  English text, so on any other client every record was filed under one
+  invented player called "Unknown". Patterns now come from the client's own
+  strings.
 - **A raid night that ran two difficulties counted as two nights.** Clearing
   Heroic and then pulling Mythic on the same evening put everyone who stayed
   for both a night ahead of everyone who came to one, on the only number the
-  due list ranks by. The record still shows both runs; attendance counts the
-  night once.
-- **Attendance stopped completely if loot capture was off.** `/syl capture`
-  off also silenced raid nights, rosters and the due list, with nothing said.
-  Attendance no longer depends on loot capture.
+  due list ranks by.
+- **Dungeons were being recorded as raid nights**, so every Mythic+ run added
+  a five-person raid night to attendance.
+- **A solo Story clear opened a one-person raid night.** Story, Follower,
+  Event and Timewalking difficulties are recorded and are not raid nights.
+- **Attendance stopped completely if loot capture was off**, with nothing
+  said. It no longer depends on loot capture.
 - **A `/reload` mid-raid could record that boss's drops twice**, which reads
-  as somebody winning the same item twice. A pull now keeps its identity
-  across a reload.
-- **Crafting counted as gear you received.** Making a piece for somebody else
-  prints down the loot channel, so a guild's crafter looked permanently
-  showered in loot and never appeared in the due list.
+  as somebody winning the same item twice.
+- **Crafting counted as gear you received**, so a guild's crafter looked
+  permanently showered in loot and never appeared in the due list.
 - **A world blue reset a Mythic raider's drought**, and so did a guild tabard.
   Only epics count now, and cosmetic slots never did belong.
-- **Guild rank could change between refreshes** for anyone with alts, because
-  it was read off whichever character came up first. It is the main's rank.
-- **Roster ticks were being dropped.** Ticking three people found one at a
-  time by searching, then pressing a bulk action, applied it only to whoever
-  happened to be on screen — and cleared the rest without saying so.
 - **Roles could not be changed for anyone the game called damage.** Clicking
   ROLE did nothing at all, permanently, for most of a raid group.
+- **Roster ticks were being dropped.** Ticking three people found one at a
+  time by searching, then pressing a bulk action, applied it to whoever
+  happened to be on screen and cleared the rest without saying so.
+- **Guild rank could change between refreshes** for anyone with alts. It is
+  the main's rank.
 - **Guild members who had never raided had no class**, so most of a large
-  guild showed up in the roster with no colour and no class.
+  guild showed up in the roster with no colour.
 - **Alts declared in a public note were missed** if the character had an
-  officer note of any kind — a trial date or a spec reminder was enough. Both
-  notes are read now.
+  officer note of any kind — a trial date was enough. Both notes are read now.
 - **Delves were filed as world loot**, alongside a quest reward from a city.
-- **A solo Story clear opened a one-person raid night.** Story, Follower,
-  Event and Timewalking are recorded, and are not raid nights.
+- **The same person appeared twice in the Player filter**, once per capture
+  path, so filtering to them hid half their loot.
 - **Item names and class colours went grey** everywhere except the main list
   after changing the theme, until a `/reload`.
 - **Shift-clicking a chat-captured row pasted a broken link** into chat.
-- **The same person appeared twice in the Player filter**, once per capture
-  path, so filtering to them hid half their loot.
-- **Clicking a column header that could not sort** re-sorted by name and then
-  drew the arrow over the column you clicked.
-- **Open dropdowns swallowed every right-click in the game**, and both the
+- **Hovering a dungeon boss froze the game for seconds.**
+- **An open dropdown swallowed every right-click in the game**, and both the
   command menu and the filter dropdowns were left floating over the world
-  when the window they belonged to closed.
-- **Item level is recorded** on every drop from now on, so a Champion piece
-  and a Myth piece are no longer indistinguishable. It is shown on the drop
-  detail window; what the fairness maths does with it is still an open
-  question and has not been changed.
-- **Dungeons were being recorded as raid nights.** Any instance opened one, so
-  every Mythic+ run added a five-person raid night to attendance. The due list
-  ranks by nights attended, so a guild that runs keys together was partly
-  ranked on dungeons. New nights are raids only, and existing dungeon
-  sessions are left in the database but no longer counted — a counting bug is
-  not a reason to delete history.
+  after the window they belonged to closed.
+- **Clicking a column header that could not sort** re-sorted by name and drew
+  the arrow over the column you clicked.
+- **Officer sync sent five messages back to back** when a boss dropped five
+  items, in the busiest second of a raid. They are queued now.
 
 ## 0.1.0-alpha
 
