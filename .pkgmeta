@@ -9,7 +9,9 @@
 #
 #   web/          the Supabase dashboard. A web page, not an addon, and it is
 #                 the half that talks to a server. Nothing in game reads it.
-#   tools/        the uploader and the static checker. Developer tooling.
+#   tools/        the uploader, the static checker and the tests.
+#   screenshots/  the CurseForge project page images. Tracked in git, and two
+#                 megabytes that no player needs downloading.
 #   .claude/      editor state.
 #   the notes     working documents, not user documentation.
 #
@@ -43,6 +45,12 @@ ignore:
     - HANDOFF.md
     - SCREENSHOTS.md
     - .pkgmeta
+
+    # The CurseForge screenshots. Tracked in git so they are not one disk
+    # failure from being gone, and named here because they are two megabytes
+    # of PNG that belong on the project page rather than in every user's
+    # AddOns folder. This line is the whole reason they can be committed.
+    - screenshots
 
     # Named even though it is gitignored, so it cannot ship. A CI build works
     # from a clean checkout and would never see it, but packaging by hand
