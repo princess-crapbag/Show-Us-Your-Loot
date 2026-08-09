@@ -182,8 +182,6 @@ Refresh = function()
         rows[index]:Hide()
     end
 
-    -- An empty list here has two very different causes and they need
-    -- different answers: nothing recorded at all, or nobody recent enough.
     if total == 0 then
         -- Three causes, three different fixes, and telling them apart is the
         -- whole job of this message: nothing recorded, nobody recent, or
