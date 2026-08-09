@@ -201,13 +201,9 @@ end
 --------------------------------------------------------------------------
 
 function SYL:OpenDeveloperWindow()
-    local window = CreateDeveloperWindow()
-
-    if window:IsShown() then
-        window:Hide()
-    else
-        window:Show()
-    end
+    -- Raises a buried window rather than hiding it; see
+    -- WindowStack.ToggleWindow.
+    SYL.WindowStack.ToggleWindow(CreateDeveloperWindow())
 end
 
 function SYL:RefreshDeveloperWindow()

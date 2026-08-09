@@ -33,7 +33,13 @@ local COLUMNS = {
     -- Nothing in the fairness maths reads it: it is context, not an input.
     { key = "score", label = "M+", width = 46, gap = 8 },
     { key = "nights", label = "NIGHTS", width = 50, gap = 8 },
-    { key = "eligible", label = "ROLLED ON", width = 66, gap = 8 },
+    -- ELIGIBLE, not ROLLED ON. The number is how many drops this player could
+    -- have won — every roll list they appeared on — and a pass or a no-roll
+    -- puts you on that list exactly as a Need does. Labelled "ROLLED ON" it
+    -- is the number an officer quotes in a loot dispute, and it would be
+    -- wrong in the direction that loses the argument for the quiet raider who
+    -- passes on everything.
+    { key = "eligible", label = "ELIGIBLE", width = 66, gap = 8 },
     { key = "upgrades", label = "UPGRADES", width = 68, gap = 8 },
     { key = "mog", label = "MOG", width = 40, gap = 8 },
     { key = "lastWin", label = "LAST UPGRADE", width = 100, gap = 8 },
@@ -378,11 +384,7 @@ local function CreateWindow()
 end
 
 function SYL:OpenPlayerWindow()
-    local window = CreateWindow()
-
-    if window:IsShown() then
-        window:Hide()
-    else
-        window:Show()
-    end
+    -- Raises a buried window rather than hiding it; see
+    -- WindowStack.ToggleWindow.
+    SYL.WindowStack.ToggleWindow(CreateWindow())
 end

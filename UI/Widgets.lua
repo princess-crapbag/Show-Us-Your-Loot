@@ -30,6 +30,26 @@ function Widgets.CreatePanelButton(parent, width, height, text, onClick)
     return Theme.CreateButton(parent, width, height, text, onClick)
 end
 
+-- Where each column starts, from a list of { key, width, gap }.
+--
+-- Five windows each carry an identical `do ... end` block computing this, and
+-- the header and the rows both have to agree with it — which is exactly the
+-- kind of duplication that let the boss window ship with columns wider than
+-- its own frame. New windows use this; the older ones still have their copies
+-- and can be moved over when they are next touched.
+function Widgets.ColumnOffsets(columns)
+    local offsets = {}
+    local x = 0
+
+    for _, column in ipairs(columns) do
+        x = x + column.gap
+        offsets[column.key] = x
+        x = x + column.width
+    end
+
+    return offsets
+end
+
 -- Escape closes the window, the way every other panel in the game behaves.
 --
 -- UISpecialFrames is Blizzard's list of frames Escape may close, and it holds

@@ -9,8 +9,10 @@ a wipe rather than a stack trace, so these are the checks worth having:
   2. Load order           — every SYL.Module referenced at file scope must be
                             defined by a file the .toc loads earlier.
   3. Missing members      — SYL.Module.Member used but never assigned anywhere.
-  4. .toc against disk    — files listed but absent, or present but unlisted.
-  5. Size limit           — the project's own 400 line rule, which a file may
+  4. Bare module globals  — Module.Member where that file never made Module a
+                            local. Reads as a nil global at runtime.
+  5. .toc against disk    — files listed but absent, or present but unlisted.
+  6. Size limit           — the project's own 400 line rule, which a file may
                             opt out of by saying why.
 
 The size rule is a question, not a verdict: "is this file doing more than one
@@ -204,6 +206,70 @@ def check_columns(name: str, code: str, problems: list):
             )
 
 
+# Every way a name becomes local to a file: declarations, function parameters
+# and loop variables. Deliberately generous — a name missed here is reported
+# as a nil global that is not one, and a checker that cries wolf gets ignored,
+# which is worse than the gap it was closing.
+LOCAL_RE = re.compile(
+    r"\blocal\s+(?:function\s+)?([A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)"
+)
+PARAM_RE = re.compile(r"\bfunction\b[^(\n]*\(([^)]*)\)")
+FOR_IN_RE = re.compile(r"\bfor\s+([A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)\s+in\b")
+FOR_NUM_RE = re.compile(r"\bfor\s+([A-Za-z_]\w*)\s*=")
+
+
+def local_names(code: str) -> set:
+    names = set()
+
+    for pattern in (LOCAL_RE, FOR_IN_RE, FOR_NUM_RE):
+        for m in pattern.finditer(code):
+            for part in m.group(1).split(","):
+                names.add(part.strip())
+
+    for m in PARAM_RE.finditer(code):
+        for part in m.group(1).split(","):
+            part = part.strip()
+            if part and part != "...":
+                names.add(part)
+
+    return names
+
+
+# A name followed by a dot, not already qualified by one and not a method call
+# on something else.
+BARE_RE = re.compile(r"(?<![\w.:])([A-Za-z_]\w*)\s*\.")
+
+
+def check_module_globals(name: str, code: str, modules: set, problems: list):
+    """Module.Member in a file that never made Module a local.
+
+    Lua resolves that to a global, which is nil, and the failure lands at the
+    point of use rather than where the mistake is. Three of these have shipped
+    into the working tree: `RaidSession.RaidsOnly(...)` missing its `SYL.`
+    prefix, and twice more when a file was split and a function moved away
+    from the `local` that named its module.
+
+    The ones that arrive from splitting are the dangerous kind, because they
+    sit at file scope and run at load — so the addon does not misbehave, it
+    fails to start, and every window goes with it.
+
+    Checks 1-3 could not see any of this: they read `SYL.Module.Member`, and a
+    bare `Module.Member` is neither an SYL reference nor an unbalanced block.
+    """
+    locals_here = local_names(code)
+
+    for m in BARE_RE.finditer(code):
+        candidate = m.group(1)
+
+        if candidate in modules and candidate not in locals_here:
+            line = code[:m.start()].count("\n") + 1
+            problems.append(
+                f"{name}:{line}: bare `{candidate}.` — this file never makes "
+                f"{candidate} a local, so it is a nil global "
+                f"(did you mean SYL.{candidate}?)"
+            )
+
+
 def toc_order() -> list:
     files = []
     for raw in TOC.read_text(encoding="utf-8").splitlines():
@@ -232,6 +298,8 @@ def main() -> int:
 
     # Members assigned anywhere: SYL.X = / SYL.X.Y = / function SYL.X:Y / .X.Y(
     assigned = set()
+    # Just the bare module names, for the bare-global check below.
+    modules = set()
     bodies = {}
     for name in listed:
         path = ROOT / name
@@ -271,6 +339,7 @@ def main() -> int:
 
         for m in re.finditer(r"SYL\.([A-Za-z_]\w*)\s*=", code):
             assigned.add(m.group(1))
+            modules.add(m.group(1))
         for m in re.finditer(r"SYL\.([A-Za-z_]\w*)\.([A-Za-z_]\w*)\s*=", code):
             assigned.add(f"{m.group(1)}.{m.group(2)}")
         for m in re.finditer(r"function\s+SYL\.([A-Za-z_]\w*)[.:]([A-Za-z_]\w*)", code):
@@ -312,6 +381,9 @@ def main() -> int:
     # Referenced members
     for name in listed:
         code = bodies.get(name, "")
+
+        check_module_globals(name, code, modules, problems)
+
         for m in re.finditer(r"SYL\.([A-Za-z_]\w*)[.:]([A-Za-z_]\w*)", code):
             mod, mem = m.group(1), m.group(2)
             if mod not in assigned:

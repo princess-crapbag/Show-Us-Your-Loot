@@ -115,6 +115,35 @@ function SelectionBar.Create(parent, view, config)
 
     bar.selectAll:SetPoint("RIGHT", bar.deselect, "LEFT", -6, 0)
 
+    -- Four of these narrow or widen the same list along different axes and
+    -- three of them are toggles, so pressing one to find out what it does
+    -- changes what you were reading. See UI/Tooltips.lua.
+    local Tip = SYL.Tooltips.Attach
+
+    Tip(bar.showHidden, "Show hidden",
+        "Hidden rows are set aside, never deleted. This shows only those, "
+        .. "so you can put them back.")
+
+    Tip(bar.contentScope, "All content / Raid / Dungeon",
+        "Cycles. A Mythic+ drop says nothing about who is due in the raid, "
+        .. "and a guild that runs both has them interleaved.")
+
+    Tip(bar.gearOnly, "Gear only",
+        "Hides reagents, gold and quest items. The same test the due list "
+        .. "uses, so this list and those numbers agree.")
+
+    Tip(bar.allSeasons, "All seasons",
+        "Widens the list to archived seasons as well as the active one.")
+
+    Tip(bar.action, "Hide or unhide",
+        "Sets the ticked rows aside. Nothing is deleted and it is always "
+        .. "reversible from Show hidden.")
+
+    Tip(bar.selectAll, "Select all",
+        "Ticks everything the filters currently match, not the whole season.")
+
+    Tip(bar.deselect, "Deselect all", "Unticks everything.")
+
     bar.countText = Theme.CreateText(parent, Theme.sizes.subtitle, "accent")
     bar.countText:SetPoint("RIGHT", bar.selectAll, "LEFT", -10, 0)
     bar.countText:SetJustifyH("RIGHT")

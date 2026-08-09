@@ -196,11 +196,7 @@ local function CreateWindow()
 end
 
 function SYL:OpenExportWindow()
-    local window = CreateWindow()
-
-    if window:IsShown() then
-        window:Hide()
-    else
-        window:Show()
-    end
+    -- Raises a buried window rather than hiding it; see
+    -- WindowStack.ToggleWindow.
+    SYL.WindowStack.ToggleWindow(CreateWindow())
 end

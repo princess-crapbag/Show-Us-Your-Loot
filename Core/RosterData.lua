@@ -24,7 +24,30 @@ function RosterData.EnsureRegistry()
     SYL.AltDetect.EnsureGuildMembers()
 end
 
+-- Built once and kept until something changes it.
+--
+-- The header above warns that filling the registry is too expensive to do on
+-- every refresh, and then Build did the equally expensive half on every one:
+-- a pass over every guild member, an alt resolution and a registry lookup
+-- each, attendance folded across every raid night, and Raider.IO attached on
+-- top. RosterWindow.Refresh runs on every keystroke in the search box, so
+-- typing a six-letter name rebuilt a four-hundred-member roster six times.
+--
+-- Invalidated rather than time-limited, because the things that change it are
+-- all events: the guild roster arriving, an alt being mapped, and opening the
+-- window. Role and team are deliberately not cached here — the rows read
+-- those live, so clicking one is already free.
+local cached
+
+function RosterData.Invalidate()
+    cached = nil
+end
+
 function RosterData.Build()
+    if cached then
+        return cached
+    end
+
     local _, attendance =
         SYL.RaidSession.BuildAttendance(SYL.GetAllRaids())
 
@@ -59,6 +82,8 @@ function RosterData.Build()
     end
 
     SYL.RaiderIO.AttachScores(roster)
+
+    cached = roster
 
     return roster
 end

@@ -82,9 +82,11 @@ local function UpdateTabs()
         buttons.back:Hide()
     end
 
-    -- Archiving acts on the whole season, so it is offered from the list
-    -- but not from the archive browser.
-    if view.mode == "feed" then
+    -- Archiving is offered from the archive browser, which is the list of
+    -- things it creates, and nowhere else. It used to be the other way round:
+    -- permanently on screen next to the loot list, and hidden on the one tab
+    -- it is actually about.
+    if view.mode == "archives" then
         buttons.archiveSeason:Show()
     else
         buttons.archiveSeason:Hide()
@@ -95,6 +97,12 @@ local function UpdateRows()
     if not frame then
         return
     end
+
+    -- Every path that changes what should be on screen ends up here: a tab,
+    -- a filter, a scroll, a selection, a captured drop. So this is the one
+    -- place the feed cache has to be dropped, and the list below is rebuilt
+    -- once rather than once per thing that asks for it.
+    ListSources.Invalidate()
 
     LootListView.HideAllRows(view)
 
@@ -219,7 +227,13 @@ local function CreateScrollArea(parent)
 
     view.emptyText:SetPoint("CENTER", 0, -12)
     view.emptyText:SetJustifyH("CENTER")
-    view.emptyText:SetText("No loot has been recorded.")
+
+    -- Wrapped and bounded, because the empty message explains why the list is
+    -- empty rather than only stating that it is, and that does not fit on one
+    -- line. No initial text: every draw sets it, so anything written here
+    -- could never be read.
+    view.emptyText:SetWordWrap(true)
+    view.emptyText:SetWidth(WINDOW_WIDTH - 120)
     view.emptyText:Hide()
 
     -- 6px below the action row, which ends at 148.
@@ -340,13 +354,9 @@ end
 --------------------------------------------------------------------------
 
 function SYL:OpenMainWindow()
-    local window = CreateMainWindow()
-
-    if window:IsShown() then
-        window:Hide()
-    else
-        window:Show()
-    end
+    -- Raises a buried window rather than hiding it; see
+    -- WindowStack.ToggleWindow.
+    SYL.WindowStack.ToggleWindow(CreateMainWindow())
 end
 
 function SYL:RefreshMainWindow()

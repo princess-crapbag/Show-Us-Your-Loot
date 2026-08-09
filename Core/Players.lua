@@ -307,6 +307,13 @@ function Players.SetMain(altKey, mainKey, source)
     alt.identitySource = source
     alt.identitySetAt = time()
 
+    -- The roster window caches who is whose alt. Invalidated here rather
+    -- than at each caller, because this is already the choke point for alt
+    -- identity and `/syl alt` would otherwise leave an open window stale.
+    if SYL.RosterData then
+        SYL.RosterData.Invalidate()
+    end
+
     return true, (alt.name or altKey)
         .. " counts as "
         .. (main.name or mainKey)
@@ -328,6 +335,10 @@ function Players.ClearMain(altKey)
     alt.mainGUID = nil
     alt.identitySource = nil
     alt.identitySetAt = nil
+
+    if SYL.RosterData then
+        SYL.RosterData.Invalidate()
+    end
 
     return true, (alt.name or altGUID) .. " is on its own again."
 end

@@ -212,6 +212,9 @@ local function AnnounceDrop(record)
     )
 end
 
+-- Both indexes over the drop array are rebuilt together, because anything
+-- that invalidates one invalidates the other and remembering that at each
+-- call site is how one of them goes stale.
 function Store.RebuildIndex()
     dropIndex = {}
 
@@ -219,6 +222,10 @@ function Store.RebuildIndex()
         if record.id then
             dropIndex[record.id] = record
         end
+    end
+
+    if SYL.ItemTooltip then
+        SYL.ItemTooltip.Invalidate()
     end
 end
 
@@ -267,6 +274,12 @@ function Store.RecordSnapshot(snapshot)
 
                 table.insert(drops, record)
                 dropIndex[recordID] = record
+
+                -- The item tooltip indexes drops by item and would otherwise
+                -- keep answering from before this one.
+                if SYL.ItemTooltip then
+                    SYL.ItemTooltip.Invalidate()
+                end
 
                 added = added + 1
 

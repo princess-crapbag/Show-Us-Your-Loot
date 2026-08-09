@@ -15,7 +15,7 @@ local DUE_LIMIT = 10
 
 local COMMANDS = {}
 
-COMMANDS.help = Reports.Help
+COMMANDS.help = SYL.CommandList.Help
 COMMANDS.season = Reports.SeasonStatus
 COMMANDS.archives = Reports.Archives
 COMMANDS.api = Reports.APIReport
@@ -346,5 +346,5 @@ SlashCmdList["SHOWUSYOURLOOT"] = function(input)
         return
     end
 
-    Reports.Help()
+    SYL.CommandList.UnknownCommand(command)
 end

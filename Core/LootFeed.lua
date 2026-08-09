@@ -188,14 +188,20 @@ function LootFeed.Build(drops, lootRecords)
         end
     end
 
+    -- A stable tiebreak, or two items received in the same second swap places
+    -- between redraws. Computed once per entry rather than inside the
+    -- comparator, which ran tostring on both sides of every comparison — n
+    -- log n calls to convert strings that were already strings.
+    for _, entry in ipairs(entries) do
+        entry.sortID = tostring(entry.id)
+    end
+
     table.sort(entries, function(left, right)
         if left.timestamp ~= right.timestamp then
             return left.timestamp < right.timestamp
         end
 
-        -- A stable tiebreak, or two items received in the same second swap
-        -- places between redraws.
-        return tostring(left.id) < tostring(right.id)
+        return left.sortID < right.sortID
     end)
 
     return entries

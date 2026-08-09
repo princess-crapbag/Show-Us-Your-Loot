@@ -14,15 +14,34 @@ local Theme = SYL.Theme
 local SearchBox = {}
 SYL.SearchBox = SearchBox
 
-function SearchBox.Create(parent, width, placeholder, onChange)
+-- options.bordered draws an outline, for a field that is a value rather than
+-- a filter.
+--
+-- The roster window has both, a hundred pixels apart and previously
+-- identical: one narrows the list as you type, the other is the name the
+-- "Alt of" button will act on and does nothing at all until that button is
+-- pressed. Two controls that look the same and behave completely differently
+-- is a trap, and the one that does nothing looks broken.
+function SearchBox.Create(parent, width, placeholder, onChange, options)
     local holder = CreateFrame("Frame", nil, parent)
 
     holder:SetSize(width, 20)
 
+    if options and options.bordered then
+        local edge = Theme.CreateSolidTexture(holder, "border", "BACKGROUND")
+
+        edge:SetAllPoints()
+    end
+
     local background =
         Theme.CreateSolidTexture(holder, "rowAlt", "BACKGROUND")
 
-    background:SetAllPoints()
+    if options and options.bordered then
+        background:SetPoint("TOPLEFT", 1, -1)
+        background:SetPoint("BOTTOMRIGHT", -1, 1)
+    else
+        background:SetAllPoints()
+    end
 
     local editBox = CreateFrame("EditBox", nil, holder)
 

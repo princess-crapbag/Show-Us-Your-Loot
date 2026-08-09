@@ -15,20 +15,54 @@ SYL.ItemTooltip = ItemTooltip
 
 local MAX_LINES = 4
 
-local function BuildHistory(itemID)
-    local matches = {}
+-- itemID -> that item's drops, newest first. Nil until something asks.
+--
+-- This used to run per tooltip, and a tooltip is not a rare event: mousing
+-- across a full bag fires dozens a second, and each one called GetAllDrops —
+-- which allocates a fresh array and copies every drop from the active season
+-- and every archive into it — then filtered and sorted the result. A season's
+-- history, rebuilt and re-sorted, to answer a question about one item.
+--
+-- Indexed once instead. Drops are written in exactly two places, and a season
+-- changing replaces the array wholesale, so the invalidation points are
+-- countable rather than hopeful.
+local index
+
+function ItemTooltip.Invalidate()
+    index = nil
+end
+
+local function BuildIndex()
+    index = {}
 
     for _, record in ipairs(SYL.GetAllDrops()) do
-        if record.itemID == itemID and not record.excludedFromAnalytics then
+        local itemID = record.itemID
+
+        if itemID and not record.excludedFromAnalytics then
+            local matches = index[itemID]
+
+            if not matches then
+                matches = {}
+                index[itemID] = matches
+            end
+
             table.insert(matches, record)
         end
     end
 
-    table.sort(matches, function(left, right)
-        return (left.timestamp or 0) > (right.timestamp or 0)
-    end)
+    for _, matches in pairs(index) do
+        table.sort(matches, function(left, right)
+            return (left.timestamp or 0) > (right.timestamp or 0)
+        end)
+    end
+end
 
-    return matches
+local function BuildHistory(itemID)
+    if not index then
+        BuildIndex()
+    end
+
+    return index[itemID] or {}
 end
 
 local function AddHistoryLines(tooltip, itemID)

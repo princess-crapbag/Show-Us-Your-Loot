@@ -23,16 +23,29 @@ local function OnAddonLoaded(loadedAddonName)
     SYL.Theme.Apply(ShowUsYourLootDB.settings.palette, true)
 
     local activeSeason = SYL.GetActiveSeason()
+    local recorded = #activeSeason.drops + #activeSeason.loot
 
-    SYL:Print(
-        "Database ready. Active season: "
-        .. activeSeason.name
-        .. " — "
-        .. #activeSeason.drops
-        .. " drops, "
-        .. #activeSeason.loot
-        .. " item records."
-    )
+    -- A first run said "Database ready. Active season: … — 0 drops, 0 item
+    -- records", which is a status line written for whoever built it. It never
+    -- mentioned the slash command, so the only way in was the minimap button,
+    -- and it never said that zero is the expected number on day one.
+    if recorded == 0 then
+        SYL:Print(
+            "Ready. Nothing is recorded yet — it starts from now, and cannot "
+            .. "see loot from before today. Type /syl to open it, or "
+            .. "/syl rename <name> to name the season."
+        )
+    else
+        SYL:Print(
+            "Ready. "
+            .. activeSeason.name
+            .. " — "
+            .. #activeSeason.drops
+            .. " drops, "
+            .. #activeSeason.loot
+            .. " item records. /syl to open."
+        )
+    end
 
     -- Loot History is the primary source, so capture runs unless it has been
     -- turned off deliberately. /syl dev only opens the inspector window.
@@ -88,6 +101,9 @@ end
 
 local function OnGuildRosterUpdate()
     local count = SYL.Guild.Refresh()
+
+    -- The roster window builds from this, and caches what it built.
+    SYL.RosterData.Invalidate()
 
     SYL:DebugPrint("Guild roster cached: " .. tostring(count) .. " members.")
 end

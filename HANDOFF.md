@@ -39,15 +39,16 @@ See CURSEFORGE.md.
 
 ### Working here
 
-- `python tools/syl_check.py` after every change. There is no Lua
-  interpreter on this machine and, apart from `tools/test_lootmessages.py`
-  (§4A), no tests.
+- `python tools/syl_check.py` after every change. The only tests are
+  `tools/test_lootmessages.py` (§4A), which need `lupa` — see there.
 - **The checker is a regex heuristic, not a parser.** It validates
-  `SYL.Module.Member` references, block balance, .toc-against-disk and
-  column widths. It passed clean through four crash-level bugs in one day.
-  It does **not** catch bare module globals — `RaidSession.RaidsOnly(...)`
-  without the `SYL.` prefix sailed through and was a nil global. Closing
-  that gap is worth doing (see G1).
+  `SYL.Module.Member` references, bare module globals, block balance,
+  .toc-against-disk and column widths. It passed clean through four
+  crash-level bugs in one day, so treat a clean run as "nothing obvious"
+  rather than as "this works".
+- **What it cannot see** is a local used before its declaration —
+  `HideTarget`, called twenty lines above the `local function` that defined
+  it, was a nil global and shipped. See G1 for the tool that would catch it.
 - 400-line limit per file is a warning, not an error. A file may opt out
   with `-- syl-check: size-exempt — reason` in its first 40 lines. **Never
   delete a comment to get under it**; that happened twice before the escape
@@ -184,6 +185,57 @@ this is not a substitute for the checker knowing about module globals.
 
 </details>
 
+### B. Performance — ALL FIXED, 2026-08-08
+
+B1–B6 are done. The pattern in most of them was the same: work repeated
+because nothing remembered the answer. Three caches were added, each with its
+invalidation points named in the code rather than assumed —
+
+- **The merged feed** (B1) is built once per redraw instead of five times,
+  keyed by the view state that changes it, and dropped at the top of
+  `MainWindow.UpdateRows`, which every path already goes through.
+- **The roster** (B3) is built once and invalidated by the guild roster
+  arriving, an alt being mapped, or the window opening. Typing in the search
+  box no longer rebuilds four hundred rows per keystroke.
+- **The item tooltip** (B5) indexes drops by item. Drops are written in
+  exactly two places, so `LootHistoryStore.RebuildIndex` owns invalidation for
+  both indexes and no caller has to remember.
+
+B2's poll became `GET_ITEM_INFO_RECEIVED`, registered only while something on
+screen is waiting. B4 turned out to be worse than described: a dungeon boss
+can *never* be in the journal bridge, because the tier walk reads raid
+instances only — so every hover walked all thirteen tiers and failed. Misses
+are remembered now, and the hover path cannot walk at all.
+
+B6 has a send queue at one message per 0.25s, re-checking the gate at send
+time rather than only at queue time.
+
+### C. UX — ALL FIXED, 2026-08-08
+
+C1–C15 are done. Three are worth knowing about because they changed
+behaviour rather than wording:
+
+- **C2 added a Due window** (`UI/DueWindow.lua`) and a Due button, first in
+  the footer. It repeats none of the maths — it reads `Core/DueList.lua` —
+  and it prints the basis of the ranking and the two completeness numbers
+  above the list, the same way `/syl due` does.
+- **C13 moved Archive Season to the Archives tab** and muted it. It was top
+  right on the Loot tab and hidden on the tab it is actually about.
+- **C1 narrowed announcements to gear.** Every quality is still recorded; a
+  grey no longer gets announced back at you.
+
+C3 is only half of Aimee's F3. Windows now raise instead of hiding when they
+are buried, and cascade instead of stacking dead centre — but they still
+overlap. Non-overlapping placement is still F3 and still unbuilt.
+
+Five files were split along the way, all because they crossed the size limit
+and none of them for its own sake: `Core/Seasons.lua`,
+`Core/EncounterJournal.lua`, `UI/SettingsRows.lua`, `UI/WindowStack.lua` and
+`UI/Tooltips.lua`.
+
+<details>
+<summary>The original B and C lists, for reference</summary>
+
 ### B. Performance
 
 | # | Item |
@@ -214,6 +266,8 @@ this is not a substitute for the checker knowing about module globals.
 | C13 | **Archive Season is the most prominent button** and the one a new user should never press |
 | C14 | Hardcoded default season name "Midnight Season 1" |
 | C15 | Dead empty-state string in MainWindow, overwritten every draw |
+
+</details>
 
 ### D. Cut candidates — reviewers say remove, not improve
 
@@ -256,9 +310,37 @@ already need, rather than an end in itself.
 
 ### G. Tooling
 
+**G1 — bare module globals — is DONE, 2026-08-08.** `syl_check.py` now
+reports `Module.Member` in a file that never made `Module` a local, as a
+problem rather than a warning, because it is a nil global.
+
 | # | Item |
 |---|---|
-| G1 | **`syl_check.py` does not catch bare module globals.** `RaidSession.RaidsOnly(...)` without `SYL.` passed clean and was a nil global. It knows every module name already, so flagging a bare one is cheap and would have caught three of today's bugs |
+| ~~G1~~ | Done. Left here because what it does *not* cover is below |
+
+It had bitten three times by the end: the original `RaidSession.RaidsOnly`,
+one during the A pass, and once more while splitting `UI/Widgets.lua`, which
+dragged `Widgets.CloseOnEscape` into `UI/Tooltips.lua` where `Widgets` is not
+a local. That last one was an assignment at file scope — it would have thrown
+on load and taken every window with it — and the checker passed clean on it,
+because checks 1-3 read `SYL.Module.Member` and a bare `Module.Member` is
+neither that nor an unbalanced block.
+
+Verified by putting the real fault back and watching it fail, then removing it
+again. Getting it usable took two passes: `name` is a module (`SYL.name`) and
+is also the commonest loop variable in the addon, so loop variables and
+function parameters have to count as locals or it cries wolf on ordinary code.
+
+**WHAT IT STILL DOES NOT CATCH**, which matters because it is the sibling
+class: a *local* used before it is declared. `Selection.ApplyHidden` calling
+`HideTarget` twenty lines above its definition was exactly that, and
+`HideTarget` is not a module name, so nothing here sees it.
+
+The tool that catches both is `luacheck` with a WoW globals definition, which
+parses instead of pattern-matching. That needs a Lua toolchain and a first-run
+triage across eighty files, so it is a separate decision. Note the ground
+moved: installing `lupa` for the locale tests means there **is** a Lua
+interpreter on this machine now, which §1 of this file used to deny.
 
 ---
 

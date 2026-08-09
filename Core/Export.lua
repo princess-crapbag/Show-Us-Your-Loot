@@ -129,7 +129,7 @@ function Export.BuildEmptyHandedSummary(drops)
             "  "
             .. tostring(entry.name)
             .. (entry.guildRank and (" [" .. entry.guildRank .. "]") or "")
-            .. " - rolled on "
+            .. " - eligible for "
             .. entry.eligible
             .. (entry.mogWins > 0 and (", " .. entry.mogWins .. " mog") or "")
         )
@@ -147,7 +147,7 @@ function Export.BuildPlayerSummary(drops)
 
     table.insert(lines, "Player totals (" .. #stats .. " players)")
     table.insert(lines, "")
-    table.insert(lines, "Player | Rank | Nights | Rolled | Upgrades | Mog")
+    table.insert(lines, "Player | Rank | Nights | Eligible | Upgrades | Mog")
 
     for _, entry in ipairs(stats) do
         table.insert(

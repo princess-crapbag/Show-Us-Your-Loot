@@ -226,6 +226,16 @@ function FilterBar.Create(parent, config)
 
         dropdown:SetPoint("LEFT", previous, "RIGHT", CONTROL_GAP, 0)
 
+        -- Ticking two values inside one dropdown widens the result; ticking
+        -- across two dropdowns narrows it. That is what people expect from
+        -- checkbox filters and it is not obvious from looking at them.
+        SYL.Tooltips.Attach(
+            dropdown,
+            Filters.LABELS[field],
+            "Tick several to see any of them. Filters in different dropdowns "
+            .. "apply together."
+        )
+
         bar.dropdowns[field] = dropdown
         previous = dropdown
     end
@@ -252,6 +262,13 @@ function FilterBar.Create(parent, config)
         bar:Refresh()
         onChange()
     end)
+
+    SYL.Tooltips.Attach(
+        clearButton,
+        "Clear filters",
+        "Empties the search, the dates and every dropdown. It does not "
+        .. "change any record."
+    )
 
     clearButton:SetPoint("RIGHT", 0, 0)
 

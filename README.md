@@ -67,16 +67,16 @@ lists every command on right click.
 
 | Command | |
 |---|---|
-| `/syl drops` | Recent drops with winners and rolls |
 | `/syl due` | Who has gone longest without an upgrade |
 | `/syl players` | Per-player eligibility, wins and droughts |
 | `/syl raids` | Every raid night |
+| `/syl roster` | Potential raiders, their classes and missing buffs |
 | `/syl bosses` | Kills, pulls and drops per boss |
+| `/syl alts` | Which characters count as the same person |
 | `/syl tonight` | Summary of the night in progress |
-| `/syl sync` | Officer sync status |
-| `/syl theme` | Change the colour scheme |
 | `/syl export` | Copy the whole history out |
-| `/syl help` | Everything else |
+| `/syl settings` | Settings, including which qualities to record |
+| `/syl help` | The list above; `/syl help all` for all of it |
 
 ## Officer sync
 

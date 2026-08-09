@@ -36,12 +36,24 @@ function MainNav.Create(parent, config)
 
     local buttons = {}
 
+    -- Muted, and shown on the Archives tab rather than beside the loot list.
+    --
+    -- It was the most prominent control in the window: top right, opposite
+    -- the tabs, in the same weight as everything else. It is also the one
+    -- action a new user should never take — it closes the season, files
+    -- everything into the archives and starts again empty. Prominence should
+    -- follow how often something is wanted, and this is wanted once a tier.
+    --
+    -- Archives is where it belongs anyway: that tab is the list of archived
+    -- seasons, and this is the button that makes one. Reaching it now means
+    -- deliberately going there.
     buttons.archiveSeason =
         Theme.CreateButton(parent, 120, 24, "Archive Season", function()
             config.onArchive()
         end)
 
     buttons.archiveSeason:SetPoint("TOPRIGHT", -16, -66)
+    Theme.SetTextColor(buttons.archiveSeason.label, "textMuted")
 
     -- Shares its anchor with Archive Season. The two are never shown at the
     -- same time, since one belongs to the active season and the other to an
@@ -52,6 +64,22 @@ function MainNav.Create(parent, config)
         end)
 
     buttons.back:SetPoint("TOPRIGHT", -16, -66)
+
+    -- Archive Season is the one control here that cannot be undone, so its
+    -- tooltip says what it does rather than what it is for.
+    SYL.Tooltips.Attach(
+        buttons.archiveSeason,
+        "Archive this season",
+        "Files everything recorded so far into the archives and starts a new "
+        .. "season, empty. Nothing is deleted, but the active list begins "
+        .. "again. Once a tier, not once a night."
+    )
+
+    SYL.Tooltips.Attach(
+        buttons.back,
+        "Back to Archives",
+        "Returns to the list of archived seasons."
+    )
 
     return tabStrip, buttons
 end

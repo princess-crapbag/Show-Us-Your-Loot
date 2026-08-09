@@ -1,4 +1,11 @@
--- Database.lua
+-- Core/Database.lua
+--
+-- The shape of the saved database: the settings defaults, the season
+-- structure, the migration from before seasons existed, and the one-time
+-- setup at ADDON_LOADED.
+--
+-- Reading what this builds — the active season, the archives, and everything
+-- across both — is Core/Seasons.lua.
 
 local SYL = _G.ShowUsYourLoot
 
@@ -105,18 +112,18 @@ local function InitializeSettings()
     -- touches a roll, so with this off the due list is blind to a whole
     -- channel and reports raiders as starved who are not.
     --
-    -- The argument for off is that the data cannot support it, and defaults
-    -- to a bias that runs one way. CHAT_MSG_LOOT only ever sees your own
-    -- loot plus your current group's. Nobody claims a vault while standing
-    -- next to the officer running this addon, so with it on the only vault
-    -- claims in the database are the officer's own. Their drought resets
-    -- every week and nobody else's ever does, and the officer sinks to the
-    -- bottom of a list they wrote. That is worse than being blind: it is
-    -- confidently wrong, in a direction that looks like modesty.
+    -- The argument for off wins because the data cannot support it, and it
+    -- fails in one direction. CHAT_MSG_LOOT only ever sees your own loot plus
+    -- your current group's, and nobody claims a vault standing next to the
+    -- officer running this addon — so the only vault claims in the database
+    -- are the officer's own. Their drought resets weekly and nobody else's
+    -- does, and they sink to the bottom of a list they wrote. That is worse
+    -- than being blind: it is confidently wrong, in a direction that looks
+    -- like modesty.
     --
-    -- So it stays a setting, because for a guild where everybody runs the
-    -- addon and syncs, on is the better answer. It just cannot be the
-    -- default until the sync can fill the gap (see F8/E8 in HANDOFF.md).
+    -- It stays a setting because for a guild where everybody runs the addon
+    -- and syncs, on is the better answer. It just cannot be the default until
+    -- the sync can fill the gap (F8/E8 in HANDOFF.md).
     if ShowUsYourLootDB.settings.countPersonalLoot == nil then
         ShowUsYourLootDB.settings.countPersonalLoot = false
     end
@@ -160,7 +167,6 @@ function SYL.DatabaseInitialize()
     ShowUsYourLootDB.recentRecordIDs =
         ShowUsYourLootDB.recentRecordIDs or {}
 
-
     -- Account level, not per season. An alt mapping is a fact about a
     -- person, and archiving a season must not forget who somebody is.
     ShowUsYourLootDB.players = ShowUsYourLootDB.players or {}
@@ -171,9 +177,13 @@ function SYL.DatabaseInitialize()
         migrated = MigrateOldLootDatabase()
     end
 
+    -- Deliberately not named after a patch. "Midnight Season 1" was hardcoded
+    -- here, which is right for one season and quietly wrong for every install
+    -- after it. A neutral name cannot go stale, and the first-run message
+    -- says how to change it.
     if not ShowUsYourLootDB.activeSeason then
         ShowUsYourLootDB.activeSeason =
-            CreateSeason("Midnight Season 1")
+            CreateSeason("Current Season")
     end
 
     EnsureSeasonStructure(ShowUsYourLootDB.activeSeason)
@@ -202,118 +212,6 @@ function SYL.DatabaseInitialize()
     end
 end
 
-function SYL.GetActiveSeason()
-    return ShowUsYourLootDB
-        and ShowUsYourLootDB.activeSeason
-end
-
-function SYL.GetActiveLoot()
-    local season = SYL.GetActiveSeason()
-
-    if not season then
-        return {}
-    end
-
-    season.loot = season.loot or {}
-
-    return season.loot
-end
-
-function SYL.GetArchives()
-    if not ShowUsYourLootDB then
-        return {}
-    end
-
-    ShowUsYourLootDB.archives =
-        ShowUsYourLootDB.archives or {}
-
-    return ShowUsYourLootDB.archives
-end
-
-function SYL.GetAllLoot()
-    local allLoot = {}
-
-    local activeSeason = SYL.GetActiveSeason()
-
-    if activeSeason and activeSeason.loot then
-        for _, record in ipairs(activeSeason.loot) do
-            table.insert(allLoot, record)
-        end
-    end
-
-    for _, season in ipairs(SYL.GetArchives()) do
-        for _, record in ipairs(season.loot or {}) do
-            table.insert(allLoot, record)
-        end
-    end
-
-    return allLoot
-end
-
-function SYL.GetActiveDrops()
-    local season = SYL.GetActiveSeason()
-
-    if not season then
-        return {}
-    end
-
-    season.drops = season.drops or {}
-
-    return season.drops
-end
-
-function SYL.GetAllDrops()
-    local allDrops = {}
-
-    local activeSeason = SYL.GetActiveSeason()
-
-    if activeSeason and activeSeason.drops then
-        for _, record in ipairs(activeSeason.drops) do
-            table.insert(allDrops, record)
-        end
-    end
-
-    for _, season in ipairs(SYL.GetArchives()) do
-        for _, record in ipairs(season.drops or {}) do
-            table.insert(allDrops, record)
-        end
-    end
-
-    return allDrops
-end
-
-function SYL.GetActiveRaids()
-    local season = SYL.GetActiveSeason()
-
-    if not season then
-        return {}
-    end
-
-    season.raids = season.raids or {}
-
-    return season.raids
-end
-
-function SYL.GetAllRaids()
-    local allRaids = {}
-
-    local activeSeason = SYL.GetActiveSeason()
-
-    if activeSeason and activeSeason.raids then
-        for _, session in ipairs(activeSeason.raids) do
-            table.insert(allRaids, session)
-        end
-    end
-
-    for _, season in ipairs(SYL.GetArchives()) do
-        for _, session in ipairs(season.raids or {}) do
-            table.insert(allRaids, session)
-        end
-    end
-
-    return allRaids
-end
-
 function SYL.StartNewSeason(name)
     name = name and name:gsub("^%s+", ""):gsub("%s+$", "")
 
@@ -328,6 +226,9 @@ function SYL.StartNewSeason(name)
         ShowUsYourLootDB.activeSeason.loot
 
     ShowUsYourLootDB.recentRecordIDs = {}
+
+    -- The drop indexes describe an array just replaced wholesale.
+    SYL.LootHistoryStore.RebuildIndex()
 
     return ShowUsYourLootDB.activeSeason
 end

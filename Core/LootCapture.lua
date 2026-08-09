@@ -221,8 +221,30 @@ local function BuildRecord(recordID, season, recipient, item, timestamp, hint)
     }
 end
 
+-- Gear only, whatever the quality filter is set to record.
+--
+-- The filter defaults to recording every quality, which is right — a fresh
+-- install should never quietly miss loot — and announcing every quality is
+-- not the same decision. With both on, one Mythic+ run doubled the user's
+-- loot chat by repeating every grey and every reagent back at them, prefixed.
+-- A reviewer named this specifically as the thing that gets an addon
+-- uninstalled, and they are right: it is the only part of this that talks
+-- unprompted, in the channel people actually read.
+--
+-- So the record is still written, and the line is only printed for something
+-- worth telling somebody about. IsTrackableGear returns nil for an item the
+-- client has not cached, which is treated as "not yet" — announcing it a
+-- second later would be worse than not announcing it.
+local function WorthAnnouncing(record)
+    return SYL.PersonalLoot.IsTrackableGear(record) == true
+end
+
 local function AnnounceCapture(record)
     if not ShowUsYourLootDB.settings.announceCaptures then
+        return
+    end
+
+    if not WorthAnnouncing(record) then
         return
     end
 

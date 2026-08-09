@@ -33,8 +33,49 @@ this says what you will notice.
 - **Click a player** in the players window for their whole record: every drop
   they could have had, what they chose, and what they got.
 
+- **A window for who is due.** The headline question was chat-only: ten lines
+  from `/syl due`, gone as soon as anyone spoke. There is now a Due button,
+  first in the footer. It shows the dry-night count, how many nights each
+  raider has attended, when they last took an upgrade, and — above the list —
+  what went into those numbers, including how many records were left out and
+  why. Clicking a row opens that raider's whole history.
+- **Controls explain themselves.** Roughly two dozen buttons had no
+  explanation anywhere: not on screen, not in the README, not in `/syl help`.
+  "All content", "Gear only" and "All seasons" all narrow or widen the same
+  list in different ways, and the only way to find out which was to press one
+  and watch what changed. They all have tooltips now.
+- **Settings has the setting that changes the headline number.** Counting
+  gear taken without a roll was reachable only through a slash command.
+
+### Changed
+
+- **Archive Season moved to the Archives tab** and is no longer the loudest
+  button in the window. It ends the season, which is a once-a-tier action,
+  and it was sitting top right on the loot list where a new user would find
+  it first.
+- **`/syl help` shows the ten commands you would actually use**, with
+  `/syl help all` for the rest. A typo used to print all twenty-nine.
+- **Windows raise instead of hiding when they are buried.** Every window
+  opens at the same size in the same place, so a footer button could "toggle"
+  something already open and completely covered — which hid it, changing
+  nothing you could see. They also cascade now instead of stacking exactly.
+- **The addon is faster with a season's worth of history.** The loot list was
+  rebuilt up to five times per redraw; the roster was rebuilt on every
+  keystroke in its search box; the item tooltip re-scanned and re-sorted
+  every drop you own on every hover, including mousing across your bags. All
+  three are built once and kept until something changes them.
+- **Only gear is announced in chat.** Every quality is still recorded, but a
+  Mythic+ run no longer repeats every grey and reagent back at you.
+
 ### Fixed
 
+- **Hovering a dungeon boss froze the game for seconds.** It read the
+  Encounter Journal looking for a boss that cannot be in it, gave up, and did
+  the same thing again the next time your mouse crossed the row.
+- **An open dropdown swallowed every right-click in the game.**
+- **Officer sync sent five messages back to back** when a boss dropped five
+  items, in the busiest second of a raid, which is exactly when the server
+  throws them away. They are queued now.
 - **The addon only worked in English.** Loot lines were matched against the
   literal English "receives loot:", so on any other client nothing matched and
   every record was filed under one invented player called "Unknown". The

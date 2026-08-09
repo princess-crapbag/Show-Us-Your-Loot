@@ -233,6 +233,10 @@ local function CreateWindow()
 
     frame:SetSize(WINDOW_WIDTH, LIST_TOP + VISIBLE_ROLLS * ROW_HEIGHT + 56)
     frame:SetPoint("CENTER", 260, 0)
+
+    -- Anchored beside the list that opens it, so the cascade must
+    -- not move it.
+    SYL.WindowStack.KeepPlacement(frame)
     frame:SetFrameStrata("DIALOG")
     frame:SetClampedToScreen(true)
 
@@ -323,5 +327,8 @@ function SYL:OpenDropDetail(record)
 
     Refresh()
 
-    window:Show()
+    -- Shown rather than toggled: this window was opened by clicking
+    -- a row, and it has to end up on top of the window that row is
+    -- in. See WindowStack.
+    SYL.WindowStack.ShowWindow(window)
 end

@@ -289,7 +289,7 @@ local function CreateWindow()
 
             -- Built on the first press rather than at load. If the journal
             -- will not open, the column stays dashed and says so once.
-            if showItems and not SYL.LootTable.IsAvailable() then
+            if showItems and not SYL.EncounterJournal.IsAvailable() then
                 SYL:Print(
                     "The Encounter Journal is not available, so loot tables "
                     .. "cannot be read."
@@ -348,11 +348,7 @@ local function CreateWindow()
 end
 
 function SYL:OpenBossWindow()
-    local window = CreateWindow()
-
-    if window:IsShown() then
-        window:Hide()
-    else
-        window:Show()
-    end
+    -- Raises a buried window rather than hiding it; see
+    -- WindowStack.ToggleWindow.
+    SYL.WindowStack.ToggleWindow(CreateWindow())
 end

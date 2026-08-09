@@ -109,18 +109,59 @@ local function Decode(payload)
     }
 end
 
+--------------------------------------------------------------------------
+-- Sending, one at a time
+--------------------------------------------------------------------------
+--
+-- A boss drops five items at once and every one of them resolved into an
+-- immediate SendAddonMessage, back to back, in the busiest second of a raid.
+-- The server rate-limits addon traffic and drops what arrives over the line —
+-- so the messages most likely to be thrown away were the ones from the moment
+-- this addon exists to record. A client that keeps it up gets disconnected.
+--
+-- Most addons reach for ChatThrottleLib here. This one bundles no libraries,
+-- and the requirement is small enough not to need it: a queue and a timer.
+--
+-- The gate is re-checked at send time rather than only at queue time. A pull
+-- can end, the raid can break up, or sync can be switched off in the seconds
+-- between a drop resolving and its turn coming round, and none of those
+-- should still put a message on the wire.
+local SEND_INTERVAL = 0.25
+
+-- Roughly a minute of backlog. A queue longer than this means something is
+-- wrong upstream, and silently growing it forever is worse than saying so.
+local MAX_QUEUE = 200
+
+local queue = {}
+local draining = false
+
+local function CanSend()
+    return IsEnabled()
+        and IsInRaid()
+        and C_ChatInfo
+        and C_ChatInfo.SendAddonMessage
+        and true
+        or false
+end
+
+local function Drain()
+    local payload = table.remove(queue, 1)
+
+    if not payload then
+        draining = false
+
+        return
+    end
+
+    if CanSend() then
+        C_ChatInfo.SendAddonMessage(PREFIX, payload, "RAID")
+    end
+
+    C_Timer.After(SEND_INTERVAL, Drain)
+end
+
 function Sync.Send(record)
-    if not IsEnabled() or not record or not record.id then
-        return false
-    end
-
-    -- Raid only. Guild-wide would reach people who are not raiding and have
-    -- no reason to receive it.
-    if not IsInRaid() then
-        return false
-    end
-
-    if not C_ChatInfo or not C_ChatInfo.SendAddonMessage then
+    if not CanSend() or not record or not record.id then
         return false
     end
 
@@ -132,7 +173,19 @@ function Sync.Send(record)
         return false
     end
 
-    C_ChatInfo.SendAddonMessage(PREFIX, payload, "RAID")
+    if #queue >= MAX_QUEUE then
+        SYL:DebugPrint("Sync queue full, dropped: " .. record.id)
+
+        return false
+    end
+
+    table.insert(queue, payload)
+
+    if not draining then
+        draining = true
+
+        Drain()
+    end
 
     return true
 end

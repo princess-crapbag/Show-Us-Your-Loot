@@ -18,6 +18,7 @@ Core\Serializer.lua
 Core\Guild.lua
 Core\ItemQuality.lua
 Core\Database.lua
+Core\Seasons.lua
 Core\Players.lua
 Core\AltDetect.lua
 Core\RaiderIO.lua
@@ -32,6 +33,7 @@ Core\Sync.lua
 Core\Events.lua
 Core\Analytics.lua
 Core\PlayerHistory.lua
+Core\EncounterJournal.lua
 Core\LootTable.lua
 Core\RaidTeam.lua
 Core\RosterData.lua
@@ -51,6 +53,8 @@ Core\SlashCommands.lua
 UI\Palettes.lua
 UI\Theme.lua
 UI\Widgets.lua
+UI\WindowStack.lua
+UI\Tooltips.lua
 UI\Toggles.lua
 UI\SearchBox.lua
 UI\ListScrollBar.lua
@@ -75,6 +79,7 @@ UI\MinimapButton.lua
 UI\PlayerWindow.lua
 UI\PlayerDetailWindow.lua
 UI\RaidWindow.lua
+UI\DueWindow.lua
 UI\RosterRows.lua
 UI\RosterControls.lua
 UI\RosterWindow.lua
@@ -82,6 +87,7 @@ UI\BossTooltip.lua
 UI\BossWindow.lua
 UI\ItemTooltip.lua
 UI\ExportWindow.lua
+UI\SettingsRows.lua
 UI\SettingsWindow.lua
 UI\DeveloperReport.lua
 UI\DeveloperWindow.lua

@@ -10,9 +10,11 @@
 -- project's 400 line limit, and because this is presentation — LootTable
 -- answers the question, this one phrases it.
 --
--- HOVERING MUST STAY CHEAP. LootTable.IsAvailable reads a tier when it has
--- nothing, which is right for a button and wrong for a mouseover, so this
--- asks IsReady instead and simply says nothing is loaded yet.
+-- HOVERING MUST STAY CHEAP, and it takes two guards rather than one.
+-- EncounterJournal.IsAvailable reads a tier when it has nothing, so this asks
+-- IsReady instead. That alone was not enough: a boss missing from the tiers
+-- already read still sent the walk through every remaining one, which is why
+-- the loot lookup here is the IfKnown variant.
 
 local SYL = _G.ShowUsYourLoot
 local Theme = SYL.Theme
@@ -68,7 +70,7 @@ end
 local function AddNeverDropped(boss)
     -- IsReady rather than IsAvailable: see the header. A hover must not
     -- start reading the journal.
-    if not SYL.LootTable.IsReady() then
+    if not SYL.EncounterJournal.IsReady() then
         GameTooltip:AddLine(" ")
         GameTooltip:AddLine(
             "Press Loot tables to read the journal", Color("textMuted")
@@ -77,7 +79,11 @@ local function AddNeverDropped(boss)
         return
     end
 
-    local missing, total = SYL.LootTable.GetMissing(boss)
+    -- IfKnown, not GetMissing: a boss absent from the tiers already read
+    -- would otherwise send the journal walk through every remaining one, and
+    -- a dungeon boss is never in any of them, so that walk always ran and
+    -- always failed. Seconds of frozen game, per hover.
+    local missing, total = SYL.LootTable.GetMissingIfKnown(boss)
 
     if not missing then
         GameTooltip:AddLine(" ")

@@ -20,12 +20,29 @@ local GAP = 6
 -- Left to right. Close is anchored to the right separately, since it is the
 -- one action that is not a place to go.
 local BUTTONS = {
-    { label = "Refresh", action = "onRefresh" },
-    { label = "Settings", open = "OpenSettingsWindow" },
-    { label = "Players", open = "OpenPlayerWindow" },
-    { label = "Raids", open = "OpenRaidWindow" },
-    { label = "Roster", open = "OpenRosterWindow" },
-    { label = "Bosses", open = "OpenBossWindow" },
+    -- Due leads because it is the question the addon exists to answer, and
+    -- until now the only way to ask it was a slash command.
+    { label = "Due", open = "OpenDueWindow",
+      tip = "Who has gone longest without an upgrade, in raid nights "
+        .. "attended rather than days elapsed." },
+    { label = "Refresh", action = "onRefresh",
+      tip = "Redraws the list. Everything already refreshes on its own; "
+        .. "this is here for when you want to be sure." },
+    { label = "Settings", open = "OpenSettingsWindow",
+      tip = "Which item qualities are recorded, and how loudly the addon "
+        .. "reports itself." },
+    { label = "Players", open = "OpenPlayerWindow",
+      tip = "Per-player eligibility, wins and droughts. Click a row for one "
+        .. "raider's whole history." },
+    { label = "Raids", open = "OpenRaidWindow",
+      tip = "Every raid night: what was pulled, what died, and who was "
+        .. "in the group." },
+    { label = "Roster", open = "OpenRosterWindow",
+      tip = "Who could be brought, what they play, and which raid buffs "
+        .. "nobody covers." },
+    { label = "Bosses", open = "OpenBossWindow",
+      tip = "Kills, pulls and drops per boss, and what a boss has never "
+        .. "been seen to drop." },
 }
 
 -- handlers carries the behaviour MainWindow owns and this file cannot reach:
@@ -58,6 +75,8 @@ function MainFooter.Create(parent, handlers)
             parent, BUTTON_WIDTH, BUTTON_HEIGHT, entry.label, onClick
         )
 
+        SYL.Tooltips.Attach(button, entry.label, entry.tip)
+
         if previous then
             button:SetPoint("LEFT", previous, "RIGHT", GAP, 0)
         else
@@ -72,4 +91,8 @@ function MainFooter.Create(parent, handlers)
     )
 
     closeButton:SetPoint("BOTTOMRIGHT", -16, 12)
+
+    SYL.Tooltips.Attach(
+        closeButton, "Close", "Escape does the same. Nothing is lost."
+    )
 end

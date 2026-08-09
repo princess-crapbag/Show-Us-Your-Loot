@@ -111,9 +111,51 @@ local function VisibleEntries(entries, view)
     return kept
 end
 
--- Everything in scope before filtering. Dropdown options are derived from
--- this, so choosing one filter never empties the other dropdowns.
-function ListSources.GetUnfiltered(view)
+--------------------------------------------------------------------------
+-- Caching one redraw
+--------------------------------------------------------------------------
+--
+-- Drawing the list called this five times. The row renderer wanted the
+-- entries, the count line wanted the total, the hidden count wanted the same
+-- list with one flag flipped, the selection bar wanted it twice more, and the
+-- mouse wheel asked again to work out how far it could scroll.
+--
+-- Each pass rebuilt the whole feed from scratch: a table per record, an index
+-- over every drop, a sort with a tostring on both sides of every comparison,
+-- and — with Gear only on — a C_Item.GetItemInfo call per entry. On a full
+-- season that is the dominant cost of showing the window, paid five times to
+-- produce five identical answers.
+--
+-- Cached per redraw rather than memoised forever, because "has anything
+-- changed" is not a question this file can answer cheaply and getting it
+-- wrong shows stale loot. Invalidate() is called at the top of every redraw,
+-- which is the one place every path already goes through.
+--
+-- Keyed by the view state that changes the answer, not just cleared, because
+-- CountHiddenInScope deliberately asks the same question with showHidden
+-- flipped and must not be handed the other list.
+local unfilteredCache = {}
+local filteredCache = {}
+
+function ListSources.Invalidate()
+    unfilteredCache = {}
+    filteredCache = {}
+end
+
+local function Signature(view)
+    return table.concat({
+        tostring(view.mode),
+        view.allSeasons and "1" or "0",
+        tostring(view.contentScope or "all"),
+        view.gearOnly and "1" or "0",
+        view.showHidden and "1" or "0",
+        tostring(view.selectedArchiveIndex or 0),
+    }, "|")
+end
+
+-- The returned tables are shared between callers within one redraw. Nothing
+-- may sort or otherwise mutate them in place; every caller reads.
+local function Build(view)
     local drops, loot
 
     if view.mode == "archive" then
@@ -138,6 +180,23 @@ function ListSources.GetUnfiltered(view)
     local entries = SYL.LootFeed.Build(drops, loot)
 
     return InScope(GearOnly(VisibleEntries(entries, view), view), view)
+end
+
+-- Everything in scope before filtering. Dropdown options are derived from
+-- this, so choosing one filter never empties the other dropdowns.
+function ListSources.GetUnfiltered(view)
+    local key = Signature(view)
+    local cached = unfilteredCache[key]
+
+    if cached then
+        return cached
+    end
+
+    local entries = Build(view)
+
+    unfilteredCache[key] = entries
+
+    return entries
 end
 
 -- The line under the title, saying which records are on screen.
@@ -193,14 +252,28 @@ function ListSources.CountHiddenInScope(view)
     return hidden
 end
 
+-- Cached alongside the unfiltered list. The filter state can only change
+-- through a control that redraws, and a redraw invalidates, so the signature
+-- does not have to describe the filters themselves.
 function ListSources.GetFiltered(view)
-    local records = ListSources.GetUnfiltered(view)
+    local key = Signature(view)
+    local cached = filteredCache[key]
 
-    if not view.filters then
-        return records
+    if cached then
+        return cached
     end
 
-    return Filters.Apply(records, view.filters, ListSources.GetFields(view))
+    local records = ListSources.GetUnfiltered(view)
+
+    if view.filters then
+        records = Filters.Apply(
+            records, view.filters, ListSources.GetFields(view)
+        )
+    end
+
+    filteredCache[key] = records
+
+    return records
 end
 
 function ListSources.IsFiltering(view)

@@ -373,14 +373,3 @@ function Reports.Bosses(limit)
 end
 
 -- Built from Core/CommandList.lua so this and the minimap menu always agree.
-function Reports.Help()
-    SYL:Print("Commands:")
-
-    for _, entry in ipairs(SYL.CommandList.ENTRIES) do
-        SYL:Write(
-            SYL.CommandList.Format(entry)
-            .. " — "
-            .. entry.description
-        )
-    end
-end

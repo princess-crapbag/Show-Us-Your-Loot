@@ -146,8 +146,13 @@ local function CreateActions(frame, handlers)
 
     frame.removeButton:SetPoint("LEFT", frame.addButton, "RIGHT", 6, 0)
 
-    frame.mainInput =
-        SYL.SearchBox.Create(frame, 130, "Main's name…", function() end)
+    -- Bordered, and it says what it is for rather than "Main's name…", which
+    -- is what the identical-looking search box above it would have said if it
+    -- filtered by main. This one filters nothing: it is the argument to the
+    -- button beside it, and does nothing until that button is pressed.
+    frame.mainInput = SYL.SearchBox.Create(
+        frame, 130, "Alt of whom?", function() end, { bordered = true }
+    )
 
     frame.mainInput:SetPoint("LEFT", frame.removeButton, "RIGHT", 12, 0)
 
@@ -200,6 +205,27 @@ local function CreateActions(frame, handlers)
         end)
 
     frame.clearButton:SetPoint("LEFT", frame.altButton, "RIGHT", 12, 0)
+
+    local Tip = SYL.Tooltips.Attach
+
+    Tip(frame.addButton, "Add to team",
+        "Marks the ticked characters as raiders. Team membership is per "
+        .. "character, because you bring a character rather than a person.")
+
+    Tip(frame.removeButton, "Remove",
+        "Takes the ticked characters off the raid team. Nothing about their "
+        .. "loot history changes.")
+
+    Tip(frame.mainInput, "Whose alt?",
+        "Type the main's name, then press Alt of. This box does not filter "
+        .. "the list — the search box above it does that.")
+
+    Tip(frame.altButton, "Alt of",
+        "Maps every ticked character to the main named on the left. This "
+        .. "changes past numbers as well as future ones, because two "
+        .. "characters then count as one person.")
+
+    Tip(frame.clearButton, "Untick all", "Clears the ticked characters.")
 end
 
 -- handlers:

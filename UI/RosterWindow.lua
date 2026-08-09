@@ -79,6 +79,15 @@ end
 
 local Refresh
 
+-- Refresh redraws from the cached roster, which is what makes typing in the
+-- search box cheap. Rebuild is for the handful of actions that change what
+-- the roster *is* — mapping an alt, or the guild roster arriving.
+local function Rebuild()
+    SYL.RosterData.Invalidate()
+
+    Refresh()
+end
+
 -- Checked characters, keyed by GUID. Survives sorting and searching, so you
 -- can find three people by name one at a time and act on all of them.
 local selected = {}
@@ -266,7 +275,10 @@ local function CreateWindow()
         getSelected = SelectedEntries,
 
         onClearSelection = ClearSelection,
-        onChanged = function() Refresh() end,
+
+        -- The bulk actions include "Alt of", which changes mainKey, isAlt and
+        -- mainName on the entries themselves, so this one has to rebuild.
+        onChanged = Rebuild,
     })
 
     frame.scrollBar = SYL.ListScrollBar.Create(frame, {
@@ -347,7 +359,7 @@ local function CreateWindow()
         -- all. In a large guild that is almost everybody.
         SYL.RosterData.EnsureRegistry()
 
-        Refresh()
+        Rebuild()
     end)
 
     frame:Hide()
@@ -356,11 +368,7 @@ local function CreateWindow()
 end
 
 function SYL:OpenRosterWindow()
-    local window = CreateWindow()
-
-    if window:IsShown() then
-        window:Hide()
-    else
-        window:Show()
-    end
+    -- Raises a buried window rather than hiding it; see
+    -- WindowStack.ToggleWindow.
+    SYL.WindowStack.ToggleWindow(CreateWindow())
 end

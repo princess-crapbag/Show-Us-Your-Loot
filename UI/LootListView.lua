@@ -35,27 +35,53 @@ end
 local LootListView = {}
 SYL.LootListView = LootListView
 
-local CACHE_RETRY_SECONDS = 0.6
-
-local retryScheduled = false
-
 -- Item quality and icon come from the client cache, which may not hold an
--- item this character has never seen. One delayed refresh lets the cache fill
--- rather than leaving uncoloured names on screen.
-local function ScheduleCacheRetry()
-    if retryScheduled then
-        return
+-- item this character has never seen.
+--
+-- This used to re-draw the whole list every 0.6 seconds until everything
+-- resolved, which is a poll for an answer the client volunteers. Two things
+-- were wrong with it: a full season's list was rebuilt twice a second while
+-- the window sat open, and an item the server never answers for — a removed
+-- id, a failed request — kept it going forever.
+--
+-- GET_ITEM_INFO_RECEIVED fires when the cache fills. Registered only while
+-- something on screen is actually waiting, and dropped again the moment
+-- nothing is, so an idle window listens to nothing.
+local BURST_SECONDS = 0.1
+
+local cacheWatcher
+local refreshPending = false
+
+local function StopWatchingItemCache()
+    if cacheWatcher then
+        cacheWatcher:UnregisterAllEvents()
+    end
+end
+
+local function WatchItemCache()
+    if not cacheWatcher then
+        cacheWatcher = CreateFrame("Frame")
+
+        cacheWatcher:SetScript("OnEvent", function()
+            -- A boss's worth of items resolve in one burst, and each would
+            -- otherwise redraw the list on its own.
+            if refreshPending then
+                return
+            end
+
+            refreshPending = true
+
+            C_Timer.After(BURST_SECONDS, function()
+                refreshPending = false
+
+                if SYL.RefreshMainWindow then
+                    SYL:RefreshMainWindow()
+                end
+            end)
+        end)
     end
 
-    retryScheduled = true
-
-    C_Timer.After(CACHE_RETRY_SECONDS, function()
-        retryScheduled = false
-
-        if SYL.RefreshMainWindow then
-            SYL:RefreshMainWindow()
-        end
-    end)
+    cacheWatcher:RegisterEvent("GET_ITEM_INFO_RECEIVED")
 end
 
 --------------------------------------------------------------------------
@@ -172,19 +198,50 @@ local function FillFeedRow(row, entry, index)
     return Rows.SetRowItem(row, entry.itemLink, entry.itemName)
 end
 
+-- Why the list is empty, not just that it is.
+--
+-- It said "No loot recorded yet" for every empty list, including the four
+-- that are empty because of something the user just pressed. Worse, on a
+-- fresh install it is the first thing anybody sees, and it reads as "this is
+-- not working" — because the one fact that would explain it is nowhere in
+-- the addon: history starts at install. Nothing that dropped before then can
+-- ever appear, and no amount of waiting will change that.
+local function EmptyMessage(view)
+    if ListSources.IsFiltering(view) then
+        return "Nothing matches these filters."
+    end
+
+    if view.showHidden then
+        return "Nothing has been hidden. Tick a row and press Hide to set it "
+            .. "aside without deleting it."
+    end
+
+    if view.gearOnly then
+        return "No gear recorded yet. Gear only hides reagents, gold and "
+            .. "quest items — press it again to see everything."
+    end
+
+    if view.contentScope == "raid" then
+        return "Nothing recorded from a raid yet."
+    end
+
+    if view.contentScope == "dungeon" then
+        return "Nothing recorded from a dungeon yet. Dungeon gear is "
+            .. "personal loot, so it arrives without a roll."
+    end
+
+    return "Nothing recorded yet.\n\nRecording starts when the addon is "
+        .. "installed — it cannot see loot from before that. Run a boss and "
+        .. "it will fill in."
+end
+
 function LootListView.UpdateFeedRows(view)
     local entries = ListSources.GetFiltered(view)
     local total = #entries
 
     view.countText:SetText(DescribeCount(view, total, "item", "items"))
 
-    SetEmptyState(
-        view,
-        total == 0,
-        ListSources.IsFiltering(view)
-            and "Nothing matches these filters."
-            or "No loot recorded yet."
-    )
+    SetEmptyState(view, total == 0, EmptyMessage(view))
 
     local maxOffset = ClampOffset(view, total)
     local allCached = true
@@ -210,8 +267,10 @@ function LootListView.UpdateFeedRows(view)
         end
     end
 
-    if not allCached then
-        ScheduleCacheRetry()
+    if allCached then
+        StopWatchingItemCache()
+    else
+        WatchItemCache()
     end
 
     UpdateScrollRange(view, maxOffset, total)
