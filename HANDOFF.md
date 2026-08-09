@@ -20,7 +20,7 @@ an upgrade, who turned up, and what each boss has given.
 
 - **Repo:** https://github.com/princess-crapbag/Show-Us-Your-Loot (public)
 - **CurseForge:** project 1642383, live at **v0.2.0-alpha**
-- **`main` is 5 commits ahead of that tag.** Everything after it is on GitHub
+- **`main` is 10 commits ahead of that tag.** Everything after it is on GitHub
   and in Aimee's game, and has reached no user.
 - 87 Lua files in the .toc, 7 test suites in `tools/`, all run before a
   release by `.github/workflows/release.yml`.
