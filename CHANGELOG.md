@@ -15,6 +15,13 @@ this says what you will notice.
   Nothing is deleted.
 - **Hide or ignore every copy of an item.** Hold Shift when you press either
   button. Hiding one Dawn Crystal used to leave the other two.
+- **Features can be switched off.** Settings has a Features list: raid buff
+  coverage, Mythic+ scores, boss loot tables, officer sync and the developer
+  tools. Each says what it costs when it is on. Anything switched off is not
+  built at all rather than built and hidden, so a `/reload` applies it.
+- **Windows no longer open on top of each other.** They are laid out as a set
+  and centred as a group, so opening the loot list and the due list puts them
+  side by side. Drag a window and the addon stops rearranging that one.
 
 ### Changed
 

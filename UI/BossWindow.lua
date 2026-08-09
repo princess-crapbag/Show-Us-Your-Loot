@@ -283,30 +283,37 @@ local function CreateWindow()
         .. "table has actually dropped."
     )
 
-    frame.itemsButton =
-        Theme.CreateButton(frame, 130, 20, "Loot tables", function()
-            showItems = not showItems
+    -- Built only when the feature is on. Off, the ITEMS column stays dashed
+    -- and there is no button offering to fill it.
+    if SYL.Features.IsEnabled("lootTables") then
+        frame.itemsButton =
+            Theme.CreateButton(frame, 130, 20, "Loot tables", function()
+                showItems = not showItems
 
-            -- Built on the first press rather than at load. If the journal
-            -- will not open, the column stays dashed and says so once.
-            if showItems and not SYL.EncounterJournal.IsAvailable() then
-                SYL:Print(
-                    "The Encounter Journal is not available, so loot tables "
-                    .. "cannot be read."
+                -- Built on the first press rather than at load. If the
+                -- journal will not open, the column stays dashed and says so
+                -- once.
+                if showItems
+                    and not SYL.EncounterJournal.IsAvailable()
+                then
+                    SYL:Print(
+                        "The Encounter Journal is not available, so loot "
+                        .. "tables cannot be read."
+                    )
+
+                    showItems = false
+                end
+
+                Theme.SetTextColor(
+                    frame.itemsButton.label,
+                    showItems and "accent" or "textPrimary"
                 )
 
-                showItems = false
-            end
+                Refresh()
+            end)
 
-            Theme.SetTextColor(
-                frame.itemsButton.label,
-                showItems and "accent" or "textPrimary"
-            )
-
-            Refresh()
-        end)
-
-    frame.itemsButton:SetPoint("TOPLEFT", 18, -106)
+        frame.itemsButton:SetPoint("TOPLEFT", 18, -106)
+    end
 
     CreateHeader(frame)
 

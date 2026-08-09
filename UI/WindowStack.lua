@@ -21,11 +21,9 @@ SYL.WindowStack = WindowStack
 -- that a buried window rises instead of hiding: toggling off is only what you
 -- meant if you could actually see the thing you were closing.
 --
--- THEY ALL OPEN IN THE SAME PLACE. Dead centre, every one, so opening two
--- means dragging one off the other before either can be read. Cascading is
--- not a layout — the real answer is Aimee's F3, windows that do not overlap
--- at all — but it does mean two open windows are both visible without
--- touching the mouse.
+-- THEY ALL OPENED IN THE SAME PLACE. Where a window goes is UI/WindowLayout.
+-- This file only decides when to ask it, and what to do when it cannot find
+-- anywhere: step off centre so at least the title bars are distinguishable.
 
 local CASCADE_STEP = 30
 local CASCADE_WRAP = 6
@@ -33,10 +31,45 @@ local CASCADE_WRAP = 6
 local cascadeIndex = 0
 local windows = {}
 
+-- Insertion order is kept as well as membership, because the layout below
+-- has to be stable: pairs() would rearrange every window each time one
+-- opened.
+local order = {}
+
 -- Registered so "is anything of ours on top of this" is answerable. Frames
 -- are created once and kept, so this never needs cleaning up.
 function WindowStack.TrackWindow(frame)
+    if windows[frame] then
+        return
+    end
+
     windows[frame] = true
+
+    table.insert(order, frame)
+end
+
+-- Once a window has been dragged, its position is the user's answer and the
+-- layout stops having an opinion about it.
+function WindowStack.NoteUserMoved(frame)
+    frame.symlUserMoved = true
+end
+
+-- Everything currently open, oldest first, and whether any of them has been
+-- put somewhere by hand.
+local function OpenWindows(exclude)
+    local open, userMoved = {}, false
+
+    for _, frame in ipairs(order) do
+        if frame:IsShown() then
+            if frame.symlUserMoved then
+                userMoved = true
+            elseif frame ~= exclude then
+                table.insert(open, frame)
+            end
+        end
+    end
+
+    return open, userMoved
 end
 
 local function IsTopmost(frame)
@@ -72,6 +105,14 @@ local function PlaceOnce(frame)
 
     frame.symlPlaced = true
 
+    local open, userMoved = OpenWindows(frame)
+
+    if SYL.WindowLayout.Place(frame, open, userMoved) then
+        return
+    end
+
+    -- The screen is full, or the frame has no size yet. Step off centre so at
+    -- least the title bars are distinguishable.
     local step = cascadeIndex % CASCADE_WRAP
 
     cascadeIndex = cascadeIndex + 1

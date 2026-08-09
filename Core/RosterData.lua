@@ -81,7 +81,9 @@ function RosterData.Build()
         })
     end
 
-    SYL.RaiderIO.AttachScores(roster)
+    if SYL.Features.IsEnabled("raiderIO") then
+        SYL.RaiderIO.AttachScores(roster)
+    end
 
     cached = roster
 

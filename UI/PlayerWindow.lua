@@ -87,7 +87,9 @@ local function CurrentStats()
     end
 
     -- Before the sort, so the M+ column sorts like any other.
-    SYL.RaiderIO.AttachScores(stats)
+    if SYL.Features.IsEnabled("raiderIO") then
+        SYL.RaiderIO.AttachScores(stats)
+    end
 
     return Analytics.Sort(stats, sortKey, sortReversed)
 end

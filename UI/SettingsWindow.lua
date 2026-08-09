@@ -47,7 +47,7 @@ local function CreateSettingsWindow()
         Theme.CreateText(frame, Theme.sizes.subtitle, "textSecondary")
 
     subtitle:SetPoint("TOPLEFT", 27, -40)
-    subtitle:SetText("What gets recorded")
+    subtitle:SetText("What gets recorded, and what runs at all")
 
     local separator = Theme.CreateSeparator(frame)
     separator:SetPoint("TOPLEFT", 16, -66)
@@ -60,6 +60,7 @@ local function CreateSettingsWindow()
 
     SettingsRows.BuildQualitySection(frame)
     SettingsRows.BuildToggleSection(frame)
+    SettingsRows.BuildFeatureSection(frame)
 
     local footerRule = Theme.CreateSeparator(frame)
     footerRule:SetPoint("BOTTOMLEFT", 16, 44)

@@ -40,12 +40,12 @@ local SEPARATOR = "\t"
 local frame
 local registered = false
 
+-- One switch, in the feature registry, rather than a setting of its own.
+-- This is the only part of the addon that sends anything to another player,
+-- which is exactly the kind of thing somebody should be able to find in one
+-- list and turn off.
 local function IsEnabled()
-    return ShowUsYourLootDB
-        and ShowUsYourLootDB.settings
-        and ShowUsYourLootDB.settings.syncEnabled
-        and true
-        or false
+    return SYL.Features.IsEnabled("sync")
 end
 
 -- Tabs are the field separator, so anything containing one would corrupt the

@@ -75,7 +75,13 @@ local function OnPlayerLogin()
     )
 
     SYL.ItemTooltip.Enable()
-    SYL.Sync.Enable()
+
+    -- Not registered at all when off, rather than registered and refusing to
+    -- send. A feature that is off should cost nothing, including an addon
+    -- message prefix and an event handler.
+    if SYL.Features.IsEnabled("sync") then
+        SYL.Sync.Enable()
+    end
 
     -- The reply arrives as GUILD_ROSTER_UPDATE.
     SYL.Guild.Request()

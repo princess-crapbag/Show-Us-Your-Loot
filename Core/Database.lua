@@ -10,7 +10,8 @@
 local SYL = _G.ShowUsYourLoot
 
 -- 4: countPersonalLoot's default flipped to off. See MigrateSettings.
-local DATABASE_VERSION = 4
+-- 5: syncEnabled became the "sync" feature.
+local DATABASE_VERSION = 5
 
 local function GenerateSeasonID()
     return "season-" .. date("%Y%m%d-%H%M%S")
@@ -157,9 +158,16 @@ end
 -- quietly is its own kind of wrong, and this one changes a number they may
 -- have been quoting to their raid.
 local function MigrateSettings(storedVersion)
+    -- Guarded against the version this migration was introduced at, NOT
+    -- against DATABASE_VERSION. Written the second way it re-fires on every
+    -- later bump: somebody who migrated to 4, decided they wanted the setting
+    -- after all and turned it back on would have it taken away again by the
+    -- next unrelated schema change. A migration runs once, at its own
+    -- boundary, and every one below owns its own number.
+    --
     -- No stored version is a fresh install, not an upgrade: it should take
     -- the new default from InitializeSettings without being told anything.
-    if type(storedVersion) ~= "number" or storedVersion >= DATABASE_VERSION then
+    if type(storedVersion) ~= "number" or storedVersion >= 4 then
         return false
     end
 
@@ -170,6 +178,27 @@ local function MigrateSettings(storedVersion)
     ShowUsYourLootDB.settings.countPersonalLoot = false
 
     return true
+end
+
+-- syncEnabled moved into the feature registry, and it is the one switch here
+-- that decides whether the addon talks to other players.
+--
+-- Carried across rather than defaulted, in both directions. Somebody who
+-- turned sync on chose that and should not find it off after an update;
+-- somebody who never touched it should not find it on. The old setting is
+-- left in place rather than deleted, so a downgrade still reads it.
+local function MigrateSyncFeature(storedVersion)
+    if type(storedVersion) ~= "number" or storedVersion >= 5 then
+        return
+    end
+
+    local wasEnabled = ShowUsYourLootDB.settings.syncEnabled == true
+
+    ShowUsYourLootDB.features = ShowUsYourLootDB.features or {}
+
+    if ShowUsYourLootDB.features.sync == nil then
+        ShowUsYourLootDB.features.sync = wasEnabled
+    end
 end
 
 local function MigrateOldLootDatabase()
@@ -200,6 +229,8 @@ function SYL.DatabaseInitialize()
     InitializeSettings()
 
     local settingChanged = MigrateSettings(storedVersion)
+
+    MigrateSyncFeature(storedVersion)
 
     ShowUsYourLootDB.archives = ShowUsYourLootDB.archives or {}
     ShowUsYourLootDB.recentRecordIDs =

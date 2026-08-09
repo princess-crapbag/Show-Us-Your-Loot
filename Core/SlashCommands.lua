@@ -168,6 +168,15 @@ COMMANDS.settings = function()
 end
 
 COMMANDS.dev = function()
+    if not SYL.Features.IsEnabled("developer") then
+        SYL:Print(
+            "Developer tools are off. Turn them on in Settings, under "
+            .. "Features."
+        )
+
+        return
+    end
+
     -- Capture runs on its own; this only opens the inspector window.
     if not SYL.LootHistory.IsEnabled() then
         SYL:Print(

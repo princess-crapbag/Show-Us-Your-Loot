@@ -68,6 +68,10 @@ local function AddDropped(boss)
 end
 
 local function AddNeverDropped(boss)
+    if not SYL.Features.IsEnabled("lootTables") then
+        return
+    end
+
     -- IsReady rather than IsAvailable: see the header. A hover must not
     -- start reading the journal.
     if not SYL.EncounterJournal.IsReady() then

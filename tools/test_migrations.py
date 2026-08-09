@@ -48,6 +48,10 @@ CASES = [
     ("upgrade from 0.1.0-alpha, setting already off", 3, False, False, False),
     ("already migrated, user turned it back on", 4, True, False, True),
     ("already migrated, left off", 4, False, False, False),
+
+    # A later, unrelated schema bump must not re-run this migration. Written
+    # against DATABASE_VERSION rather than its own boundary, it did.
+    ("a later version bump does not re-fire it", 5, True, False, True),
 ]
 
 failures = []

@@ -40,6 +40,11 @@ function RosterControls.UpdateRoles(frame, roster)
 end
 
 function RosterControls.UpdateCoverage(frame, roster)
+    -- Nothing to update when the feature never built the lines.
+    if not frame.coverageText then
+        return
+    end
+
     local coverage = SYL.RaidBuffs.BuildCoverage(roster)
     local covered, total = SYL.RaidBuffs.Summarise(coverage)
     local missing = SYL.RaidBuffs.Missing(coverage)
@@ -66,15 +71,19 @@ function RosterControls.UpdateCoverage(frame, roster)
 end
 
 local function CreateSummary(frame, handlers)
-    frame.coverageText =
-        Theme.CreateText(frame, Theme.sizes.row, "textPrimary")
+    -- Not created at all when the feature is off, rather than created and
+    -- left blank. Two empty lines of chrome are still two lines of chrome.
+    if SYL.Features.IsEnabled("raidBuffs") then
+        frame.coverageText =
+            Theme.CreateText(frame, Theme.sizes.row, "textPrimary")
 
-    frame.coverageText:SetPoint("TOPLEFT", 18, -74)
+        frame.coverageText:SetPoint("TOPLEFT", 18, -74)
 
-    frame.missingText = Theme.CreateText(frame, Theme.sizes.row, "warning")
-    frame.missingText:SetPoint("TOPLEFT", 18, -96)
-    frame.missingText:SetPoint("TOPRIGHT", -16, -96)
-    frame.missingText:SetJustifyH("LEFT")
+        frame.missingText = Theme.CreateText(frame, Theme.sizes.row, "warning")
+        frame.missingText:SetPoint("TOPLEFT", 18, -96)
+        frame.missingText:SetPoint("TOPRIGHT", -16, -96)
+        frame.missingText:SetJustifyH("LEFT")
+    end
 
     frame.rolesText =
         Theme.CreateText(frame, Theme.sizes.rowSmall, "textSecondary")

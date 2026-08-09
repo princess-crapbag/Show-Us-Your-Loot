@@ -107,25 +107,25 @@ local function CreateTextArea(parent)
 end
 
 local function CreateFooter(parent)
-    local copyButton = Widgets.CreatePanelButton(
+    local copyButton = Theme.CreateButton(
         parent, 110, 24, "Copy JSON", ShowSnapshotJSON
     )
 
     copyButton:SetPoint("BOTTOMLEFT", 20, 22)
 
-    local exportButton = Widgets.CreatePanelButton(
+    local exportButton = Theme.CreateButton(
         parent, 110, 24, "Export", ShowFullExport
     )
 
     exportButton:SetPoint("LEFT", copyButton, "RIGHT", 6, 0)
 
-    local reportButton = Widgets.CreatePanelButton(
+    local reportButton = Theme.CreateButton(
         parent, 110, 24, "Live Report", ShowReport
     )
 
     reportButton:SetPoint("LEFT", exportButton, "RIGHT", 6, 0)
 
-    local clearButton = Widgets.CreatePanelButton(
+    local clearButton = Theme.CreateButton(
         parent, 110, 24, "Clear", function()
             LootHistory.ClearLog()
             ShowReport()
@@ -134,7 +134,7 @@ local function CreateFooter(parent)
 
     clearButton:SetPoint("LEFT", reportButton, "RIGHT", 6, 0)
 
-    local closeButton = Widgets.CreatePanelButton(
+    local closeButton = Theme.CreateButton(
         parent, 110, 24, "Close", function()
             frame:Hide()
         end

@@ -12,6 +12,13 @@
 -- saved setting. Two are not settings at all: the colour scheme and the output
 -- window cycle through values when pressed, and drawing those as checkboxes
 -- meant drawing a box that could never be ticked.
+--
+-- syl-check: size-exempt — three sections of one window, and they share the
+-- row factory, the section helper, the row registry and the layout constants
+-- that decide where each section starts. Splitting the last one out to save
+-- ten lines would mean exporting five internals: more surface than it
+-- removes, and the layout maths would then live apart from the thing it
+-- measures.
 
 local SYL = _G.ShowUsYourLoot
 local Theme = SYL.Theme
@@ -29,6 +36,7 @@ local HEADING_HEIGHT = 18
 local NOTE_HEIGHT = 30
 local SECTION_GAP = 44
 local FOOTER_HEIGHT = 60
+local FEATURE_ROW_HEIGHT = 38
 
 local rows = {}
 
@@ -37,12 +45,16 @@ local rows = {}
 local GetItemQualityColor =
     C_Item and C_Item.GetItemQualityColor or _G.GetItemQualityColor
 
-local function CreateSettingRow(parent, index, labelText, onClick, isAction)
-    local row = CreateFrame("Button", nil, parent)
+local function CreateSettingRow(parent, index, labelText, onClick, options)
+    options = options or {}
 
-    row:SetHeight(ROW_HEIGHT)
-    row:SetPoint("TOPLEFT", 0, -((index - 1) * ROW_HEIGHT))
-    row:SetPoint("TOPRIGHT", 0, -((index - 1) * ROW_HEIGHT))
+    local row = CreateFrame("Button", nil, parent)
+    local height = options.height or ROW_HEIGHT
+    local isAction = options.isAction
+
+    row:SetHeight(height)
+    row:SetPoint("TOPLEFT", 0, -((index - 1) * height))
+    row:SetPoint("TOPRIGHT", 0, -((index - 1) * height))
 
     row.highlight = Theme.CreateSolidTexture(row, "rowHover", "BACKGROUND")
     row.highlight:SetAllPoints()
@@ -236,10 +248,6 @@ local TOGGLES = {
         end,
     },
     {
-        label = "Share drops with officers in raid",
-        key = "syncEnabled",
-    },
-    {
         -- Says gear, because that is now all it announces. Every quality is
         -- still recorded; announcing every quality was what doubled the
         -- user's loot chat with greys after a Mythic+ run.
@@ -273,12 +281,16 @@ local TOGGLES = {
     },
 }
 
+local function FeatureSectionTop()
+    return ToggleSectionTop() - HEADING_HEIGHT
+        - #TOGGLES * ROW_HEIGHT - NOTE_HEIGHT - SECTION_GAP
+end
+
 function SettingsRows.WindowHeight()
     local contentBottom =
-        math.abs(ToggleSectionTop())
+        math.abs(FeatureSectionTop())
         + HEADING_HEIGHT
-        + #TOGGLES * ROW_HEIGHT
-        + NOTE_HEIGHT
+        + #SYL.Features.LIST * FEATURE_ROW_HEIGHT
 
     return contentBottom + FOOTER_HEIGHT
 end
@@ -319,7 +331,7 @@ function SettingsRows.BuildToggleSection(parent)
                 SettingsRows.Refresh()
             end,
 
-            isAction
+            { isAction = isAction }
         )
 
         if not isAction then
@@ -354,4 +366,52 @@ function SettingsRows.BuildToggleSection(parent)
         .. "with them, so counting gear taken without a roll mostly counts "
         .. "yours."
     )
+end
+
+-- Whole features, switched on and off.
+--
+-- Taller rows than the toggles above, because each one carries a line saying
+-- what it costs when it is on. A switch with no stated price is a guess, and
+-- the point of this list is that somebody can decide rather than wonder.
+function SettingsRows.BuildFeatureSection(parent)
+    local container =
+        AddSection(parent, "FEATURES", FeatureSectionTop())
+
+    container:SetHeight(#SYL.Features.LIST * FEATURE_ROW_HEIGHT)
+
+    for index, feature in ipairs(SYL.Features.LIST) do
+        local row = CreateSettingRow(
+            container,
+            index,
+            feature.label,
+            function()
+                local enabled = SYL.Features.Toggle(feature.key)
+
+                SYL.Features.AnnounceReloadNeeded(feature, enabled)
+                SettingsRows.Refresh()
+            end,
+
+            { height = FEATURE_ROW_HEIGHT }
+        )
+
+        -- Label to the top of a two-line row rather than centred on it.
+        row.label:ClearAllPoints()
+        row.label:SetPoint("TOPLEFT", row.box, "TOPRIGHT", 8, 1)
+        row.label:SetPoint("RIGHT", -4, 0)
+
+        row.costText =
+            Theme.CreateText(row, Theme.sizes.rowSmall, "textMuted")
+
+        row.costText:SetPoint("TOPLEFT", row.label, "BOTTOMLEFT", 0, -2)
+        row.costText:SetPoint("RIGHT", -4, 0)
+        row.costText:SetJustifyH("LEFT")
+        row.costText:SetWordWrap(true)
+        row.costText:SetText(feature.cost or "")
+
+        row.isChecked = function()
+            return SYL.Features.IsEnabled(feature.key)
+        end
+
+        table.insert(rows, row)
+    end
 end

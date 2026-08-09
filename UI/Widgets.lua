@@ -23,20 +23,20 @@ function Widgets.MakeMovable(frame)
 
     frame:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
-    end)
-end
 
-function Widgets.CreatePanelButton(parent, width, height, text, onClick)
-    return Theme.CreateButton(parent, width, height, text, onClick)
+        -- Moved by hand is the user's answer; the layout stops rearranging it.
+        if SYL.WindowStack then
+            SYL.WindowStack.NoteUserMoved(self)
+        end
+    end)
 end
 
 -- Where each column starts, from a list of { key, width, gap }.
 --
 -- Five windows each carry an identical `do ... end` block computing this, and
--- the header and the rows both have to agree with it — which is exactly the
--- kind of duplication that let the boss window ship with columns wider than
--- its own frame. New windows use this; the older ones still have their copies
--- and can be moved over when they are next touched.
+-- the header and rows both have to agree with it — the kind of duplication
+-- that let the boss window ship with columns wider than its own frame. New
+-- windows use this; the older copies can move over when next touched.
 function Widgets.ColumnOffsets(columns)
     local offsets = {}
     local x = 0
