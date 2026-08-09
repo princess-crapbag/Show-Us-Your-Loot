@@ -1,8 +1,12 @@
 # Handoff — Show Us Your Loot
 
-Written 2026-08-08 for a session starting fresh. Everything here is a
-decision waiting to be made or a fault waiting to be fixed. Nothing in this
-file is finished work; `git log` has that.
+Rewritten 2026-08-09 for a session starting fresh. The previous version was
+written when the whole review triage was open; nearly all of it has since been
+done, and a patched list of finished work is worse than no list.
+
+This file is what is **open**, what has been **decided**, and what has already
+**cost somebody time**. Finished work is in `git log`, which explains it
+better than a summary would.
 
 Not shipped in the addon zip — see `.pkgmeta`.
 
@@ -15,13 +19,26 @@ Blizzard's Loot History API, plus chat-captured loot, and answers who is due
 an upgrade, who turned up, and what each boss has given.
 
 - **Repo:** https://github.com/princess-crapbag/Show-Us-Your-Loot (public)
-- **CurseForge:** project 1642383, live at **v0.1.0-alpha**
-- **`main` is many commits ahead of that tag.** Everything after
-  `v0.1.0-alpha` is on GitHub and in Aimee's game, and has reached no user.
+- **CurseForge:** project 1642383, live at **v0.2.0-alpha**
+- **`main` is 4 commits ahead of that tag.** Everything after it is on GitHub
+  and in Aimee's game, and has reached no user.
+- 83 Lua files in the .toc, 5 test suites in `tools/`.
 
 **Aimee runs the addon from a symlink**, `Interface/AddOns/ShowUsYourLoot ->
-Desktop/ShowUsYourLoot`. Edits are live in game immediately; only a
-`/reload` is needed. There is no build step for local testing.
+Desktop/ShowUsYourLoot`. Edits are live in game immediately; only a `/reload`
+is needed. There is no build step for local testing.
+
+### THE MOST IMPORTANT THING ON THIS PAGE
+
+**None of the fairness maths has ever run on a real raid night.**
+
+Three passes have now changed how attendance is counted, how droughts are
+measured, what counts as an upgrade, when things are recomputed and what is on
+screen. Not one of those changes has been watched happening with real data.
+
+The next raid is the single highest-value event for this project. Running
+`/syl due` before and after that night will say more than another review pass
+would. Until then, treat every number as plausible rather than correct.
 
 ### The rule about releasing
 
@@ -33,412 +50,193 @@ identically in a terminal.
 - **Released to CurseForge** — a `v*` tag was pushed, a zip was built and
   uploaded, real people download it.
 
-Releasing: write the CHANGELOG entry, bump `## Version:` in the .toc *by
-hand*, tag, push the tag. The `-alpha` suffix is what marks the file Alpha.
-See CURSEFORGE.md.
+Releasing: write the CHANGELOG entry, bump `## Version:` in the .toc **by
+hand**, commit, tag, push the tag. The `-alpha` suffix is what marks the file
+Alpha rather than a full release. See CURSEFORGE.md.
 
-### Working here
+---
 
-- `python tools/syl_check.py` after every change. The only tests are
-  `tools/test_lootmessages.py` (§4A), which need `lupa` — see there.
-- **The checker is a regex heuristic, not a parser.** It validates
-  `SYL.Module.Member` references, bare module globals, block balance,
-  .toc-against-disk and column widths. It passed clean through four
-  crash-level bugs in one day, so treat a clean run as "nothing obvious"
-  rather than as "this works".
-- **What it cannot see** is a local used before its declaration —
+## 2. Working here
+
+- **`python tools/syl_check.py` after every change.** It validates
+  `SYL.Module.Member` references, bare module globals, members on a file's own
+  module table, block balance, .toc-against-disk and column widths.
+- **It is a regex heuristic, not a parser.** It passed clean through four
+  crash-level bugs in one day. A clean run means "nothing obvious", not "this
+  works".
+- **What it still cannot see:** a local used before its declaration.
   `HideTarget`, called twenty lines above the `local function` that defined
-  it, was a nil global and shipped. See G1 for the tool that would catch it.
-- 400-line limit per file is a warning, not an error. A file may opt out
-  with `-- syl-check: size-exempt — reason` in its first 40 lines. **Never
-  delete a comment to get under it**; that happened twice before the escape
-  hatch existed.
-- Commit identity is set repo-local. `gh` is installed and authenticated as
-  `princess-crapbag`; pushes need no prompt. Never put a token in a URL.
+  it, was a nil global and shipped. `luacheck` with a WoW globals definition
+  would catch it and is the open tooling item (§6).
+- **The tests need `lupa`**, which embeds a Lua interpreter:
+
+  ```bash
+  python -m venv .venv && .venv/Scripts/python -m pip install lupa
+  ```
+
+  Then `.venv/Scripts/python tools/test_lootmessages.py`, and the same for
+  `test_migrations`, `test_lootsort`, `test_windowplacement`,
+  `test_syncchunks`. Each reads its Lua straight out of the addon, so they
+  cannot drift from the code. All five exit non-zero on failure.
+- **400-line limit is a warning, not an error.** A file opts out with
+  `-- syl-check: size-exempt — reason` in its first 40 lines. Three files do,
+  and each says why. **Never delete a comment to get under it** — that
+  happened twice before the escape hatch existed. Splitting is usually the
+  right answer; five files were split that way in one day.
+- Commit identity is repo-local. `gh` is authenticated as `princess-crapbag`;
+  pushes need no prompt. Never put a token in a URL.
+
+### Write commit messages from the diff, not from the intent
+
+The commit "Fix four crashes and three wrong numbers found by review" opens by
+describing a fix to `UI/FilterDropdown.lua` in detail. It does not touch that
+file. `git show --stat` lists seven files and that is not one of them.
+
+The bug was real, was reported as fixed, and stayed broken for days — every
+filter dropdown threw on click and none of them opened. Nobody noticed because
+the message said otherwise.
+
+Treat the rest of that commit's claims with the same suspicion. More
+generally: check the diff before describing it.
 
 ---
 
-## 2. What just happened
+## 3. What is open
 
-Five expert reviewers went over the addon: a raid officer, a retail-systems
-specialist, a WoW addon API reviewer, a UX specialist, and a competitive
-analyst. Their findings are triaged in §4.
+### Aimee's list
 
-**Six bugs were fixed and pushed** (commit "Fix four crashes and three wrong
-numbers found by review"). Its message claims seven:
-
-- ~~`FilterDropdown.ResetSearch` was called but never defined~~ — **THIS ONE
-  WAS NOT ACTUALLY FIXED.** The commit describes the fix and does not touch
-  `UI/FilterDropdown.lua`; `git show --stat` on it lists seven files and that
-  is not one of them. The function had never existed, since the commit that
-  added the call. Every filter dropdown threw on click and none of them opened
-  for the whole of that time, and it was reported as done.
-
-  Fixed properly on 2026-08-08, and `syl_check` now has a rule that catches
-  the shape (see G1). **Worth taking as a warning about the rest of that
-  commit message**: it was written from intent rather than from the diff.
-- No palette defined `warning`, so `unpack(Theme.colors.warning)` errored on
-  any unparseable date
-- Archive popup read `self.EditBox`; StaticPopup provides `self.editBox`, so
-  archiving could never complete
-- `Selection.ApplyHidden` called `HideTarget` declared below it — a nil
-  global, so Hide and Unhide did nothing
-- Paladin missing from battle resurrection (Intercession, since Dragonflight)
-- `DueList.FilterRecent` built its cutoff from unfiltered sessions, so keys
-  emptied the due list
-- `LootFeed.DropType` defaulted unknown roll states to "need"
-
-**Then the whole A list was fixed** — see §4A. Twenty-one items across
-thirty-six files.
-
-**Untested in game.** No raid night has ever gone through the fairness maths.
-The next raid is ~2 weeks out. That was true before the A-list pass and is
-still true after it: the A fixes changed how several numbers are computed and
-not one of them has been watched happening.
-
----
-
-## 3. Aimee's outstanding requests
-
-**F1-F6 and F8 are done, 2026-08-09.** D7, D8 and D9 were taken as cuts at
-the same time; D1-D6 are keeps and became feature toggles, which is what F6
-was for.
+Everything except these is done.
 
 | # | Item | State |
 |---|---|---|
-| F1 | Hide all copies of an item | Done — Shift on Hide or Ignore |
-| F2 | Delete selected, or an ignore flag | Done as **ignore**, not delete — see below |
-| F3 | Windows should not overlap | Done — laid out as a set, not one at a time |
-| F4 | Sort the main list by column | Done |
-| F5 | `/syl output` does not persist | Done — it stored an index, not a window |
-| F6 | Modular enable/disable | Done — `Core/Features.lua`, five toggles |
-| F7 | Roster shareable as a link | **Blocked, and not on what §4 said** |
-| F8 | Chunked sync | Done as transport only — see below |
-| F9 | Droptimizer import | **Cannot be done in the addon** |
-| F10 | Re-take screenshot 4 | Aimee is doing this |
+| F7 | Roster shareable as a link | Blocked on a decision — see below |
+| F9 | Droptimizer import | Cannot be done in the addon — see below |
+| F10 | Re-take the screenshots | Waiting on UI work settling |
 
-**F2 is an ignore flag rather than a delete.** `excludedFromAnalytics` already
-existed on every record and was already honoured everywhere; nothing had been
-able to set it. Ignore does everything a delete would do to the numbers and
-stays reversible, and the addon's one promise about your data is that it does
-not remove things. A hard delete can be added on top if it is wanted.
+**F7 is blocked earlier than it looks.** It is recorded as needing a
+public-read decision on Supabase RLS. It needs one before that: **the roster
+is not uploaded at all.** `Core/DataExport.lua` sends seasons — drops, chat
+loot, raid nights with their per-night rosters. The raid *team* — who is
+marked as raiding, their roles, the alt mappings — lives in
+`ShowUsYourLootDB.players`, which is account level and never leaves the
+machine. There is nothing on the server to link to.
 
-**F8 is the transport and nothing else.** Payloads of any size now split and
-reassemble, which is what unblocks NOTES phases 2/3/5/6. What is actually sent
-has deliberately not changed: still drop headers, still no roll lists. Sending
-more is a decision to take on purpose rather than inherit from a roomier pipe.
+Two decisions, in order. First: should team, role and alt data be uploaded at
+all? That is officers' judgements about people, which is a different category
+from a record of what dropped. Only then: should a link make it readable
+without a login? If both are yes, the mechanism to copy is the one
+`syl_upload` already uses — a `SECURITY DEFINER` function keyed on a share
+token, so the tables are never opened to `anon` and revoking is deleting a
+token.
 
-### F7 is blocked on something upstream of the RLS question
+**F9 cannot be an in-game import. WoW addons cannot make HTTP requests.** That
+is the whole answer and it does not depend on what Raidbots exposes.
+(`/reports/<id>/data.json` answers 403 rather than 404, which hints the route
+exists behind bot protection; `simbot/report/<id>` returns the app shell for
+any id, so it proves nothing. Neither was confirmed.)
 
-§4 said this needs "a public-read decision on Supabase RLS". It needs one
-before that: **the roster is not uploaded at all.** `Core/DataExport.lua`
-exports seasons — drops, chat loot and raid nights with their per-night
-rosters. The raid *team* — who is marked as raiding, their roles, the alt
-mappings — lives in `ShowUsYourLootDB.players`, which is account level and
-never leaves the machine. There is nothing on the server to share a link to.
+That leaves pasting hundreds of kilobytes into a WoW edit box, or fetching it
+from `tools/syl_upload.py` — which already runs outside the game and already
+talks to Supabase — and joining it on the web side. Only the second works, and
+it makes F9 a web feature rather than an addon one.
 
-So it is two decisions, in order:
+**F10 is bigger than one screenshot.** All seven are stale and two show a UI
+that no longer exists:
 
-1. **Should team, role and alt data be uploaded?** That is a different
-   category from loot history: it is officers' judgements about people, not a
-   record of what dropped.
-2. **Then**, should a link make it readable without a login? The clean
-   mechanism is the one `syl_upload` already uses — a SECURITY DEFINER
-   function keyed on a share token, so the tables are never opened to `anon`
-   and revoking is deleting a token. That is a much better shape than a public
-   read policy.
+- 1 "The main window, Drops tab" and 5 "Chat Loot tab" — those tabs were
+  merged into a single Loot tab.
+- 4 "Player statistics" — pre-dates the M+ column, and ROLLED ON is now
+  ELIGIBLE.
+- 6 "Settings" — no Features section; the two action rows still drawn as
+  checkboxes.
+- 7 "The minimap command menu" — still lists commands that were removed.
+- 2 "Filters in use" and 3 "A drop's detail" — closest to current, missing the
+  Ignore button and the item level line.
 
-Not built, because both are Aimee's calls and the first one has not been made.
+They are tracked in git now and excluded from the zip in `.pkgmeta`. They are
+uploaded to the CurseForge page by hand, so the repo never pushes them — but
+the live project page currently shows v0.1.0-alpha's interface beside a
+v0.2.0-alpha download.
 
-### F9 cannot be an in-game import
+### Strategy — none of this is started
 
-**WoW addons cannot make HTTP requests.** There is no API for it, so the addon
-cannot fetch a Raidbots report however the endpoint is shaped. That is the
-whole answer and it does not depend on verification.
-
-For completeness: `https://www.raidbots.com/reports/<id>/data.json` answers
-**403**, not 404, which suggests the route exists and is behind bot
-protection; `simbot/report/<id>` returns the app shell for any id, so it
-proves nothing. Neither could be confirmed properly from here.
-
-That leaves two shapes, and both are somebody's decision rather than a fix:
-
-- **Paste into the addon.** A Droptimizer report is hundreds of kilobytes.
-  Pasting that into a WoW edit box is not realistic, and a trimmed paste means
-  asking the user to do the trimming.
-- **Fetch it outside the game.** `tools/syl_upload.py` already runs outside
-  WoW and already talks to Supabase. It could fetch a report by id and the web
-  dashboard could join it against the loot history. This is the only version
-  that works — and it makes F9 a web feature, which is worth knowing before
-  starting it, given D4.
-
-## 4. Reviewer findings, triaged
-
-Aimee is choosing from this list. **Do not start any of it unprompted.**
-
-### A. Wrong numbers and crashes — ALL FIXED, 2026-08-08
-
-A1–A21 are done and on GitHub. Nothing has shipped to CurseForge. **None of
-it has been in a raid**, and the fairness maths has still never run on a real
-night — see §2.
-
-Four judgement calls were made while fixing these. They are decisions, not
-findings, and they can be reversed:
-
-- **`countPersonalLoot` now defaults OFF** (A1). One client cannot see
-  anybody's solo loot but its own, so counting it put the officer at the
-  bottom of their own due list. When it is on, only gear received while
-  grouped is counted, which is the largest subset where coverage is even.
-  `/syl due` reports how many records were left out. The full reasoning is in
-  `Database.lua` next to the default.
-- **The quality floor for "did they get geared" is now epic** (A13), because
-  every gear track a raider chases awards epics and blue is levelling gear.
-  Tabards and shirts are excluded outright.
-- **Crafted items never count as gear received** (A2). A create line says an
-  item was made, never that the maker kept it, and the two errors are not
-  symmetric.
-- **Item level is now recorded but changes no ranking** (A14). Storing it was
-  the bug; weighting the due list by it is a policy decision and is still
-  Aimee's to make. Crest upgrades remain invisible and always will be — they
-  fire no loot event of any kind.
-
-Two files took a size exemption rather than being split: `LootHistory.lua`
-and `RaidSession.lua`. Both say why in their headers.
-
-`Core/LootMessages.lua` is new — the locale-aware chat parser, split out of
-`LootCapture.lua`. There are **real tests for it**, the first in this project,
-and they found two bugs that reading the code did not:
-
-```bash
-python -m venv .venv && .venv/Scripts/python -m pip install lupa
-```
-
-Then `.venv/Scripts/python tools/test_lootmessages.py`. It embeds a Lua
-interpreter and reads the parsing block straight out of the addon, so it
-cannot drift from the code. Six locales, exits non-zero on failure. See G1 —
-this is not a substitute for the checker knowing about module globals.
-
-<details>
-<summary>The original A-list, for reference</summary>
-
+Reviewer arguments, unchanged except where noted. **It is a menu, not a plan.**
 
 | # | Item |
 |---|---|
-| A1 | **`countPersonalLoot` default on inverts the due list against whoever runs the addon.** `CHAT_MSG_LOOT` only ever sees your own out-of-raid loot plus your current group's; nobody claims a vault while grouped with the officer. So your vault resets your drought and no one else's does. Two reviewers independently. **The single most consequential item here.** |
-| A2 | Crafting **for other people** counts as gear you received — `PersonalLoot.Build` never consults `LootTypeOf`. A guild crafter never appears due |
-| A3 | A **two-difficulty night counts twice** — `BuildSessionID` keys on instance + difficulty + date, and `nightsSinceUpgrade` is the sole ranking key |
-| A4 | **Attendance dies silently when loot capture is off** — `ENCOUNTER_START/END` are registered inside `LootHistory.Enable()` |
-| A5 | **Non-English clients file every chat-loot record under one fake player "Unknown."** `DetermineRecipient` matches literal English. Fix by moving to `ENCOUNTER_LOOT_RECEIVED`, already registered, which carries `playerName` and is locale-free — also fixes M+/dungeon attribution |
-| A6 | **Role cycle is a permanent no-op** for anyone the game assigned DAMAGER — `ROLES[4]` is nil, so it resets to the detected value |
-| A7 | **Roster bulk actions apply only to the post-search list** — ticks made under a different search are silently discarded, then cleared |
-| A8 | **Guild rank read off whichever alt `pairs()` reached first** — varies between refreshes |
-| A9 | **Class dropped for non-raiding guild members** — `AltDetect.EnsureGuildMembers` never passes `member.class` |
-| A10 | **Quality colours wiped** when the theme is changed, until `/reload` |
-| A11 | **Shift-click on chat-captured rows inserts a malformed link** — the capture pattern drops `|cff…`/`|r` |
-| A12 | **One person appears twice** in the Player filter — chat stores full name, the API stores short |
-| A13 | `MINIMUM_QUALITY = 3` is too low — any world blue resets a Mythic raider's drought; tabards and shirts pass the slot check despite a comment saying otherwise |
-| A14 | **No item level or upgrade track anywhere.** A Champion M+ piece and a Myth vault piece count the same. Crest upgrades produce no loot event at all and are entirely invisible |
-| A15 | **`/reload` mid-raid may duplicate that boss's drops** — `runID` is memory-only and re-minted. **Unverified**; needs one deliberate test |
-| A16 | Sortable headers for `select` and `main` have no comparator — silently sort by name |
-| A17 | `AltDetect` uses `officerNote or publicNote`, so anyone with any officer note never has their public note scanned |
-| A18 | **Delves classify as "world"** — `instanceType == "scenario"` is handled nowhere |
-| A19 | Missing difficulty IDs: Story, Follower, Event, Timewalking LFR. A solo Story clear opens a one-person raid night |
-| A20 | Roll-state constants hardcoded in three files while `LootHistoryAPI` reverse-maps the live enum |
-| A21 | Click-catchers never `RegisterForClicks`, so they swallow right-clicks; both panels float over the game after their window closes |
-
-</details>
-
-### B. Performance — ALL FIXED, 2026-08-08
-
-B1–B6 are done. The pattern in most of them was the same: work repeated
-because nothing remembered the answer. Three caches were added, each with its
-invalidation points named in the code rather than assumed —
-
-- **The merged feed** (B1) is built once per redraw instead of five times,
-  keyed by the view state that changes it, and dropped at the top of
-  `MainWindow.UpdateRows`, which every path already goes through.
-- **The roster** (B3) is built once and invalidated by the guild roster
-  arriving, an alt being mapped, or the window opening. Typing in the search
-  box no longer rebuilds four hundred rows per keystroke.
-- **The item tooltip** (B5) indexes drops by item. Drops are written in
-  exactly two places, so `LootHistoryStore.RebuildIndex` owns invalidation for
-  both indexes and no caller has to remember.
-
-B2's poll became `GET_ITEM_INFO_RECEIVED`, registered only while something on
-screen is waiting. B4 turned out to be worse than described: a dungeon boss
-can *never* be in the journal bridge, because the tier walk reads raid
-instances only — so every hover walked all thirteen tiers and failed. Misses
-are remembered now, and the hover path cannot walk at all.
-
-B6 has a send queue at one message per 0.25s, re-checking the gate at send
-time rather than only at queue time.
-
-### C. UX — ALL FIXED, 2026-08-08
-
-C1–C15 are done. Three are worth knowing about because they changed
-behaviour rather than wording:
-
-- **C2 added a Due window** (`UI/DueWindow.lua`) and a Due button, first in
-  the footer. It repeats none of the maths — it reads `Core/DueList.lua` —
-  and it prints the basis of the ranking and the two completeness numbers
-  above the list, the same way `/syl due` does.
-- **C13 moved Archive Season to the Archives tab** and muted it. It was top
-  right on the Loot tab and hidden on the tab it is actually about.
-- **C1 narrowed announcements to gear.** Every quality is still recorded; a
-  grey no longer gets announced back at you.
-
-C3 is only half of Aimee's F3. Windows now raise instead of hiding when they
-are buried, and cascade instead of stacking dead centre — but they still
-overlap. Non-overlapping placement is still F3 and still unbuilt.
-
-Five files were split along the way, all because they crossed the size limit
-and none of them for its own sake: `Core/Seasons.lua`,
-`Core/EncounterJournal.lua`, `UI/SettingsRows.lua`, `UI/WindowStack.lua` and
-`UI/Tooltips.lua`.
-
-<details>
-<summary>The original B and C lists, for reference</summary>
-
-### B. Performance
-
-| # | Item |
-|---|---|
-| B1 | **Merged feed rebuilt 3–5× per redraw** — `GetFiltered`, `DescribeCount`, `CountHiddenInScope`, `SelectionBar.Update`, plus a fifth on wheel. Each pass allocates per record, indexes drops, sorts with a `tostring` tiebreak, and with Gear only on calls `C_Item.GetItemInfo` per entry. Dominant cost on a full season |
-| B2 | **Polls every 0.6s** for uncached items instead of registering `GET_ITEM_INFO_RECEIVED`; a never-resolving item loops forever |
-| B3 | **Full roster rebuild per keystroke** — `RosterData.lua` explicitly warns against this and `Refresh` does it anyway |
-| B4 | **Multi-second freeze** hovering a dungeon-boss row — `Find` walks every remaining tier, the stutter `LootTable`'s header promises to avoid |
-| B5 | Item tooltip scans and sorts all drops on every hover, including mousing across bags |
-| B6 | **`Sync.Send` has no throttle** — five drops send five back-to-back addon messages with no ChatThrottleLib |
-
-### C. UX
-
-| # | Item |
-|---|---|
-| C1 | **`announceCaptures` on + every quality tracked = chat spam.** Named the uninstall trigger: one M+ run doubles the user's loot chat with greys |
-| C2 | **"Who is due" has no window** — the README's headline pitch is chat-only, and the footer has no Due or Tonight |
-| C3 | **Windows open dead-centre, nothing calls `Raise()`, footer buttons toggle.** Clicking a buried window's button *hides* it and nothing visibly happens |
-| C4 | Empty states never say **history starts now and cannot be backfilled** |
-| C5 | First-run chat never mentions `/syl` and reads "0 drops, 0 item records" |
-| C6 | **No tooltips** on roughly 26 main-window controls |
-| C7 | Toggle labels inconsistent — four name their state, one names an action then flips to a state |
-| C8 | Two Settings rows are **permanently-unticked checkboxes** (`isChecked` hard-returns false for action rows) |
-| C9 | `countPersonalLoot` is **not in Settings** despite changing the headline number |
-| C10 | **`ROLLED ON` counts eligibility, not rolls** — officers will quote it in a dispute and be wrong |
-| C11 | The roster's "Main's name…" box is built with `SearchBox` and a no-op callback — looks like the real search 100px above it |
-| C12 | `/syl help` dumps 29 lines on any typo; README documents 10 and omits roster, settings, alts |
-| C13 | **Archive Season is the most prominent button** and the one a new user should never press |
-| C14 | Hardcoded default season name "Midnight Season 1" |
-| C15 | Dead empty-state string in MainWindow, overwritten every draw |
-
-</details>
-
-### D. Cut candidates — reviewers say remove, not improve
-
-| # | Item | Argument |
-|---|---|---|
-| D1 | **Raid buff coverage** | Never reads the live raid group; MRT and WeakAuras answer "what are we missing now" better. Recomputes on the post-search list, so typing a name announces missing buffs |
-| D2 | **Raider.IO column** | Feeds nothing in the maths; everyone who cares already has Raider.IO |
-| D3 | **Boss loot tables** | Best-engineered file in the repo, competing with the Adventure Guide and Wowhead |
-| D4 | **The web dashboard** | Competes with WoWAudit, and `web/index.html:373` double-counts raiders so the two export paths disagree |
-| D5 | **Officer sync** | Only reaches people who already captured everything; produces `partial` records excluded from the maths |
-| D6 | **NOTES Phases 3–5** (vault, crests, Droptimizer wishlists) | WoWAudit's core product |
-| D7 | **Refresh button** | Everything refreshes on show; it holds the leftmost footer slot |
-| D8 | `/syl dev`, `api`, `debug`, `count`, `output` in the user-facing menu |
-| D9 | `/syl recent`, `player`, `count` | Superseded by the merged list; they read raw chat capture |
-
-**Note:** if F6 (modularity) lands first, most of D1–D5 become *default-off
-toggles* rather than deletions. Worth deciding F6 before acting on D.
-
-### E. Strategy
-
-| # | Item |
-|---|---|
-| E1 | **Trade-window advisor.** On a win, tell the winner who rolled Need and lost, with their droughts and time remaining. **Unanimous top pick, and it has no cold start** — the roll list is complete on the very first drop, so it is useful on install night before any history exists. RCLootCouncil's `Modules/TradeUI.lua` is the reference: `TRADE_SHOW`, `TRADE_CLOSED`, `TRADE_ACCEPT_UPDATE`, `UI_INFO_MESSAGE` watching `LE_GAME_ERR_TRADE_COMPLETE`, target from `TradeFrameRecipientNameText:GetText()`, 5-minute timer to expire the two-hour window |
+| E1 | **Trade-window advisor.** On a win, tell the winner who rolled Need and lost, with their droughts and time remaining. **Unanimous top pick, and it has no cold start** — the roll list is complete on the very first drop, so it works on install night before any history exists. RCLootCouncil's `Modules/TradeUI.lua` is the reference: `TRADE_SHOW`, `TRADE_CLOSED`, `TRADE_ACCEPT_UPDATE`, `UI_INFO_MESSAGE` watching `LE_GAME_ERR_TRADE_COMPLETE`, target from `TradeFrameRecipientNameText:GetText()`, 5-minute timer for the two-hour window |
 | E2 | **Trade tracking** — credit the recipient, not the winner. Today every traded item is two errors |
-| E3 | **Store item level** on each record — one `GetDetailedItemLevelInfo` call turns item-count fairness into gearing fairness |
+| ~~E3~~ | ~~Store item level~~ — **done**. Recorded on every drop and shown in the drop detail. What the fairness maths does with it is still open, and is the interesting half |
 | E4 | **Scope every number to the raid team.** `RaidTeam` exists and feeds nothing that matters |
 | E5 | **Something that reaches other people** — there is no `SendChatMessage` anywhere. Currently a private notebook |
 | E6 | **Reposition.** The unique asset is the pass data: every eligible player and what each chose. Nothing else on the market has it. Suggested line: *"Group Loot remembers who won. This remembers who passed."* |
 | E7 | Reconsider **All Rights Reserved** — tells an officer they are stranded if the author stops |
-| E8 | **Sync backfill handshake**, or turn sync off |
+| E8 | **Sync backfill handshake.** The transport can now carry it (F8) |
 | E9 | Screenshots show nothing differentiated; the end-of-night summary is missing |
 | E10 | The alpha warning appears in the README, the CurseForge description **and** the .toc |
 
-### F. The commercial risk nobody had named
+### The commercial risk nobody had named
 
 A guild running Group Loot has, by definition, **chosen not to have a loot
-process.** Handing them fairness analytics invites drama they opted out of.
-E1 is the proposed answer: make the history a means to a decision people
-already need, rather than an end in itself.
+process.** Handing them fairness analytics invites drama they opted out of. E1
+is the proposed answer: make the history a means to a decision people already
+need, rather than an end in itself.
 
-### G. Tooling
+### NOTES.md phases
 
-**G1 — bare module globals — is DONE, 2026-08-08.** `syl_check.py` now
-reports `Module.Member` in a file that never made `Module` a local, as a
-problem rather than a warning, because it is a nil global.
-
-| # | Item |
-|---|---|
-| ~~G1~~ | Done. Left here because what it does *not* cover is below |
-
-It had bitten three times by the end: the original `RaidSession.RaidsOnly`,
-one during the A pass, and once more while splitting `UI/Widgets.lua`, which
-dragged `Widgets.CloseOnEscape` into `UI/Tooltips.lua` where `Widgets` is not
-a local. That last one was an assignment at file scope — it would have thrown
-on load and taken every window with it — and the checker passed clean on it,
-because checks 1-3 read `SYL.Module.Member` and a bare `Module.Member` is
-neither that nor an unbalanced block.
-
-Verified by putting the real fault back and watching it fail, then removing it
-again. Getting it usable took two passes: `name` is a module (`SYL.name`) and
-is also the commonest loop variable in the addon, so loop variables and
-function parameters have to count as locals or it cries wolf on ordinary code.
-
-**A second rule was added the same week**, after the filter dropdowns turned
-out never to have opened: `Module.Member` on a file's *own* local table, where
-`Member` is never assigned anywhere. `FilterDropdown.ResetSearch` slipped past
-everything precisely because it looked right — `FilterDropdown` is a local in
-that file, so the bare-globals rule passes it, and it is not an `SYL.`
-reference, so check 3 never saw it. Verified the same way: remove the
-function, watch it fail, put it back.
-
-**WHAT IT STILL DOES NOT CATCH**, which matters because it is the sibling
-class: a *local* used before it is declared. `Selection.ApplyHidden` calling
-`HideTarget` twenty lines above its definition was exactly that, and
-`HideTarget` is not a module name, so nothing here sees it.
-
-The tool that catches both is `luacheck` with a WoW globals definition, which
-parses instead of pattern-matching. That needs a Lua toolchain and a first-run
-triage across eighty files, so it is a separate decision. Note the ground
-moved: installing `lupa` for the locale tests means there **is** a Lua
-interpreter on this machine now, which §1 of this file used to deny.
+Phases 2, 3, 5 and 6 were blocked on sync being unable to send more than a
+drop header. **That block is gone** — see F8 in §4 — but nothing has been
+built on top of it, and doing so means deciding to transmit more about people
+than the addon currently does.
 
 ---
 
-## 5. The modularity ask (F6), in more detail
+## 4. Decisions already made
 
-Aimee wants ElvUI-style feature toggles: *"if people don't want things they
-can turn it off."*
+These were argued once. Reopen them deliberately if at all, but do not
+rediscover them.
 
-**RCLootCouncil is the model to copy** — not Ace3 itself, but the shape.
-Nine modules loaded from `Modules/Modules.xml`, each one file with its own
-enable state, core kept separate from modules.
+**`countPersonalLoot` defaults off, and migrates existing installs off.** One
+client only ever sees its owner's solo loot — nobody claims a vault standing
+next to the officer — so counting it counted almost entirely the officer's own
+gear, resetting their drought weekly and nobody else's. It put them at the
+bottom of a list they wrote. When on, only gear received while grouped counts,
+which is the largest subset where coverage is even.
 
-**Decided direction, from NOTES.md:** a registry where each feature declares
-a key, a default, and what it costs when on. Settings gets a Features list.
-**Windows and commands for a disabled feature should not register at all**,
-rather than being built and hidden — a feature that is off should cost
-nothing.
+**Gear means epic and above, and never a tabard or shirt.** Rare is levelling
+gear; a blue ring from Dornogal was resetting a Mythic raider's drought.
 
-Candidate toggles: raid buff coverage, the Raider.IO column, boss loot
-tables, officer sync, personal-loot counting, the developer window, capture
-announcements.
+**Crafted items never count as gear received.** A create line says an item was
+made, never that the maker kept it, and a wrongly-counted crafter drops off
+the due list for the tier.
+
+**A night is one night however many difficulties it passed through.** Fixed
+where nights are counted, not by merging the sessions, so the record of what
+happened stays intact and existing history corrects itself.
+
+**F2 is an ignore flag, not a delete.** It does everything a delete would do
+to the numbers and stays reversible. The addon's one promise about your data
+is that it does not remove things.
+
+**F8 is transport only.** Payloads of any size now split and reassemble. What
+is actually sent is unchanged — still drop headers, still no roll lists.
+Widening that is a decision to take on purpose, not to inherit from a roomier
+pipe.
+
+**Features are off means not built.** `Core/Features.lua` holds five toggles
+(raid buffs, Raider.IO, loot tables, sync, developer tools). A disabled
+feature registers no events, creates no frames and puts nothing in the menu.
+The price is that a change needs a `/reload`, and the toggle says so.
+
+**D1–D6 were kept, not cut.** Five reviewers wanted them deleted; they became
+default-on toggles instead. "Some guilds do not want this" and "nobody wants
+this" are different claims and only the first was argued.
 
 ---
 
-## 6. Traps that have already bitten
+## 5. Traps that have already bitten
 
-Written down because each cost real time.
+Each of these cost real time.
 
 - **Retail dungeons and M+ award personal loot.** There are no need/greed
   rolls, so `C_LootHistory` records nothing and the drops list is correctly
@@ -449,16 +247,63 @@ Written down because each cost real time.
   overlap or it double-counts every raid drop.
 - **`EJ_GetEncounterInfoByIndex` takes a `journalInstanceID` and ignores
   it** — the encounter list comes from the *current selection*, so the
-  instance must be selected first. The documented parameter does not do
-  what its name implies.
-- **`ENCOUNTER_START` gives a dungeonEncounterID; `EJ_SelectEncounter`
-  wants a journalEncounterID.** Different numbers for the same boss, and
-  passing the wrong one returns another boss's loot rather than failing.
-- **The packager rewrites the .toc version in the zip only.** The working
-  copy is untouched, so a symlinked install reports whatever was last typed
-  there.
-- **`GITHUB_TOKEN` is read-only by default.** The first release uploaded to
-  CurseForge successfully and *then* failed creating the GitHub release. A
-  red workflow does not mean nothing shipped.
+  instance must be selected first.
+- **`ENCOUNTER_START` gives a dungeonEncounterID; `EJ_SelectEncounter` wants a
+  journalEncounterID.** Different numbers for the same boss, and passing the
+  wrong one returns another boss's loot rather than failing.
+- **The journal's tier walk reads raid instances only.** A dungeon boss can
+  never be in it, so searching for one walks all thirteen tiers and fails.
+  Misses are remembered now; they were not, and it froze the game per hover.
+- **The packager rewrites the .toc version in the zip only.** The working copy
+  is untouched, so a symlinked install reports whatever was last typed there.
+- **`GITHUB_TOKEN` is read-only by default.** v0.1.0-alpha uploaded to
+  CurseForge successfully and *then* failed creating the GitHub release. **A
+  red workflow does not mean nothing shipped.** Fixed since, and v0.2.0-alpha
+  went green.
 - **`itemEquipLoc` is not a reliable "is this gear" test.** Some
   non-equippable items report `INVTYPE_NON_EQUIP_IGNORE`. Item class is.
+- **A migration must guard on its own version, not on `DATABASE_VERSION`.**
+  Written the second way it re-fires on every later schema bump and overrules
+  a choice the user made after it ran. `tools/test_migrations.py` caught
+  exactly this.
+- **Blizzard's format strings carry grammar directives** — `|1을;를;`,
+  `|4item:items;`, `|3-1(...)` — which are resolved before the line reaches
+  chat. A pattern built from a format string must strip them or it matches
+  nothing.
+
+---
+
+## 6. Tooling
+
+`syl_check.py` gained two rules in two days, both written after the fault
+rather than before, and both for mistakes a Lua parser would simply refuse to
+load:
+
+- bare `Module.Member` where the file never made `Module` a local;
+- `Module.Member` on a file's *own* module table where the member is never
+  assigned anywhere.
+
+**The open item is `luacheck` with a WoW globals definition.** It parses
+instead of pattern-matching, and it catches the class both of those rules were
+written for plus the one neither covers — a local used before its declaration.
+The cost is a Lua toolchain and a first-run triage across 83 files. Note the
+ground has moved: installing `lupa` for the tests means there **is** a Lua
+interpreter on this machine now.
+
+---
+
+## 7. Where the finished work is
+
+`git log` since 2026-08-08, newest first. The messages explain the reasoning
+and what was rejected on the way, which is why `.pkgmeta` keeps them out of
+the user-facing changelog.
+
+- `a09b508` screenshots tracked and excluded from the zip
+- `7e7fa6e` chunked sync transport; F7 and F9 answered rather than guessed
+- `e1bb3bb` feature registry, non-overlapping window layout
+- `b45dc15` sortable list, ignore flag, hide-all-copies, D7/D8/D9 cuts
+- `35acdf1` personal-loot default migrated for existing installs
+- `1e32473` release 0.2.0-alpha
+- `4059149` the filter dropdowns, which had never opened
+- `e99146f` the B and C lists — performance and UX
+- `d424bf2` the A list — every wrong number and crash the review found
