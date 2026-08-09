@@ -3,6 +3,36 @@
 What changed, for the person installing it. The commit history explains why;
 this says what you will notice.
 
+## Unreleased
+
+### Added
+
+- **Sort the loot list by any column.** Click PLAYER, ITEM, TYPE, WHERE or
+  DATE; click again to reverse. It opens on newest first, as before.
+- **Ignore a record.** Tick rows and press **Ignore** to take them out of
+  every number — the due list, droughts, player stats — for when a capture is
+  simply wrong. The rows stay in the list, marked, and it is reversible.
+  Nothing is deleted.
+- **Hide or ignore every copy of an item.** Hold Shift when you press either
+  button. Hiding one Dawn Crystal used to leave the other two.
+
+### Changed
+
+- **The Refresh button is gone.** Every window already redraws when it opens
+  and whenever anything changes, so it was a button that did nothing you
+  could see.
+- **`/syl recent`, `/syl player` and `/syl count` are gone**, replaced by the
+  loot list and its filters, which read the same records and rather more.
+- **`/syl dev`, `api`, `debug` and `output` are off the minimap menu.** They
+  still work when typed and are listed by `/syl help all`.
+
+### Fixed
+
+- **The chosen output window was remembered by position, not by identity.**
+  Deleting any chat window shifts the ones below it, so the addon started
+  writing into whichever window had moved into that slot. It remembers the
+  window's name now.
+
 ## 0.2.0-alpha
 
 A large update. Several of these change the numbers the addon reports, so

@@ -35,8 +35,11 @@ local COLUMN_SETS = {
     -- says it per row instead — which is the only way a single list can hold
     -- both without losing the distinction.
     feed = {
-        { key = "select", label = "", width = 16, gap = 8 },
-        { key = "number", label = "#", width = 30, gap = 8 },
+        -- Neither of these two is a value. SELECT is a tickbox with no label
+        -- to click, and # is the row's position on screen, which is the
+        -- result of the sort rather than something to sort by.
+        { key = "select", label = "", width = 16, gap = 8, sortable = false },
+        { key = "number", label = "#", width = 30, gap = 8, sortable = false },
         { key = "player", label = "PLAYER", width = 130, gap = 8 },
         { key = "item", label = "ITEM", width = 250, gap = 10 },
         { key = "wintype", label = "TYPE", width = 76, gap = 8 },

@@ -20,8 +20,14 @@ local function BindRow(view, row, record, recordIndex)
     row.recordIndex = recordIndex
 
     Rows.SetRowSelected(row, Selection.IsSelected(view.selection, record))
-    -- Joined entries keep hidden on the record underneath.
-    Rows.SetRowHidden(row, (record.record or record).hidden)
+
+    -- Joined entries keep both flags on the record underneath.
+    local underlying = record.record or record
+
+    Rows.SetRowHidden(row, underlying.hidden)
+
+    -- After the type cell has been filled, since it overwrites it.
+    Rows.SetRowIgnored(row, underlying.excludedFromAnalytics)
 end
 
 local function ReleaseRow(row)
@@ -97,7 +103,19 @@ local function SetEmptyState(view, isEmpty, message)
     end
 end
 
-local function DescribeCount(view, shown, singular, plural)
+local function CountIgnored(entries)
+    local ignored = 0
+
+    for _, entry in ipairs(entries) do
+        if (entry.record or entry).excludedFromAnalytics then
+            ignored = ignored + 1
+        end
+    end
+
+    return ignored
+end
+
+local function DescribeCount(view, shown, singular, plural, entries)
     local total = #ListSources.GetUnfiltered(view)
 
     local text
@@ -116,6 +134,15 @@ local function DescribeCount(view, shown, singular, plural)
 
     if hidden > 0 then
         text = text .. "  ·  " .. hidden .. " hidden"
+    end
+
+    -- Said for the same reason as hidden, and it matters more: an ignored
+    -- record is still on screen and is no longer in any number, so the list
+    -- and the due list disagree by exactly this many.
+    local ignored = CountIgnored(entries or {})
+
+    if ignored > 0 then
+        text = text .. "  ·  " .. ignored .. " ignored"
     end
 
     return text
@@ -239,20 +266,28 @@ function LootListView.UpdateFeedRows(view)
     local entries = ListSources.GetFiltered(view)
     local total = #entries
 
-    view.countText:SetText(DescribeCount(view, total, "item", "items"))
+    view.countText:SetText(
+        DescribeCount(view, total, "item", "items", entries)
+    )
 
     SetEmptyState(view, total == 0, EmptyMessage(view))
 
     local maxOffset = ClampOffset(view, total)
     local allCached = true
 
+    -- Drawn forwards now. The list used to be built oldest-first and read
+    -- backwards to show the newest at the top, which worked exactly as long
+    -- as there was only ever one order. A sortable header needs the array to
+    -- already be in the order it is displayed in, so the reversal moved into
+    -- LootFeed.Sort where the direction is a comparator rather than a
+    -- subtraction.
     for rowIndex = 1, view.visibleRows do
-        local entryIndex = total - view.offset - rowIndex + 1
+        local entryIndex = view.offset + rowIndex
         local row = view.feedRows[rowIndex]
 
-        Widgets.AnchorRow(row, view.offset + rowIndex, Widgets.ROW_HEIGHT)
+        Widgets.AnchorRow(row, entryIndex, Widgets.ROW_HEIGHT)
 
-        if entryIndex >= 1 then
+        if entryIndex <= total then
             local entry = entries[entryIndex]
 
             if not FillFeedRow(row, entry, entryIndex) then

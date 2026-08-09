@@ -19,34 +19,8 @@ COMMANDS.help = SYL.CommandList.Help
 COMMANDS.season = Reports.SeasonStatus
 COMMANDS.archives = Reports.Archives
 COMMANDS.api = Reports.APIReport
-COMMANDS.player = Reports.PlayerLoot
-
-COMMANDS.recent = function()
-    Reports.RecentLoot(RECENT_LIMIT)
-end
-
 COMMANDS.drops = function()
     Reports.Drops(RECENT_LIMIT)
-end
-
-COMMANDS.count = function()
-    local counts = SYL.LootHistoryStore.GetCounts()
-
-    SYL:Print(
-        "Active season: "
-        .. counts.active
-        .. " drops, "
-        .. #SYL.GetActiveLoot()
-        .. " chat items"
-    )
-
-    SYL:Write(
-        "All-time: "
-        .. counts.allTime
-        .. " drops, "
-        .. #SYL.GetAllLoot()
-        .. " chat items"
-    )
 end
 
 COMMANDS.rename = function(remainder)
@@ -332,8 +306,6 @@ SlashCmdList["SHOWUSYOURLOOT"] = function(input)
     if command == "" then
         if SYL.OpenMainWindow then
             SYL:OpenMainWindow()
-        else
-            Reports.RecentLoot(RECENT_LIMIT)
         end
 
         return

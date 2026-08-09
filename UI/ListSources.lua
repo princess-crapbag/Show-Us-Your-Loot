@@ -150,6 +150,11 @@ local function Signature(view)
         view.gearOnly and "1" or "0",
         view.showHidden and "1" or "0",
         tostring(view.selectedArchiveIndex or 0),
+
+        -- The sort is part of what the cached list *is*, not a thing applied
+        -- to it afterwards, because the rows are drawn straight out of it.
+        tostring(view.sortKey or "date"),
+        view.sortReversed and "1" or "0",
     }, "|")
 end
 
@@ -270,6 +275,24 @@ function ListSources.GetFiltered(view)
             records, view.filters, ListSources.GetFields(view)
         )
     end
+
+    -- Copied before sorting when nothing was filtered out, because Apply
+    -- hands back the very table the unfiltered cache is holding and sorting
+    -- it in place would reorder that too. Same table, two different
+    -- questions.
+    if records == unfilteredCache[key] then
+        local copy = {}
+
+        for index = 1, #records do
+            copy[index] = records[index]
+        end
+
+        records = copy
+    end
+
+    -- Returned in display order, so the rows are drawn straight out of it
+    -- rather than being indexed backwards.
+    SYL.LootFeed.Sort(records, view.sortKey, view.sortReversed)
 
     filteredCache[key] = records
 

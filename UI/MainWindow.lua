@@ -7,7 +7,6 @@
 local SYL = _G.ShowUsYourLoot
 local Theme = SYL.Theme
 local Widgets = SYL.Widgets
-local Rows = SYL.Rows
 local Filters = SYL.Filters
 local FilterBar = SYL.FilterBar
 local FilterDropdown = SYL.FilterDropdown
@@ -45,6 +44,14 @@ local view = {
     -- reason: hiding three hundred records without being asked is how an
     -- update looks like data loss.
     gearOnly = false,
+
+    -- Newest first, which is what the list has always shown. Every other
+    -- window in the addon has had a sortable header for a while; this one,
+    -- the list people actually read, had a header that looked identical and
+    -- did nothing when clicked.
+    sortKey = "date",
+    sortReversed = false,
+
     filters = Filters.CreateState(),
     selection = Selection.Create(),
     feedRows = {},
@@ -125,6 +132,11 @@ local function UpdateRows()
     view.filterBar:Show()
 
     view.feedHeader:Show()
+
+    -- Keeps the arrow on the column actually being sorted by, including when
+    -- the sort changed through something other than a click on it.
+    view.feedHeader.UpdateLabels()
+
     LootListView.UpdateFeedRows(view)
 end
 
@@ -236,10 +248,29 @@ local function CreateScrollArea(parent)
     view.emptyText:SetWidth(WINDOW_WIDTH - 120)
     view.emptyText:Hide()
 
-    -- 6px below the action row, which ends at 148.
-    view.feedHeader = Rows.CreateColumnHeader(parent, "feed")
-    view.feedHeader:SetPoint("TOPLEFT", 16, -154)
-    view.feedHeader:SetPoint("TOPRIGHT", -34, -154)
+    -- 6px below the action row, which ends at 148. SortHeader anchors itself
+    -- 24px above the list top it is given, so 178 lands on the same -154.
+    view.feedHeader = SYL.SortHeader.Create(parent, {
+        columns = SYL.Columns.Get("feed"),
+        offsets = SYL.Columns.offsets.feed,
+        top = 178,
+
+        getSort = function()
+            return view.sortKey, view.sortReversed
+        end,
+
+        onSort = function(key, reversed)
+            view.sortKey = key
+            view.sortReversed = reversed
+            view.offset = 0
+
+            -- The list is about to be reordered underneath a selection that
+            -- was made by position.
+            Selection.Clear(view.selection)
+
+            UpdateRows()
+        end,
+    })
 
     SYL.ScrollArea.Create(parent, view, {
         childWidth = WINDOW_WIDTH - 70,
@@ -263,12 +294,6 @@ end
 
 local function CreateFooter(parent)
     SYL.MainFooter.Create(parent, {
-        onRefresh = function()
-            view.offset = 0
-
-            UpdateRows()
-        end,
-
         onClose = function()
             frame:Hide()
         end,

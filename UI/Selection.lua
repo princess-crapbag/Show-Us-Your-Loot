@@ -85,12 +85,43 @@ local function HideTarget(record)
     return record.record or record
 end
 
-function Selection.ApplyHidden(selection, records, hidden)
-    local changed = 0
+-- Which items the selection covers, for the "every copy" variant.
+--
+-- Hiding one Dawn Crystal left the other two sitting in the list, which is
+-- almost never what the click meant: you are setting an item aside, not one
+-- of the three times it dropped. Keyed by item id rather than name, so two
+-- items that happen to share a name are still two items.
+local function SelectedItemIDs(selection, records)
+    local ids = {}
 
     for _, record in ipairs(records) do
         if Selection.IsSelected(selection, record) then
-            local target = HideTarget(record)
+            local itemID = (record.record or record).itemID
+
+            if itemID then
+                ids[itemID] = true
+            end
+        end
+    end
+
+    return ids
+end
+
+-- allCopies extends the action from the ticked rows to every row sharing an
+-- item with them, within whatever list was passed in — so it follows the
+-- filters and the content scope rather than reaching across the season.
+function Selection.ApplyHidden(selection, records, hidden, allCopies)
+    local changed = 0
+    local itemIDs = allCopies and SelectedItemIDs(selection, records) or nil
+
+    for _, record in ipairs(records) do
+        local target = HideTarget(record)
+
+        local wanted = Selection.IsSelected(selection, record)
+            or (itemIDs ~= nil and target.itemID ~= nil
+                and itemIDs[target.itemID] == true)
+
+        if wanted then
             local current = target.hidden and true or false
 
             if current ~= hidden then
@@ -101,6 +132,56 @@ function Selection.ApplyHidden(selection, records, hidden)
     end
 
     return changed
+end
+
+-- Ignoring a record takes it out of every number without deleting it.
+--
+-- This is the "capture was wrong" case: a record that should never have
+-- existed, or one that would be counted twice. excludedFromAnalytics was
+-- already on every record and already honoured by the due list, the player
+-- stats, the personal-loot maths and the item tooltip — nothing had ever
+-- been able to set it.
+--
+-- Deliberately not a delete. The addon's one promise about your data is that
+-- it does not remove things, and an ignore does everything a delete would do
+-- to the numbers while staying reversible by whoever finds it next week and
+-- disagrees.
+function Selection.ApplyIgnored(selection, records, ignored, allCopies)
+    local changed = 0
+    local itemIDs = allCopies and SelectedItemIDs(selection, records) or nil
+
+    for _, record in ipairs(records) do
+        local target = HideTarget(record)
+
+        local wanted = Selection.IsSelected(selection, record)
+            or (itemIDs ~= nil and target.itemID ~= nil
+                and itemIDs[target.itemID] == true)
+
+        if wanted then
+            local current = target.excludedFromAnalytics and true or false
+
+            if current ~= ignored then
+                target.excludedFromAnalytics = ignored or nil
+                changed = changed + 1
+            end
+        end
+    end
+
+    return changed
+end
+
+function Selection.CountIgnored(selection, records)
+    local ignored = 0
+
+    for _, record in ipairs(records) do
+        if Selection.IsSelected(selection, record)
+            and HideTarget(record).excludedFromAnalytics
+        then
+            ignored = ignored + 1
+        end
+    end
+
+    return ignored
 end
 
 -- Counts how many of the selected records are currently hidden, which decides

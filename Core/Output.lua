@@ -31,6 +31,37 @@ local function GetChatFrame(index)
     return nil
 end
 
+-- The chosen window is remembered by NAME as well as by index, and the name
+-- is what wins.
+--
+-- Chat window indices are positions, not identities. Delete window 2 and
+-- everything below it shifts up, so a saved index of 3 now addresses what
+-- used to be window 4 — and the addon starts writing into whichever window
+-- happens to be sitting there. That reads as the setting not having stuck,
+-- because from the outside it is indistinguishable: you chose "Loot" and the
+-- messages are somewhere else.
+--
+-- Names are what the user actually picked and they move with the window.
+-- The index stays as a fallback for a window with no name, and for anything
+-- saved before this.
+local function FindByName(name)
+    if type(name) ~= "string" or name == "" then
+        return nil
+    end
+
+    local total = NUM_CHAT_WINDOWS or 10
+
+    for index = 1, total do
+        local windowName = GetChatWindowInfo(index)
+
+        if windowName == name and GetChatFrame(index) then
+            return index
+        end
+    end
+
+    return nil
+end
+
 -- Only windows that actually exist. Docked or undocked does not matter; a
 -- deleted one reports no name.
 function Output.GetWindows()
@@ -51,7 +82,18 @@ end
 function Output.GetWindowIndex()
     local settings = GetSettings()
 
-    return (settings and settings.chatFrameIndex) or 1
+    if not settings then
+        return 1
+    end
+
+    -- Name first: it survives the windows being reordered underneath it.
+    local byName = FindByName(settings.chatFrameName)
+
+    if byName then
+        return byName
+    end
+
+    return settings.chatFrameIndex or 1
 end
 
 function Output.GetWindowName()
@@ -68,9 +110,19 @@ end
 function Output.SetWindowIndex(index)
     local settings = GetSettings()
 
-    if settings then
-        settings.chatFrameIndex = index
+    if not settings then
+        return
     end
+
+    settings.chatFrameIndex = index
+
+    -- Stored alongside, so the choice can be found again after the windows
+    -- have been rearranged. nil rather than "" when the window has no name,
+    -- so the index fallback takes over cleanly.
+    local name = GetChatWindowInfo(index)
+
+    settings.chatFrameName =
+        (type(name) == "string" and name ~= "") and name or nil
 end
 
 -- Advances to the next existing window, wrapping around. A cycle rather than

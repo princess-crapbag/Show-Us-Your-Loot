@@ -25,9 +25,6 @@ local BUTTONS = {
     { label = "Due", open = "OpenDueWindow",
       tip = "Who has gone longest without an upgrade, in raid nights "
         .. "attended rather than days elapsed." },
-    { label = "Refresh", action = "onRefresh",
-      tip = "Redraws the list. Everything already refreshes on its own; "
-        .. "this is here for when you want to be sure." },
     { label = "Settings", open = "OpenSettingsWindow",
       tip = "Which item qualities are recorded, and how loudly the addon "
         .. "reports itself." },
@@ -45,8 +42,10 @@ local BUTTONS = {
         .. "been seen to drop." },
 }
 
--- handlers carries the behaviour MainWindow owns and this file cannot reach:
--- onRefresh redraws the list, onClose hides the window.
+-- handlers carries the behaviour MainWindow owns and this file cannot reach.
+-- Only onClose now: the Refresh button is gone, because every window
+-- already redraws on show and on every change, so it was a button whose
+-- honest label would have been "do nothing, slowly".
 function MainFooter.Create(parent, handlers)
     local separator = Theme.CreateSeparator(parent)
     separator:SetPoint("BOTTOMLEFT", 16, 44)

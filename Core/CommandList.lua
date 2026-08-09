@@ -6,11 +6,18 @@
 -- drift apart. Entries with an `argument` cannot simply be run: clicking them
 -- opens the chat box prefilled instead, so the argument can be typed.
 --
--- `common` marks the ones worth showing unprompted. There are twenty-nine
--- commands here and printing all of them was the response to any typo — a
--- wall of chat as punishment for a missing letter, in which the answer to
--- what you actually meant is impossible to find. `/syl help` shows the
--- common ones; `/syl help all` shows everything.
+-- Two flags decide where an entry appears.
+--
+-- `common` marks the ones worth showing unprompted. Printing all of them was
+-- the response to any typo — a wall of chat as punishment for a missing
+-- letter, in which the answer to what you actually meant is impossible to
+-- find. `/syl help` shows the common ones; `/syl help all` shows everything.
+--
+-- `developer` marks the ones that exist to inspect the addon rather than to
+-- use it: the inspector window, the raw API dump, the debug toggle, the
+-- output window cycle. They keep working when typed and are listed by
+-- `/syl help all`, and they are out of the minimap menu, which is somewhere
+-- a person browses rather than somewhere they go on purpose.
 
 local SYL = _G.ShowUsYourLoot
 
@@ -22,13 +29,6 @@ CommandList.ENTRIES = {
     {
         command = "drops",
         description = "Recent group-loot drops with winners and rolls",
-    },
-    { command = "recent", description = "Recent chat-captured loot" },
-    { command = "count", description = "Active and all-time totals" },
-    {
-        command = "player",
-        argument = "NAME",
-        description = "Active-season loot for one player",
     },
     { command = "season", description = "Active-season information" },
     {
@@ -96,6 +96,7 @@ CommandList.ENTRIES = {
         description = "Change the colour scheme",
     },
     {
+        developer = true,
         command = "output",
         description = "Send addon messages to the next chat window",
     },
@@ -108,12 +109,25 @@ CommandList.ENTRIES = {
         command = "personalloot",
         description = "Count gear taken without a roll towards droughts",
     },
-    { command = "dev", description = "Open the developer window" },
-    { command = "api", description = "Print the live Loot History API" },
-    { command = "debug", description = "Toggle debug messages" },
+    { developer = true, command = "dev", description = "Open the developer window" },
+    { developer = true, command = "api", description = "Print the live Loot History API" },
+    { developer = true, command = "debug", description = "Toggle debug messages" },
     { command = "announce", description = "Toggle capture messages" },
     { command = "clear", description = "Clear active-season drops and loot" },
 }
+
+-- What the minimap menu lists: everything except the developer commands.
+function CommandList.MenuEntries()
+    local entries = {}
+
+    for _, entry in ipairs(CommandList.ENTRIES) do
+        if not entry.developer then
+            table.insert(entries, entry)
+        end
+    end
+
+    return entries
+end
 
 function CommandList.Format(entry)
     local text = "/syl"

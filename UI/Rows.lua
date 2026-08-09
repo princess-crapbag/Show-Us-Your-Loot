@@ -151,6 +151,25 @@ function Rows.SetRowHidden(row, hidden)
     row:SetAlpha(hidden and 0.45 or 1)
 end
 
+-- Ignored rows stay in the list and stop counting, and have to look like it.
+--
+-- A flag that changes every number the addon reports and leaves no mark on
+-- screen is the worst of both: the list and the maths disagree and nothing
+-- says why. Dimming alone would not do — that is what hidden looks like, and
+-- the two are different states. The type cell carries it, because that is the
+-- column that already answers "what is this row".
+function Rows.SetRowIgnored(row, ignored)
+    if not row.typeText then
+        return
+    end
+
+    if ignored then
+        row:SetAlpha(0.55)
+        Theme.SetTextColor(row.typeText, "warning")
+        row.typeText:SetText("ignored")
+    end
+end
+
 --------------------------------------------------------------------------
 -- Shared row behaviour
 --------------------------------------------------------------------------
@@ -277,34 +296,4 @@ function Rows.CreateArchiveRow(parent, index, onView)
     end)
 
     return row
-end
-
---------------------------------------------------------------------------
--- Column headers
---------------------------------------------------------------------------
-
-function Rows.CreateColumnHeader(parent, setKey)
-    local header = CreateFrame("Frame", nil, parent)
-
-    header:SetHeight(22)
-
-    header.background =
-        Theme.CreateSolidTexture(header, "headerBar", "BACKGROUND")
-
-    header.background:SetAllPoints()
-
-    local separator = Theme.CreateSeparator(header)
-    separator:SetPoint("BOTTOMLEFT", 0, 0)
-    separator:SetPoint("BOTTOMRIGHT", 0, 0)
-
-    for _, column in ipairs(Columns.Get(setKey)) do
-        local label =
-            Theme.CreateText(header, Theme.sizes.columnHeader, "textMuted")
-
-        label:SetPoint("LEFT", Columns.Offset(setKey, column.key), 0)
-        label:SetWidth(column.width)
-        label:SetText(column.label)
-    end
-
-    return header
 end

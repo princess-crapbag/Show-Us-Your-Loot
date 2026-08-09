@@ -207,6 +207,70 @@ function LootFeed.Build(drops, lootRecords)
     return entries
 end
 
+-- Sorting the list by a column.
+--
+-- Build above produces the canonical order — oldest first, stable. This is
+-- the display order, which is a different question and is the user's to
+-- answer. Kept here rather than in the window because the entry shape is
+-- this file's, and a comparator that reads a field the builder renamed
+-- should break next to the builder.
+local function Text(value)
+    return tostring(value or ""):lower()
+end
+
+LootFeed.COMPARATORS = {
+    -- Newest first, which is what the list has always shown and what the
+    -- window opens on.
+    date = function(left, right)
+        return (left.timestamp or 0) > (right.timestamp or 0)
+    end,
+
+    player = function(left, right)
+        return Text(left.player) < Text(right.player)
+    end,
+
+    item = function(left, right)
+        return Text(left.itemName) < Text(right.itemName)
+    end,
+
+    location = function(left, right)
+        return Text(left.where) < Text(right.where)
+    end,
+
+    wintype = function(left, right)
+        return Text(left.typeLabel) < Text(right.typeLabel)
+    end,
+}
+
+function LootFeed.Sort(entries, key, reversed)
+    local comparator = LootFeed.COMPARATORS[key] or LootFeed.COMPARATORS.date
+
+    table.sort(entries, function(left, right)
+        local result = comparator(left, right)
+
+        -- A tie falls back to the canonical order, which is unique per
+        -- entry. That is not only for stable output: table.sort raises
+        -- "invalid order function" when a comparator reports two elements as
+        -- equal inconsistently, and sorting a season of loot by four-letter
+        -- type labels produces a great many ties.
+        if not result and not comparator(right, left) then
+            if (left.timestamp or 0) ~= (right.timestamp or 0) then
+                return (left.timestamp or 0) > (right.timestamp or 0)
+            end
+
+            return left.sortID < right.sortID
+        end
+
+        if reversed then
+            return comparator(right, left)
+        end
+
+        return result
+    end)
+
+    return entries
+end
+
 -- The detail window was written for drop records. A rolled entry hands its
 -- own straight over; an awarded one has no roll list to show, so this builds
 -- the shape that window expects and leaves the rolls empty rather than

@@ -92,10 +92,17 @@ function SelectionBar.Create(parent, view, config)
     bar.allSeasons:SetPoint("RIGHT", bar.gearOnly, "LEFT", -6, 0)
 
     bar.action = Theme.CreateButton(parent, 70, 20, "Hide", function()
-        bar:ApplyHidden()
+        bar:ApplyHidden(IsShiftKeyDown())
     end)
 
     bar.action:SetPoint("RIGHT", bar.allSeasons, "LEFT", -6, 0)
+
+    -- Takes the ticked records out of every number without deleting them.
+    bar.ignore = Theme.CreateButton(parent, 74, 20, "Ignore", function()
+        bar:ApplyIgnored(IsShiftKeyDown())
+    end)
+
+    bar.ignore:SetPoint("RIGHT", bar.action, "LEFT", -6, 0)
 
     bar.deselect = Theme.CreateButton(parent, 78, 20, "Deselect all", function()
         Selection.Clear(view.selection)
@@ -103,7 +110,7 @@ function SelectionBar.Create(parent, view, config)
         onChanged()
     end)
 
-    bar.deselect:SetPoint("RIGHT", bar.action, "LEFT", -6, 0)
+    bar.deselect:SetPoint("RIGHT", bar.ignore, "LEFT", -6, 0)
 
     -- Selects what is on the list, which after filtering means what the
     -- filters matched rather than the whole season.
@@ -136,8 +143,14 @@ function SelectionBar.Create(parent, view, config)
         "Widens the list to archived seasons as well as the active one.")
 
     Tip(bar.action, "Hide or unhide",
-        "Sets the ticked rows aside. Nothing is deleted and it is always "
-        .. "reversible from Show hidden.")
+        "Sets the ticked rows aside. Hold Shift to hide every copy of the "
+        .. "same item on this list, not just the rows you ticked. Nothing is "
+        .. "deleted and the numbers do not change.")
+
+    Tip(bar.ignore, "Ignore or restore",
+        "Takes the ticked rows out of every number — the due list, droughts, "
+        .. "player stats — for when a record is simply wrong. Hold Shift for "
+        .. "every copy of the item. Nothing is deleted and it is reversible.")
 
     Tip(bar.selectAll, "Select all",
         "Ticks everything the filters currently match, not the whole season.")
@@ -172,7 +185,13 @@ function SelectionBar.Create(parent, view, config)
         onChanged()
     end
 
-    bar.ApplyHidden = function()
+    -- Shared by both bulk actions, which differ only in the flag they write.
+    --
+    -- allCopies comes from Shift being held, which is the game's own idiom
+    -- for "and everything like it" and costs no room on a row that has none.
+    -- The result line says which happened either way, because the difference
+    -- between three records and one is exactly what somebody needs told.
+    local function ApplySelection(config)
         local records = ListSources.GetFiltered(view)
         local count = view.selection.count
 
@@ -182,24 +201,52 @@ function SelectionBar.Create(parent, view, config)
             return
         end
 
-        local hiddenCount = Selection.CountHidden(view.selection, records)
+        local already = config.countOn(view.selection, records)
 
-        -- A mixed selection hides, because that is what the button offered.
-        local makeHidden = hiddenCount < count
+        -- A mixed selection turns the flag on, because that is what the
+        -- button offered.
+        local turningOn = already < count
 
-        local changed =
-            Selection.ApplyHidden(view.selection, records, makeHidden)
+        local changed = config.apply(
+            view.selection, records, turningOn, config.allCopies
+        )
 
         Selection.Clear(view.selection)
 
         SYL:Print(
             changed
             .. (changed == 1 and " record " or " records ")
-            .. (makeHidden and "hidden." or "unhidden.")
-            .. (makeHidden and " Nothing was deleted." or "")
+            .. (turningOn and config.onText or config.offText)
+            .. (config.allCopies and " (every copy on this list)" or "")
+            .. "."
+            .. (turningOn and (" " .. config.reassurance) or "")
         )
 
         onChanged()
+    end
+
+    bar.ApplyHidden = function(_, allCopies)
+        ApplySelection({
+            allCopies = allCopies,
+            countOn = Selection.CountHidden,
+            apply = Selection.ApplyHidden,
+            onText = "hidden",
+            offText = "unhidden",
+            reassurance =
+                "Nothing was deleted and the numbers are unchanged.",
+        })
+    end
+
+    bar.ApplyIgnored = function(_, allCopies)
+        ApplySelection({
+            allCopies = allCopies,
+            countOn = Selection.CountIgnored,
+            apply = Selection.ApplyIgnored,
+            onText = "ignored",
+            offText = "counted again",
+            reassurance =
+                "They are out of every number now, and still in the list.",
+        })
     end
 
     bar.Update = function(self)
@@ -210,7 +257,7 @@ function SelectionBar.Create(parent, view, config)
         -- does not reflow every time the selection changes.
         for _, control in ipairs({
             self.showHidden,
-            self.action, self.deselect, self.selectAll,
+            self.action, self.ignore, self.deselect, self.selectAll,
         }) do
             if onList then
                 control:Show()
@@ -295,16 +342,23 @@ function SelectionBar.Create(parent, view, config)
         if count == 0 then
             self.countText:Hide()
             self.action.label:SetText("Hide")
+            self.ignore.label:SetText("Ignore")
 
             return
         end
 
-        -- When every selected row is already hidden, the only sensible action
-        -- is to put them back.
-        local hiddenCount =
-            Selection.CountHidden(view.selection, ListSources.GetFiltered(view))
+        -- When every selected row already carries the flag, the only sensible
+        -- action is to take it off again.
+        local records = ListSources.GetFiltered(view)
+
+        local hiddenCount = Selection.CountHidden(view.selection, records)
+        local ignoredCount = Selection.CountIgnored(view.selection, records)
 
         self.action.label:SetText(hiddenCount == count and "Unhide" or "Hide")
+
+        self.ignore.label:SetText(
+            ignoredCount == count and "Restore" or "Ignore"
+        )
 
         self.countText:SetText(count .. " selected")
         self.countText:Show()

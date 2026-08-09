@@ -101,7 +101,7 @@ local function CreatePanel()
         return panel
     end
 
-    local entries = CommandList.ENTRIES
+    local entries = CommandList.MenuEntries()
 
     panel = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
 
