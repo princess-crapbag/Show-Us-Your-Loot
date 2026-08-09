@@ -172,6 +172,35 @@ local function RefreshRows(panel)
     end
 end
 
+-- Empties the narrowing field, so a dropdown opens showing everything.
+--
+-- THIS FUNCTION DID NOT EXIST, and its absence is why no filter dropdown has
+-- opened since the day they gained a search box. The call was added in "Let
+-- the filter dropdowns be searched" and the function never was, so every
+-- click ran into a nil and threw before reaching Show().
+--
+-- It was then reported as fixed. The commit that says "FilterDropdown called
+-- ResetSearch, which was never defined" does not touch this file — the fix
+-- was described, not made, and `syl_check` had nothing to say because a bare
+-- `FilterDropdown.Member` is neither an `SYL.` reference nor a bare global:
+-- FilterDropdown *is* a local here. The checker now covers that case too.
+--
+-- Reset on open rather than on close, because a dropdown reopened with three
+-- letters still in it looks like it has lost most of its options.
+function FilterDropdown.ResetSearch(panel)
+    if not panel then
+        return
+    end
+
+    panel.searchText = ""
+    panel.offset = 0
+
+    if panel.search then
+        panel.search.editBox:SetText("")
+        panel.search.UpdatePlaceholder()
+    end
+end
+
 --------------------------------------------------------------------------
 -- Panel
 --------------------------------------------------------------------------

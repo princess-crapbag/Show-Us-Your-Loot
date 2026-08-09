@@ -240,6 +240,50 @@ def local_names(code: str) -> set:
 BARE_RE = re.compile(r"(?<![\w.:])([A-Za-z_]\w*)\s*\.")
 
 
+LOCAL_MEMBER_RE = re.compile(r"(?<![\w.:])([A-Za-z_]\w*)\.([A-Za-z_]\w*)")
+
+
+def check_local_module_members(
+    name: str, code: str, modules: set, assigned: set, problems: list
+):
+    """`Module.Member` on a file's own local table, where Member is never set.
+
+    `FilterDropdown.ResetSearch(...)` was called and never defined, and every
+    filter dropdown threw on click for weeks. Nothing here saw it: check 3
+    reads `SYL.Module.Member`, and the bare-globals check above passes it
+    because FilterDropdown *is* a local in that file — which is exactly what
+    made it look correct.
+
+    So the qualified form is checked against the same member set, which
+    already knows what `function Module.Member` and `Module.Member =` assign
+    anywhere in the addon.
+
+    Only names published onto SYL are considered. A local table that is not a
+    module is nobody's contract and may have members set in ways this cannot
+    see.
+    """
+    locals_here = local_names(code)
+
+    for m in LOCAL_MEMBER_RE.finditer(code):
+        module, member = m.group(1), m.group(2)
+
+        if module not in modules or module not in locals_here:
+            continue
+
+        # Assignment, not use: `Module.Member = ...` is what defines it.
+        after = code[m.end():m.end() + 40].lstrip()
+
+        if after.startswith("=") and not after.startswith("=="):
+            continue
+
+        if f"{module}.{member}" not in assigned:
+            line = code[:m.start()].count("\n") + 1
+            problems.append(
+                f"{name}:{line}: {module}.{member} is called but never "
+                f"assigned anywhere"
+            )
+
+
 def check_module_globals(name: str, code: str, modules: set, problems: list):
     """Module.Member in a file that never made Module a local.
 
@@ -383,6 +427,7 @@ def main() -> int:
         code = bodies.get(name, "")
 
         check_module_globals(name, code, modules, problems)
+        check_local_module_members(name, code, modules, assigned, problems)
 
         for m in re.finditer(r"SYL\.([A-Za-z_]\w*)[.:]([A-Za-z_]\w*)", code):
             mod, mem = m.group(1), m.group(2)

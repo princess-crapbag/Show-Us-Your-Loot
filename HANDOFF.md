@@ -64,11 +64,19 @@ Five expert reviewers went over the addon: a raid officer, a retail-systems
 specialist, a WoW addon API reviewer, a UX specialist, and a competitive
 analyst. Their findings are triaged in §4.
 
-**Seven bugs were fixed and pushed** (commit "Fix four crashes and three
-wrong numbers found by review"):
+**Six bugs were fixed and pushed** (commit "Fix four crashes and three wrong
+numbers found by review"). Its message claims seven:
 
-- `FilterDropdown.ResetSearch` was called but never defined — every filter
-  dropdown threw on click
+- ~~`FilterDropdown.ResetSearch` was called but never defined~~ — **THIS ONE
+  WAS NOT ACTUALLY FIXED.** The commit describes the fix and does not touch
+  `UI/FilterDropdown.lua`; `git show --stat` on it lists seven files and that
+  is not one of them. The function had never existed, since the commit that
+  added the call. Every filter dropdown threw on click and none of them opened
+  for the whole of that time, and it was reported as done.
+
+  Fixed properly on 2026-08-08, and `syl_check` now has a rule that catches
+  the shape (see G1). **Worth taking as a warning about the rest of that
+  commit message**: it was written from intent rather than from the diff.
 - No palette defined `warning`, so `unpack(Theme.colors.warning)` errored on
   any unparseable date
 - Archive popup read `self.EditBox`; StaticPopup provides `self.editBox`, so
@@ -330,6 +338,14 @@ Verified by putting the real fault back and watching it fail, then removing it
 again. Getting it usable took two passes: `name` is a module (`SYL.name`) and
 is also the commonest loop variable in the addon, so loop variables and
 function parameters have to count as locals or it cries wolf on ordinary code.
+
+**A second rule was added the same week**, after the filter dropdowns turned
+out never to have opened: `Module.Member` on a file's *own* local table, where
+`Member` is never assigned anywhere. `FilterDropdown.ResetSearch` slipped past
+everything precisely because it looked right — `FilterDropdown` is a local in
+that file, so the bare-globals rule passes it, and it is not an `SYL.`
+reference, so check 3 never saw it. Verified the same way: remove the
+function, watch it fail, put it back.
 
 **WHAT IT STILL DOES NOT CATCH**, which matters because it is the sibling
 class: a *local* used before it is declared. `Selection.ApplyHidden` calling

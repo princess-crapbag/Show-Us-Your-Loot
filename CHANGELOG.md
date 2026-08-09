@@ -69,6 +69,9 @@ this says what you will notice.
 
 ### Fixed
 
+- **The filter dropdowns did not open.** Player, Item, Location and Win type
+  all threw an error the moment you clicked them, from the moment they gained
+  their own search box. Nothing in the window was filterable in the meantime.
 - **Hovering a dungeon boss froze the game for seconds.** It read the
   Encounter Journal looking for a boss that cannot be in it, gave up, and did
   the same thing again the next time your mouse crossed the row.
