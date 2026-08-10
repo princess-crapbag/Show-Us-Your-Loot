@@ -283,9 +283,24 @@ cursor tracking and re-anchoring for a list of eight; arrows cannot drop a
 widget anywhere ambiguous. The saved order is identical either way, so a drag
 handle can replace them without touching `Core/Dashboard.lua`.
 
-**NONE OF IT HAS RUN IN THE GAME.** Static checks pass, every test passes, and
-three review passes found the defects listed in git log — but the first
-`/reload` is still the first time any of this draws.
+**NONE OF IT HAS RUN IN THE GAME.** The first `/reload` is still the first
+time any of it draws on a real screen. What *is* established:
+
+- All 98 files load in `.toc` order against a stubbed client
+  (`tools/test_load.py`).
+- All six working renderers draw against an empty database and a populated
+  one, and the grid refreshes with every widget off
+  (`tools/test_dashboardrender.py`). Both tests were confirmed to fail on a
+  planted fault before being trusted.
+- Three review passes found nine defects. All nine are fixed and in git log:
+  a grid 136px taller than its frame, a cogwheel under the close button, a
+  first-draw width that overran, a strip that ignored that guard, settings
+  rows too short for wrapped text, a headline clipped by the row beneath it,
+  loot-list chrome left on top of every panel, a tile routing to a tab label
+  instead of a tab key, and the Due window left unreachable.
+
+What no test here can reach: whether a font renders at the size assumed,
+whether a colour reads, and whether any of it is usable. That is tomorrow.
 
 ### The design it was built from
 
