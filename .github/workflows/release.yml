@@ -45,9 +45,10 @@ jobs:
         run: python tools/syl_check.py
 
       # The test suites, all of which run the shipped Lua rather than a copy
-      # of it: every file in the .toc parses, the migrations do the right
-      # thing to every state an install can be in, and a drought is only
-      # reset by content that counts as a raid night.
+      # of it: every file in the .toc parses and then loads against a stubbed
+      # client, the migrations do the right thing to every state an install
+      # can be in, and a drought is only reset by content that counts as a
+      # raid night.
       #
       # lupa ships manylinux wheels, so this is a download rather than a
       # build. If it ever starts costing releases, drop both steps — the
