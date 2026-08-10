@@ -20,9 +20,9 @@ upgrade, who turned up, and what each boss has given.
 
 - **Repo:** https://github.com/princess-crapbag/Show-Us-Your-Loot (public)
 - **CurseForge:** project 1642383, live at **v0.2.0-alpha**
-- **`main` is 48 commits ahead of that tag.** All of it is on GitHub and in
+- **`main` is 50 commits ahead of that tag.** All of it is on GitHub and in
   Aimee's game. **None of it has reached a user.**
-- 108 Lua files in the `.toc`, 19 test suites in `tools/`.
+- 112 Lua files in the `.toc`, 20 test suites in `tools/`.
 
 **Aimee runs the addon from a symlink**, `Interface/AddOns/ShowUsYourLoot ->
 Desktop/ShowUsYourLoot`. Edits are live in game immediately; only a `/reload`
@@ -107,7 +107,7 @@ again:
 python -m venv .venv && .venv/Scripts/python -m pip install lupa
 ```
 
-Nineteen suites. Each reads its Lua straight out of the addon, so none can
+Twenty suites. Each reads its Lua straight out of the addon, so none can
 drift from the code, and each exits non-zero on failure. `release.yml` runs the
 lot before building a zip, so a failing suite blocks a release.
 
@@ -247,9 +247,14 @@ order is the argument and deleting the finished ones hides it.
 
 ### Tier 2 — the placeholder that needs a data source
 
-3. **The calendar.** Two widgets need it and nothing else does. See below.
-4. **"Who is out" is not built at all** — designed, but absent from the widget
-   registry rather than placeheld. Same blocker.
+3. **DONE, and not the way this file expected. The schedule.**
+   `Core/RaidSchedule.lua`. Both tiles now answer, and neither needs the
+   calendar: the guild's usual raid days are typed once
+   (`/syl schedule days tue wed`) and answer "when is the next raid night"
+   forever. `Core/GuildCalendar.lua` imports the in-game calendar on top, and
+   an import never overwrites a typed night.
+4. **DONE. "Who is out"** — `/syl out <name> [days] [reason]`, ranges rather
+   than single days, `/syl in <name>` to undo.
 
 ### Tier 3 — the strategy items never got to
 
@@ -339,14 +344,25 @@ first `SendChatMessage` in the addon.
 - **The players and roster windows** are still reachable only via `/syl players`
   and `/syl roster`. Folding them into the Raiders tab is the rest of item 1a.
 
-### The calendar — the one real blocker
+### The calendar — no longer a blocker
 
-Two dashboard widgets need it and nothing else does: **Next raid night** and
-**Who is out**. Next raid night currently draws a tile saying it is waiting on
-the calendar, which is honest rather than blank.
+**Nothing is blocked on it.** Both tiles answer from `Core/RaidSchedule.lua`,
+which is typed and tested. `Core/GuildCalendar.lua` reads `C_Calendar` on top
+and is **unverified against a live client** — if it silently finds nothing,
+distrust it rather than the schedule.
 
-`C_Calendar` is the only in-game source. It needs the month opened before it
-returns anything, and signup lists arrive separately from events.
+What was decided, and why, after Aimee asked whether Discord could feed this:
+
+- **Discord cannot reach the addon by any route.** WoW makes no HTTP requests,
+  so this is the same wall as Warcraft Logs and Droptimizer. A bot could feed
+  the **web dashboard** — the login is already Discord, so that side is easy —
+  but the web can only ever display, never push into the game.
+- **`C_Calendar` is the only automatic in-game source**, and it only knows who
+  is out if people click Declined on the in-game event. A guild that posts
+  absences in Discord produces nothing there. That is why typed absences are
+  the primary path and not the fallback.
+- **Once other people run the addon**, absences could ride the sync channel —
+  an officer marks somebody out and it propagates. Not built.
 
 **Warcraft Logs cannot feed this, and having an API key does not change that.**
 Checked against the public docs 2026-08-09. Two walls: an addon makes no HTTP
