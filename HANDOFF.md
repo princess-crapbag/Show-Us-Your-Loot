@@ -250,7 +250,44 @@ channel behaves as assumed.
 
 Two people with the addon and the switch on, in the same guild, is the test.
 
-### The dashboard — designed, agreed, not started
+### The dashboard — BUILT 2026-08-09, untested in game
+
+Everything below this heading was the design. It is now code. What actually
+shipped, and what did not:
+
+**Built and working, as far as static checking can tell:**
+
+- `Core/Dashboard.lua` — the widget registry, all on by default, saved order,
+  tested against orders saved by older versions.
+- `Core/LootScore.lua` — Need 100, offspec 20, greed 20, transmog 0, ranked by
+  score over nights with a three-night floor. 28 assertions.
+- `Core/Links.lua` — a few URLs and a copy box.
+- `UI/DashboardTab.lua`, `DashboardParts.lua`, `DashboardWidgets.lua` — the
+  grid and six working widgets.
+- `UI/TabPanels.lua` — the five non-list tabs.
+- `UI/SettingsWidgets.lua` — tick and reorder, in Settings.
+- Seven tabs and a cogwheel in `UI/MainWindow.lua`; the footer is empty.
+
+**Deliberately not built, and each says so on screen:**
+
+- **Next raid night** is a tile that says it is waiting on the calendar.
+- **Raiders, Nights, Bosses and Keys** are real tabs that open the windows
+  which already answer them. The board, the calendar and the two-pane boss
+  screen are designed and unbuilt. Folding six windows into one is a refactor
+  touching all of them, and doing it in the same change as new widgets would
+  have meant a broken dashboard and a broken roster with no way to tell which
+  broke first.
+
+**Reordering is arrows, not drag.** Dragging inside a settings panel means
+cursor tracking and re-anchoring for a list of eight; arrows cannot drop a
+widget anywhere ambiguous. The saved order is identical either way, so a drag
+handle can replace them without touching `Core/Dashboard.lua`.
+
+**NONE OF IT HAS RUN IN THE GAME.** Static checks pass, every test passes, and
+three review passes found the defects listed in git log — but the first
+`/reload` is still the first time any of this draws.
+
+### The design it was built from
 
 Aimee rearranged the widget mocks by hand and that arrangement is the one to
 build: two tall columns pinning the outer edges (Last raid night, Who is due)
