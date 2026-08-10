@@ -294,6 +294,50 @@ write to the clipboard. The most any addon does is pop a box with the URL
 selected so the user presses Ctrl-C. So that widget is three configurable URLs
 and a copy box, and it is worth checking that is still wanted.
 
+### Weighted loot value — Aimee's idea, and it replaces the drought
+
+Raised 2026-08-09 and explicitly parked: "we will also need to work on the
+scoring but thats another topic". Her shape: **a win is worth an amount, not a
+yes.** Need 100%, greed around 20%, and an officer can mark a rare item at
+200%.
+
+This does not sit alongside `nightsSinceUpgrade` — it replaces it. A drought is
+a binary clock; a score says how much somebody has actually taken, which is a
+better answer to the same question and the one that survives an argument about
+a greed win.
+
+**Four questions, none answered, each of which changes every number:**
+
+1. **What are offspec and transmog worth?** The two she did not name. Today
+   offspec counts fully and transmog counts as nothing.
+2. **Does score decay?** A Need win in March cannot weigh the same as one last
+   night, or a raider is punished all tier for a single item.
+3. **Is it per night attended?** Raw score punishes attendance — whoever turns
+   up most accrues most. Score over nights is the fair shape, and it is the
+   same trap `DueList` already avoids for droughts.
+4. **Marked rare — set by whom, and does it sync?** It is an officer's
+   judgement about an item, the same category as the roster data.
+
+**Do this after the LFR run, not before.** It changes every number the addon
+reports, and a wrong number cannot be told from a wrong weight if both arrive
+at once.
+
+### Requesting somebody's key — agreed, unbuilt
+
+Press Request on a row in the Keys tab and the holder is notified, with an
+Invite button on the notification. The channel exists: `Core/KeystoneSync.lua`
+already has guildies talking on the `SYLKEY` prefix, and a request is one more
+message shape on it.
+
+Three things to settle first, with my recommendation:
+
+- **Offline holders.** An addon message does not reach them. Recommend
+  online-only rather than a queue.
+- **Spam.** Recommend one request per key per person per hour, alongside the
+  existing answer throttle.
+- **Does the requester hear back?** Recommend not — "sent", and nothing more.
+  Anything richer is a chat client and the game already ships one.
+
 ### The calendar is the blocking piece
 
 Two widgets need it and nothing else does: **Next raid night** and **Who is
@@ -306,6 +350,29 @@ from events. The alternative is an officer typing the next raid by hand, which
 is an afternoon's work and always correct but never updates itself.
 
 **Aimee has asked for the calendar**, so the direction is settled.
+
+### Screen-by-screen notes from the design pass
+
+Mockups of all six tabs exist and are agreed. Points that came out of review
+and would otherwise be lost:
+
+- **Raiders** merges Players and Roster. The union is fourteen columns and does
+  not fit; the cut is role as a chip on the name, "alt of" as a suffix, no Team
+  column at team scope, and Eligible/Mog/alt list behind the row click. The
+  word **"dry" is rejected** — the column is *Waiting* and rows carry their
+  unit, "6 nights" rather than "6".
+- **Nights** is a month calendar with a week toggle, not a table with a box on
+  top. Past nights come from what the addon recorded; future ones from
+  `C_Calendar`, so a guild that does not keep events sees an empty half-month
+  and the screen should say so rather than look broken.
+- **Bosses** is two panes — a fixed boss rail and that boss's loot table with
+  drop counts, defaulting to items that have **not** dropped. The item list is
+  the Encounter Journal, which the `lootTables` feature already reads, so this
+  needs no new source. Open question: the Journal lists what a boss can drop
+  for *any* spec, so "never dropped" includes items nobody in your raid can
+  use. Filtering to your raid's classes is a decision, not a given.
+- **Loot** keeps its tick column. It was in the addon and missing from the
+  first mock, which is the sort of thing a mock must not quietly do.
 
 ### Keys tab, later — Aimee's words: "this part is not urgent"
 
