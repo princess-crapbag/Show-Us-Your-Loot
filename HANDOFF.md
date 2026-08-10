@@ -20,9 +20,9 @@ upgrade, who turned up, and what each boss has given.
 
 - **Repo:** https://github.com/princess-crapbag/Show-Us-Your-Loot (public)
 - **CurseForge:** project 1642383, live at **v0.2.0-alpha**
-- **`main` is 39 commits ahead of that tag.** All of it is on GitHub and in
+- **`main` is 41 commits ahead of that tag.** All of it is on GitHub and in
   Aimee's game. **None of it has reached a user.**
-- 98 Lua files in the `.toc`, 13 test suites in `tools/`.
+- 100 Lua files in the `.toc`, 15 test suites in `tools/`.
 
 **Aimee runs the addon from a symlink**, `Interface/AddOns/ShowUsYourLoot ->
 Desktop/ShowUsYourLoot`. Edits are live in game immediately; only a `/reload`
@@ -30,18 +30,22 @@ is needed. There is no build step for local testing.
 
 ### THE TWO MOST IMPORTANT THINGS ON THIS PAGE
 
-**1. The dashboard has never drawn on a real screen.** Six widgets, seven tabs,
-a cogwheel, a new scoring system and the code behind them were all written on
-2026-08-09 and the game has not loaded any of it once. Static checks and 13
-suites pass, which establishes that it loads and that the code paths run — not
-that a font renders at the size assumed, that a colour reads, or that any of it
-is usable.
+**1. The dashboard has drawn, and Aimee confirmed it works.** Loaded 2026-08-09
+late. That was the top item on this page for a day and it is closed. What she
+reported back became the work below: several tabs were placeholders, and not
+every list of people honoured the raid team / guild / everyone order.
+
+**The Raiders board has NOT drawn.** It was built after she went to bed. Static
+checks and 15 suites pass, which establishes that it loads, that every path
+runs and that the pane's arithmetic agrees with the bar beside it — not that a
+bar is legible, that the average line lands where the eye expects, or that 16
+rows fit the space they were measured for.
 
 **2. The fairness maths has still never run on a real raid night.** Five passes
 have now changed how attendance is counted, how droughts are measured, what
-counts as an upgrade, who is on the list at all, and — as of tonight — replaced
-the drought with a weighted score. Not one has been watched with real data.
-Treat every number as plausible rather than correct.
+counts as an upgrade, who is on the list at all, and replaced the drought with
+a weighted score. Not one has been watched with real data. Treat every number
+as plausible rather than correct.
 
 The next raid remains the highest-value event for this project.
 
@@ -90,13 +94,16 @@ after the LFR test.
 
 ### The tests
 
-They need `lupa`, which embeds a Lua interpreter:
+They need `lupa`, which embeds a Lua interpreter. **It is already installed on
+the system python on this machine** — `python tools/test_load.py` runs as is.
+There is no `.venv`, despite what this file used to say; if it is ever needed
+again:
 
 ```bash
 python -m venv .venv && .venv/Scripts/python -m pip install lupa
 ```
 
-Thirteen suites. Each reads its Lua straight out of the addon, so none can
+Fifteen suites. Each reads its Lua straight out of the addon, so none can
 drift from the code, and each exits non-zero on failure. `release.yml` runs the
 lot before building a zip, so a failing suite blocks a release.
 
@@ -112,6 +119,12 @@ The four that matter most:
 - **`test_lootscore`** and **`test_duelist`** — the fairness maths. Extend
   these whenever it changes. They are the only tests of the numbers this addon
   is named after.
+- **`test_raiderspanel`** — builds the Raiders board and refreshes it empty,
+  populated, and with the scope hiding everybody, then renders the detail pane.
+  It asserts the breakdown **sums to the score on the bar**, which is the one
+  way that screen can be wrong while looking fine.
+- **`test_audience`** — the raid team / guild / everyone order, the computed
+  default's fall-through, and the three surfaces that used to ignore it.
 
 **Every test written this session was confirmed to fail on a planted fault
 before being trusted.** Do the same. A test that has never failed proves
@@ -122,15 +135,22 @@ nothing.
 None is exempt and none should be without a real reason:
 
 - `UI/MainWindow.lua` 517
-- `Core/SlashCommands.lua` 493
+- `Core/SlashCommands.lua` 509
 - `Core/Utilities.lua` 439
 - `UI/RosterWindow.lua` 422
 
 `Utilities` has the obvious seam: the item helpers (`GetItemLevel`,
 `GetItemIDFromLink`, `NormalizeItemLink`, `GetItemNameFromLink`,
-`IsBindOnEquip`) are a module. `SlashCommands` gained four commands tonight and
-could shed the roster and link ones. **Never delete a comment to get under the
-limit** — that happened twice before the escape hatch existed.
+`IsBindOnEquip`) are a module — but it is 12 call sites across 8 files, and the
+test suites load those modules individually, so it ripples into `tools/` too.
+`SlashCommands` could shed the roster and link commands. **Never delete a
+comment to get under the limit** — that happened twice before the escape hatch
+existed.
+
+**A new screen does not have to grow `MainWindow`.** `UI/TabPanels.lua` builds
+the panels and hands back `mode -> panel`, so the Raiders board was added
+without touching `MainWindow` at all. The size limit is not what stands between
+here and the remaining tabs.
 
 ### Write commit messages from the diff, not from the intent
 
@@ -147,14 +167,113 @@ pushes need no prompt. Never put a token in a URL.
 
 ## 3. What is open
 
-### Waiting on Aimee, blocking nothing else
+**The list below is the agreed order of work**, built 2026-08-09 from what
+Aimee asked for after loading the addon, plus the strategy items recovered from
+the pre-rewrite version of this file. Numbered so they can be referred to.
+Items 2 and 5 are done; they are left in place with what was built, because the
+order is the argument and deleting the finished ones hides it.
 
-1. **Load the addon and test the dashboard.** Everything below is worth less
-   than this.
-2. **The LFR run**, with `/syl due` before and after.
-3. **Release from alpha** once the maths has been watched.
-4. **F10 — re-take the screenshots.** All seven are stale and the UI changed
-   completely tonight. Do this last.
+### Tier 1 — what she asked for after loading it
+
+1. **The route panels are stubs.** Raiders, Nights, Bosses and Keys each drew a
+   heading, a blurb and a button opening the old window. **1a Raiders is DONE**
+   — `UI/RaidersPanel.lua`. Remaining, in value order: **1b Bosses** (boss rail
+   plus that boss's loot table, defaulting to items that have *not* dropped;
+   needs no new data source, the Journal is already read — open question is
+   that it lists drops for any spec, so "never dropped" includes items nobody
+   in the raid can use), **1c Keys** (the request flow is fully specified in §4
+   of the pre-rewrite file and in the mockups), **1d Nights** (the past half —
+   month calendar, shading, kill counts — needs nothing new; only the accented
+   *next* night is blocked on item 3).
+2. **DONE. Audience scope on every list of people.** Three surfaces never asked
+   `Core/Audience.lua`: the Readiness tile (called `RaidTeam.Filter` directly,
+   so it was the one list that could not widen), the end-of-night summary (swept
+   the whole roster, then pointed at `/syl due`, which is scoped — it said nine
+   where the list showed three), and the player filter dropdown (plain
+   alphabetical, so a pug sat above the raid team).
+
+   The dropdown is **ordered, not filtered**, and that is the call worth
+   challenging: it drives the loot list, which is a record of drops rather than
+   a list of people, so removing a pug's name would leave a visible row no
+   filter could reach. Keys is exempt, per Aimee and per `UI/MainWindow.lua`.
+
+   The raid, boss and player-detail screens turned out **not** to need this —
+   they carry no list of people. Raid nights shows `rosterCount`, which is a
+   historical fact about who was there and must stay unscoped.
+
+### Tier 2 — the placeholder that needs a data source
+
+3. **The calendar.** Two widgets need it and nothing else does. See below.
+4. **"Who is out" is not built at all** — designed, but absent from the widget
+   registry rather than placeheld. Same blocker.
+
+### Tier 3 — the strategy items never got to
+
+Recovered from the pre-rewrite file, section E. E4 became `Core/Audience.lua`;
+item 2 above finished it. E5 is effectively done — keystone sharing added the
+first `SendChatMessage` in the addon.
+
+5. **DONE, as part of 1a. E3 — the score breakdown.** `LootScore.Add` took a
+   weight, so a total had no route back to the wins behind it. It takes the
+   roll state now and `LootScore.Breakdown` reads it back. *(Storing item level
+   on each record — the other half of E3 — is still open, and still the cheap
+   change that turns item-count fairness into gearing fairness.)*
+6. **E1 — the trade-window advisor.** The unanimous reviewer top pick, and the
+   only feature on this list with **no cold start**: the roll list is complete
+   on the first drop, so it works on install night with no history. On a win,
+   tell the winner who rolled Need and lost, with droughts and time remaining.
+   RCLootCouncil's `Modules/TradeUI.lua` is the reference — `TRADE_SHOW`,
+   `TRADE_CLOSED`, `TRADE_ACCEPT_UPDATE`, `UI_INFO_MESSAGE` watching
+   `LE_GAME_ERR_TRADE_COMPLETE`, target from
+   `TradeFrameRecipientNameText:GetText()`, 5-minute timer for the two-hour
+   window. It is also the answer to the risk in §4: a guild on Group Loot chose
+   not to have a loot process, and this makes the history serve a decision they
+   already have to make.
+7. **E2 — trade tracking.** Credit the recipient, not the winner; today every
+   traded item is two wrong numbers. Falls out of item 6 nearly free.
+8. **E8 — sync backfill, or turn sync off.** Officer sync still sends drop
+   headers only, so synced records sit outside the fairness maths as `partial`.
+   Needs two clients more than it needs code.
+9. **E6 — reposition.** The unique asset is the pass data. Suggested line:
+   *"Group Loot remembers who won. This remembers who passed."*
+10. **E7 — reconsider All Rights Reserved.** Tells an officer they are stranded
+    if the author stops. Aimee's call, no code.
+
+### Tier 4 — started here and unfinished
+
+11. **F7 — roster as a link.** Both decisions made; `Core/DataExport.lua` still
+    sends seasons only, so there is nothing on the server to point a link at,
+    and the Discord claim step does not exist. Not urgent, her words.
+12. **F9 — Droptimizer.** Web-side only; the addon makes no HTTP requests.
+13. **Four files over the size limit** — `MainWindow` 517, `SlashCommands` 509,
+    `Utilities` 439, `RosterWindow` 422. **This is no longer blocking the tab
+    work**: `TabPanels.CreateAll` is the seam, and Raiders was added without
+    `MainWindow` growing by a line. `Utilities` still has the obvious seam —
+    the five item helpers are a module — but it is 12 call sites across 8 files
+    and the test suites load those modules individually, so it ripples further
+    than it looks. Never delete a comment to get under the limit.
+14. **`luacheck` with WoW globals.** The one open tooling item: catches a local
+    used before its declaration, which nothing here covers and which shipped
+    once as `HideTarget`. `lupa` is installed, so there is a Lua interpreter.
+15. **The personal-loot asymmetry.** Dormant, not wrong — see §4.
+16. **NOTES Phases 2, 3, 5, 6.** Phase 6 is item 7.
+
+### Tier 5 — shipping
+
+17. **The LFR run**, with `/syl due` before and after.
+18. **Release from alpha** once the maths has been watched. Also fixes the
+    CurseForge invisibility.
+19. **F10 — re-take the screenshots.** All seven stale. Do this last.
+
+### Open decisions from tonight, both small
+
+- **Is the due window superseded?** The Raiders board answers the same question
+  better, but `UI/DueWindow.lua` has a recency toggle the board does not. Making
+  the tab a panel deleted its last route, so `/syl due window` was added rather
+  than leaving two files loading and unreachable. If the board is enough, delete
+  `DueWindow.lua` and `DueRows.lua` and drop that subcommand.
+- **The players and roster windows** are still reachable only via `/syl players`
+  and `/syl roster`. Folding them into the Raiders tab is the rest of item 1a.
 
 ### The calendar — the one real blocker
 
@@ -181,11 +300,13 @@ read the in-game calendar, allow a manual override.
 The mockups are settled and signed off. Each of these is a real tab today that
 opens the window already answering it, and says so on the panel.
 
-- **Raiders** — a board (one bar per raider, length = loot taken per night,
-  line at the raid average) with a detail pane on click. **Aimee rejected two
-  table designs before this; do not go back to a table.** The pane's "where the
-  score came from" is the screen somebody stands at when they disagree with
-  their number.
+- ~~**Raiders**~~ — **BUILT**, `UI/RaidersPanel.lua` and `UI/RaidersDetail.lua`.
+  A board, one bar per raider, length = loot taken per night, line at the raid
+  average, detail pane on click. **Aimee rejected two table designs before
+  this; do not go back to a table.** The pane's "where the score came from" is
+  the screen somebody stands at when they disagree with their number, so it
+  shows the arithmetic and is asserted to sum to the bar beside it. Not yet
+  drawn by the real client.
 - **Nights** — a month calendar with a week toggle, past nights shaded with
   their kill count, the next one accented. Clicking a day fills one dense stat
   panel below. The table that used to sit under it was deleted: it repeated the
@@ -284,6 +405,14 @@ let a Timewalking raid wipe a two-month drought.
 **Ordinary LFR is group loot and counts fully.** It was reverted from personal
 loot when group loot came back to raids. An earlier claim in this file that LFR
 awards personal loot was wrong.
+
+**The player filter dropdown is ordered by that scope, not filtered by it.**
+Every other people-list narrows; this one re-orders and keeps everybody. It
+drives the loot list, and the loot list is a record of drops rather than a list
+of people — a pug's win is a row already on screen, so dropping their name
+would leave a visible row that no filter could reach. Aimee said "besides the
+keys tab everything should focus on that order", and ordering is the reading
+that does not break the list underneath it. Open to challenge.
 
 **Lists of people default to raid team, then guild, then everyone.**
 `Core/Audience.lua`. The default is computed rather than written down — team
@@ -400,7 +529,12 @@ Each of these cost real time.
 `git log`. The messages explain the reasoning and what was rejected on the way,
 which is why `.pkgmeta` keeps them out of the user-facing changelog.
 
-The 2026-08-09 session, in order: the audience scope and quiet-by-default chat,
+The late 2026-08-09 session, after Aimee confirmed the dashboard drew: the
+audience scope wired into the three screens that never asked for it, and the
+Raiders tab turned from a routing stub into a board with a detail pane that
+shows the arithmetic behind a raider's number.
+
+The earlier 2026-08-09 session, in order: the audience scope and quiet-by-default chat,
 the record-id backfill, the Timewalking drought fix, recruits before they join,
 keystone tracking and guild sharing, MM-DD-YYYY dates, weighted loot value, the
 dashboard and six-tab navigation, and thirteen defects found by three review
