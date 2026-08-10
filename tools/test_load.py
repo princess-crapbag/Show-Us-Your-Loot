@@ -83,6 +83,19 @@ lua.execute(
     UIParent = Stub()
 
     function GetTime() return 0 end
+
+    -- The trade frame. Slots and the recipient name are driven by the test
+    -- that needs them; empty here so loading touches nothing.
+    TRADE_SLOT_LINKS = {}
+    TRADE_RECIPIENT = nil
+
+    LE_GAME_ERR_TRADE_COMPLETE = 300
+
+    function GetTradePlayerItemLink(slot) return TRADE_SLOT_LINKS[slot] end
+
+    TradeFrameRecipientNameText = {
+        GetText = function() return TRADE_RECIPIENT end,
+    }
     -- Honours a date table, the way the client's does. Returning a constant
     -- for every argument made any calendar arithmetic untestable: twelve
     -- different months all resolved to the same instant, so a grid built from

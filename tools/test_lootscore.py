@@ -49,6 +49,12 @@ for module in ("Utilities.lua", "LootHistoryAPI.lua"):
 lua.execute(
     """
     ShowUsYourLoot.Players = { ResolveToMain = function(key) return key end }
+
+    -- Identity, because no fixture here has been traded. The real one hands
+    -- back the recipient for a drop that was; test_tradetracker owns that.
+    ShowUsYourLoot.TradeTracker = {
+        CreditedIdentity = function(_, rawIdentity) return rawIdentity end,
+    }
     """
 )
 

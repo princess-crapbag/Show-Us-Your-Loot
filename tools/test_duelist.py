@@ -81,6 +81,14 @@ lua.execute(
         NameKey = function(name) return name end,
     }
 
+    -- Identity, because no fixture here has been traded. The real one hands
+    -- back the recipient for a drop that was; that behaviour has its own
+    -- suite in test_tradetracker, and stubbing it keeps this file about the
+    -- one rule it was written for.
+    SYL.TradeTracker = {
+        CreditedIdentity = function(_, rawIdentity) return rawIdentity end,
+    }
+
     SYL.RaidSession = {
         NightKey = function(session) return session.nightKey end,
 

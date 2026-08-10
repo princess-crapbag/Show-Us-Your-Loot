@@ -70,6 +70,12 @@ Features.LIST = {
             .. "rolled on it. Sends nothing to anyone.",
     },
     {
+        key = "tradeTracking",
+        label = "Follow traded loot",
+        cost = "Watches your own trades, and credits an item you traded away "
+            .. "to whoever received it. Changes the score.",
+    },
+    {
         key = "developer",
         label = "Developer tools",
         cost = "Adds /syl dev and the event inspector. For diagnosing the "
@@ -95,6 +101,13 @@ local DEFAULTS = {
     -- nothing, so the rule it might look like it breaks — the addon does not
     -- talk unless asked — is about chat and is untouched.
     tradeAdvisor = true,
+
+    -- On, because it is a correctness fix and off is the wrong answer that
+    -- shipped until now: a traded item credited the winner, who gave it away,
+    -- and not the person wearing it. It is still a switch, because it moves
+    -- points between two real people and a guild is entitled to say they would
+    -- rather it did not.
+    tradeTracking = true,
 
     developer = false,
 }

@@ -158,9 +158,17 @@ function LootScore.BuildTotals(drops)
             -- records carry no roll list, so the header is the fallback.
             for _, roll in ipairs(drop.rolls or {}) do
                 if roll.isWinner then
+                    -- Traded away means credited away. Routed through the same
+                    -- choke point DueList uses, because two lists that
+                    -- disagree about who won an item is how an officer stops
+                    -- trusting both.
                     Add(
                         totals,
-                        SYL.Players.ResolveToMain(roll.guid or roll.name),
+                        SYL.Players.ResolveToMain(
+                            SYL.TradeTracker.CreditedIdentity(
+                                drop, roll.guid or roll.name
+                            )
+                        ),
                         roll.state,
                         drop.timestamp
                     )
@@ -173,7 +181,9 @@ function LootScore.BuildTotals(drops)
                 Add(
                     totals,
                     SYL.Players.ResolveToMain(
-                        drop.winnerGUID or drop.winnerName
+                        SYL.TradeTracker.CreditedIdentity(
+                            drop, drop.winnerGUID or drop.winnerName
+                        )
                     ),
                     drop.winnerState,
                     drop.timestamp

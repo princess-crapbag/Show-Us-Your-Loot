@@ -214,8 +214,21 @@ local function OnPlayerEnteringWorld()
     SYL.RaidSummary.ReportIfFinished()
 end
 
+-- Registered unconditionally, unlike the feature's own work. A feature that is
+-- off should cost nothing, and these four cost nothing: every handler returns
+-- on the first line when tradeTracking is off. Gating the registration instead
+-- would mean the events are only ever live for somebody who reloaded after
+-- turning it on, and a trade missed for that reason is invisible.
 local HANDLERS = {
     ADDON_LOADED = OnAddonLoaded,
+    TRADE_SHOW = function() SYL.TradeTracker.OnTradeShow() end,
+    TRADE_CLOSED = function() SYL.TradeTracker.OnTradeClosed() end,
+    TRADE_ACCEPT_UPDATE = function(playerAccepted, targetAccepted)
+        SYL.TradeTracker.OnAcceptUpdate(playerAccepted, targetAccepted)
+    end,
+    UI_INFO_MESSAGE = function(messageType)
+        SYL.TradeTracker.OnInfoMessage(messageType)
+    end,
     CHALLENGE_MODE_COMPLETED = OnKeystoneMayHaveChanged,
     BAG_UPDATE_DELAYED = OnKeystoneMayHaveChanged,
     ITEM_CHANGED = OnKeystoneMayHaveChanged,

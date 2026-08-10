@@ -55,6 +55,7 @@ Core\DueList.lua
 Core\RaidSummary.lua
 Core\NightIndex.lua
 Core\TradeAdvisor.lua
+Core\TradeTracker.lua
 Core\Export.lua
 Core\DataExport.lua
 Core\CommandList.lua

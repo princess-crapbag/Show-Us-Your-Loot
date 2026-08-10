@@ -99,8 +99,13 @@ local function LastUpgradeByPlayer(drops)
 
             for _, roll in ipairs(drop.rolls or {}) do
                 if roll.isWinner and IsUpgrade(roll.state) then
+                    -- An item won and then traded away belongs to whoever is
+                    -- wearing it. See Core/TradeTracker.lua: crediting the
+                    -- winner made a traded item two wrong numbers at once.
                     local key = SYL.Players.ResolveToMain(
-                        roll.guid or roll.name
+                        SYL.TradeTracker.CreditedIdentity(
+                            drop, roll.guid or roll.name
+                        )
                     )
 
                     if key then
@@ -117,7 +122,9 @@ local function LastUpgradeByPlayer(drops)
 
             if not counted and IsUpgrade(drop.winnerState) then
                 local key = SYL.Players.ResolveToMain(
-                    drop.winnerGUID or drop.winnerName
+                    SYL.TradeTracker.CreditedIdentity(
+                        drop, drop.winnerGUID or drop.winnerName
+                    )
                 )
 
                 if key then
