@@ -329,6 +329,50 @@ Three things to settle first, with my recommendation:
 - **Does the requester hear back?** Recommend not — "sent", and nothing more.
   Anything richer is a chat client and the game already ships one.
 
+### Warcraft Logs has an API. It still cannot feed the calendar.
+
+Aimee found the Web API page and asked what it gives us. Checked 2026-08-09
+against the public docs.
+
+**Two separate walls, and both stand.**
+
+1. **The addon cannot call it.** WoW addons make no HTTP requests, to Warcraft
+   Logs or anywhere. Same wall as F9. An API key changes nothing about that.
+2. **There is no calendar in the API.** The v2 GraphQL guild type exposes
+   `attendance(guildTagID, limit, page, zoneID)`, `members(...)` and
+   `zoneRanking(zoneId:)`. No events, no signups, no schedule. A forum thread
+   asking for an attendance CSV endpoint suggests export is deliberately thin.
+
+**And the page she linked is not a schedule.** `warcraftlogs.com/guild/calendar/<id>`
+renders as a *Report* Calendar — a grid of past uploaded logs. Even with an API
+it would answer "when did we raid", not "when are we raiding and who signed
+up". (Not confirmed directly: the page is behind a bot check, which was not
+bypassed. The title of another guild's public calendar is the evidence.)
+
+So **the next-raid-night widget cannot come from Warcraft Logs**, and the two
+sources named earlier are still the only two: `C_Calendar` in game, or an
+officer typing the schedule in.
+
+**What the API is genuinely good for, later.** `tools/syl_upload.py` already
+runs outside the game and already talks to Supabase, so it could also pull
+guild attendance from logs as an independent cross-check of what the addon
+recorded. Worth knowing that **the addon's own attendance is the better
+record**: it reads the group roster at every pull, so it counts the healer who
+never appeared in a log segment, and it does not depend on anybody remembering
+to upload.
+
+**If that is ever built, two practical notes.** `attendance` is v2 only, and v2
+needs an OAuth2 client — id and secret from "manage your V2 clients", not the
+V1 key. Rate limit is 18,000 points/hour, which is generous at guild scale.
+
+**Getting anything back into the addon** has exactly one honest path: an
+external tool writes a generated Lua file into the addon folder, which the
+addon loads at startup. RaiderIO ships its whole dataset that way. It needs
+the tool run and a `/reload`, and it is never live.
+
+**The V1 key in that screenshot is burned** and should be reset — it was
+readable in an image pasted into a chat.
+
 ### The calendar is the blocking piece
 
 Two widgets need it and nothing else does: **Next raid night** and **Who is
