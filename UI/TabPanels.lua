@@ -32,20 +32,6 @@ SYL.TabPanels = TabPanels
 -- key, heading, what it answers, and the window that answers it today.
 local ROUTES = {
     {
-        mode = "nights",
-        title = "Nights",
-        blurb = "Every raid night recorded, who was there, what was pulled and "
-            .. "what dropped. The calendar view and the next raid night are "
-            .. "not built yet — they need the in-game guild calendar, which "
-            .. "nothing here reads so far.",
-        button = "Open raid nights",
-        open = function()
-            if SYL.OpenRaidWindow then
-                SYL:OpenRaidWindow()
-            end
-        end,
-    },
-    {
         mode = "keys",
         title = "Mythic+ keys",
         blurb = "What your characters are holding, and what your guild is "
@@ -125,6 +111,7 @@ function TabPanels.CreateAll(parent, config)
 
     panels.raiders = SYL.RaidersPanel.Create(parent)
     panels.bosses = SYL.BossesPanel.Create(parent)
+    panels.nights = SYL.NightsPanel.Create(parent)
 
     for _, route in ipairs(ROUTES) do
         panels[route.mode] = CreateRoutePanel(parent, route)

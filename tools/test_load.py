@@ -83,7 +83,17 @@ lua.execute(
     UIParent = Stub()
 
     function GetTime() return 0 end
-    function time(t) return 1700000000 end
+    -- Honours a date table, the way the client's does. Returning a constant
+    -- for every argument made any calendar arithmetic untestable: twelve
+    -- different months all resolved to the same instant, so a grid built from
+    -- this could be wrong in every cell and still look consistent.
+    function time(t)
+        if type(t) == 'table' then
+            return os.time(t)
+        end
+
+        return 1700000000
+    end
     date = os.date
     function GetLocale() return 'enUS' end
     function UnitName() return 'Tester' end

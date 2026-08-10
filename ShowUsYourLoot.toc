@@ -53,6 +53,7 @@ Core\LootScore.lua
 Core\Dashboard.lua
 Core\DueList.lua
 Core\RaidSummary.lua
+Core\NightIndex.lua
 Core\Export.lua
 Core\DataExport.lua
 Core\CommandList.lua
@@ -90,6 +91,8 @@ UI\RaidersDetail.lua
 UI\RaidersPanel.lua
 UI\BossLoot.lua
 UI\BossesPanel.lua
+UI\NightStats.lua
+UI\NightsPanel.lua
 UI\TabPanels.lua
 UI\MainWindow.lua
 UI\DropDetailWindow.lua
