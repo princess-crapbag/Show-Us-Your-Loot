@@ -20,9 +20,9 @@ upgrade, who turned up, and what each boss has given.
 
 - **Repo:** https://github.com/princess-crapbag/Show-Us-Your-Loot (public)
 - **CurseForge:** project 1642383, live at **v0.2.0-alpha**
-- **`main` is 44 commits ahead of that tag.** All of it is on GitHub and in
+- **`main` is 46 commits ahead of that tag.** All of it is on GitHub and in
   Aimee's game. **None of it has reached a user.**
-- 105 Lua files in the `.toc`, 17 test suites in `tools/`.
+- 107 Lua files in the `.toc`, 18 test suites in `tools/`.
 
 **Aimee runs the addon from a symlink**, `Interface/AddOns/ShowUsYourLoot ->
 Desktop/ShowUsYourLoot`. Edits are live in game immediately; only a `/reload`
@@ -36,7 +36,7 @@ reported back became the work below: several tabs were placeholders, and not
 every list of people honoured the raid team / guild / everyone order.
 
 **The three new tabs have NOT drawn.** Raiders, Bosses and Nights were all
-built after she went to bed. Static checks and 17 suites pass, which
+built after she went to bed. Static checks and 18 suites pass, which
 establishes that they load, that every path runs, and that the numbers agree
 with each other — not that a bar is legible, that the average line lands where
 the eye expects, that 16 rows fit the space they were measured for, or that a
@@ -106,7 +106,7 @@ again:
 python -m venv .venv && .venv/Scripts/python -m pip install lupa
 ```
 
-Seventeen suites. Each reads its Lua straight out of the addon, so none can
+Eighteen suites. Each reads its Lua straight out of the addon, so none can
 drift from the code, and each exits non-zero on failure. `release.yml` runs the
 lot before building a zip, so a failing suite blocks a release.
 
@@ -135,6 +135,9 @@ The four that matter most:
   one night stay one night. Its past-midnight fixture is a full 24 hours apart
   on purpose: a realistic gap lands on the same day in some timezones and not
   others, so the first version passed or failed depending on the machine.
+- **`test_tradeadvisor`** — asserts the **cold start first**: with no seasons,
+  no nights and no prior drops, everybody who rolled and lost is still named.
+  That is the reason the feature exists, so it is the assertion to keep.
 
 **Every test written this session was confirmed to fail on a planted fault
 before being trusted.** Do the same. A test that has never failed proves
@@ -145,7 +148,7 @@ nothing.
 None is exempt and none should be without a real reason:
 
 - `UI/MainWindow.lua` 517
-- `Core/SlashCommands.lua` 509
+- `Core/SlashCommands.lua` 528
 - `Core/Utilities.lua` 439
 - `UI/RosterWindow.lua` 422
 
@@ -246,19 +249,29 @@ first `SendChatMessage` in the addon.
    roll state now and `LootScore.Breakdown` reads it back. *(Storing item level
    on each record — the other half of E3 — is still open, and still the cheap
    change that turns item-count fairness into gearing fairness.)*
-6. **E1 — the trade-window advisor.** The unanimous reviewer top pick, and the
-   only feature on this list with **no cold start**: the roll list is complete
-   on the first drop, so it works on install night with no history. On a win,
-   tell the winner who rolled Need and lost, with droughts and time remaining.
-   RCLootCouncil's `Modules/TradeUI.lua` is the reference — `TRADE_SHOW`,
-   `TRADE_CLOSED`, `TRADE_ACCEPT_UPDATE`, `UI_INFO_MESSAGE` watching
-   `LE_GAME_ERR_TRADE_COMPLETE`, target from
-   `TradeFrameRecipientNameText:GetText()`, 5-minute timer for the two-hour
-   window. It is also the answer to the risk in §4: a guild on Group Loot chose
-   not to have a loot process, and this makes the history serve a decision they
-   already have to make.
+6. **DONE. E1 — the trade-window advisor.** `Core/TradeAdvisor.lua`,
+   `UI/TradeAdvisorPanel.lua`. On a win it names everybody who rolled Need or
+   offspec and lost, most owed first, with the clock. Feature-toggled, on by
+   default, `/syl trade` reopens it.
+
+   **It is the only thing here with no cold start**, and that is the whole
+   reason it went first — it works on install night with no history, where
+   every screen built the night before reads as empty.
+
+   **The trade half is NOT built.** Nothing watches `TRADE_SHOW`,
+   `TRADE_ACCEPT_UPDATE` or `UI_INFO_MESSAGE` for
+   `LE_GAME_ERR_TRADE_COMPLETE`, so the addon still does not know whether the
+   item was actually handed over. That is item 7, and RCLootCouncil's
+   `Modules/TradeUI.lua` is the reference for it — target from
+   `TradeFrameRecipientNameText:GetText()`.
+
+   **No whisper button, deliberately.** It could exist; it was left off
+   because "the addon does not talk unless asked" is a rule a popup offering
+   to talk for you erodes one button at a time. Reopen if wanted.
 7. **E2 — trade tracking.** Credit the recipient, not the winner; today every
-   traded item is two wrong numbers. Falls out of item 6 nearly free.
+   traded item is two wrong numbers. **Now the obvious next thing**: item 6
+   already holds the item id and the two-hour window, so this is the event
+   handling plus a rule for what a completed trade does to the score.
 8. **E8 — sync backfill, or turn sync off.** Officer sync still sends drop
    headers only, so synced records sit outside the fairness maths as `partial`.
    Needs two clients more than it needs code.
