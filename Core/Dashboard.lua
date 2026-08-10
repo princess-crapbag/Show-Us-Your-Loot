@@ -31,7 +31,10 @@ Dashboard.WIDGETS = {
         key = "lastNight",
         label = "Last raid night",
         note = "What dropped, and how many went home with nothing.",
-        tab = "loot",
+        -- "feed", not "loot". Loot is the tab's label; feed is its key, and
+        -- SetMode takes the key. Pointing at the label selected a mode no tab
+        -- matched, which cleared every underline and blanked the subtitle.
+        tab = "feed",
         span = 1,
     },
     {

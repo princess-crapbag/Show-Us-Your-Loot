@@ -158,41 +158,54 @@ lua.execute(
     """
 )
 
-listed = [
-    line.strip()
-    for line in (ROOT / "ShowUsYourLoot.toc").read_text(encoding="utf-8").splitlines()
-    if line.strip().lower().endswith(".lua")
-]
+def load_all():
+    """Loads every file in the .toc, in order. Returns the failures."""
+    listed = [
+        line.strip()
+        for line in (ROOT / "ShowUsYourLoot.toc")
+        .read_text(encoding="utf-8")
+        .splitlines()
+        if line.strip().lower().endswith(".lua")
+    ]
 
-failures = []
-
-for entry in listed:
-    path = ROOT / entry.replace("\\", "/")
-    source = path.read_text(encoding="utf-8")
-
-    # Main.lua takes the addon name and table the way the client passes them.
-    wrapped = (
-        "local __chunk = ...\n"
-        "return function(...) " + source + " end"
+    compile_lua = lua.execute(
+        "return function(src, name) return load(src, name) end"
     )
 
-    try:
-        fn = lua.execute("return function(src, name) return load(src, name) end")(
-            "return function(...)\n" + source + "\nend", entry
-        )
+    failures = []
 
-        if fn is None:
-            print(f"FAIL {entry} — did not compile")
+    for entry in listed:
+        source = (ROOT / entry.replace("\\", "/")).read_text(encoding="utf-8")
+
+        try:
+            # Wrapped in a function so the vararg header every addon file uses
+            # — `local addonName, SYL = ...` in Main.lua — receives what the
+            # client would pass it.
+            wrapped = "return function(...)\n" + source + "\nend"
+
+            fn = compile_lua(wrapped, entry)
+
+            if fn is None:
+                print(f"FAIL {entry} — did not compile")
+                failures.append(entry)
+                continue
+
+            fn()("ShowUsYourLoot", lua.globals().ShowUsYourLoot or lua.table())
+        except Exception as err:  # noqa: BLE001 — any Lua error is the finding
+            print(f"FAIL {entry}")
+            print("       " + str(err).splitlines()[0])
             failures.append(entry)
-            continue
 
-        fn()("ShowUsYourLoot", lua.globals().ShowUsYourLoot or lua.table())
-    except Exception as err:  # noqa: BLE001 — any Lua error is a real finding
-        message = str(err).split("\n")[0]
-        print(f"FAIL {entry}\n       {message}")
-        failures.append(entry)
+    print()
+    print(f"loaded {len(listed)} files in .toc order")
 
-print()
-print(f"loaded {len(listed)} files in .toc order")
-print("FAILURES:", failures or "none")
-sys.exit(1 if failures else 0)
+    return failures
+
+
+# Importable on purpose: tools/test_dashboardrender.py reuses this stubbed
+# client and the addon it has just loaded, rather than standing up its own.
+problems = load_all()
+
+if __name__ == "__main__":
+    print("FAILURES:", problems or "none")
+    sys.exit(1 if problems else 0)

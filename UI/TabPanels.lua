@@ -32,14 +32,22 @@ local ROUTES = {
             .. "how often they turn up. Ranked by loot taken per raid night, "
             .. "so somebody with perfect attendance is more due than somebody "
             .. "there half the time.",
-        button = "Open the roster",
+        -- Who is due leads, because emptying the footer took away the only
+        -- route to that window and the dashboard tile points here.
+        button = "Who is due",
         open = function()
+            if SYL.OpenDueWindow then
+                SYL:OpenDueWindow()
+            end
+        end,
+        second = "Open the roster",
+        openSecond = function()
             if SYL.OpenRosterWindow then
                 SYL:OpenRosterWindow()
             end
         end,
-        second = "Open players",
-        openSecond = function()
+        third = "Open players",
+        openThird = function()
             if SYL.OpenPlayerWindow then
                 SYL:OpenPlayerWindow()
             end
@@ -106,12 +114,23 @@ local function CreateRoutePanel(parent, route)
     local open = Theme.CreateButton(panel, 170, 26, route.button, route.open)
     open:SetPoint("TOPLEFT", 2, -116)
 
+    local previous = open
+
     if route.second then
         local second = Theme.CreateButton(
             panel, 150, 26, route.second, route.openSecond
         )
 
-        second:SetPoint("LEFT", open, "RIGHT", 8, 0)
+        second:SetPoint("LEFT", previous, "RIGHT", 8, 0)
+        previous = second
+    end
+
+    if route.third then
+        local third = Theme.CreateButton(
+            panel, 150, 26, route.third, route.openThird
+        )
+
+        third:SetPoint("LEFT", previous, "RIGHT", 8, 0)
     end
 
     -- Said plainly rather than left for somebody to work out from the fact

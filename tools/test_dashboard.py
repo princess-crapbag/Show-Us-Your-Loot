@@ -105,6 +105,18 @@ for widget in dash.WIDGETS.values():
     check(f"{key} names a tab to open", isinstance(widget["tab"], str) and widget["tab"] != "")
     check(f"{key} explains itself", isinstance(widget["note"], str) and len(widget["note"]) > 10)
 
+# Every tab a widget claims to open must be a real tab key, or clicking the
+# tile selects a mode no tab matches: the strip goes dark and the subtitle
+# blanks. "loot" is the Loot tab's LABEL; its key is "feed".
+TAB_KEYS = {"dashboard", "feed", "raiders", "nights", "bosses", "keys",
+            "archives", "settings"}
+
+for widget in dash.WIDGETS.values():
+    check(
+        f"{widget['key']} routes to a real tab, not a label",
+        widget["tab"] in TAB_KEYS,
+    )
+
 check("recording spans the full width", dash.Get("recording")["span"] == 3)
 check("next raid night declares it needs the calendar", dash.Get("nextNight")["needs"] == "calendar")
 
