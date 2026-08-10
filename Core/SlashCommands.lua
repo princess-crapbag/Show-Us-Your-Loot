@@ -356,11 +356,28 @@ COMMANDS.keys = function()
         )
     end
 
-    SYL:Write(
-        "  Only this account's characters. Seeing the guild's keys needs "
-        .. "everyone to run the addon and share them, which it does not do "
-        .. "yet."
-    )
+    local guild = SYL.KeystoneSync.List()
+
+    if #guild > 0 then
+        SYL:Write("Guild keys, from officers running the addon:")
+
+        for _, entry in ipairs(guild) do
+            SYL:Write(
+                "  " .. tostring(entry.name)
+                .. " — " .. SYL.Keystone.Describe(entry)
+            )
+        end
+    elseif SYL.KeystoneSync.IsEnabled() then
+        SYL:Write(
+            "  Nobody else has sent a key yet. They need this addon with key "
+            .. "sharing on — nothing can read another player's bags."
+        )
+    else
+        SYL:Write(
+            "  Key sharing is off, so this is your account only. Turn it on "
+            .. "in Settings under Features to see your guild's keys."
+        )
+    end
 end
 
 COMMANDS.clear = function()

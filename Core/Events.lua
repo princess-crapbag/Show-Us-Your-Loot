@@ -83,6 +83,12 @@ local function OnPlayerLogin()
         SYL.Sync.Enable()
     end
 
+    -- Separate switch from sync: that one sends drop headers to officers in
+    -- your group, this sends one line about this character to the guild.
+    if SYL.Features.IsEnabled("keystoneSharing") then
+        SYL.KeystoneSync.Enable()
+    end
+
     -- The reply arrives as GUILD_ROSTER_UPDATE.
     SYL.Guild.Request()
 
@@ -104,6 +110,11 @@ local function OnKeystoneMayHaveChanged()
 
     if changed and entry then
         SYL:DebugPrint("Keystone now: " .. SYL.Keystone.Describe(entry))
+
+        -- Only on a real change. This runs on bag updates, which fire
+        -- constantly, and a broadcast per bag update would be a broadcast per
+        -- looted grey.
+        SYL.KeystoneSync.OnOwnKeyChanged()
     end
 end
 

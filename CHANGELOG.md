@@ -11,11 +11,15 @@ this says what you will notice.
   button on the roster window, on by default. Anyone joining the guild is
   never hidden by it, and neither is anyone the client has not reported on
   yet. Press it for everyone.
-- **Your Mythic+ keystones are tracked.** `/syl keys` lists what this
-  account's characters are holding, kept current at login, when a dungeon
-  finishes, and when a key is rerolled. This is your own account only —
-  seeing the guild's keys needs everyone to run the addon and share them,
-  which is not built yet.
+- **Mythic+ keystones, yours and your guild's.** `/syl keys` lists what your
+  characters hold, kept current at login, when a dungeon finishes, and when a
+  key is rerolled. Turn on **Share Mythic+ keys with the guild** in Settings
+  under Features and it also shows everyone else's — for anyone in your guild
+  running the addon with the same switch on. Nothing can read another
+  player's bags, so that is the only way it can work. What goes out is one
+  line about the character you are on: dungeon, key level, class. No loot, no
+  attendance, and nothing anybody sees in chat. Keys older than a week are
+  dropped rather than shown stale. Off by default.
 - **Add someone who is joining but is not in the guild yet.**
   `/syl addraider Aimee-Silvermoon mage`. They appear on the roster marked
   **Joining**, count towards raid buff coverage, and can be put on the raid

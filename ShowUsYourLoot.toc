@@ -39,6 +39,7 @@ Core\PlayerHistory.lua
 Core\EncounterJournal.lua
 Core\LootTable.lua
 Core\Keystone.lua
+Core\KeystoneSync.lua
 Core\IncomingRoster.lua
 Core\RaidTeam.lua
 Core\Audience.lua

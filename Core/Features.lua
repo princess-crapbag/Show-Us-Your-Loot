@@ -57,6 +57,13 @@ Features.LIST = {
             .. "unless you turn it on.",
     },
     {
+        key = "keystoneSharing",
+        label = "Share Mythic+ keys with the guild",
+        cost = "Tells your guild which key this character holds, and remembers "
+            .. "theirs. Needs them to run the addon too. Off unless you turn "
+            .. "it on.",
+    },
+    {
         key = "developer",
         label = "Developer tools",
         cost = "Adds /syl dev and the event inspector. For diagnosing the "
@@ -72,6 +79,10 @@ local DEFAULTS = {
     -- Matches syncEnabled's own default, which this replaces. It is the one
     -- thing here that talks to other people.
     sync = false,
+
+    -- The second thing here that talks to other players, and the only one
+    -- that talks outside your own group. Off for the same reason sync is.
+    keystoneSharing = false,
 
     developer = false,
 }
