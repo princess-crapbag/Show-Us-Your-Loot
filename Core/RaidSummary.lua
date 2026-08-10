@@ -70,10 +70,21 @@ function RaidSummary.Build(session)
 
     -- Everyone present who did not win an upgrade. This is the number a raid
     -- leader gets asked about the next day.
+    --
+    -- SCOPED, because the line under it points at /syl due, which is scoped —
+    -- unscoped here meant the summary said nine and the ranked list showed
+    -- three, with nothing on either screen explaining the gap. The scope is
+    -- named in the line rather than applied silently: the total is still a
+    -- true count of who was in the raid, and this is a subset of it.
+    local scope = SYL.Audience.Get()
     local emptyHanded = 0
 
-    for key in pairs(session.roster or {}) do
-        if not wonBy[key] then
+    for key, entry in pairs(session.roster or {}) do
+        local inScope = SYL.Audience.Includes(
+            scope, key, entry and entry.guid, entry and entry.fullName
+        )
+
+        if inScope and not wonBy[key] then
             emptyHanded = emptyHanded + 1
         end
     end
@@ -94,9 +105,14 @@ function RaidSummary.Build(session)
     ))
 
     if emptyHanded > 0 then
+        -- "9 recorded went home" does not read, so only the narrowing scopes
+        -- name themselves. Everyone is the scope where the count already means
+        -- what the sentence says.
         table.insert(lines, string.format(
-            "%d went home without an upgrade. /syl due ranks them.",
-            emptyHanded
+            "%d%s went home without an upgrade. /syl due ranks them.",
+            emptyHanded,
+            scope == "everyone" and ""
+                or (" " .. SYL.Audience.Subject(scope))
         ))
     end
 

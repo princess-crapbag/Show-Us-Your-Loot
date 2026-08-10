@@ -135,20 +135,30 @@ DashboardWidgets.RENDERERS.due = function(tile)
 end
 
 -- Readiness ---------------------------------------------------------------
+--
+-- This read RaidTeam.Filter directly and so was the one people-list that could
+-- not widen: with nobody ticked it drew an empty state, on a dashboard whose
+-- every other tile falls through to the guild. Audience.Filter is the same
+-- narrowing one step up, and it folds alts — an officer who ticks the alt
+-- somebody actually raids on used to have them fail their own team test here.
 DashboardWidgets.RENDERERS.readiness = function(tile)
-    local roster = SYL.RaidTeam.Filter(SYL.RosterData.Build())
+    local scope = SYL.Audience.Get()
+    local roster = SYL.RosterData.Build()
+    local beforeScope = #roster
+
+    roster = SYL.Audience.Filter(roster, scope)
 
     if #roster == 0 then
         DashboardParts.Empty(tile,
-            "Nobody is marked as being on the raid team. Open Raiders and tick "
-            .. "the TEAM column.")
+            SYL.Audience.ExplainEmpty(scope, beforeScope)
+            or "Nobody on the roster yet. This fills in from your guild list.")
 
         return
     end
 
     local counts = SYL.RaidTeam.CountRoles(roster)
 
-    DashboardParts.Headline(tile, #roster, "on the team")
+    DashboardParts.Headline(tile, #roster, SYL.Audience.Subject(scope))
 
     local index = 1
 

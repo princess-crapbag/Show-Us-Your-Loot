@@ -56,6 +56,16 @@ Audience.NOTES = {
     everyone = "everyone recorded, including pugs",
 }
 
+-- The words after a count, so a headline reads "12 on the team" rather than
+-- carrying a noun that the scope has quietly stopped describing. A widget that
+-- says "on the team" while showing the whole guild is worse than one that says
+-- nothing, because it is a number somebody will quote.
+Audience.SUBJECTS = {
+    team = "on the team",
+    guild = "in your guild",
+    everyone = "recorded",
+}
+
 local function Settings()
     return ShowUsYourLootDB and ShowUsYourLootDB.settings
 end
@@ -127,6 +137,10 @@ end
 
 function Audience.Note(scope)
     return Audience.NOTES[scope or Audience.Get()] or ""
+end
+
+function Audience.Subject(scope)
+    return Audience.SUBJECTS[scope or Audience.Get()] or "recorded"
 end
 
 --------------------------------------------------------------------------
