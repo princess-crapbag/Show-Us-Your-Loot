@@ -48,6 +48,7 @@ Core\RaidBuffs.lua
 Core\BossStats.lua
 Core\PersonalLoot.lua
 Core\LootFeed.lua
+Core\Links.lua
 Core\LootScore.lua
 Core\Dashboard.lua
 Core\DueList.lua
@@ -82,6 +83,10 @@ UI\SelectionBar.lua
 UI\LootListView.lua
 UI\MainFooter.lua
 UI\MainNav.lua
+UI\DashboardParts.lua
+UI\DashboardTab.lua
+UI\DashboardWidgets.lua
+UI\TabPanels.lua
 UI\MainWindow.lua
 UI\DropDetailWindow.lua
 UI\CommandMenu.lua
@@ -100,6 +105,7 @@ UI\BossWindow.lua
 UI\ItemTooltip.lua
 UI\ExportWindow.lua
 UI\SettingsRows.lua
+UI\SettingsWidgets.lua
 UI\SettingsWindow.lua
 UI\DeveloperReport.lua
 UI\DeveloperWindow.lua

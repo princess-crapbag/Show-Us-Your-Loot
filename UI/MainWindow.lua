@@ -63,9 +63,35 @@ local view = {
 -- merged list holds them together with the type on each row, and All-Time
 -- became redundant the moment "All seasons" applied to one list instead of
 -- to whichever tab you happened to be on.
+--
+-- Six now, and the order is the order an officer wants them: the dashboard
+-- first because it answers the question, guild screens next, and Keys last
+-- because it is the one screen where half the names will not be in the guild.
+--
+-- Raiders is Players and Roster merged. The difference between those two
+-- screens was always the audience — people with loot history versus people
+-- who could raid — and that is a button, not a tab.
+--
+-- Archives stays at the end and out of the way. It is reached once a tier.
 local TABS = {
+    { key = "dashboard", label = "Dashboard" },
     { key = "feed", label = "Loot" },
+    { key = "raiders", label = "Raiders" },
+    { key = "nights", label = "Nights" },
+    { key = "bosses", label = "Bosses" },
+    { key = "keys", label = "Keys" },
     { key = "archives", label = "Archives" },
+}
+
+-- Modes that draw their own content instead of the loot list. Everything the
+-- list machinery does — filters, selection, the sort header — is hidden for
+-- these, and each is responsible for its own frame.
+local PANEL_MODES = {
+    dashboard = true,
+    raiders = true,
+    nights = true,
+    bosses = true,
+    keys = true,
 }
 
 --------------------------------------------------------------------------
@@ -100,6 +126,22 @@ local function UpdateTabs()
     end
 end
 
+-- Shows the one panel that belongs to this mode and hides the rest, so a
+-- panel can never be left on screen under another tab's content.
+local function UpdatePanels()
+    for mode, panel in pairs(view.panels or {}) do
+        if mode == view.mode then
+            panel:Show()
+
+            if panel.Refresh then
+                panel:Refresh()
+            end
+        else
+            panel:Hide()
+        end
+    end
+end
+
 local function UpdateRows()
     if not frame then
         return
@@ -115,9 +157,20 @@ local function UpdateRows()
 
     UpdateHeader()
     UpdateTabs()
-    view.selectionBar:Update()
+    UpdatePanels()
 
     view.feedHeader:Hide()
+
+    -- A panel owns the whole body, so every control belonging to the loot
+    -- list goes away rather than sitting behind it.
+    if PANEL_MODES[view.mode] then
+        view.filterBar:Hide()
+        view.selectionBar:HideAll()
+
+        return
+    end
+
+    view.selectionBar:Update()
 
     -- Nothing on the archive list is filterable, so the bar would only be
     -- misleading there.
@@ -181,6 +234,23 @@ local function CreateTitleBar(parent)
         CreateFrame("Button", nil, parent, "UIPanelCloseButton")
 
     closeCorner:SetPoint("TOPRIGHT", -6, -6)
+
+    -- Settings sat in the footer, in the row used every raid night, and is
+    -- opened about once a month. A corner is where a thing like that belongs.
+    view.settingsButton = Theme.CreateButton(parent, 26, 22, "*", function()
+        if SYL.OpenSettingsWindow then
+            SYL:OpenSettingsWindow()
+        end
+    end)
+
+    view.settingsButton:SetPoint("TOPRIGHT", -34, -18)
+
+    SYL.Tooltips.Attach(
+        view.settingsButton,
+        "Settings",
+        "Colour scheme, what gets recorded, which dashboard widgets are on, "
+        .. "and the features that can be switched off."
+    )
 end
 
 local function CreateNavigationBar(parent)
@@ -337,6 +407,28 @@ local function CreateMainWindow()
     CreateTitleBar(frame)
     CreateNavigationBar(frame)
     CreateFilterBar(frame)
+
+    -- After the nav so the tabs exist to be switched to, and before the
+    -- first UpdateRows so a panel is never asked to draw before it is built.
+    view.panels = SYL.TabPanels.CreateAll(frame, {
+        onOpenTab = function(tab)
+            -- A widget names the tab it is about; Settings is a window rather
+            -- than a tab, so it is the one that does not switch.
+            if tab == "settings" then
+                if SYL.OpenSettingsWindow then
+                    SYL:OpenSettingsWindow()
+                end
+
+                return
+            end
+
+            SetMode(tab, nil)
+        end,
+    })
+
+    -- Opens on the dashboard. It is the screen that answers the question, and
+    -- the loot list is one click away for anybody who wants the old landing.
+    view.mode = "dashboard"
     view.selectionBar = SYL.SelectionBar.Create(frame, view, {
         onChanged = UpdateRows,
     })

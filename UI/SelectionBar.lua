@@ -251,6 +251,21 @@ function SelectionBar.Create(parent, view, config)
         })
     end
 
+    -- Everything this bar owns, off screen. A panel mode draws its own body
+    -- and these would otherwise sit on top of it — Update alone is not enough,
+    -- because it only ever decides between showing and hiding for the list.
+    bar.HideAll = function(self)
+        for _, control in ipairs({
+            self.showHidden, self.action, self.ignore,
+            self.deselect, self.selectAll, self.allSeasons,
+            self.contentScope, self.gearOnly,
+        }) do
+            if control then
+                control:Hide()
+            end
+        end
+    end
+
     bar.Update = function(self)
         local count = view.selection.count
         local onList = view.mode ~= "archives"

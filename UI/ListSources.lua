@@ -211,7 +211,26 @@ end
 -- apart would mean a heading that describes a different list to the one
 -- below it. The archive line names its record type for that reason: two
 -- lists under one season name are otherwise indistinguishable.
+-- The subtitle under the window title. Panel modes describe themselves in
+-- their own words rather than falling through to the season name, which would
+-- be true but useless on a screen that is not about a season.
+local PANEL_SUBTITLES = {
+    dashboard = "Dashboard",
+    raiders = "Raiders",
+    nights = "Raid nights",
+    bosses = "Bosses",
+    keys = "Mythic+ keys",
+}
+
 function ListSources.DescribeView(view)
+    local panel = PANEL_SUBTITLES[view.mode or ""]
+
+    if panel then
+        local season = SYL.GetActiveSeason()
+
+        return panel .. (season and ("  ·  " .. season.name) or "")
+    end
+
     if view.mode == "feed" then
         if view.allSeasons then
             return "Every season"

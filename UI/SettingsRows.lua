@@ -279,11 +279,23 @@ local function FeatureSectionTop()
         - #TOGGLES * ROW_HEIGHT - NOTE_HEIGHT - SECTION_GAP
 end
 
+-- Where the dashboard widget section starts, and the shared section builder
+-- it needs. Both are exported rather than duplicated: UI/SettingsWidgets.lua
+-- owns that section, and this file still owns the geometry every section
+-- shares. See the header there for why it is not a third block in here.
+function SettingsRows.WidgetSectionTop()
+    return FeatureSectionTop() - HEADING_HEIGHT
+        - #SYL.Features.LIST * FEATURE_ROW_HEIGHT - SECTION_GAP
+end
+
+function SettingsRows.AddSection(parent, title, offsetY)
+    return AddSection(parent, title, offsetY)
+end
+
 function SettingsRows.WindowHeight()
     local contentBottom =
-        math.abs(FeatureSectionTop())
-        + HEADING_HEIGHT
-        + #SYL.Features.LIST * FEATURE_ROW_HEIGHT
+        math.abs(SettingsRows.WidgetSectionTop())
+        + SYL.SettingsWidgets.SectionHeight()
 
     return contentBottom + FOOTER_HEIGHT
 end

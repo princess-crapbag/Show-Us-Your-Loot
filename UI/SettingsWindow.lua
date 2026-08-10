@@ -62,6 +62,12 @@ local function CreateSettingsWindow()
     SettingsRows.BuildToggleSection(frame)
     SettingsRows.BuildFeatureSection(frame)
 
+    SYL.SettingsWidgets.Build(
+        frame,
+        SettingsRows.WidgetSectionTop(),
+        SettingsRows.AddSection
+    )
+
     local footerRule = Theme.CreateSeparator(frame)
     footerRule:SetPoint("BOTTOMLEFT", 16, 44)
     footerRule:SetPoint("BOTTOMRIGHT", -16, 44)
