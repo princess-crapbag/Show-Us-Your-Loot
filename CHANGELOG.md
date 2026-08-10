@@ -7,6 +7,15 @@ this says what you will notice.
 
 ### Added
 
+- **The roster hides characters nobody has played for a month.** An **Active**
+  button on the roster window, on by default. Anyone joining the guild is
+  never hidden by it, and neither is anyone the client has not reported on
+  yet. Press it for everyone.
+- **Your Mythic+ keystones are tracked.** `/syl keys` lists what this
+  account's characters are holding, kept current at login, when a dungeon
+  finishes, and when a key is rerolled. This is your own account only —
+  seeing the guild's keys needs everyone to run the addon and share them,
+  which is not built yet.
 - **Add someone who is joining but is not in the guild yet.**
   `/syl addraider Aimee-Silvermoon mage`. They appear on the roster marked
   **Joining**, count towards raid buff coverage, and can be put on the raid

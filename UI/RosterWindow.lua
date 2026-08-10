@@ -52,6 +52,10 @@ local header
 -- four hundred guild members is the thing you widen to occasionally rather
 -- than the thing you start from.
 local teamOnly = true
+-- Hides characters nobody has logged into for a month. On by default: a
+-- roster is a list of people you could bring, and a name that has not been
+-- seen since the last tier is not one. See RosterData.ActiveOnly.
+local activeOnly = true
 -- The size of the last list drawn, so the scrollbar knows its range without
 -- rebuilding the roster every time it asks.
 local lastTotal = 0
@@ -169,6 +173,12 @@ Refresh = function()
         roster = SYL.RaidTeam.Filter(roster)
     end
 
+    -- Before the search, so a name typed into the box is looked for among the
+    -- people this list is actually about.
+    if activeOnly then
+        roster = SYL.RosterData.ActiveOnly(roster)
+    end
+
     roster = SYL.RosterData.Search(roster, searchText)
     roster = SYL.RosterData.Sort(roster, sortKey, sortReversed)
 
@@ -176,7 +186,7 @@ Refresh = function()
 
     lastTotal = total
 
-    SYL.RosterControls.UpdateFilters(frame, teamOnly)
+    SYL.RosterControls.UpdateFilters(frame, teamOnly, activeOnly)
     SYL.RosterControls.UpdateCoverage(frame, roster)
     SYL.RosterControls.UpdateRoles(frame, roster)
 
@@ -191,6 +201,9 @@ Refresh = function()
         .. (teamOnly and " on the raid team" or
             (total == 1 and " guild member" or " guild members"))
         .. "  ·  " .. SYL.RaidTeam.Count() .. " marked as raiding"
+        .. (activeOnly
+            and ("  ·  seen in the last "
+                .. SYL.RosterData.INACTIVE_DAYS .. " days") or "")
         .. (selectedCount > 0
             and ("  ·  " .. selectedCount .. " ticked") or "")
     )
@@ -262,6 +275,12 @@ local function CreateWindow()
     SYL.RosterControls.Create(frame, {
         onTeamOnly = function()
             teamOnly = not teamOnly
+            offset = 0
+            Refresh()
+        end,
+
+        onActiveOnly = function()
+            activeOnly = not activeOnly
             offset = 0
             Refresh()
         end,

@@ -20,12 +20,41 @@ SYL.Guild = Guild
 local NAME_INDEX = 1
 local RANK_NAME_INDEX = 2
 local RANK_INDEX_INDEX = 3
+local ONLINE_INDEX = 9
 local PUBLIC_NOTE_INDEX = 7
 local OFFICER_NOTE_INDEX = 8
 -- The locale-independent name ("DEATHKNIGHT"), not the display one, since it
 -- is used as a key for class colours and buff lookups.
 local CLASS_FILE_INDEX = 11
 local GUID_INDEX = 17
+
+-- Days offline, for "only people who still play here".
+--
+-- Not one of GetGuildRosterInfo's returns — it comes from a separate call,
+-- GetGuildRosterLastOnline, which answers in years, months, days and hours
+-- rather than in a timestamp. Folded to days because that is the unit the
+-- question is asked in.
+--
+-- Online right now answers nil from that function rather than zero, which is
+-- the one case that must not be read as "never seen".
+local DAYS_PER_YEAR = 365
+local DAYS_PER_MONTH = 30
+
+local function DaysOffline(index, isOnline)
+    if isOnline then
+        return 0
+    end
+
+    local ok, years, months, days = pcall(GetGuildRosterLastOnline, index)
+
+    if not ok or type(days) ~= "number" then
+        return nil
+    end
+
+    return (years or 0) * DAYS_PER_YEAR
+        + (months or 0) * DAYS_PER_MONTH
+        + days
+end
 
 local byGUID = {}
 local byName = {}
@@ -76,6 +105,7 @@ function Guild.Refresh()
         local publicNote = info[PUBLIC_NOTE_INDEX]
         local officerNote = info[OFFICER_NOTE_INDEX]
         local classFile = info[CLASS_FILE_INDEX]
+        local isOnline = info[ONLINE_INDEX] and true or false
 
         if type(fullName) == "string" then
             local member = {
@@ -89,6 +119,9 @@ function Guild.Refresh()
                 -- or not, which is what makes a roster of *potential*
                 -- raiders answerable rather than only those already seen.
                 class = type(classFile) == "string" and classFile or nil,
+
+                isOnline = isOnline,
+                daysOffline = DaysOffline(index, isOnline),
 
                 publicNote = type(publicNote) == "string"
                     and publicNote ~= "" and publicNote or nil,

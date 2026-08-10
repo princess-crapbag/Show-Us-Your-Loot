@@ -78,6 +78,12 @@ function RosterData.Build()
             rank = member.rank,
             rankIndex = member.rankIndex,
             nights = seen and seen.nights or 0,
+
+            -- "people who havent signed in in 30 days plus dont matter".
+            -- nil means the client would not say, which is not the same as
+            -- inactive and must not be filtered out as though it were.
+            daysOffline = member.daysOffline,
+            isOnline = member.isOnline,
         })
     end
 
@@ -111,6 +117,35 @@ function RosterData.Build()
     cached = roster
 
     return roster
+end
+
+-- Characters nobody has logged into for a while.
+--
+-- Aimee's cutoff, and the reason for it: a roster is a list of people you
+-- could bring, and somebody who has not signed in for a month is not one of
+-- them. Recruits who have not joined yet are always kept — they have no
+-- last-online at all, and they are on the list precisely because they are
+-- expected.
+--
+-- Unknown is kept too. GetGuildRosterLastOnline answers nothing for a member
+-- the client has not filled in yet, and dropping those would empty the roster
+-- for the first few seconds after login, which reads as the guild being gone.
+RosterData.INACTIVE_DAYS = 30
+
+function RosterData.ActiveOnly(roster, withinDays)
+    withinDays = withinDays or RosterData.INACTIVE_DAYS
+
+    local kept = {}
+
+    for _, entry in ipairs(roster or {}) do
+        local days = entry.daysOffline
+
+        if entry.isIncoming or days == nil or days <= withinDays then
+            table.insert(kept, entry)
+        end
+    end
+
+    return kept
 end
 
 -- Substring, case-insensitive, on the name. Anything cleverer would be

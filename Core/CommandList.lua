@@ -110,6 +110,10 @@ CommandList.ENTRIES = {
     { developer = true, command = "debug", description = "Toggle debug messages" },
     { command = "announce", description = "Toggle capture messages" },
     {
+        command = "keys",
+        description = "Mythic+ keystones on this account",
+    },
+    {
         command = "addraider",
         argument = "NAME-REALM CLASS",
         description = "Add someone joining the guild to the roster",

@@ -19,11 +19,21 @@ SYL.RosterControls = RosterControls
 
 -- The button says which list you are on rather than what pressing it does,
 -- because the two states are both destinations here.
-function RosterControls.UpdateFilters(frame, teamOnly)
+function RosterControls.UpdateFilters(frame, teamOnly, activeOnly)
     frame.teamButton.label:SetText(teamOnly and "Raid team" or "Whole guild")
 
     Theme.SetTextColor(
         frame.teamButton.label, teamOnly and "accent" or "textPrimary"
+    )
+
+    if not frame.activeButton then
+        return
+    end
+
+    frame.activeButton.label:SetText(activeOnly and "Active" or "Everyone")
+
+    Theme.SetTextColor(
+        frame.activeButton.label, activeOnly and "accent" or "textPrimary"
     )
 end
 
@@ -109,10 +119,29 @@ local function CreateSummary(frame, handlers)
 
     frame.teamButton:SetPoint("TOPLEFT", 18, -170)
 
+    -- Somebody who has not signed in for a month is not somebody you can
+    -- bring, and in a guild with years of alts in it they are most of the
+    -- list. Recruits who have not joined yet are never hidden by this.
+    frame.activeButton =
+        Theme.CreateButton(frame, 90, 20, "Active", function()
+            handlers.onActiveOnly()
+        end)
+
+    frame.activeButton:SetPoint("LEFT", frame.teamButton, "RIGHT", 8, 0)
+
+    SYL.Tooltips.Attach(
+        frame.activeButton,
+        "Active / Everyone",
+        "Active hides characters nobody has logged into for "
+        .. SYL.RosterData.INACTIVE_DAYS .. " days. Anyone joining the guild "
+        .. "is always shown, and so is anyone the client has not told us "
+        .. "about yet."
+    )
+
     frame.search =
         SYL.SearchBox.Create(frame, 180, "Search names…", handlers.onSearch)
 
-    frame.search:SetPoint("LEFT", frame.teamButton, "RIGHT", 8, 0)
+    frame.search:SetPoint("LEFT", frame.activeButton, "RIGHT", 8, 0)
 end
 
 local function CreateActions(frame, handlers)
@@ -238,7 +267,8 @@ local function CreateActions(frame, handlers)
 end
 
 -- handlers:
---   onTeamOnly(on), onSearch(text)  filter changes
+--   onTeamOnly(), onActiveOnly()     filter toggles
+--   onSearch(text)                  filter changes
 --   getSelected()                   the ticked entries
 --   onClearSelection()              untick everything
 --   onChanged()                     redraw

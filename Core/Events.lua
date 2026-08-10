@@ -85,6 +85,26 @@ local function OnPlayerLogin()
 
     -- The reply arrives as GUILD_ROSTER_UPDATE.
     SYL.Guild.Request()
+
+    -- What this character is holding, read once at login. See
+    -- Core/Keystone.lua for why this can only ever be our own key.
+    SYL.Keystone.Update()
+end
+
+-- The three ways a key changes: a run finishes and awards the next one, the
+-- weekly reset takes it away, and rerolling at the font swaps it — which the
+-- client reports as the keystone item moving in the bags rather than as
+-- anything Mythic+ specific.
+--
+-- Update returns whether the answer actually differs, and BAG_UPDATE_DELAYED
+-- fires constantly, so the debug line is behind that check rather than
+-- printing on every bag change.
+local function OnKeystoneMayHaveChanged()
+    local entry, changed = SYL.Keystone.Update()
+
+    if changed and entry then
+        SYL:DebugPrint("Keystone now: " .. SYL.Keystone.Describe(entry))
+    end
 end
 
 local function OnChatMessageLoot(message)
@@ -185,6 +205,9 @@ end
 
 local HANDLERS = {
     ADDON_LOADED = OnAddonLoaded,
+    CHALLENGE_MODE_COMPLETED = OnKeystoneMayHaveChanged,
+    BAG_UPDATE_DELAYED = OnKeystoneMayHaveChanged,
+    ITEM_CHANGED = OnKeystoneMayHaveChanged,
     PLAYER_LOGIN = OnPlayerLogin,
     PLAYER_ENTERING_WORLD = OnPlayerEnteringWorld,
     CHAT_MSG_LOOT = OnChatMessageLoot,

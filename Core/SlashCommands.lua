@@ -326,6 +326,43 @@ COMMANDS.dropraider = function(remainder)
     end
 end
 
+-- What this account's characters are holding. Only ever this account's:
+-- an addon cannot read anybody else's bags. See Core/Keystone.lua.
+COMMANDS.keys = function()
+    if not SYL.Keystone.IsAvailable() then
+        SYL:Print("This client does not expose the Mythic+ keystone API.")
+
+        return
+    end
+
+    -- Re-read before reporting, so the answer is current rather than whatever
+    -- was true at login.
+    SYL.Keystone.Update()
+
+    local entries = SYL.Keystone.List()
+
+    if #entries == 0 then
+        SYL:Print("No keystones recorded yet on this account.")
+
+        return
+    end
+
+    SYL:Print("Keystones on this account:")
+
+    for _, entry in ipairs(entries) do
+        SYL:Write(
+            "  " .. tostring(entry.name)
+            .. " — " .. SYL.Keystone.Describe(entry)
+        )
+    end
+
+    SYL:Write(
+        "  Only this account's characters. Seeing the guild's keys needs "
+        .. "everyone to run the addon and share them, which it does not do "
+        .. "yet."
+    )
+end
+
 COMMANDS.clear = function()
     local activeSeason = SYL.GetActiveSeason()
 

@@ -200,6 +200,41 @@ accident.
 It is **off by default** (`countPersonalLoot`), so nobody is affected until
 they turn it on. That is the only reason this is a note rather than a fix.
 
+### Guild keystone sharing — half built, and the other half is a decision
+
+Aimee asked to see who is holding which Mythic+ key. `Core/Keystone.lua` does
+the half that can be done alone: it reads **this** character's key at login,
+on finishing a dungeon, and when the keystone item moves in the bags — which
+is what a reroll looks like to the client — and remembers it per character.
+`/syl keys` prints it.
+
+**It cannot be finished by reading more.** There is no API that reads another
+player's bags, for guild members or anyone else. Every addon that shows a
+guild's keys works one way: every player runs the addon, each copy reads its
+own key, and they broadcast to each other over the GUILD addon channel.
+
+So the remaining work is a guild-wide broadcast, and that is a decision rather
+than a task. Everything this addon sends today is deliberately narrow — sync
+is off by default, officer-to-officer, and inside your own group only, and §4
+records that widening it is "a decision to take on purpose, not to inherit
+from a roomier pipe". Guild-wide keystone chatter is exactly that widening:
+a new channel, a new payload, and traffic from every member rather than from
+officers in a raid.
+
+Aimee has asked for the feature, so the direction is settled. What is not
+settled, and should be before it is written:
+
+- Does it ride on the existing `sync` feature or get its own switch? Somebody
+  who wants keys shared may not want drop headers shared, and the reverse.
+- Broadcast on a timer, or only on change? Only on change is cheaper and
+  means a key can be up to a login stale.
+- What is stored about other people, and for how long? A key is worthless a
+  week later, and keeping stale ones makes the list lie.
+
+`RosterData.ActiveOnly` and `Guild`'s new `daysOffline` already answer the
+"only people who still play here" half of the ask, and are useful without any
+of the above.
+
 ### Strategy — none of this is started
 
 Reviewer arguments, unchanged except where noted. **It is a menu, not a plan.**
