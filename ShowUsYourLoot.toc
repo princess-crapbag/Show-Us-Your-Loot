@@ -88,6 +88,8 @@ UI\DashboardTab.lua
 UI\DashboardWidgets.lua
 UI\RaidersDetail.lua
 UI\RaidersPanel.lua
+UI\BossLoot.lua
+UI\BossesPanel.lua
 UI\TabPanels.lua
 UI\MainWindow.lua
 UI\DropDetailWindow.lua
