@@ -160,7 +160,7 @@ DashboardWidgets.RENDERERS.readiness = function(tile)
         for position = 1, math.min(2, #missing) do
             local buff = missing[position]
 
-            DashboardParts.Row(tile, index + 1,
+            DashboardParts.Row(tile, index,
                 type(buff) == "table" and (buff.name or buff.label or "?") or tostring(buff),
                 "missing", "textPrimary", "warning")
 
@@ -211,7 +211,7 @@ DashboardWidgets.RENDERERS.tier = function(tile)
     for index = 1, math.min(2, #unkilled) do
         local boss = unkilled[index]
 
-        DashboardParts.Row(tile, index + 1,
+        DashboardParts.Row(tile, index,
             boss.name or "Unknown",
             (boss.pulls or 0) .. " pulls, no kill",
             "textPrimary", "warning")
@@ -332,9 +332,13 @@ function DashboardWidgets.Render(tile, widget)
     local ok, err = pcall(renderer, tile)
 
     if not ok then
+        -- One call, not Empty plus Caption: the Recording strip has 18px of
+        -- body and two stacked lines would draw through each other exactly
+        -- when something has already gone wrong.
         DashboardParts.Empty(tile, "This widget could not be drawn.")
-        DashboardParts.Caption(tile, tostring(err), "warning")
 
-        SYL:DebugPrint("Widget " .. tostring(widget.key) .. " failed: " .. tostring(err))
+        SYL:DebugPrint(
+            "Widget " .. tostring(widget.key) .. " failed: " .. tostring(err)
+        )
     end
 end

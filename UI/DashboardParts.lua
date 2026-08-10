@@ -26,8 +26,14 @@ function DashboardParts.Row(tile, index, leftText, rightText, leftColor, rightCo
     local row = CreateFrame("Frame", nil, tile.body)
 
     row:SetHeight(ROW_HEIGHT)
-    row:SetPoint("TOPLEFT", 0, -(index - 1) * ROW_HEIGHT)
-    row:SetPoint("TOPRIGHT", 0, -(index - 1) * ROW_HEIGHT)
+    -- Rows start below whatever the tile put above them. A headline is a 15px
+    -- font string whose descenders reach about 20px, and row 2 at -17 drew its
+    -- stripe over the bottom of the big number — a child frame's BACKGROUND
+    -- sits above the parent's OVERLAY, so the stripe won.
+    local top = (tile.rowTop or 0) + (index - 1) * ROW_HEIGHT
+
+    row:SetPoint("TOPLEFT", 0, -top)
+    row:SetPoint("TOPRIGHT", 0, -top)
 
     if index % 2 == 0 then
         local stripe = Theme.CreateSolidTexture(row, "rowAlt", "BACKGROUND")
@@ -69,6 +75,10 @@ function DashboardParts.Headline(tile, value, unit)
     local big = Theme.CreateText(tile.body, Theme.sizes.title, "textPrimary")
     big:SetPoint("TOPLEFT", 2, -2)
     big:SetText(tostring(value))
+
+    -- Everything drawn after this starts below it, so callers can keep
+    -- numbering their rows from one.
+    tile.rowTop = 24
 
     if unit then
         local small = Theme.CreateText(tile.body, Theme.sizes.rowSmall, "textMuted")

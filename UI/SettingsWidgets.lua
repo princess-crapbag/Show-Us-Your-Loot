@@ -22,7 +22,11 @@ local Theme = SYL.Theme
 local SettingsWidgets = {}
 SYL.SettingsWidgets = SettingsWidgets
 
-local ROW_HEIGHT = 34
+-- 48, not 34. The section is 380px wide and the note wraps at about 286 of
+-- it, so four of the seven notes run to two lines: 3 top inset + 14 label + 2
+-- + 26 of note is 45, and a 34px row put the second line through the next
+-- row's label.
+local ROW_HEIGHT = 48
 local HEADING_HEIGHT = 26
 
 local rows = {}

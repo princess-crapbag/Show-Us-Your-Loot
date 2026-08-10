@@ -39,6 +39,12 @@ local TALL_RATIO = 1.3
 -- draw. Proportioned the same way so the first frame is not visibly different.
 local FALLBACK_SHORT = 160
 
+-- The window is fixed at 900 wide and the frame insets 16 each side, so this
+-- is the real column width rather than a round number. 300 was the guess, and
+-- three of those plus two gaps is 920 in an 868 frame — the third column ran
+-- off the window on the very first draw.
+local FALLBACK_WIDTH = (900 - 32 - GAP * (COLUMNS - 1)) / COLUMNS
+
 -- Returns the two row heights for the space there is. Solving
 -- tall + gap + short + gap + strip = height, with tall = ratio x short.
 local function RowHeights(available, hasStrip)
@@ -152,7 +158,7 @@ function DashboardTab.Create(parent, config)
         -- once, which happens on the very first show. Sane fallbacks keep the
         -- first draw from collapsing to nothing.
         if not width or width <= 1 then
-            width = 300
+            width = FALLBACK_WIDTH
         end
 
         local hasStrip = false
@@ -196,7 +202,11 @@ function DashboardTab.Create(parent, config)
                     row = row + 1
                 end
 
-                tile:SetWidth(self:GetWidth())
+                -- Spanned from the column width rather than read off the
+                -- frame: GetWidth is the value the guard above exists to
+                -- replace, and using it here gave the strip zero on the very
+                -- first draw while its siblings got a real width.
+                tile:SetWidth(width * COLUMNS + GAP * (COLUMNS - 1))
                 tile:SetHeight(STRIP_HEIGHT)
             else
                 tile:SetWidth(width)
