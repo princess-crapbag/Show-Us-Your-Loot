@@ -7,6 +7,14 @@ this says what you will notice.
 
 ### Added
 
+- **Add someone who is joining but is not in the guild yet.**
+  `/syl addraider Aimee-Silvermoon mage`. They appear on the roster marked
+  **Joining**, count towards raid buff coverage, and can be put on the raid
+  team before they arrive — so "we have no Mage" is right for the raid you are
+  actually bringing. The class has to be typed because the client cannot look
+  up a character it has never seen. When they join the guild they move onto
+  the roster by themselves, keeping their team place and role.
+  `/syl dropraider Name-Realm` removes one.
 - **Sort the loot list by any column.** Click PLAYER, ITEM, TYPE, WHERE or
   DATE; click again to reverse. It opens on newest first, as before.
 - **Ignore a record.** Tick rows and press **Ignore** to take them out of

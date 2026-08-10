@@ -117,8 +117,20 @@ local lastGuildCount
 local function OnGuildRosterUpdate()
     local count = SYL.Guild.Refresh()
 
+    -- A recruit who has now joined stops being a placeholder and becomes a
+    -- guild member, carrying their team flag and role with them.
+    local promoted = SYL.IncomingRoster.PromoteJoined()
+
     -- The roster window builds from this, and caches what it built.
     SYL.RosterData.Invalidate()
+
+    if promoted > 0 then
+        SYL:Print(
+            promoted
+            .. (promoted == 1 and " recruit has" or " recruits have")
+            .. " joined the guild and moved onto the roster."
+        )
+    end
 
     if count ~= lastGuildCount then
         lastGuildCount = count

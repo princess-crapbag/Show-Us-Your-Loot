@@ -110,6 +110,16 @@ CommandList.ENTRIES = {
     { developer = true, command = "debug", description = "Toggle debug messages" },
     { command = "announce", description = "Toggle capture messages" },
     {
+        command = "addraider",
+        argument = "NAME-REALM CLASS",
+        description = "Add someone joining the guild to the roster",
+    },
+    {
+        command = "dropraider",
+        argument = "NAME-REALM",
+        description = "Remove someone from the joining list",
+    },
+    {
         command = "scope",
         description = "Show the raid team, the guild, or everyone",
     },

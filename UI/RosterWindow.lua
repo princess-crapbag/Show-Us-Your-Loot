@@ -367,6 +367,17 @@ local function CreateWindow()
     return frame
 end
 
+-- Redraws the roster if it happens to be open, and does nothing if it is not.
+--
+-- Adding a recruit from chat has to show up in a window that is already on
+-- screen, and the alternative — the caller reaching for the window's local
+-- Refresh — is the seam every other window here already exposes.
+function SYL:RefreshRosterWindow()
+    if frame and frame:IsShown() then
+        Rebuild()
+    end
+end
+
 function SYL:OpenRosterWindow()
     -- Raises a buried window rather than hiding it; see
     -- WindowStack.ToggleWindow.

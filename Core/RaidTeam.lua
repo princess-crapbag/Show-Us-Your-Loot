@@ -47,12 +47,18 @@ end
 -- character, with its class, its role and its gear. Somebody's alt is not on
 -- the team because their main is, and resolving here meant marking one
 -- character silently marked every other character they own.
+-- The registry first, then the incoming list.
+--
+-- An incoming raider — agreed to join, not in the guild yet — has no GUID, so
+-- the registry has nothing to hold their team flag on. Their entry carries the
+-- same two fields under the same names, so every function below works on one
+-- without knowing the difference. See Core/IncomingRoster.lua.
 local function Record(key)
     if not key then
         return nil
     end
 
-    return SYL.Players.Get(key)
+    return SYL.Players.Get(key) or SYL.IncomingRoster.Get(key)
 end
 
 function RaidTeam.IsMember(key)
@@ -189,6 +195,15 @@ function RaidTeam.Count()
 
     for _, player in pairs(SYL.Players.GetRegistry()) do
         if player.inRaidTeam then
+            total = total + 1
+        end
+    end
+
+    -- Counted here too, or a roster made entirely of recruits reads as no
+    -- team at all — and Audience.Default would fall back to the whole guild
+    -- on the strength of it.
+    for _, entry in ipairs(SYL.IncomingRoster.List()) do
+        if entry.inRaidTeam then
             total = total + 1
         end
     end

@@ -271,6 +271,61 @@ COMMANDS.scope = function()
     end
 end
 
+-- Somebody who is joining but is not in the guild yet, so buff coverage can
+-- see them before they arrive. Name-Realm and a class, because the client
+-- cannot look up a character it has never seen.
+COMMANDS.addraider = function(remainder)
+    local text = Utilities.Trim(remainder) or ""
+
+    -- The class is the last word; everything before it is the character, so a
+    -- realm with a space in it survives being typed the way people write it.
+    local fullName, class = text:match("^(.-)%s+(%S+)$")
+
+    if not fullName then
+        SYL:Print("Usage: /syl addraider Name-Realm CLASS")
+        SYL:Write("  For example: /syl addraider Aimee-Silvermoon mage")
+
+        return
+    end
+
+    local entry, message = SYL.IncomingRoster.Add(fullName, class)
+
+    SYL:Print(message)
+
+    if entry then
+        SYL.RosterData.Invalidate()
+
+        if SYL.RefreshRosterWindow then
+            SYL:RefreshRosterWindow()
+        end
+    end
+end
+
+COMMANDS.dropraider = function(remainder)
+    local fullName = Utilities.Trim(remainder) or ""
+
+    if fullName == "" then
+        SYL:Print("Usage: /syl dropraider Name-Realm")
+
+        return
+    end
+
+    if SYL.IncomingRoster.Remove(fullName) then
+        SYL:Print("Removed " .. fullName .. " from the joining list.")
+
+        SYL.RosterData.Invalidate()
+
+        if SYL.RefreshRosterWindow then
+            SYL:RefreshRosterWindow()
+        end
+    else
+        SYL:Print(
+            "No one on the joining list called " .. fullName
+            .. ". They are listed by /syl roster, marked Joining."
+        )
+    end
+end
+
 COMMANDS.clear = function()
     local activeSeason = SYL.GetActiveSeason()
 

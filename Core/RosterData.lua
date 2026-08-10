@@ -81,6 +81,29 @@ function RosterData.Build()
         })
     end
 
+    -- Recruits who have not joined yet, appended so they are counted for
+    -- buff coverage and can be marked onto the team before they arrive. They
+    -- carry no GUID and no attendance, and the rank column says why.
+    for _, entry in ipairs(SYL.IncomingRoster.List()) do
+        table.insert(roster, {
+            key = entry.key,
+            guid = nil,
+            mainKey = entry.key,
+            isAlt = false,
+            mainName = nil,
+
+            isIncoming = true,
+
+            name = entry.name,
+            class = entry.class,
+            rank = "Joining",
+            -- Below every real rank, so they sort to the bottom rather than
+            -- into the middle of the officer ranks by accident.
+            rankIndex = 98,
+            nights = 0,
+        })
+    end
+
     if SYL.Features.IsEnabled("raiderIO") then
         SYL.RaiderIO.AttachScores(roster)
     end

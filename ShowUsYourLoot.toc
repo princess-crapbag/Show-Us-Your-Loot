@@ -38,6 +38,7 @@ Core\Analytics.lua
 Core\PlayerHistory.lua
 Core\EncounterJournal.lua
 Core\LootTable.lua
+Core\IncomingRoster.lua
 Core\RaidTeam.lua
 Core\Audience.lua
 Core\RosterData.lua
