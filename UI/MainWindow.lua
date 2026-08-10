@@ -163,11 +163,29 @@ local function UpdateRows()
 
     -- A panel owns the whole body, so every control belonging to the loot
     -- list goes away rather than sitting behind it.
+    --
+    -- HideAllRows only hides rows. The count line, the empty-state text and
+    -- the scroll frame are separate and would otherwise sit on top of a
+    -- dashboard tile — the count in particular lands at -130, right through
+    -- the first row of widgets.
     if PANEL_MODES[view.mode] then
         view.filterBar:Hide()
         view.selectionBar:HideAll()
 
+        view.countText:Hide()
+        view.emptyText:Hide()
+
+        if view.scrollFrame then
+            view.scrollFrame:Hide()
+        end
+
         return
+    end
+
+    view.countText:Show()
+
+    if view.scrollFrame then
+        view.scrollFrame:Show()
     end
 
     view.selectionBar:Update()
@@ -431,6 +449,7 @@ local function CreateMainWindow()
     -- Opens on the dashboard. It is the screen that answers the question, and
     -- the loot list is one click away for anybody who wants the old landing.
     view.mode = "dashboard"
+
     view.selectionBar = SYL.SelectionBar.Create(frame, view, {
         onChanged = UpdateRows,
     })
