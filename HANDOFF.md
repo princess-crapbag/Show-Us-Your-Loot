@@ -20,9 +20,9 @@ upgrade, who turned up, and what each boss has given.
 
 - **Repo:** https://github.com/princess-crapbag/Show-Us-Your-Loot (public)
 - **CurseForge:** project 1642383, live at **v0.2.0-alpha**
-- **`main` is 46 commits ahead of that tag.** All of it is on GitHub and in
+- **`main` is 48 commits ahead of that tag.** All of it is on GitHub and in
   Aimee's game. **None of it has reached a user.**
-- 107 Lua files in the `.toc`, 18 test suites in `tools/`.
+- 108 Lua files in the `.toc`, 19 test suites in `tools/`.
 
 **Aimee runs the addon from a symlink**, `Interface/AddOns/ShowUsYourLoot ->
 Desktop/ShowUsYourLoot`. Edits are live in game immediately; only a `/reload`
@@ -35,14 +35,15 @@ late. That was the top item on this page for a day and it is closed. What she
 reported back became the work below: several tabs were placeholders, and not
 every list of people honoured the raid team / guild / everyone order.
 
-**The three new tabs have NOT drawn.** Raiders, Bosses and Nights were all
-built after she went to bed. Static checks and 18 suites pass, which
-establishes that they load, that every path runs, and that the numbers agree
-with each other — not that a bar is legible, that the average line lands where
-the eye expects, that 16 rows fit the space they were measured for, or that a
-calendar cell is big enough to read. **Every layout constant in them was
-measured against a 900×596 window on paper and has never been seen.** Expect
-to spend the first ten minutes nudging sizes.
+**Raiders, Bosses and Nights have drawn too, and the sizing is good** —
+confirmed 2026-08-10. Every layout constant in them was measured on paper
+against a 900×596 window, and they came out right first time; do not take that
+as licence to skip looking at the next one.
+
+**The trade advisor and the trade tracker have NOT been seen.** The advisor
+opens a window unprompted during a boss fight, which is the one thing here that
+can be actively annoying rather than merely wrong, and the tracker only does
+anything during a real trade. Neither can be exercised without a raid.
 
 **2. The fairness maths has still never run on a real raid night.** Five passes
 have now changed how attendance is counted, how droughts are measured, what
@@ -106,7 +107,7 @@ again:
 python -m venv .venv && .venv/Scripts/python -m pip install lupa
 ```
 
-Eighteen suites. Each reads its Lua straight out of the addon, so none can
+Nineteen suites. Each reads its Lua straight out of the addon, so none can
 drift from the code, and each exits non-zero on failure. `release.yml` runs the
 lot before building a zip, so a failing suite blocks a release.
 
@@ -138,10 +139,22 @@ The four that matter most:
 - **`test_tradeadvisor`** — asserts the **cold start first**: with no seasons,
   no nights and no prior drops, everybody who rolled and lost is still named.
   That is the reason the feature exists, so it is the assertion to keep.
+- **`test_tradetracker`** — asserts a traded item moves the score **and** the
+  drought together. Reverting the fix on either side alone fails it, which is
+  the point: two lists disagreeing about who won an item is worse than both
+  being wrong the same way.
 
 **Every test written this session was confirmed to fail on a planted fault
 before being trusted.** Do the same. A test that has never failed proves
-nothing.
+nothing — and this is not a formality. Planting the fault is what showed that
+the trade tracker's acceptance gate was not covered at all: removing it changed
+no result, because no case exercised a half-accepted trade. The assertion that
+now covers it was written afterwards.
+
+**Anything the fairness files call needs a stub in `test_duelist` and
+`test_lootscore`.** Both load their modules individually rather than the whole
+`.toc`, so a new dependency inside `DueList` or `LootScore` breaks them at the
+first call. `TradeTracker` was the most recent.
 
 ### Four files are over the size limit
 
@@ -268,10 +281,20 @@ first `SendChatMessage` in the addon.
    **No whisper button, deliberately.** It could exist; it was left off
    because "the addon does not talk unless asked" is a rule a popup offering
    to talk for you erodes one button at a time. Reopen if wanted.
-7. **E2 — trade tracking.** Credit the recipient, not the winner; today every
-   traded item is two wrong numbers. **Now the obvious next thing**: item 6
-   already holds the item id and the two-hour window, so this is the event
-   handling plus a rule for what a completed trade does to the score.
+7. **DONE. E2 — trade tracking.** `Core/TradeTracker.lua`. Watches your own
+   trades and credits an item you traded away to whoever received it, through
+   a single choke point both `DueList` and `LootScore` call. Feature-toggled
+   as **Follow traded loot**, on by default.
+
+   **It is a self-report and cannot be anything else** — only the winner's
+   client knows a trade happened. Two people running the addon do not see each
+   other's trades, and an untracked trade leaves the credit where it is, which
+   is what happened before this existed.
+
+   **Untested against a real trade.** The event order is the risky part:
+   slots are captured when both sides accept and committed on
+   `LE_GAME_ERR_TRADE_COMPLETE`. If that ordering is wrong in practice the
+   symptom is silence — nothing is recorded and nothing says why.
 8. **E8 — sync backfill, or turn sync off.** Officer sync still sends drop
    headers only, so synced records sit outside the fairness maths as `partial`.
    Needs two clients more than it needs code.
