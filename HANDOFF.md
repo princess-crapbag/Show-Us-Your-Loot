@@ -67,15 +67,6 @@ Alpha rather than a full release. See CURSEFORGE.md.
 - **It is a regex heuristic, not a parser.** It passed clean through four
   crash-level bugs in one day. A clean run means "nothing obvious", not "this
   works".
-- **It exits 0 on warnings, and a broken cross-module call is a warning.**
-  `SYL.PlayerRows.Build never assigned` — the shape a rename leaves behind when
-  a call site is missed — prints, and `syl_check` still returns success. So the
-  "Check the Lua before shipping it" step in `release.yml` cannot block a
-  release on it. Verified by renaming a call and reading the exit code.
-  Whether to make warnings fatal is a judgement about the false-positive rate:
-  it currently reports zero across the addon, and caught a deliberately broken
-  reference exactly, which is evidence it could be. Not changed, because that
-  is a decision about the release pipeline.
 - **Check whether syl_check already covers it before writing a new tool.** A
   `test_references.py` was written and committed to catch unresolved
   `SYL.Module.Member` calls; `syl_check` had done that since before this file
