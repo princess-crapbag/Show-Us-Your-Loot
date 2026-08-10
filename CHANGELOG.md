@@ -33,6 +33,15 @@ this says what you will notice.
 
 ### Changed
 
+- **A drought is now reset by one thing only:** a Need or offspec win, on a
+  bind-on-pickup item, from group loot, on a night that counted as a raid
+  night. Everything else — the vault, Mythic+ chests, the catalyst, delves,
+  personal loot handed out mid-raid, and BoEs — is still recorded and still
+  on the loot list, but no longer changes who is due.
+- **"Count gear taken without a roll towards droughts" is gone**, along with
+  `/syl personalloot`. It only ever fed the calculation above, and that
+  calculation no longer counts any of it under any setting.
+
 - **The due list and the players window now open on your raid team.** They
   used to open on everyone the addon had ever seen, which includes anybody
   you pugged a raid or a key with — and somebody seen once who won nothing
@@ -57,17 +66,6 @@ this says what you will notice.
   loot list and its filters, which read the same records and rather more.
 - **`/syl dev`, `api`, `debug` and `output` are off the minimap menu.** They
   still work when typed and are listed by `/syl help all`.
-
-### Changed
-
-- **A drought is now reset by one thing only:** a Need or offspec win, on a
-  bind-on-pickup item, from group loot, on a night that counted as a raid
-  night. Everything else — the vault, Mythic+ chests, the catalyst, delves,
-  personal loot handed out mid-raid, and BoEs — is still recorded and still
-  on the loot list, but no longer changes who is due.
-- **"Count gear taken without a roll towards droughts" is gone**, along with
-  `/syl personalloot`. It only ever fed the calculation above, and that
-  calculation no longer counts any of it under any setting.
 
 ### Fixed
 
