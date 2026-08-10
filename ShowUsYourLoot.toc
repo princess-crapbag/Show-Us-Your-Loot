@@ -48,6 +48,8 @@ Core\RaidBuffs.lua
 Core\BossStats.lua
 Core\PersonalLoot.lua
 Core\LootFeed.lua
+Core\LootScore.lua
+Core\Dashboard.lua
 Core\DueList.lua
 Core\RaidSummary.lua
 Core\Export.lua
