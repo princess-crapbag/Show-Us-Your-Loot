@@ -20,9 +20,9 @@ upgrade, who turned up, and what each boss has given.
 
 - **Repo:** https://github.com/princess-crapbag/Show-Us-Your-Loot (public)
 - **CurseForge:** project 1642383, live at **v0.2.0-alpha**
-- **`main` is 50 commits ahead of that tag.** All of it is on GitHub and in
+- **`main` is 52 commits ahead of that tag.** All of it is on GitHub and in
   Aimee's game. **None of it has reached a user.**
-- 112 Lua files in the `.toc`, 20 test suites in `tools/`.
+- 116 Lua files in the `.toc`, 21 test suites in `tools/`.
 
 **Aimee runs the addon from a symlink**, `Interface/AddOns/ShowUsYourLoot ->
 Desktop/ShowUsYourLoot`. Edits are live in game immediately; only a `/reload`
@@ -40,10 +40,14 @@ confirmed 2026-08-10. Every layout constant in them was measured on paper
 against a 900×596 window, and they came out right first time; do not take that
 as licence to skip looking at the next one.
 
-**The trade advisor and the trade tracker have NOT been seen.** The advisor
-opens a window unprompted during a boss fight, which is the one thing here that
-can be actively annoying rather than merely wrong, and the tracker only does
-anything during a real trade. Neither can be exercised without a raid.
+**Four things have never been seen, and they need three different tests:**
+
+| What | Needs |
+|---|---|
+| The trade advisor | A raid. It opens a window unprompted mid-fight, which is the one thing here that can be actively annoying rather than merely wrong |
+| The trade tracker | A real trade. If the event ordering is wrong the symptom is **silence** — nothing recorded, nothing saying why |
+| Key requests | **A second client.** Every rule is covered locally; nothing has watched a message arrive. Aimee has a second account |
+| `/syl schedule import` | A guild calendar with events in it. `Core/GuildCalendar.lua` is unverified against a live client — if it finds nothing, distrust it before `Core/RaidSchedule.lua`, which is tested and depends on none of it |
 
 **2. The fairness maths has still never run on a real raid night.** Five passes
 have now changed how attendance is counted, how droughts are measured, what
@@ -107,7 +111,7 @@ again:
 python -m venv .venv && .venv/Scripts/python -m pip install lupa
 ```
 
-Twenty suites. Each reads its Lua straight out of the addon, so none can
+Twenty-one suites. Each reads its Lua straight out of the addon, so none can
 drift from the code, and each exits non-zero on failure. `release.yml` runs the
 lot before building a zip, so a failing suite blocks a release.
 
@@ -206,9 +210,10 @@ order is the argument and deleting the finished ones hides it.
 
 ### Tier 1 — what she asked for after loading it
 
-1. **The route panels were stubs.** Raiders, Nights, Bosses and Keys each drew
-   a heading, a blurb and a button opening the old window. **Three of the four
-   are DONE** and only Keys still routes.
+1. **DONE. The route panels were stubs.** Raiders, Nights, Bosses and Keys
+   each drew a heading, a blurb and a button opening the old window. **All
+   four are real screens now**, and `UI/TabPanels.lua` has lost the routing
+   scaffolding entirely rather than keeping an empty table.
 
    - **1a Raiders — DONE.** `UI/RaidersPanel.lua`, `UI/RaidersDetail.lua`.
    - **1b Bosses — DONE.** `UI/BossesPanel.lua`, `UI/BossLoot.lua`. Boss rail
@@ -221,14 +226,18 @@ order is the argument and deleting the finished ones hides it.
      toggle, nights shaded with their kill count, one stat panel below. The
      **next** raid night is still not drawn — that is item 3, not an oversight,
      and the caption says so.
-   - **1c Keys — STILL A ROUTE.** The only one left. The sortable list is
-     easy; the request flow is the rest of it and is fully specified (role
-     picker on the ask; approve, tentative, deny, whisper, dismiss for the
-     holder; a "requests to you" list so a dismissed popup is never a lost
-     request; per account throughout; online only; only Denied gets "Ask
-     again"; cleared at reset in the existing sweep). **It sends messages
-     between players, so like officer sync it needs a second client more than
-     it needs code** — which is why it was left rather than guessed at.
+   - **1c Keys — DONE.** `UI/KeysPanel.lua`, `UI/KeyRequestList.lua`,
+     `Core/KeystoneRequests.lua`, `Core/KeystoneRequestSync.lua`. Sortable
+     list, whispered requests, approve/maybe/no/whisper/dismiss, a durable
+     "requests to you" list, online only, only Denied reopens, swept at reset.
+     Off by default and registers no prefix until on.
+
+     **Untested between two clients.** Every rule is covered locally, but
+     nothing has watched a message actually arrive. That is the next thing a
+     second account can prove.
+
+     One deviation: the role picker is one control for the panel rather than a
+     menu per row. Reopen if the per-request version was wanted.
 2. **DONE. Audience scope on every list of people.** Three surfaces never asked
    `Core/Audience.lua`: the Readiness tile (called `RaidTeam.Filter` directly,
    so it was the one list that could not widen), the end-of-night summary (swept
