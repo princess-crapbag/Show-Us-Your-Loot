@@ -255,13 +255,6 @@ local TOGGLES = {
         key = "announceCaptures",
     },
     {
-        -- The setting that changes the headline number, and it was reachable
-        -- only by knowing a slash command existed. See the note under this
-        -- section for why it is off.
-        label = "Count gear taken without a roll towards droughts",
-        key = "countPersonalLoot",
-    },
-    {
         -- Not a checkbox: it cycles windows and reports where it landed.
         label = "Output window",
         action = function()

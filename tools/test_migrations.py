@@ -51,7 +51,6 @@ lua.execute((CORE / "Migrations.lua").read_text(encoding="utf-8"))
 # away a setting the user turned back on; the last case below is what catches
 # that, and it only catches it while there IS a later version to test with.
 MIGRATIONS = [
-    ("MigrateSettings", "countPersonalLoot", 4),
     ("MigrateAnnounceDefault", "announceCaptures", 6),
 ]
 

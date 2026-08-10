@@ -55,9 +55,7 @@ local Refresh
 local function Entries()
     local sessions = SYL.GetAllRaids()
 
-    local entries = SYL.DueList.Build(
-        SYL.GetAllDrops(), sessions, SYL.GetAllLoot()
-    )
+    local entries = SYL.DueList.Build(SYL.GetAllDrops(), sessions)
 
     if recentOnly then
         entries = SYL.DueList.FilterRecent(entries, sessions, RECENT_NIGHTS)
@@ -88,38 +86,9 @@ local function DescribeBasis(total)
         table.insert(parts, "every raider recorded")
     end
 
-    local settings = ShowUsYourLootDB and ShowUsYourLootDB.settings
-
-    if settings and settings.countPersonalLoot then
-        table.insert(parts, "gear taken without a roll counts")
-    else
-        table.insert(parts, "group-loot wins only")
-    end
-
-    return table.concat(parts, "  ·  ")
-end
-
--- The two numbers that say how complete the answer is. Neither is a rounding
--- error and neither should be discovered later.
-local function DescribeGaps()
-    local pending = SYL.DueList.pendingItems or 0
-    local unobserved = SYL.DueList.unobservedItems or 0
-
-    if pending == 0 and unobserved == 0 then
-        return nil
-    end
-
-    local parts = {}
-
-    if pending > 0 then
-        table.insert(parts, pending .. " item(s) not cached yet")
-    end
-
-    if unobserved > 0 then
-        table.insert(
-            parts, unobserved .. " received outside a group and left out"
-        )
-    end
+    -- Stated every time, because it is the whole definition and somebody
+    -- will argue with a number that quietly means something else.
+    table.insert(parts, "group-loot wins only, no BoEs")
 
     return table.concat(parts, "  ·  ")
 end
@@ -138,11 +107,6 @@ Refresh = function()
     end
 
     frame.summaryText:SetText(DescribeBasis(total))
-
-    local gaps = DescribeGaps()
-
-    frame.gapsText:SetText(gaps or "")
-    frame.gapsText:SetShown(gaps ~= nil)
 
     frame.recentButton.label:SetText(
         recentOnly and "Recent raiders" or "All dates"
@@ -231,12 +195,6 @@ local function CreateWindow()
             Refresh()
         end,
     })
-
-    frame.gapsText = Theme.CreateText(frame, Theme.sizes.rowSmall, "warning")
-    frame.gapsText:SetPoint("TOPLEFT", 27, -62)
-    frame.gapsText:SetPoint("TOPRIGHT", -16, -62)
-    frame.gapsText:SetJustifyH("LEFT")
-    frame.gapsText:Hide()
 
     local hint = Theme.CreateText(frame, Theme.sizes.rowSmall, "textMuted")
     hint:SetPoint("TOPLEFT", 18, -84)

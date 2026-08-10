@@ -88,27 +88,6 @@ COMMANDS.roster = function()
     end
 end
 
-COMMANDS.personalloot = function()
-    local settings = ShowUsYourLootDB.settings
-
-    settings.countPersonalLoot = not settings.countPersonalLoot
-
-    if settings.countPersonalLoot then
-        SYL:Print(
-            "Gear taken without a roll now resets a drought — the vault, a "
-            .. "Mythic+ chest, the catalyst — but only when it was received "
-            .. "while grouped. Your client cannot see anybody else's solo "
-            .. "loot, so counting yours would put you at the bottom of your "
-            .. "own list."
-        )
-    else
-        SYL:Print(
-            "Only group-loot wins reset a drought now. The due list will "
-            .. "not see gear that arrived without a roll."
-        )
-    end
-end
-
 COMMANDS.due = function()
     Reports.Due(DUE_LIMIT)
 end

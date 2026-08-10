@@ -152,6 +152,39 @@ function Utilities.GetItemLevel(itemLink)
     return level
 end
 
+-- Bind on Equip, as far as the client will say.
+--
+-- Aimee's rule: a BoE does not reset a raid drought. Somebody who wins a BoE
+-- has won something sellable, not the tier piece the drought is measuring, and
+-- resetting their clock for it pushes a genuinely starved raider down the list.
+--
+-- THREE ANSWERS, NOT TWO. nil means the client has not cached the item yet and
+-- genuinely does not know. Callers must not read that as "yes": treating an
+-- uncached item as a BoE would silently stop counting real upgrades, and the
+-- failure would look exactly like the drought maths being broken. Not-BoE is
+-- the safe default because it is the answer that keeps counting.
+--
+-- bindType is field 14 of GetItemInfo, and 2 is Bind on Equip. Read from the
+-- link at the time the question is asked rather than stored at capture, so
+-- this works on the history already recorded instead of only on new drops.
+local BIND_ON_EQUIP = 2
+
+function Utilities.IsBindOnEquip(itemLink)
+    if type(itemLink) ~= "string" or itemLink == "" then
+        return nil
+    end
+
+    local success, bindType = pcall(function()
+        return select(14, C_Item.GetItemInfo(itemLink))
+    end)
+
+    if not success or type(bindType) ~= "number" then
+        return nil
+    end
+
+    return bindType == BIND_ON_EQUIP
+end
+
 function Utilities.FormatDateTime(timestamp)
     if not timestamp then
         return "Unknown"

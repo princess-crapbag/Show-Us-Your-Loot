@@ -199,9 +199,7 @@ function Reports.Due(limit)
         return
     end
 
-    local entries = SYL.DueList.Build(
-        SYL.GetAllDrops(), sessions, SYL.GetAllLoot()
-    )
+    local entries = SYL.DueList.Build(SYL.GetAllDrops(), sessions)
 
     entries = SYL.DueList.FilterRecent(entries, sessions)
 
@@ -241,42 +239,16 @@ function Reports.Due(limit)
 
     -- What went into these numbers, said out loud. A ranking that quietly
     -- changed what counts is one somebody will argue with and be right to.
-    local settings = ShowUsYourLootDB.settings
-
-    if settings and settings.countPersonalLoot then
-        SYL:Write(
-            "  Gear taken without a roll — the vault, a Mythic+ chest, the "
-            .. "catalyst — resets a drought too, when it was received in a "
-            .. "group. /syl personalloot to turn that off."
-        )
-    else
-        SYL:Write(
-            "  Only group-loot wins count. Gear taken without a roll is not "
-            .. "in these numbers — /syl personalloot."
-        )
-    end
-
-    local pending = SYL.DueList.pendingItems or 0
-
-    if pending > 0 then
-        SYL:Write(
-            "  " .. pending .. " item(s) are not cached yet and were left "
-            .. "out. Run this again once they load."
-        )
-    end
-
-    -- The gap is not a rounding error and saying so is the difference between
-    -- a number somebody trusts and one they should not.
-    local unobserved = SYL.DueList.unobservedItems or 0
-
-    if unobserved > 0 then
-        SYL:Write(
-            "  " .. unobserved .. " item(s) arrived outside a group and were "
-            .. "left out. Your client only sees other people's loot while "
-            .. "you are grouped with them, so counting those would only ever "
-            .. "count yours."
-        )
-    end
+    --
+    -- One sentence now rather than four branches. The personal-loot lines
+    -- that used to be here described a setting that no longer exists, and the
+    -- two "some items were left out" warnings counted chat records this
+    -- calculation never reads any more.
+    SYL:Write(
+        "  Group-loot Need and offspec wins only, on bind-on-pickup items, "
+        .. "from nights that counted as raid nights. The vault, Mythic+ "
+        .. "chests, the catalyst and BoEs do not reset a drought."
+    )
 end
 
 function Reports.Bosses(limit)

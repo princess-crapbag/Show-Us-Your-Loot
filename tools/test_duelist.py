@@ -36,7 +36,31 @@ CORE = Path(__file__).resolve().parent.parent / "Core"
 lua = LuaRuntime(unpack_returned_tuples=True)
 
 lua.execute("ShowUsYourLoot = {}")
-lua.execute("ShowUsYourLootDB = { settings = { countPersonalLoot = false } }")
+lua.execute("ShowUsYourLootDB = { settings = {} }")
+
+# GetItemInfo's 14th return is bindType; 2 is Bind on Equip. Stubbed off the
+# link text so a fixture can ask for either, and returning nothing at all is
+# the uncached case the real client gives for an item it has not seen.
+lua.execute(
+    """
+    C_Item = {
+        GetItemInfo = function(link)
+            if link == 'uncached' then
+                return nil
+            end
+
+            local bindType = 1
+
+            if link == 'boe' then
+                bindType = 2
+            end
+
+            return 'name', link, 4, 600, 80, '', '', 1, '', '', 0, 4, 1,
+                bindType
+        end,
+    }
+    """
+)
 
 for module in ("Utilities.lua", "LootHistoryAPI.lua"):
     lua.execute((CORE / module).read_text(encoding="utf-8"))
@@ -84,7 +108,7 @@ DAY = 86400
 # Three Mythic raid nights, one player present at all of them.
 lua.execute(
     """
-    function BuildScenario(dropInstanceType, dropDifficultyID, dropAt)
+    function BuildScenario(dropInstanceType, dropDifficultyID, dropAt, itemLink)
         local roster = { P1 = { guid = 'P1', name = 'Aimee', class = 'MAGE' } }
         local sessions = {}
 
@@ -100,6 +124,7 @@ lua.execute(
 
         local drop = {
             timestamp = dropAt,
+            itemLink = itemLink or 'bop',
             instanceType = dropInstanceType,
             difficultyID = dropDifficultyID,
             -- NeedMainSpec, read from the shipped enum rather than hardcoded.
@@ -112,7 +137,7 @@ lua.execute(
             },
         }
 
-        local entries = ShowUsYourLoot.DueList.Build({ drop }, sessions, {})
+        local entries = ShowUsYourLoot.DueList.Build({ drop }, sessions)
 
         for _, entry in ipairs(entries) do
             if entry.key == 'P1' then
@@ -150,6 +175,16 @@ CASES = [
     ("dungeon win does NOT reset a raid drought", "party", 8, IGNORED),
 ]
 
+# Aimee's rule: a BoE is not what the drought measures. Same scenario, same
+# Mythic raid night, only the item's binding differs.
+BIND_CASES = [
+    ("a bind-on-pickup win resets the clock", "bop", RESET),
+    ("a BoE win does NOT reset it", "boe", IGNORED),
+    # Unknown must count. An uncached item answers nil, and reading that as
+    # "BoE" would silently stop counting real upgrades.
+    ("an uncached item counts rather than being assumed a BoE", "uncached", RESET),
+]
+
 failures = []
 
 for label, instance_type, difficulty, want in CASES:
@@ -165,6 +200,16 @@ for label, instance_type, difficulty, want in CASES:
     if not ok:
         print(f"       dry nights: got {got}, wanted {want}")
         print(f"       everWon:    got {bool(ever_won)}, wanted {want_ever_won}")
+        failures.append(label)
+
+for label, link, want in BIND_CASES:
+    got, ever_won = build("raid", 16, 4 * DAY, link)
+
+    ok = got == want and bool(ever_won) == (want == RESET)
+    print(("ok   " if ok else "FAIL ") + label)
+
+    if not ok:
+        print(f"       dry nights: got {got}, wanted {want}")
         failures.append(label)
 
 print()

@@ -9,7 +9,9 @@
 
 local SYL = _G.ShowUsYourLoot
 
--- 4: countPersonalLoot's default flipped to off. See MigrateSettings.
+-- 4: countPersonalLoot's default flipped to off. The setting is gone
+--    entirely now — personal loot never resets a drought — so nothing
+--    reads it and the migration that managed it was removed with it.
 -- 5: syncEnabled became the "sync" feature.
 -- 6: announceCaptures' default flipped to off. See MigrateAnnounceDefault.
 local DATABASE_VERSION = 6
@@ -121,31 +123,6 @@ local function InitializeSettings()
         ShowUsYourLootDB.settings.syncEnabled = false
     end
 
-    -- Whether gear that arrived without a roll — the vault, a Mythic+ chest,
-    -- a catalyst conversion — resets somebody's drought.
-    --
-    -- OFF, and this was the hardest default in the addon to get right.
-    --
-    -- The argument for on is real: a large share of retail gearing never
-    -- touches a roll, so with this off the due list is blind to a whole
-    -- channel and reports raiders as starved who are not.
-    --
-    -- The argument for off wins because the data cannot support it, and it
-    -- fails in one direction. CHAT_MSG_LOOT only ever sees your own loot plus
-    -- your current group's, and nobody claims a vault standing next to the
-    -- officer running this addon — so the only vault claims in the database
-    -- are the officer's own. Their drought resets weekly and nobody else's
-    -- does, and they sink to the bottom of a list they wrote. That is worse
-    -- than being blind: it is confidently wrong, in a direction that looks
-    -- like modesty.
-    --
-    -- It stays a setting because for a guild where everybody runs the addon
-    -- and syncs, on is the better answer. It just cannot be the default until
-    -- the sync can fill the gap (F8/E8 in HANDOFF.md).
-    if ShowUsYourLootDB.settings.countPersonalLoot == nil then
-        ShowUsYourLootDB.settings.countPersonalLoot = false
-    end
-
     -- Which colour scheme the window wears. Stored as a key rather than as
     -- colour values, so editing a palette improves every existing install
     -- instead of only new ones.
@@ -184,8 +161,6 @@ function SYL.DatabaseInitialize()
     local storedVersion = ShowUsYourLootDB.databaseVersion
 
     InitializeSettings()
-
-    local settingChanged = SYL.Migrations.MigrateSettings(storedVersion)
 
     local announceChanged =
         SYL.Migrations.MigrateAnnounceDefault(storedVersion)
@@ -242,28 +217,6 @@ function SYL.DatabaseInitialize()
         SYL:Print(
             "Existing loot was moved into the active season: "
             .. ShowUsYourLootDB.activeSeason.name
-        )
-    end
-
-    if settingChanged then
-        SYL:Print(
-            "Gear taken without a roll no longer counts towards droughts. "
-            .. "Your client only sees other people's loot while you are "
-            .. "grouped with them, so counting it mostly counted yours. Turn "
-            .. "it back on in Settings, or with /syl personalloot."
-        )
-    end
-
-    -- Said once, because it explains a list that was behaving oddly rather
-    -- than announcing routine maintenance. Silent when there is nothing to
-    -- fix, which is every install captured after the field existed.
-    if backfilled > 0 then
-        SYL:Print(
-            backfilled
-            .. (backfilled == 1 and " older record" or " older records")
-            .. " could not be ticked, and can be now. They were captured "
-            .. "before records carried an id, so Select all and Hide had no "
-            .. "way to reach them."
         )
     end
 

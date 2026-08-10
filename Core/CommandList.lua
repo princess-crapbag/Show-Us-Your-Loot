@@ -105,10 +105,6 @@ CommandList.ENTRIES = {
         description = "Put every window back to its default size and centre",
     },
     { command = "capture", description = "Toggle Loot History capture" },
-    {
-        command = "personalloot",
-        description = "Count gear taken without a roll towards droughts",
-    },
     { developer = true, command = "dev", description = "Open the developer window" },
     { developer = true, command = "api", description = "Print the live Loot History API" },
     { developer = true, command = "debug", description = "Toggle debug messages" },

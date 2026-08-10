@@ -58,6 +58,17 @@ this says what you will notice.
 - **`/syl dev`, `api`, `debug` and `output` are off the minimap menu.** They
   still work when typed and are listed by `/syl help all`.
 
+### Changed
+
+- **A drought is now reset by one thing only:** a Need or offspec win, on a
+  bind-on-pickup item, from group loot, on a night that counted as a raid
+  night. Everything else — the vault, Mythic+ chests, the catalyst, delves,
+  personal loot handed out mid-raid, and BoEs — is still recorded and still
+  on the loot list, but no longer changes who is due.
+- **"Count gear taken without a roll towards droughts" is gone**, along with
+  `/syl personalloot`. It only ever fed the calculation above, and that
+  calculation no longer counts any of it under any setting.
+
 ### Fixed
 
 - **Some older records could not be ticked at all.** Rows captured before

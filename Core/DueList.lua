@@ -54,7 +54,24 @@ local IsUpgrade = SYL.LootHistoryAPI.IsUpgradeState
 --
 -- The rule is now the same on both sides: an upgrade resets your clock only
 -- if it came from content that would have counted as a night.
+-- A BoE is not what the drought is measuring.
+--
+-- Aimee's rule, in her words: "boes received does not change the raid
+-- drought". Winning a BoE is winning something sellable, and resetting a
+-- clock for it pushes a genuinely starved raider down the list.
+--
+-- Unknown counts as not-BoE — see Utilities.IsBindOnEquip. An uncached item
+-- answers nil, and reading that as "yes" would silently stop counting real
+-- upgrades in a way indistinguishable from the maths being broken.
+local function IsBindOnEquipWin(drop)
+    return SYL.Utilities.IsBindOnEquip(drop.itemLink) == true
+end
+
 local function CountsTowardsDrought(drop)
+    if IsBindOnEquipWin(drop) then
+        return false
+    end
+
     -- Records written before the location was stored carry neither field.
     -- Treating unknown as "not a raid" would erase the upgrade history of
     -- everything captured before that, so unknown counts. The drops list is
@@ -151,54 +168,34 @@ local function Identify(member, key)
     }
 end
 
--- Gear that arrived without a roll counts too, when the setting allows it.
+-- PERSONAL LOOT NEVER RESETS A RAID DROUGHT, and there is no longer a setting
+-- for it.
 --
--- The due list reads roll history, and in current retail a large share of
--- gearing never touches a roll: the vault, a Mythic+ chest, a catalyst
--- conversion. Somebody taking a mythic-track vault item every week appeared
--- here as though they had received nothing, which is not a small error in a
--- list whose only job is to say who has gone without.
+-- Aimee's rule, and it is stricter than the one this file used to implement:
+-- "the due option is only for loot received in our guilds raids... also
+-- personal loot in raid and boes received does not change the raid drought
+-- either." So the vault, a Mythic+ chest, a catalyst conversion and a
+-- personal-loot item handed out mid-raid are all outside it.
 --
--- PersonalLoot subtracts the overlap first, because a group-loot win also
--- prints a chat loot line and counting both would double every raid drop.
--- Off by default, because one client can only see its owner's solo loot and
--- counting it inverts this list against whoever runs the addon. PersonalLoot
--- narrows what it returns to records captured while grouped for the same
--- reason; see the note above ObservableForEveryone there.
-local function MergePersonalLoot(lastUpgrade, lootRecords, drops)
-    if not ShowUsYourLootDB
-        or not ShowUsYourLootDB.settings
-        or not ShowUsYourLootDB.settings.countPersonalLoot
-    then
-        return lastUpgrade, 0, 0
-    end
-
-    local entries, pending, unobserved =
-        SYL.PersonalLoot.Build(lootRecords, drops)
-
-    local last = SYL.PersonalLoot.LastByPlayer(entries)
-
-    for key, at in pairs(last) do
-        if not lastUpgrade[key] or at > lastUpgrade[key] then
-            lastUpgrade[key] = at
-        end
-    end
-
-    return lastUpgrade, pending, unobserved
-end
+-- This used to merge PersonalLoot into the upgrade times whenever
+-- countPersonalLoot was on. That setting is gone rather than defaulted off:
+-- it only ever fed this calculation, and a switch that no longer changes any
+-- number is worse than no switch. Chat loot is still captured, still on the
+-- loot list, still exported — "i do want to know about other loot received"
+-- — it simply has no bearing on who is due.
+--
+-- What is left is a definition small enough to state in one line: a drought
+-- is reset by a Need or offspec win, on a bind-on-pickup item, from group
+-- loot, on a night that counted as a raid night.
 
 -- Sessions and drops are passed in so a caller can scope this to one season.
-function DueList.Build(drops, sessions, lootRecords)
+--
+-- Chat loot is no longer an argument. It fed the personal-loot merge and
+-- nothing else, and that is gone; callers passing a third value are simply
+-- ignored rather than broken.
+function DueList.Build(drops, sessions)
     local lastUpgrade = LastUpgradeByPlayer(drops)
     local byKey, order = {}, {}
-
-    local pendingItems, unobservedItems
-
-    lastUpgrade, pendingItems, unobservedItems =
-        MergePersonalLoot(lastUpgrade, lootRecords, drops)
-
-    DueList.pendingItems = pendingItems
-    DueList.unobservedItems = unobservedItems
 
     -- Dungeons are not raid nights. A Mythic+ run used to open one and put
     -- its five people in the roster, so a guild that runs keys together was
@@ -229,18 +226,12 @@ function DueList.Build(drops, sessions, lootRecords)
 
                 table.insert(order, entry)
 
-                -- The roster is keyed by GUID, and so is the drop data, so
-                -- the two line up without name matching. Chat loot carries
-                -- no GUID, so personal gear is also indexed by short name
-                -- and checked as a fallback.
-                local byName =
-                    lastUpgrade[SYL.PersonalLoot.NameKey(member.name) or ""]
-
+                -- The roster is keyed by GUID and so is the drop data, so
+                -- the two line up without name matching. The short-name
+                -- fallback that used to sit here existed only for chat loot,
+                -- which carries no GUID — with personal loot out of this
+                -- calculation there is nothing left for it to match.
                 local at = lastUpgrade[key]
-
-                if byName and (not at or byName > at) then
-                    at = byName
-                end
 
                 entry.lastUpgradeAt = at
                 entry.everWon = at ~= nil
