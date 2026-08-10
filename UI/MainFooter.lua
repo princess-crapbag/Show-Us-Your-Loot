@@ -17,30 +17,20 @@ local BUTTON_WIDTH = 100
 local BUTTON_HEIGHT = 26
 local GAP = 6
 
--- Left to right. Close is anchored to the right separately, since it is the
--- one action that is not a place to go.
-local BUTTONS = {
-    -- Due leads because it is the question the addon exists to answer, and
-    -- until now the only way to ask it was a slash command.
-    { label = "Due", open = "OpenDueWindow",
-      tip = "Who has gone longest without an upgrade, in raid nights "
-        .. "attended rather than days elapsed." },
-    { label = "Settings", open = "OpenSettingsWindow",
-      tip = "Which item qualities are recorded, and how loudly the addon "
-        .. "reports itself." },
-    { label = "Players", open = "OpenPlayerWindow",
-      tip = "Per-player eligibility, wins and droughts. Click a row for one "
-        .. "raider's whole history." },
-    { label = "Raids", open = "OpenRaidWindow",
-      tip = "Every raid night: what was pulled, what died, and who was "
-        .. "in the group." },
-    { label = "Roster", open = "OpenRosterWindow",
-      tip = "Who could be brought, what they play, and which raid buffs "
-        .. "nobody covers." },
-    { label = "Bosses", open = "OpenBossWindow",
-      tip = "Kills, pulls and drops per boss, and what a boss has never "
-        .. "been seen to drop." },
-}
+-- EMPTY, AND THAT IS THE CHANGE. Six buttons lived here — Due, Settings,
+-- Players, Raids, Roster, Bosses — and every one of them is now a tab or the
+-- cogwheel. Keeping them would mean two ways to reach each screen sitting a
+-- centimetre apart, which is how a window teaches somebody that its
+-- navigation is not to be trusted.
+--
+-- Due has no tab because it became the dashboard, which is the first thing
+-- the window opens on. Settings is the cogwheel in the corner. The other four
+-- are tabs.
+--
+-- The list stays rather than being deleted outright: this file exists to turn
+-- a list into a row of buttons, and the next thing that wants a footer button
+-- should add a line rather than rebuild the loop.
+local BUTTONS = {}
 
 -- handlers carries the behaviour MainWindow owns and this file cannot reach.
 -- Only onClose now: the Refresh button is gone, because every window

@@ -7,6 +7,24 @@ this says what you will notice.
 
 ### Added
 
+- **A dashboard, and it is what the window opens on.** Six tiles plus a status
+  strip: last raid night, next raid night, who is due, readiness, tier
+  progress, links, and whether the addon is actually recording. Click any tile
+  to open the tab it is about. Every widget can be switched off and reordered
+  in Settings.
+- **The window has tabs now** — Dashboard, Loot, Raiders, Nights, Bosses,
+  Keys, Archives — and **Settings moved to a cogwheel** in the top corner. The
+  six footer buttons are gone; every one of them was a tab or the cogwheel.
+- **Loot is scored rather than counted.** A Need win is worth 100, offspec and
+  greed 20 each, transmog 0 and no deduction. Who is due is now ranked by
+  score divided by raid nights attended, so somebody with perfect attendance
+  ranks above somebody there half the time on the same amount of loot. Nobody
+  with fewer than three nights is ranked at all — they are listed with the
+  reason, rather than sorted to the top on an empty score.
+- **Links.** A few URLs of your own, on the dashboard and in Settings. Click
+  one and it opens a box with the address selected to copy — an addon cannot
+  open a browser or write to your clipboard.
+
 - **The roster hides characters nobody has played for a month.** An **Active**
   button on the roster window, on by default. Anyone joining the guild is
   never hidden by it, and neither is anyone the client has not reported on
@@ -89,6 +107,10 @@ this says what you will notice.
   still work when typed and are listed by `/syl help all`.
 
 ### Fixed
+
+- **Keystones now expire at your realm's actual weekly reset** rather than
+  seven days after the addon heard about them. A key learned on Monday used to
+  survive Tuesday's reset and sit in the list claiming to be current.
 
 - **Dates read MM-DD-YYYY everywhere.** Three different formats were in use
   depending on which window drew the row — `08/05/2026`, `08/05/26` and
