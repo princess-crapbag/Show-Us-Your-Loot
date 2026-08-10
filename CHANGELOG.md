@@ -6,7 +6,6 @@ this says what you will notice.
 ## Unreleased
 
 ### Added
-
 - **A dashboard, and it is what the window opens on.** Six tiles plus a status
   strip: last raid night, next raid night, who is due, readiness, tier
   progress, links, and whether the addon is actually recording. Click any tile
@@ -24,7 +23,6 @@ this says what you will notice.
 - **Links.** A few URLs of your own, on the dashboard and in Settings. Click
   one and it opens a box with the address selected to copy — an addon cannot
   open a browser or write to your clipboard.
-
 - **The roster hides characters nobody has played for a month.** An **Active**
   button on the roster window, on by default. Anyone joining the guild is
   never hidden by it, and neither is anyone the client has not reported on
@@ -71,7 +69,6 @@ this says what you will notice.
   same from chat. Both windows share the one setting.
 
 ### Changed
-
 - **A drought is now reset by one thing only:** a Need or offspec win, on a
   bind-on-pickup item, from group loot, on a night that counted as a raid
   night. Everything else — the vault, Mythic+ chests, the catalyst, delves,
@@ -80,7 +77,6 @@ this says what you will notice.
 - **"Count gear taken without a roll towards droughts" is gone**, along with
   `/syl personalloot`. It only ever fed the calculation above, and that
   calculation no longer counts any of it under any setting.
-
 - **The due list and the players window now open on your raid team.** They
   used to open on everyone the addon had ever seen, which includes anybody
   you pugged a raid or a key with — and somebody seen once who won nothing
@@ -107,16 +103,13 @@ this says what you will notice.
   still work when typed and are listed by `/syl help all`.
 
 ### Fixed
-
 - **Keystones now expire at your realm's actual weekly reset** rather than
   seven days after the addon heard about them. A key learned on Monday used to
   survive Tuesday's reset and sit in the list claiming to be current.
-
 - **Dates read MM-DD-YYYY everywhere.** Three different formats were in use
   depending on which window drew the row — `08/05/2026`, `08/05/26` and
   `2026-08-05`. The date filter boxes take MM-DD-YYYY now too, and still
   accept the old YYYY-MM-DD if you paste one.
-
 - **Some older records could not be ticked at all.** Rows captured before
   records carried an id drew a checkbox that did nothing: Select all skipped
   them, and Hide and Ignore could never reach them. They are given an id at
@@ -149,7 +142,6 @@ of it — history recorded under the old behaviour stays, and the counting is
 corrected when it is read.
 
 ### Added
-
 - **A window for who is due.** The question this addon exists to answer was
   chat-only. There is now a **Due** button, first in the footer: dry nights,
   nights attended, when each raider last took an upgrade, and above the list a
@@ -178,7 +170,6 @@ corrected when it is read.
   backfilled.
 
 ### Changed
-
 - **Gear taken without a roll no longer counts towards droughts by default.**
   This is the most important line here. Your client only ever sees other
   people's loot while you are grouped with them — nobody claims their vault
@@ -209,7 +200,6 @@ corrected when it is read.
   list, typing in the roster search, and hovering items in your bags.
 
 ### Fixed
-
 - **The filter dropdowns did not open.** Player, Item, Location and Win type
   all threw an error when clicked, so nothing in the window could be filtered.
 - **The addon only worked in English.** Loot lines were matched against
@@ -261,7 +251,6 @@ corrected when it is read.
 ## 0.1.0-alpha
 
 ### Added
-
 - **Alts count as one person.** Map a raider's second character to their main
   and every number — attendance, drought, the due list — treats them as one.
   `/syl alts scan` reads your guild notes and suggests mappings; nothing is
@@ -286,7 +275,6 @@ corrected when it is read.
   centres it.
 
 ### Fixed
-
 - **Scrolling hid rows as you went.** A scrolled list showed fewer and fewer
   entries with blank space below them, and the ones still visible were the
   wrong records. Only affected lists longer than about thirteen rows, which is
