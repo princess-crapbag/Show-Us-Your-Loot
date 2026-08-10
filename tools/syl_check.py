@@ -325,7 +325,9 @@ def toc_order() -> list:
 
 
 def main() -> int:
-    problems, warnings, exemptions = [], [], []
+    # advisories is size only: reported every run, never fatal. See the
+    # note by the return for why that class is deliberately not a failure.
+    problems, warnings, exemptions, advisories = [], [], [], []
     listed = toc_order()
 
     on_disk = {
@@ -357,11 +359,11 @@ def main() -> int:
         exempt, reason = size_exemption(raw)
 
         if lines > MAX_LINES and not exempt:
-            warnings.append(f"{name}: {lines} lines, over the {MAX_LINES} limit")
+            advisories.append(f"{name}: {lines} lines, over the {MAX_LINES} limit")
         elif lines > MAX_LINES and not reason:
             # Opting out without saying why is how the rule quietly stops
             # meaning anything.
-            warnings.append(
+            advisories.append(
                 f"{name}: claims a size exemption but gives no reason"
             )
         elif exempt and lines > MAX_LINES:
@@ -370,7 +372,7 @@ def main() -> int:
             # reads as a bug in the checker.
             exemptions.append(f"{name}: {lines} lines - {reason}")
         elif exempt:
-            warnings.append(
+            advisories.append(
                 f"{name}: claims a size exemption but is {lines} lines, "
                 f"under the {MAX_LINES} limit, so drop the marker"
             )
@@ -449,6 +451,11 @@ def main() -> int:
         for w in sorted(set(warnings)):
             print("  ", w)
         print()
+    if advisories:
+        print(f"SIZE ({len(advisories)})")
+        for a in sorted(set(advisories)):
+            print("  ", a)
+        print()
     # Printed every run rather than only when something is wrong. An
     # exemption nobody sees is an exemption nobody revisits.
     if exemptions:
@@ -456,9 +463,25 @@ def main() -> int:
         for e in sorted(set(exemptions)):
             print("  ", e)
         print()
-    if not problems and not warnings:
+    if not problems and not warnings and not advisories:
         print("Nothing found.")
-    return 1 if problems else 0
+
+    # Correctness warnings fail; size does not. Two different classes that
+    # were sharing one list, which is why they now have two.
+    #
+    # The one that matters is "SYL.Module.Member never assigned" — the shape a
+    # rename leaves behind when a call site is missed. Lua only finds that out
+    # at the moment of the call, and only if the call happens, so a rarely
+    # opened window can carry one for weeks. Exiting 0 on it meant the release
+    # workflow could never block on the class of bug it is best placed to
+    # catch. Aimee's call, 2026-08-09.
+    #
+    # SIZE STAYS ADVISORY, and that is not an oversight. It has its own opt-out
+    # with a required reason, the whole point of which is that a file is
+    # sometimes right to be long — and a limit that blocks releases is a limit
+    # people satisfy by deleting comments, which this project has watched
+    # happen twice.
+    return 1 if (problems or warnings) else 0
 
 
 if __name__ == "__main__":

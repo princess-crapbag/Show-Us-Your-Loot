@@ -102,7 +102,10 @@ function RosterData.Build()
 
             name = entry.name,
             class = entry.class,
-            rank = "Joining",
+            -- They have no guild rank because they are not in the guild.
+            -- "N/A" rather than "Joining": this is the GUILD RANK column, and
+            -- a status word in it reads as a rank somebody could hold.
+            rank = "N/A",
             -- Below every real rank, so they sort to the bottom rather than
             -- into the middle of the officer ranks by accident.
             rankIndex = 98,

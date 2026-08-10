@@ -100,6 +100,21 @@ Alpha rather than a full release. See CURSEFORGE.md.
 
   `test_duelist` is the one to extend when the fairness maths changes. It is
   the only test of the number the whole addon is named after.
+- **Read the whole `syl_check` output, not the tail.** Its sections print in a
+  fixed order and SIZE EXEMPTIONS is last, so `| tail -3` shows the exemptions
+  and hides everything above them. Four files went over the limit in one
+  evening behind exactly that mistake.
+- **Correctness warnings now fail the run; size warnings do not.** A missing
+  `SYL.Module.Member` exits 1, so `release.yml` blocks on it. Size prints under
+  its own SIZE heading and exits 0 — it has an opt-out with a required reason,
+  and a size limit that blocks releases is one people satisfy by deleting
+  comments, which has happened here twice.
+- **Four files are over the limit right now and need splitting**, all of them
+  grown on 2026-08-09: `Core/Utilities.lua` 427, `UI/RosterWindow.lua` 422,
+  `Core/SlashCommands.lua` 419, `UI/MainWindow.lua` 404. None is exempt and
+  none should be without a real reason. `Utilities` has the obvious seam — the
+  item helpers (`GetItemLevel`, `GetItemIDFromLink`, `NormalizeItemLink`,
+  `GetItemNameFromLink`, `IsBindOnEquip`) are a module.
 - **400-line limit is a warning, not an error.** A file opts out with
   `-- syl-check: size-exempt — reason` in its first 40 lines. Three files do,
   and each says why. **Never delete a comment to get under it** — that

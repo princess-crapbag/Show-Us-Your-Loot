@@ -170,7 +170,22 @@ Refresh = function()
     -- are we missing" is a question about the team — asking it of every alt
     -- and social in the guild reports everything covered and means nothing.
     if teamOnly then
-        roster = SYL.RaidTeam.Filter(roster)
+        -- Recruits survive the team filter whether or not they are marked.
+        --
+        -- They are a short list somebody typed in on purpose, and the whole
+        -- reason for typing them is to have them counted in the coverage this
+        -- view shows. Filtering them out until they are marked also made them
+        -- impossible to mark: the tick is on the row, and the row was not
+        -- being drawn.
+        local team = SYL.RaidTeam.Filter(roster)
+
+        for _, entry in ipairs(roster) do
+            if entry.isIncoming and not SYL.RaidTeam.IsMember(entry.key) then
+                table.insert(team, entry)
+            end
+        end
+
+        roster = team
     end
 
     -- Before the search, so a name typed into the box is looked for among the
@@ -196,11 +211,14 @@ Refresh = function()
         offset = maxOffset
     end
 
+    local joining = SYL.IncomingRoster.Count()
+
     frame.summaryText:SetText(
         total
         .. (teamOnly and " on the raid team" or
             (total == 1 and " guild member" or " guild members"))
         .. "  ·  " .. SYL.RaidTeam.Count() .. " marked as raiding"
+        .. (joining > 0 and ("  ·  " .. joining .. " joining") or "")
         .. (activeOnly
             and ("  ·  seen in the last "
                 .. SYL.RosterData.INACTIVE_DAYS .. " days") or "")
