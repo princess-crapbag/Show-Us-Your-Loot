@@ -20,9 +20,9 @@ an upgrade, who turned up, and what each boss has given.
 
 - **Repo:** https://github.com/princess-crapbag/Show-Us-Your-Loot (public)
 - **CurseForge:** project 1642383, live at **v0.2.0-alpha**
-- **`main` is 10 commits ahead of that tag.** Everything after it is on GitHub
+- **`main` is 17 commits ahead of that tag.** Everything after it is on GitHub
   and in Aimee's game, and has reached no user.
-- 87 Lua files in the .toc, 7 test suites in `tools/`, all run before a
+- 89 Lua files in the .toc, 8 test suites in `tools/`, all run before a
   release by `.github/workflows/release.yml`.
 
 **Aimee runs the addon from a symlink**, `Interface/AddOns/ShowUsYourLoot ->
@@ -90,8 +90,9 @@ Alpha rather than a full release. See CURSEFORGE.md.
   python -m venv .venv && .venv/Scripts/python -m pip install lupa
   ```
 
-  There are seven: `test_duelist`, `test_lootmessages`, `test_lootsort`,
-  `test_migrations`, `test_syncchunks`, `test_syntax`, `test_windowplacement`.
+  There are 8: `test_duelist`, `test_incomingroster`, `test_lootmessages`,
+  `test_lootsort`, `test_migrations`, `test_syncchunks`, `test_syntax`,
+  `test_windowplacement`.
   Each reads its Lua straight out of the addon, so they cannot drift from the
   code, and each exits non-zero on failure. `release.yml` runs the lot before
   it builds a zip, so a failing suite blocks a release — unlike `syl_check`,
@@ -146,13 +147,30 @@ server for a link to point at.
 (An earlier draft of this file said "the roster is not uploaded at all",
 which read as though no roster existed. It does. Only the upload does not.)
 
-Two decisions, in order. First: should team, role and alt data be uploaded at
-all? That is officers' judgements about people, which is a different category
-from a record of what dropped. Only then: should a link make it readable
-without a login? If both are yes, the mechanism to copy is the one
-`syl_upload` already uses — a `SECURITY DEFINER` function keyed on a share
-token, so the tables are never opened to `anon` and revoking is deleting a
-token.
+**Both decisions are now made** (2026-08-09), and neither is urgent — Aimee:
+"i do want this but it can wait until later if needed. its not urgent, just a
+bonus for guildies."
+
+1. **Yes, team, role and alt data may be uploaded.**
+2. **Access is guild members, not the public.** In her words: "the link should
+   be accessible to anyone who claims a character in the guild... if you have
+   a guild rank you can access the link."
+
+That second one is harder than public-read and harder than login-only, and it
+is worth knowing why before starting. **Nothing on the web can verify WoW guild
+membership.** The login is Discord (see the auth notes), and Discord knows
+nothing about WoW characters. Battle.net OAuth could, but that is a second
+identity provider to add.
+
+The workable shape without adding one: the officer's upload *is* the roster,
+so the web side already holds the list of names. A visitor logs in with
+Discord, claims a character name from that list, and an officer confirms —
+which makes "has a guild rank" a fact the addon uploaded rather than one the
+web tried to check. The claim step is the piece that does not exist yet.
+
+The transport to copy either way is the one `syl_upload` already uses: a
+`SECURITY DEFINER` function keyed on a share token, so the tables are never
+opened to `anon` and revoking is deleting a token.
 
 **F9 cannot be an in-game import. WoW addons cannot make HTTP requests.** That
 is the whole answer and it does not depend on what Raidbots exposes.
