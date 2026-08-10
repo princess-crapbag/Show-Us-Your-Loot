@@ -78,6 +78,21 @@ CommandList.ENTRIES = {
         description = "Who is owed loot — add 'window' for the old screen",
     },
     {
+        command = "schedule",
+        common = true,
+        description = "Your raid days, the next night, and who is out",
+    },
+    {
+        command = "out",
+        common = true,
+        description = "Mark somebody out — /syl out <name> [days] [reason]",
+    },
+    {
+        command = "in",
+        common = true,
+        description = "Cancel an absence — /syl in <name>",
+    },
+    {
         command = "trade",
         common = true,
         description = "Reopen the trade window advisor for anything still open",

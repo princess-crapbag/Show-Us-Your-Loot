@@ -56,6 +56,9 @@ Core\RaidSummary.lua
 Core\NightIndex.lua
 Core\TradeAdvisor.lua
 Core\TradeTracker.lua
+Core\RaidSchedule.lua
+Core\GuildCalendar.lua
+Core\ScheduleCommands.lua
 Core\Export.lua
 Core\DataExport.lua
 Core\CommandList.lua
@@ -89,6 +92,7 @@ UI\MainNav.lua
 UI\DashboardParts.lua
 UI\DashboardTab.lua
 UI\DashboardWidgets.lua
+UI\ScheduleWidgets.lua
 UI\RaidersDetail.lua
 UI\RaidersPanel.lua
 UI\BossLoot.lua

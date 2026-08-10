@@ -314,18 +314,6 @@ DashboardWidgets.RENDERERS.recording = function(tile)
     summary:SetText(table.concat(pieces, "   ·   "))
 end
 
--- Waiting on the calendar -------------------------------------------------
---
--- Declared rather than omitted. A tile that says what it is waiting for is
--- honest; a missing tile reads as a bug, and a blank one reads as broken.
-DashboardWidgets.RENDERERS.nextNight = function(tile)
-    DashboardParts.Empty(tile,
-        "Waiting on the calendar.\n\nThis will show the next raid night and "
-        .. "who has signed up, read from your in-game guild calendar.")
-
-    DashboardParts.Caption(tile, "Not built yet.")
-end
-
 --------------------------------------------------------------------------
 
 function DashboardWidgets.Render(tile, widget)

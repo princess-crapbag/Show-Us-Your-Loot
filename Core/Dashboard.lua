@@ -40,10 +40,16 @@ Dashboard.WIDGETS = {
     {
         key = "nextNight",
         label = "Next raid night",
-        note = "Reads the guild calendar. Blank if nobody keeps it up to date.",
+        note = "From your usual raid days, or the guild calendar if imported.",
         tab = "nights",
         span = 1,
-        needs = "calendar",
+    },
+    {
+        key = "whoIsOut",
+        label = "Who is out",
+        note = "Absences you have typed in. An addon cannot read Discord.",
+        tab = "nights",
+        span = 1,
     },
     {
         key = "due",
@@ -85,7 +91,8 @@ Dashboard.WIDGETS = {
 -- The order the mocks were signed off in.
 local DEFAULT_ORDER = {
     "lastNight", "nextNight", "due",
-    "readiness", "tier", "links",
+    "readiness", "tier", "whoIsOut",
+    "links",
     "recording",
 }
 

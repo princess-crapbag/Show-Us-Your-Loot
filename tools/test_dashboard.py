@@ -118,7 +118,20 @@ for widget in dash.WIDGETS.values():
     )
 
 check("recording spans the full width", dash.Get("recording")["span"] == 3)
-check("next raid night declares it needs the calendar", dash.Get("nextNight")["needs"] == "calendar")
+
+# This used to assert that next raid night declared `needs = "calendar"`, and
+# it was right to until the schedule could be typed. Nothing on the dashboard
+# is blocked on the guild calendar any more — see Core/RaidSchedule.lua — so
+# the assertion is now that no widget is waiting on anything, which is the
+# claim worth keeping true.
+for widget in dash.WIDGETS.values():
+    check(
+        f"{widget['key']} is not waiting on a data source it cannot reach",
+        widget["needs"] is None,
+    )
+
+# That every widget also has a renderer is asserted by test_dashboardrender,
+# which loads the UI. This file deliberately loads only the registry.
 
 print()
 print("FAILURES:", failures or "none")

@@ -108,6 +108,18 @@ COMMANDS.due = function(remainder)
     Reports.Due(DUE_LIMIT)
 end
 
+COMMANDS.schedule = function(remainder)
+    SYL.ScheduleCommands.Schedule(remainder)
+end
+
+COMMANDS.out = function(remainder)
+    SYL.ScheduleCommands.Out(remainder)
+end
+
+COMMANDS["in"] = function(remainder)
+    SYL.ScheduleCommands.Back(remainder)
+end
+
 COMMANDS.trade = function()
     if not SYL.TradeAdvisor.IsEnabled() then
         SYL:Write("The trade window advisor is switched off in Settings.")
