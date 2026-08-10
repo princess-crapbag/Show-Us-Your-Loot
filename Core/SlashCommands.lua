@@ -108,6 +108,25 @@ COMMANDS.due = function(remainder)
     Reports.Due(DUE_LIMIT)
 end
 
+COMMANDS.trade = function()
+    if not SYL.TradeAdvisor.IsEnabled() then
+        SYL:Write("The trade window advisor is switched off in Settings.")
+
+        return
+    end
+
+    if not SYL.TradeAdvisorPanel.HasAnything() then
+        SYL:Write(
+            "Nothing is inside its trade window. This opens by itself when "
+            .. "you win something."
+        )
+
+        return
+    end
+
+    SYL.TradeAdvisorPanel.Show()
+end
+
 COMMANDS.tonight = function()
     SYL.RaidSummary.ReportCurrent()
 end

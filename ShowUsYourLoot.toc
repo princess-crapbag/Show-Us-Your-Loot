@@ -54,6 +54,7 @@ Core\Dashboard.lua
 Core\DueList.lua
 Core\RaidSummary.lua
 Core\NightIndex.lua
+Core\TradeAdvisor.lua
 Core\Export.lua
 Core\DataExport.lua
 Core\CommandList.lua
@@ -93,6 +94,7 @@ UI\BossLoot.lua
 UI\BossesPanel.lua
 UI\NightStats.lua
 UI\NightsPanel.lua
+UI\TradeAdvisorPanel.lua
 UI\TabPanels.lua
 UI\MainWindow.lua
 UI\DropDetailWindow.lua

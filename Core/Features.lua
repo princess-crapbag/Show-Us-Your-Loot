@@ -64,6 +64,12 @@ Features.LIST = {
             .. "it on.",
     },
     {
+        key = "tradeAdvisor",
+        label = "Trade window advisor",
+        cost = "Opens a small window when you win something, listing who else "
+            .. "rolled on it. Sends nothing to anyone.",
+    },
+    {
         key = "developer",
         label = "Developer tools",
         cost = "Adds /syl dev and the event inspector. For diagnosing the "
@@ -83,6 +89,12 @@ local DEFAULTS = {
     -- The second thing here that talks to other players, and the only one
     -- that talks outside your own group. Off for the same reason sync is.
     keystoneSharing = false,
+
+    -- On, despite opening a window unasked, because the window IS the feature
+    -- and it only ever appears on your own screen after your own win. It sends
+    -- nothing, so the rule it might look like it breaks — the addon does not
+    -- talk unless asked — is about chat and is untouched.
+    tradeAdvisor = true,
 
     developer = false,
 }

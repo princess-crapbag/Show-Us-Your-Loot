@@ -78,6 +78,11 @@ CommandList.ENTRIES = {
         description = "Who is owed loot — add 'window' for the old screen",
     },
     {
+        command = "trade",
+        common = true,
+        description = "Reopen the trade window advisor for anything still open",
+    },
+    {
         command = "tonight",
         common = true,
         description = "Summary of the raid night in progress",

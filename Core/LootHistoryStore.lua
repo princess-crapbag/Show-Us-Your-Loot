@@ -229,6 +229,18 @@ function Store.RebuildIndex()
     end
 end
 
+-- One record by id, off the index the store already maintains. Added for the
+-- trade advisor, which holds ids rather than copies: a record it had duplicated
+-- would keep the roll list as it stood at the moment of the win, and roll lists
+-- resolve in stages, so the copy would be the emptier one.
+function Store.GetRecord(id)
+    if not id then
+        return nil
+    end
+
+    return dropIndex[id]
+end
+
 function Store.IsEnabled()
     return ShowUsYourLootDB
         and ShowUsYourLootDB.settings
@@ -268,6 +280,13 @@ function Store.RecordSnapshot(snapshot)
             if existing then
                 UpdateRecord(existing, drop)
                 updated = updated + 1
+
+                -- Offered on later passes too, not just on first capture. A
+                -- roll list resolves in stages, and the pass that first names
+                -- the losers is often not the pass that named the winner —
+                -- so a first-capture-only hook would miss the wins with the
+                -- most to advise about. TradeAdvisor dedupes on the id.
+                SYL.TradeAdvisor.Consider(existing)
             else
                 local record =
                     BuildRecord(recordID, snapshot, drop, season, location)
@@ -284,6 +303,8 @@ function Store.RecordSnapshot(snapshot)
                 added = added + 1
 
                 AnnounceDrop(record)
+
+                SYL.TradeAdvisor.Consider(record)
 
                 -- Only on first capture. Re-processing the same drop must
                 -- not rebroadcast it.
