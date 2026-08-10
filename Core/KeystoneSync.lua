@@ -89,19 +89,38 @@ local function Store()
     return ShowUsYourLootDB.guildKeystones
 end
 
--- The most recent Wednesday reset, near enough. A key from before it is gone
--- whatever it says.
+-- A key from before the last weekly reset is gone, whatever it says.
 --
--- Deliberately not exact: region reset times differ and the client's own
--- C_DateAndTime helpers have moved more than once. Seven days back from now
--- is wrong by at most a few days in the safe direction — it drops keys that
--- are certainly stale and keeps a few that might be.
+-- ASKED, NOT ASSUMED. Aimee's realm resets Tuesday; other regions do not, and
+-- hardcoding a weekday would be wrong for most of the people who install
+-- this. C_DateAndTime.GetSecondsUntilWeeklyReset counts down to the client's
+-- own reset, so subtracting a week from it gives the moment the current week
+-- began — correct in every region without this file knowing which day it is.
+--
+-- The flat seven days is the fallback for a client that does not expose it.
+-- It is wrong in the safe direction: it keeps a key slightly too long rather
+-- than dropping one that is still good.
 local WEEK_SECONDS = 7 * 24 * 60 * 60
 
+function KeystoneSync.LastResetAt()
+    if C_DateAndTime and C_DateAndTime.GetSecondsUntilWeeklyReset then
+        local ok, remaining =
+            pcall(C_DateAndTime.GetSecondsUntilWeeklyReset)
+
+        if ok and type(remaining) == "number" and remaining > 0 then
+            return (time() + remaining) - WEEK_SECONDS
+        end
+    end
+
+    return time() - WEEK_SECONDS
+end
+
 local function IsStale(entry)
-    return not entry
-        or not entry.at
-        or (time() - entry.at) > WEEK_SECONDS
+    if not entry or not entry.at then
+        return true
+    end
+
+    return entry.at < KeystoneSync.LastResetAt()
 end
 
 function KeystoneSync.Remember(sender, mapID, level, class)

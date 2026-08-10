@@ -29,6 +29,14 @@ lua.execute("ShowUsYourLoot = {}")
 lua.execute("ShowUsYourLootDB = {}")
 lua.execute("function time() return 1700000000 end")
 lua.execute("function IsInGuild() return true end")
+
+# The client counts down to its own weekly reset, so the stale test works in
+# every region without knowing which weekday it falls on. 3 days out here.
+lua.execute("""
+    C_DateAndTime = {
+        GetSecondsUntilWeeklyReset = function() return 3 * 24 * 60 * 60 end,
+    }
+""")
 lua.execute("function CreateFrame() return { SetScript = function() end, RegisterEvent = function() end } end")
 
 # Every attempt to talk to the guild is recorded rather than performed.
@@ -162,17 +170,33 @@ listed = list(sync.List().values())
 check("both are remembered", len(listed) == 2)
 check("highest key sorts first", listed[0].level == 20)
 
-# A key is worthless after the reset, and a stale one makes the list lie.
+# The reset is 3 days away, so this week began 4 days ago. A key from 5 days
+# ago predates it and is gone; one from 2 days ago is still good.
 lua.execute(
-    "ShowUsYourLootDB.guildKeystones['Someone-Else'].at = 1700000000 - (8 * 24 * 60 * 60)"
+    "ShowUsYourLootDB.guildKeystones['Someone-Else'].at = 1700000000 - (5 * 24 * 60 * 60)"
 )
 
 listed = list(sync.List().values())
-check("a key older than a week is dropped", len(listed) == 1)
+check("a key from before this week's reset is dropped", len(listed) == 1)
 check(
     "and dropped from the store, not just the list",
     lua.globals().ShowUsYourLootDB.guildKeystones["Someone-Else"] is None,
 )
+
+# A key from inside this week survives — the guard must not be "older than
+# seven days", which would keep a key from before the reset.
+sync.Remember("Recent-Key", 375, 11, "MONK")
+lua.execute(
+    "ShowUsYourLootDB.guildKeystones['Recent-Key'].at = 1700000000 - (2 * 24 * 60 * 60)"
+)
+check("a key from after the reset is kept", len(list(sync.List().values())) == 2)
+
+# And with no C_DateAndTime at all, the flat week still works.
+lua.execute("C_DateAndTime = nil")
+lua.execute(
+    "ShowUsYourLootDB.guildKeystones['Recent-Key'].at = 1700000000 - (8 * 24 * 60 * 60)"
+)
+check("without the API it falls back to seven days", len(list(sync.List().values())) == 1)
 
 print()
 print("FAILURES:", failures or "none")
