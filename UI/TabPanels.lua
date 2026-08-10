@@ -6,16 +6,21 @@
 -- before any of these existed. That file owns the chrome, the tab state and
 -- the loot list; this one owns what the other five tabs draw.
 --
--- WHERE THE FOUR ROUTING PANELS COME FROM. Raiders, Nights, Bosses and Keys
--- are designed and agreed but not yet drawn in the window — the roster, raid,
--- boss and player screens still exist as separate windows and still work. So
--- each tab says what it is for and opens the window that answers it today.
+-- WHERE THE ROUTING PANELS COME FROM. Nights, Bosses and Keys are designed and
+-- agreed but not yet drawn in the window — the raid, boss and key screens still
+-- exist as separate windows and still work. So each tab says what it is for and
+-- opens the window that answers it today.
 --
 -- That is deliberate rather than lazy. Folding six windows into one is a
 -- refactor that touches every one of them, and doing it in the same change as
 -- new widgets would mean a broken dashboard and a broken roster at once, with
 -- no way to tell which broke. The tab is real, the route is real, and the
 -- panel replaces the route one screen at a time.
+--
+-- RAIDERS IS THE FIRST ONE REPLACED. It is drawn by UI/RaidersPanel.lua and no
+-- longer routes anywhere. The players and roster windows still exist and are
+-- still reachable from the roster button in settings; nothing was deleted in
+-- the same change that added a screen.
 
 local SYL = _G.ShowUsYourLoot
 local Theme = SYL.Theme
@@ -25,34 +30,6 @@ SYL.TabPanels = TabPanels
 
 -- key, heading, what it answers, and the window that answers it today.
 local ROUTES = {
-    {
-        mode = "raiders",
-        title = "Raiders",
-        blurb = "Who is on the team, what they play, what they have taken and "
-            .. "how often they turn up. Ranked by loot taken per raid night, "
-            .. "so somebody with perfect attendance is more due than somebody "
-            .. "there half the time.",
-        -- Who is due leads, because emptying the footer took away the only
-        -- route to that window and the dashboard tile points here.
-        button = "Who is due",
-        open = function()
-            if SYL.OpenDueWindow then
-                SYL:OpenDueWindow()
-            end
-        end,
-        second = "Open the roster",
-        openSecond = function()
-            if SYL.OpenRosterWindow then
-                SYL:OpenRosterWindow()
-            end
-        end,
-        third = "Open players",
-        openThird = function()
-            if SYL.OpenPlayerWindow then
-                SYL:OpenPlayerWindow()
-            end
-        end,
-    },
     {
         mode = "nights",
         title = "Nights",
@@ -157,6 +134,8 @@ function TabPanels.CreateAll(parent, config)
     panels.dashboard = SYL.DashboardTab.Create(parent, {
         onOpenTab = config.onOpenTab,
     })
+
+    panels.raiders = SYL.RaidersPanel.Create(parent)
 
     for _, route in ipairs(ROUTES) do
         panels[route.mode] = CreateRoutePanel(parent, route)

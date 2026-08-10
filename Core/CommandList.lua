@@ -75,7 +75,7 @@ CommandList.ENTRIES = {
     {
         command = "due",
         common = true,
-        description = "Who has gone longest without an upgrade",
+        description = "Who is owed loot — add 'window' for the old screen",
     },
     {
         command = "tonight",

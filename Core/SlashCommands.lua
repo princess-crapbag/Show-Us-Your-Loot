@@ -88,7 +88,23 @@ COMMANDS.roster = function()
     end
 end
 
-COMMANDS.due = function()
+-- `/syl due` still prints. `/syl due window` opens the standalone window.
+--
+-- The Raiders tab is the board version of this list and is where it is meant
+-- to be read now, which left UI/DueWindow.lua with no caller at all — and an
+-- unreachable window that still loads is the exact fault emptying the footer
+-- caused once already. Kept reachable rather than deleted: the window has a
+-- recency toggle the board does not, so whether it is really superseded is
+-- Aimee's call and not one to take by quietly removing the last door to it.
+COMMANDS.due = function(remainder)
+    if SYL.Utilities.Trim(remainder or "") == "window" then
+        if SYL.OpenDueWindow then
+            SYL:OpenDueWindow()
+        end
+
+        return
+    end
+
     Reports.Due(DUE_LIMIT)
 end
 

@@ -113,7 +113,11 @@ end
 -- Building
 --------------------------------------------------------------------------
 
-local function Add(totals, key, weight, at)
+-- Takes the roll state rather than the weight it maps to, so the one place
+-- that reads WEIGHTS is also the place that can remember what was counted.
+-- Without that, a total is a number with no way back to the wins behind it,
+-- and "where did my score come from" cannot be answered from stored data.
+local function Add(totals, key, state, at)
     if not key then
         return
     end
@@ -121,12 +125,20 @@ local function Add(totals, key, weight, at)
     local entry = totals[key]
 
     if not entry then
-        entry = { key = key, score = 0, wins = 0, lastAt = nil }
+        entry = { key = key, score = 0, wins = 0, lastAt = nil, byState = {} }
         totals[key] = entry
     end
 
-    entry.score = entry.score + weight
+    entry.score = entry.score + LootScore.WeightOf(state)
     entry.wins = entry.wins + 1
+
+    -- Transmog weighs nothing and still counts here. A raider with six
+    -- transmog wins and a zero contribution from them is exactly the person
+    -- who wants to see the six listed, because the number they are arguing
+    -- with is the one that does not mention them.
+    if state ~= nil then
+        entry.byState[state] = (entry.byState[state] or 0) + 1
+    end
 
     if at and (not entry.lastAt or at > entry.lastAt) then
         entry.lastAt = at
@@ -149,7 +161,7 @@ function LootScore.BuildTotals(drops)
                     Add(
                         totals,
                         SYL.Players.ResolveToMain(roll.guid or roll.name),
-                        LootScore.WeightOf(roll.state),
+                        roll.state,
                         drop.timestamp
                     )
 
@@ -163,7 +175,7 @@ function LootScore.BuildTotals(drops)
                     SYL.Players.ResolveToMain(
                         drop.winnerGUID or drop.winnerName
                     ),
-                    LootScore.WeightOf(drop.winnerState),
+                    drop.winnerState,
                     drop.timestamp
                 )
             end
@@ -188,6 +200,7 @@ function LootScore.Attach(entries, drops)
 
         entry.lootScore = totalsFor and totalsFor.score or 0
         entry.lootWins = totalsFor and totalsFor.wins or 0
+        entry.byState = totalsFor and totalsFor.byState or {}
 
         local nights = entry.nights or 0
 
@@ -265,6 +278,50 @@ function LootScore.Highest(entries)
     end
 
     return highest
+end
+
+-- Fixed order, worth most first. Read off WEIGHTS would shuffle, because
+-- pairs over a table keyed by enum values has no order to promise.
+LootScore.STATE_ORDER = {
+    API.ROLL_STATE.NeedMainSpec,
+    API.ROLL_STATE.NeedOffSpec,
+    API.ROLL_STATE.Greed,
+    API.ROLL_STATE.Transmog,
+}
+
+-- Where a score came from, as rows: label, how many, what each was worth, and
+-- what they contributed. This is the screen somebody stands at when they
+-- disagree with their number, so it has to add up to the total on its own
+-- rather than asking them to take the total on trust.
+--
+-- Rows with no wins are dropped. A breakdown listing four zeroes to explain a
+-- score of zero says less than the sentence "no wins yet" does.
+function LootScore.Breakdown(entry)
+    local rows = {}
+
+    if not entry then
+        return rows
+    end
+
+    local byState = entry.byState or {}
+
+    for _, state in ipairs(LootScore.STATE_ORDER) do
+        local count = byState[state] or 0
+
+        if count > 0 then
+            local weight = LootScore.WeightOf(state)
+
+            table.insert(rows, {
+                state = state,
+                label = LootScore.LABELS[state] or "Unknown",
+                count = count,
+                weight = weight,
+                points = count * weight,
+            })
+        end
+    end
+
+    return rows
 end
 
 function LootScore.Describe(entry)

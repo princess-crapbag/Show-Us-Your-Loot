@@ -86,6 +86,8 @@ UI\MainNav.lua
 UI\DashboardParts.lua
 UI\DashboardTab.lua
 UI\DashboardWidgets.lua
+UI\RaidersDetail.lua
+UI\RaidersPanel.lua
 UI\TabPanels.lua
 UI\MainWindow.lua
 UI\DropDetailWindow.lua

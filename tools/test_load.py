@@ -53,6 +53,14 @@ lua.execute(
                     return function() return 40 end
                 end
 
+                -- Same reason as GetStringWidth: a pane that stacks lines
+                -- adds this to a running offset, and a frame returned here
+                -- would fail as "attempt to perform arithmetic on a table"
+                -- inside the layout rather than as a missing stub.
+                if key == 'GetStringHeight' then
+                    return function() return 12 end
+                end
+
                 if key == 'IsShown' or key == 'IsVisible' then
                     return function() return false end
                 end
