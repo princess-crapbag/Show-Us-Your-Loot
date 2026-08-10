@@ -24,6 +24,9 @@ this says what you will notice.
   side by side. Drag a window and the addon stops rearranging that one.
 - **Officer sync can send messages longer than 255 bytes.** Groundwork only:
   what it sends is unchanged, still drop headers and never roll lists.
+- **The list says how many rows are selected.** On the summary line, beside
+  the item and hidden counts. There was a separate label for it that drew on
+  top of that sentence.
 - **Show the raid team, the guild, or everyone.** A button on the due list and
   the players window switches between the three, and `/syl scope` does the
   same from chat. Both windows share the one setting.
@@ -57,6 +60,18 @@ this says what you will notice.
 
 ### Fixed
 
+- **Some older records could not be ticked at all.** Rows captured before
+  records carried an id drew a checkbox that did nothing: Select all skipped
+  them, and Hide and Ignore could never reach them. They are given an id at
+  login now and behave like any other row. The addon says how many it fixed,
+  once. Aimee hit this with twenty records that survived a Select all → Hide
+  and looked like a bug in Hide.
+- **Clear now clears the toggles too** — This season, Gear only and Raids
+  only, not just the search box, the dropdowns and the dates. A list that
+  said it was cleared while Gear only was still on was hiding every reagent,
+  which is how the twenty above went unnoticed. Show hidden is deliberately
+  left alone: everything else narrows the list, so clearing shows more, and
+  that one would show less.
 - **A Timewalking raid could wipe somebody's drought.** Raid nights have never
   counted Timewalking, Story, Follower or Event difficulties — but *wins* were
   counted from everywhere, so a Timewalking raid on a Tuesday reset the clock

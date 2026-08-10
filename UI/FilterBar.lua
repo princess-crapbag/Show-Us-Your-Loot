@@ -250,6 +250,18 @@ function FilterBar.Create(parent, config)
 
     -- Anchored to the right edge rather than flowed from the left, so nothing
     -- widening ahead of it can push it off the bar.
+    -- Clears the toggles on the row below as well, not just this row's boxes.
+    --
+    -- "Clear" was read — reasonably — as "show me everything again", and it
+    -- left This season, Gear only and Raids only exactly as they were. That
+    -- is not a cosmetic gap: with Gear only still on, a list that looks
+    -- cleared is still hiding every reagent, and Select all then ticks a
+    -- subset of what is actually there. It cost Aimee a bulk Hide that missed
+    -- twenty records and looked like a bug in Hide.
+    --
+    -- Show hidden is deliberately NOT reset. Every other toggle narrows the
+    -- list, so clearing them shows more; that one only ever shows more, so
+    -- clearing it would show less and make Clear mean two opposite things.
     local clearButton = Theme.CreateButton(bar, 54, BAR_HEIGHT, "Clear", function()
         Filters.ClearAll(state)
 
@@ -258,6 +270,10 @@ function FilterBar.Create(parent, config)
         toInput.editBox:SetText("")
 
         FilterDropdown.CloseAll()
+
+        if config.onClear then
+            config.onClear()
+        end
 
         bar:Refresh()
         onChange()

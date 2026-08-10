@@ -145,6 +145,19 @@ local function DescribeCount(view, shown, singular, plural, entries)
         text = text .. "  ·  " .. ignored .. " ignored"
     end
 
+    -- On the same line as the other counts rather than in a label of its own.
+    --
+    -- There was one, anchored to the left edge of Select all — which is where
+    -- this sentence ends. A long summary and a two-digit selection drew over
+    -- each other, so the number people needed most was the one most likely to
+    -- be unreadable. It also disappeared entirely at zero, which is the state
+    -- somebody checks when they are asking "did my click register".
+    local selected = view.selection and view.selection.count or 0
+
+    if selected > 0 then
+        text = text .. "  ·  " .. selected .. " selected"
+    end
+
     return text
 end
 

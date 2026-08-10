@@ -216,6 +216,19 @@ local function CreateFilterBar(parent)
             return ListSources.GetFields(view)
         end,
 
+        -- The toggles live on the view, not in the filter state, so the bar
+        -- cannot reset them itself. See the note on the Clear button.
+        onClear = function()
+            view.contentScope = "all"
+            view.gearOnly = false
+            view.allSeasons = false
+
+            -- A selection made under the old filters is not a selection the
+            -- user would make under these ones, and leaving it ticked is how
+            -- a bulk action reaches rows nobody could see when they chose.
+            Selection.Clear(view.selection)
+        end,
+
         onChange = function()
             view.offset = 0
 

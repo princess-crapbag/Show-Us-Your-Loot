@@ -222,6 +222,11 @@ function SYL.DatabaseInitialize()
         archivedSeason.settings.locked = true
     end
 
+    -- After EnsureSeasonStructure, so every season has its loot and drops
+    -- tables to walk. A record with no id cannot be ticked by anything — see
+    -- the note in Core/Migrations.lua.
+    local backfilled = SYL.Migrations.BackfillRecordIDs(ShowUsYourLootDB)
+
     ShowUsYourLootDB.databaseVersion = DATABASE_VERSION
 
     -- The name to GUID index is derived, so it is rebuilt at login rather
@@ -246,6 +251,19 @@ function SYL.DatabaseInitialize()
             .. "Your client only sees other people's loot while you are "
             .. "grouped with them, so counting it mostly counted yours. Turn "
             .. "it back on in Settings, or with /syl personalloot."
+        )
+    end
+
+    -- Said once, because it explains a list that was behaving oddly rather
+    -- than announcing routine maintenance. Silent when there is nothing to
+    -- fix, which is every install captured after the field existed.
+    if backfilled > 0 then
+        SYL:Print(
+            backfilled
+            .. (backfilled == 1 and " older record" or " older records")
+            .. " could not be ticked, and can be now. They were captured "
+            .. "before records carried an id, so Select all and Hide had no "
+            .. "way to reach them."
         )
     end
 

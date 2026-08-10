@@ -22,6 +22,77 @@ local SYL = _G.ShowUsYourLoot
 local Migrations = {}
 SYL.Migrations = Migrations
 
+--------------------------------------------------------------------------
+-- Records with no id at all
+--------------------------------------------------------------------------
+
+-- A RECORD WITHOUT AN ID CANNOT BE TICKED, EVER.
+--
+-- Selection is keyed by `record.id` because rows are pooled and reused as the
+-- list scrolls — Selection.Set returns early when there is no id, and
+-- IsSelected can never answer true. So such a record draws a checkbox that
+-- does nothing, is skipped by Select all, and can never be hidden or ignored.
+-- It is the one row in the addon that no button reaches.
+--
+-- Found in Aimee's live data: 20 of 321 chat records had no id. They also
+-- carry no instanceType and no difficultyID, which dates them — they were
+-- captured before `id` was written onto chat records at all. She hit it doing
+-- exactly what the list invites: Select all, Hide, and twenty rows stayed put
+-- with no way to move them and nothing saying why.
+--
+-- Backfilled rather than worked around. The alternative — a fallback key
+-- derived from the record's fields at selection time — puts identity in two
+-- places and would break the moment two reagents matched.
+--
+-- NOT VERSION GUARDED, deliberately, unlike everything below it. This is not
+-- a decision being revisited; it is a field that must never be nil, and the
+-- guard is the nil itself. Run every load it is idempotent, costs one pass
+-- over records already in memory, and self-heals anything that arrives
+-- without an id in future rather than waiting for somebody to notice.
+local function AssignMissingIDs(records, seasonID, assigned)
+    for index, record in ipairs(records or {}) do
+        if type(record) == "table" and not record.id then
+            -- Position and season, not the record's contents. Two reagents
+            -- looted in the same second from the same boss are identical in
+            -- every field they have, so a content hash would give them one id
+            -- and ticking either would tick both.
+            record.id = table.concat({
+                "legacy",
+                tostring(seasonID or "season"),
+                tostring(record.timestamp or 0),
+                tostring(index),
+            }, "|")
+
+            assigned = assigned + 1
+        end
+    end
+
+    return assigned
+end
+
+-- Every season, active and archived: an archived season is still browsable
+-- with All seasons, and its rows were just as unselectable.
+function Migrations.BackfillRecordIDs(database)
+    local assigned = 0
+
+    local function Season(season)
+        if type(season) ~= "table" then
+            return
+        end
+
+        assigned = AssignMissingIDs(season.loot, season.id, assigned)
+        assigned = AssignMissingIDs(season.drops, season.id, assigned)
+    end
+
+    Season(database.activeSeason)
+
+    for _, season in ipairs(database.archives or {}) do
+        Season(season)
+    end
+
+    return assigned
+end
+
 -- A default that changed after people had already saved the old one.
 --
 -- InitializeSettings only fills in what is nil, which is right: a setting

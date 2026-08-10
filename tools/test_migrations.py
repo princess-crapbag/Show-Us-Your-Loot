@@ -103,6 +103,58 @@ for name, setting, boundary in MIGRATIONS:
 
     print()
 
+# ---------------------------------------------------------------------------
+# BackfillRecordIDs — not version guarded, so it is checked by behaviour
+# rather than by boundary: a record with no id cannot be ticked by anything.
+# ---------------------------------------------------------------------------
+
+backfill = lua.globals().ShowUsYourLoot.Migrations.BackfillRecordIDs
+
+lua.execute(
+    """
+    Fixture = {
+        activeSeason = {
+            id = 'season-1',
+            loot = {
+                { timestamp = 100 },
+                { timestamp = 100 },
+                { id = 'kept', timestamp = 100 },
+            },
+            drops = { { timestamp = 200 } },
+        },
+        archives = {
+            { id = 'season-0', loot = { { timestamp = 50 } }, drops = {} },
+        },
+    }
+    """
+)
+
+fixture = lua.globals().Fixture
+assigned = backfill(fixture)
+
+season = fixture.activeSeason
+ids = [season.loot[i].id for i in (1, 2, 3)]
+
+checks = [
+    ("assigns one id per record missing one", assigned == 4),
+    ("leaves an existing id alone", ids[2] == "kept"),
+    ("every record now has an id", all(ids)),
+    # Two records identical in every field must not collide, or ticking one
+    # ticks the other.
+    ("identical records get distinct ids", ids[0] != ids[1]),
+    ("drops are covered too", season.drops[1].id is not None),
+    ("archived seasons are covered too", fixture.archives[1].loot[1].id is not None),
+    ("a second run assigns nothing", backfill(fixture) == 0),
+]
+
+print("BackfillRecordIDs")
+
+for label, ok in checks:
+    print(("  ok   " if ok else "  FAIL ") + label)
+    if not ok:
+        failures.append(f"BackfillRecordIDs: {label}")
+
+print()
 # A migration guarding against a boundary above the current version would
 # never run at all, which is silent and total. Cheap to rule out here.
 for name, _setting, boundary in MIGRATIONS:

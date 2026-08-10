@@ -1,8 +1,10 @@
 -- UI/SelectionBar.lua
 --
--- The row of controls that appears once rows are ticked: how many are
--- selected, the hide or unhide action, and the toggle that reveals hidden
--- records so they can be brought back.
+-- The row of controls for the list: the hide or unhide action, ignore, the
+-- select-all pair, and the toggles that narrow or widen what is on screen.
+--
+-- How many rows are ticked is reported by the summary line above, not here —
+-- see DescribeCount in UI/LootListView.lua.
 --
 -- Owns the click behaviour for the row checkboxes too, since selection state
 -- and the actions on it belong together.
@@ -157,10 +159,10 @@ function SelectionBar.Create(parent, view, config)
 
     Tip(bar.deselect, "Deselect all", "Unticks everything.")
 
-    bar.countText = Theme.CreateText(parent, Theme.sizes.subtitle, "accent")
-    bar.countText:SetPoint("RIGHT", bar.selectAll, "LEFT", -10, 0)
-    bar.countText:SetJustifyH("RIGHT")
-    bar.countText:Hide()
+    -- The selected count used to live here, right-anchored into the same
+    -- space the "N items · N hidden" summary occupies, and the two overlapped.
+    -- It is part of that sentence now — see DescribeCount in
+    -- UI/LootListView.lua — which is one text, one anchor, and no collision.
 
     -- Plain click toggles one row and becomes the anchor. Shift extends from
     -- that anchor to here, adding rather than replacing, so several ranges
@@ -316,8 +318,6 @@ function SelectionBar.Create(parent, view, config)
         end
 
         if not onList then
-            self.countText:Hide()
-
             return
         end
 
@@ -340,7 +340,6 @@ function SelectionBar.Create(parent, view, config)
         )
 
         if count == 0 then
-            self.countText:Hide()
             self.action.label:SetText("Hide")
             self.ignore.label:SetText("Ignore")
 
@@ -359,9 +358,6 @@ function SelectionBar.Create(parent, view, config)
         self.ignore.label:SetText(
             ignoredCount == count and "Restore" or "Ignore"
         )
-
-        self.countText:SetText(count .. " selected")
-        self.countText:Show()
     end
 
     return bar
