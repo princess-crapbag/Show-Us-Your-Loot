@@ -259,6 +259,61 @@ channel behaves as assumed.
 
 Two people with the addon and the switch on, in the same guild, is the test.
 
+### The dashboard — designed, agreed, not started
+
+Aimee rearranged the widget mocks by hand and that arrangement is the one to
+build: two tall columns pinning the outer edges (Last raid night, Who is due)
+with short widgets stacked between them, then a full-width Recording strip.
+Eight widgets, all on by default, all switchable off, drag to reorder.
+
+**Agreed in this session, so do not reopen:**
+
+- Nav becomes Dashboard · Loot · Raiders · Nights · Bosses · Keys, with a
+  cogwheel in the corner. Players and Roster merge into **Raiders** — the
+  difference between them is the audience scope button, which already exists.
+- Every widget tile is a link into its tab. The whole tile, not just the arrow.
+- Keys comes **off** the dashboard and lives on the Keys tab.
+- Widgets default on. Off means not built, not hidden — the rule already
+  written down for features, so a change wants a `/reload`.
+
+**Drag to reorder is agreed and is not risky if it stays dumb.** The order is a
+saved list of widget names. Unknown name in the list: skip it. Widget missing
+from the list: append it. Both cases then draw a working dashboard rather than
+an empty one, which is what makes a list saved by an older version safe.
+
+**"Nights dry" replaced "6 dry".** Aimee flagged the wording. The row carries a
+bare number under a column header, matching the DRY NIGHTS column the Due
+window already uses, so the two screens teach the same vocabulary.
+
+**Attendance became "Who is out"** — upcoming absences rather than a sparkline
+of the last eight nights. Her change and the right one: absences are actionable
+tonight, a trend line is something to study.
+
+**Links needs confirming before it is built.** Addons cannot open a browser or
+write to the clipboard. The most any addon does is pop a box with the URL
+selected so the user presses Ctrl-C. So that widget is three configurable URLs
+and a copy box, and it is worth checking that is still wanted.
+
+### The calendar is the blocking piece
+
+Two widgets need it and nothing else does: **Next raid night** and **Who is
+out**. Both come from `C_Calendar` — guild events plus signup status.
+
+Nothing in the addon has ever read a calendar, so this is a new event source
+rather than a rearrangement, and `C_Calendar` has real quirks: it needs the
+month opened before it returns anything, and signup lists arrive separately
+from events. The alternative is an officer typing the next raid by hand, which
+is an afternoon's work and always correct but never updates itself.
+
+**Aimee has asked for the calendar**, so the direction is settled.
+
+### Keys tab, later — Aimee's words: "this part is not urgent"
+
+The Keys tab should show more keys than the dashboard widget did, sortable by
+**dungeon, key level and player**. Sorting is `SYL.SortHeader`, which every
+other list already uses, so this is a list view rather than new machinery. The
+data arrives from `Core/KeystoneSync.lua`.
+
 ### Strategy — none of this is started
 
 Reviewer arguments, unchanged except where noted. **It is a menu, not a plan.**
