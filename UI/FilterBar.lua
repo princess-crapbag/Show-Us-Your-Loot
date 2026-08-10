@@ -110,14 +110,14 @@ local function CreateDateInput(parent, width, placeholder, state, key, endOfDay,
 end
 
 -- The word sits outside the box so the placeholder only has to fit the date
--- format. Packing "From YYYY-MM-DD" inside a 92px box is what made these look
+-- format. Packing "From MM-DD-YYYY" inside a 92px box is what made these look
 -- cut off in the first place.
 --
 -- The box is then measured rather than guessed. 84px was a guess, and at a
 -- twelve pixel inset it left seventy-two for ten characters — right on the
 -- edge, which is why this came back. Measuring the widest string the box ever
 -- holds and adding the inset cannot be off.
-local DATE_PLACEHOLDER = "YYYY-MM-DD"
+local DATE_PLACEHOLDER = "MM-DD-YYYY"
 
 -- The editbox is inset six pixels each side inside its holder, and a caret
 -- sits at the end of the text.

@@ -90,6 +90,11 @@ this says what you will notice.
 
 ### Fixed
 
+- **Dates read MM-DD-YYYY everywhere.** Three different formats were in use
+  depending on which window drew the row — `08/05/2026`, `08/05/26` and
+  `2026-08-05`. The date filter boxes take MM-DD-YYYY now too, and still
+  accept the old YYYY-MM-DD if you paste one.
+
 - **Some older records could not be ticked at all.** Rows captured before
   records carried an id drew a checkbox that did nothing: Select all skipped
   them, and Hide and Ignore could never reach them. They are given an id at

@@ -185,12 +185,19 @@ function Utilities.IsBindOnEquip(itemLink)
     return bindType == BIND_ON_EQUIP
 end
 
+-- MM-DD-YYYY throughout, which is where Aimee reads dates.
+--
+-- Three formats were in use before this: %m/%d/%Y, %m/%d/%y and %Y-%m-%d,
+-- depending on which file drew the row. The ISO one is still used for two
+-- things that are NOT dates on screen — RaidSession's night key and the
+-- season id — and those must not be touched, because changing them re-keys
+-- every night already recorded.
 function Utilities.FormatDateTime(timestamp)
     if not timestamp then
         return "Unknown"
     end
 
-    return date("%m/%d/%y %I:%M %p", timestamp)
+    return date("%m-%d-%Y %I:%M %p", timestamp)
 end
 
 -- The list columns' version. "08/05/26 12:32 PM" is seventeen characters
@@ -198,12 +205,17 @@ end
 -- the format, not the width, that made the date column impossible. Dropping
 -- to a 24 hour clock loses the " PM" and three characters with it, and stays
 -- unambiguous.
+--
+-- THE ONE PLACE THE YEAR STAYS TWO DIGITS. The DATE column is 96px and this
+-- string already had to be cut down once to fit it; a four digit year puts
+-- two characters straight back. Same US order and same separator as
+-- everywhere else, so it does not read as a different format — just shorter.
 function Utilities.FormatDateCompact(timestamp)
     if not timestamp then
         return "Unknown"
     end
 
-    return date("%m/%d/%y %H:%M", timestamp)
+    return date("%m-%d-%y %H:%M", timestamp)
 end
 
 -- Difficulty names are long enough to break any column they land in:
@@ -378,7 +390,7 @@ function Utilities.FormatDateOnly(timestamp)
         return "Unknown"
     end
 
-    return date("%m/%d/%Y", timestamp)
+    return date("%m-%d-%Y", timestamp)
 end
 
 function Utilities.CountKeys(value)

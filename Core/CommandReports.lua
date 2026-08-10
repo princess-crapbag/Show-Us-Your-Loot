@@ -77,7 +77,7 @@ function Reports.SeasonStatus()
     SYL:Write("Season ID: " .. tostring(season.id))
     SYL:Write("Drops: " .. #(season.drops or {}))
     SYL:Write("Chat loot records: " .. #(season.loot or {}))
-    SYL:Write("Started: " .. date("%m/%d/%Y %I:%M %p", season.startedAt))
+    SYL:Write("Started: " .. Utilities.FormatDateTime(season.startedAt))
     SYL:Write("Archived seasons: " .. #SYL.GetArchives())
 
     if SYL.Guild.IsInGuild() then

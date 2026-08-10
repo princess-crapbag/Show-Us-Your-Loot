@@ -189,7 +189,7 @@ local function FillRow(row, boss)
     local seenAt = boss.lastKilledAt or boss.lastDropAt
 
     if seenAt then
-        cells.last:SetText(date("%Y-%m-%d", seenAt))
+        cells.last:SetText(SYL.Utilities.FormatDateOnly(seenAt))
         Theme.SetTextColor(cells.last, "textSecondary")
     else
         cells.last:SetText("—")

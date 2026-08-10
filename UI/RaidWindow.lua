@@ -124,7 +124,15 @@ local function FillRow(row, session)
     local pulls = #(session.encounters or {})
     local kills = RaidSession.GetKillCount(session)
 
-    cells.date:SetText(tostring(session.dateText or "?"))
+    -- From the timestamp rather than the stored dateText, which is written
+    -- as ISO and is data rather than something to show. Formatting it here
+    -- means nights recorded before this read the same as nights recorded
+    -- after it.
+    cells.date:SetText(
+        session.startedAt
+            and SYL.Utilities.FormatDateOnly(session.startedAt)
+            or tostring(session.dateText or "?")
+    )
     cells.instance:SetText(tostring(session.instanceName or "Unknown"))
     cells.difficulty:SetText(
         Utilities.ShortDifficulty(session.difficultyID, session.difficultyName)

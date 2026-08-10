@@ -135,8 +135,13 @@ end
 -- Dates
 --------------------------------------------------------------------------
 
--- Accepts YYYY-MM-DD. Returns nil for anything else, including an empty box,
--- which the caller treats as "unbounded" rather than as an error.
+-- Accepts MM-DD-YYYY, which is what every date on screen is written in, and
+-- still accepts YYYY-MM-DD.
+--
+-- Liberal on the way in on purpose: the boxes used to demand ISO, anyone who
+-- typed a date the way the rest of the addon prints it got silently no filter,
+-- and an empty box and a rejected one look identical. Returns nil for anything
+-- else, including an empty box, which the caller treats as "unbounded".
 function Filters.ParseDate(text, endOfDay)
     if type(text) ~= "string" then
         return nil
@@ -148,7 +153,12 @@ function Filters.ParseDate(text, endOfDay)
         return nil
     end
 
-    local year, month, day = text:match("^(%d%d%d%d)-(%d%d?)-(%d%d?)$")
+    local month, day, year = text:match("^(%d%d?)-(%d%d?)-(%d%d%d%d)$")
+
+    if not year then
+        -- ISO, still accepted so a date copied from anywhere else works.
+        year, month, day = text:match("^(%d%d%d%d)-(%d%d?)-(%d%d?)$")
+    end
 
     if not year then
         return nil
@@ -169,7 +179,7 @@ function Filters.FormatDate(timestamp)
         return ""
     end
 
-    return date("%Y-%m-%d", timestamp)
+    return date("%m-%d-%Y", timestamp)
 end
 
 --------------------------------------------------------------------------
