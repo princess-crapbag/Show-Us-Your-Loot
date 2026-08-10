@@ -31,6 +31,24 @@ lua.execute("function time() return 1700000000 end")
 lua.execute("function IsInGuild() return true end")
 lua.execute("function CreateFrame() return { SetScript = function() end, RegisterEvent = function() end } end")
 
+# Every attempt to talk to the guild is recorded rather than performed.
+lua.execute(
+    """
+    Sent = {}
+    Registered = {}
+
+    C_ChatInfo = {
+        SendAddonMessage = function(prefix, payload, channel)
+            table.insert(Sent, prefix .. '|' .. channel .. '|' .. payload)
+        end,
+
+        RegisterAddonMessagePrefix = function(prefix)
+            table.insert(Registered, prefix)
+        end,
+    }
+    """
+)
+
 lua.execute((CORE / "KeystoneSync.lua").read_text(encoding="utf-8"))
 
 sync = lua.globals().ShowUsYourLoot.KeystoneSync
@@ -48,6 +66,60 @@ def decode(payload):
 
     return result if isinstance(result, tuple) else (result,)
 
+
+# --- silence until asked --------------------------------------------------
+#
+# This is the only thing in the addon that talks to the whole guild rather
+# than to a raid group, so "off means silent" is a property worth a test and
+# not just a default. A later edit to Features.DEFAULTS could flip it without
+# anyone noticing; this fails if it does.
+
+lua.execute(
+    """
+    ShowUsYourLoot.Keystone = {
+        GetOwn = function()
+            return { mapID = 375, level = 12, class = 'MAGE' }
+        end,
+
+        CharacterKey = function() return 'Me' end,
+        Update = function() end,
+    }
+    """
+)
+
+
+def sent():
+    return list(lua.globals().Sent.values())
+
+
+def registered():
+    return list(lua.globals().Registered.values())
+
+
+# Enable() has not been called, which is every install that has not turned the
+# feature on. Each of these is a path that ends in a broadcast when it is on.
+sync.Announce()
+sync.Request()
+sync.OnOwnKeyChanged()
+
+check("nothing is sent while the feature is off", len(sent()) == 0)
+# Not registering the prefix means it cannot receive either, not merely that
+# it declines to send.
+check("the addon message prefix is not even registered", len(registered()) == 0)
+
+sync.Enable()
+
+check("turning it on announces and asks, and nothing more", len(sent()) == 2)
+check(
+    "both go to GUILD on our own prefix",
+    all(line.startswith("SYLKEY|GUILD|") for line in sent()),
+)
+check(
+    "the announce carries only dungeon, level and class",
+    sent()[0] == "SYLKEY|GUILD|1|K|375|12|MAGE",
+)
+
+lua.execute("Sent = {} Registered = {}")
 
 # --- round trip -----------------------------------------------------------
 encoded = sync.Encode(375, 12, "MAGE")
