@@ -20,9 +20,10 @@ this says what you will notice.
   ranks above somebody there half the time on the same amount of loot. Nobody
   with fewer than three nights is ranked at all — they are listed with the
   reason, rather than sorted to the top on an empty score.
-- **Links.** A few URLs of your own, on the dashboard and in Settings. Click
-  one and it opens a box with the address selected to copy — an addon cannot
-  open a browser or write to your clipboard.
+- **Links.** A few URLs of your own on the dashboard. Click one and it opens
+  a box with the address selected to copy — an addon cannot open a browser or
+  write to your clipboard. `/syl link add <name> <url>` adds one,
+  `/syl link remove <name>` takes it away, `/syl link` lists them.
 - **The roster hides characters nobody has played for a month.** An **Active**
   button on the roster window, on by default. Anyone joining the guild is
   never hidden by it, and neither is anyone the client has not reported on

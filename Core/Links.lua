@@ -103,7 +103,12 @@ end
 local copyFrame
 
 local function BuildCopyFrame()
-    local frame = CreateFrame("Frame", "ShowUsYourLootLinkCopy", UIParent)
+    -- "BackdropTemplate" is not optional: Theme.StyleWindow calls SetBackdrop,
+    -- which has lived on BackdropTemplateMixin rather than on plain frames
+    -- since 9.0. Without it, clicking a link throws instead of opening the box.
+    local frame = CreateFrame(
+        "Frame", "ShowUsYourLootLinkCopy", UIParent, "BackdropTemplate"
+    )
 
     frame:SetSize(420, 110)
     frame:SetPoint("CENTER")

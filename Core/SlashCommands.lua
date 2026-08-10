@@ -380,6 +380,63 @@ COMMANDS.keys = function()
     end
 end
 
+-- Core/Links.lua told people to type this in two error messages and the
+-- dashboard tile told them a third time, and it did not exist. Adding the
+-- command is the honest fix: the messages were describing the right thing.
+COMMANDS.link = function(remainder)
+    local text = SYL.Utilities.Trim(remainder) or ""
+    local verb, rest = text:match("^(%S+)%s*(.-)$")
+
+    verb = verb and verb:lower() or ""
+
+    if verb == "add" then
+        -- The URL is the last word; everything before it is the name, so
+        -- "Guild Discord https://…" works without quoting.
+        local label, url = rest:match("^(.-)%s+(%S+)$")
+
+        if not label then
+            label, url = rest, ""
+        end
+
+        local entry, message = SYL.Links.Add(label, url)
+
+        SYL:Print(message)
+
+        if entry and SYL.RefreshMainWindow then
+            SYL:RefreshMainWindow()
+        end
+
+        return
+    end
+
+    if verb == "remove" then
+        if SYL.Links.Remove(rest) then
+            SYL:Print("Removed " .. rest .. ".")
+
+            if SYL.RefreshMainWindow then
+                SYL:RefreshMainWindow()
+            end
+        else
+            SYL:Print("No link called " .. tostring(rest) .. ".")
+        end
+
+        return
+    end
+
+    local links = SYL.Links.List()
+
+    SYL:Print(#links .. " link(s):")
+
+    for _, link in ipairs(links) do
+        SYL:Write(
+            "  " .. tostring(link.label)
+            .. ((link.url or "") ~= "" and (" — " .. link.url) or " — no address yet")
+        )
+    end
+
+    SYL:Write("  /syl link add <name> <url>  ·  /syl link remove <name>")
+end
+
 COMMANDS.clear = function()
     local activeSeason = SYL.GetActiveSeason()
 

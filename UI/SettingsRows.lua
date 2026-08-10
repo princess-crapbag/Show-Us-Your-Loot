@@ -140,6 +140,11 @@ local function AddSection(parent, title, offsetY)
     heading:SetPoint("TOPLEFT", 20, offsetY)
     heading:SetText(title)
 
+    -- Kept on the container so a section that tears itself down can take its
+    -- heading with it. The heading is parented to the window, not to the
+    -- container, so hiding the container alone leaves it behind.
+    container.heading = heading
+
     local container = CreateFrame("Frame", nil, parent)
 
     container:SetPoint("TOPLEFT", 20, offsetY - 18)
@@ -288,8 +293,14 @@ function SettingsRows.WidgetSectionTop()
         - #SYL.Features.LIST * FEATURE_ROW_HEIGHT - SECTION_GAP
 end
 
+-- Returns the container and the heading. Callers that tear a section down
+-- and build it again need both: the heading is a font string on the parent,
+-- not a child of the container, so hiding the container alone left it behind
+-- and every rebuild stacked another one in the same place.
 function SettingsRows.AddSection(parent, title, offsetY)
-    return AddSection(parent, title, offsetY)
+    local container = AddSection(parent, title, offsetY)
+
+    return container, container.heading
 end
 
 function SettingsRows.WindowHeight()

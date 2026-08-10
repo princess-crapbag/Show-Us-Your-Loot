@@ -105,21 +105,29 @@ local function CreateTile(parent)
 end
 
 -- A tile is refilled rather than rebuilt, so everything the last renderer
--- created has to go. Regions and children are separate lists in this API and
--- forgetting either leaves ghosts stacked on the new content.
-local function ClearTile(tile)
+-- created has to go.
+--
+-- HIDDEN, NOT REPARENTED. The first version called region:SetParent(nil),
+-- which is not a thing to rely on for a texture or a font string — and it
+-- leaked either way, because Theme keeps a strong reference to every region
+-- it has coloured. Hiding is enough: a hidden region draws nothing, and
+-- DashboardParts reuses what is already there rather than making more.
+function DashboardTab.ClearTile(tile)
     for _, region in ipairs({ tile.body:GetRegions() }) do
         region:Hide()
-        region:SetParent(nil)
     end
 
     for _, child in ipairs({ tile.body:GetChildren() }) do
         child:Hide()
-        child:SetParent(nil)
     end
 
     tile.rows = {}
     tile.caption = nil
+
+    -- Set by Headline, read by Row. Tiles are reused by grid position, so a
+    -- leftover value pushed the next widget in that slot 24px down and its
+    -- last row out of the body — reachable just by toggling a widget off.
+    tile.rowTop = nil
 end
 
 --------------------------------------------------------------------------
@@ -182,7 +190,7 @@ function DashboardTab.Create(parent, config)
             local tile = self.tiles[index] or CreateTile(self)
             self.tiles[index] = tile
 
-            ClearTile(tile)
+            DashboardTab.ClearTile(tile)
 
             tile.title:SetText(string.upper(widget.label))
             tile.more:SetText(widget.tab and (widget.tab:gsub("^%l", string.upper) .. " ›") or "")

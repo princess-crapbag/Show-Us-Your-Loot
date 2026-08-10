@@ -168,6 +168,25 @@ try:
 except Exception as err:  # noqa: BLE001
     check("an all-off dashboard refreshes rather than throwing", False, err)
 
+# --- tile reuse -----------------------------------------------------------
+#
+# Tiles are pooled by grid position, and Headline sets tile.rowTop so its rows
+# clear the big number. If ClearTile does not reset it, the next widget in that
+# slot starts 24px low and loses its bottom row — reachable just by switching a
+# widget off, which changes the widget-to-tile mapping.
+tile = lua.globals().MakeTile()
+
+SYL.DashboardParts.Headline(tile, 7, "on the team")
+check("a headline records an offset", tile["rowTop"] == 24)
+
+SYL.DashboardTab.ClearTile(tile)
+check("clearing a tile drops the offset", tile["rowTop"] is None)
+check("and drops the rows with it", len(list(tile["rows"].values())) == 0)
+
+# A row on a cleared tile starts at the top again rather than 24px down.
+SYL.DashboardParts.Row(tile, 1, "Something", "1")
+check("a row on a cleared tile has no offset applied", tile["rowTop"] is None)
+
 print()
 print("FAILURES:", failures or "none")
 sys.exit(1 if failures else 0)

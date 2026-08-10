@@ -110,6 +110,11 @@ CommandList.ENTRIES = {
     { developer = true, command = "debug", description = "Toggle debug messages" },
     { command = "announce", description = "Toggle capture messages" },
     {
+        command = "link",
+        argument = "add|remove NAME URL",
+        description = "The links shown on the dashboard",
+    },
+    {
         command = "keys",
         description = "Mythic+ keystones on this account",
     },

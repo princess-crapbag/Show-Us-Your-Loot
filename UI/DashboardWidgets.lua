@@ -227,9 +227,9 @@ DashboardWidgets.RENDERERS.links = function(tile)
 
     if #links == 0 then
         DashboardParts.Empty(tile,
-            "No links yet. Add your guild's Warcraft Logs, Raider.IO or Discord "
-            .. "in Settings — clicking one opens a box to copy from, because "
-            .. "an addon cannot open a browser.")
+            "No links yet. /syl link add Logs https://… adds one. Clicking a "
+            .. "link opens a box to copy from, because an addon cannot open a "
+            .. "browser or write to your clipboard.")
 
         return
     end

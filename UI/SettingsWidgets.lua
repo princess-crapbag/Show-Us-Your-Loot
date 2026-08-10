@@ -156,8 +156,14 @@ function SettingsWidgets.Rebuild()
         return
     end
 
+    -- The heading too. It belongs to the window rather than the container, so
+    -- hiding only the container stacked a fresh "DASHBOARD WIDGETS" on top of
+    -- the old one every time the order changed.
+    if SettingsWidgets.container.heading then
+        SettingsWidgets.container.heading:Hide()
+    end
+
     SettingsWidgets.container:Hide()
-    SettingsWidgets.container:SetParent(nil)
     SettingsWidgets.container = nil
 
     SettingsWidgets.Build(
