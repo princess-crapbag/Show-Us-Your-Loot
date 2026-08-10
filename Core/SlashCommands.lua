@@ -376,6 +376,15 @@ end
 -- What this account's characters are holding. Only ever this account's:
 -- an addon cannot read anybody else's bags. See Core/Keystone.lua.
 COMMANDS.keys = function()
+    -- The Keys tab is a real screen now, and it is where requests are
+    -- answered. Printing to chat instead would make the notification's own
+    -- instruction ("/syl keys to answer") a dead end.
+    if SYL.OpenMainWindowAt then
+        SYL:OpenMainWindowAt("keys")
+
+        return
+    end
+
     if not SYL.Keystone.IsAvailable() then
         SYL:Print("This client does not expose the Mythic+ keystone API.")
 

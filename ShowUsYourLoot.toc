@@ -59,6 +59,8 @@ Core\TradeTracker.lua
 Core\RaidSchedule.lua
 Core\GuildCalendar.lua
 Core\ScheduleCommands.lua
+Core\KeystoneRequests.lua
+Core\KeystoneRequestSync.lua
 Core\Export.lua
 Core\DataExport.lua
 Core\CommandList.lua
@@ -93,6 +95,8 @@ UI\DashboardParts.lua
 UI\DashboardTab.lua
 UI\DashboardWidgets.lua
 UI\ScheduleWidgets.lua
+UI\KeyRequestList.lua
+UI\KeysPanel.lua
 UI\RaidersDetail.lua
 UI\RaidersPanel.lua
 UI\BossLoot.lua

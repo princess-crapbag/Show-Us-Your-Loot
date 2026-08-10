@@ -89,6 +89,13 @@ local function OnPlayerLogin()
         SYL.KeystoneSync.Enable()
     end
 
+    -- A third switch again, and separate for the same reason: sharing tells
+    -- the guild what you hold, this sends a message to one named person and
+    -- expects one back. Wanting either without the other is reasonable.
+    if SYL.Features.IsEnabled("keyRequests") then
+        SYL.KeystoneRequestSync.Enable()
+    end
+
     -- The reply arrives as GUILD_ROSTER_UPDATE.
     SYL.Guild.Request()
 

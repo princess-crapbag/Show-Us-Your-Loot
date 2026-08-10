@@ -6,102 +6,28 @@
 -- before any of these existed. That file owns the chrome, the tab state and
 -- the loot list; this one owns what the other five tabs draw.
 --
--- WHERE THE ROUTING PANELS COME FROM. Nights and Keys are designed and agreed
--- but not yet drawn in the window — the raid and key screens still exist as
--- separate windows and still work. So each tab says what it is for and opens
--- the window that answers it today.
+-- EVERY TAB IS A REAL SCREEN NOW. This file used to hold a routing panel per
+-- tab — a heading, a blurb, and a button that opened the old standalone
+-- window — because folding six windows into one at once would have meant a
+-- broken dashboard and a broken roster together, with no way to tell which
+-- broke first. That was the right order and it is finished: Raiders, Bosses,
+-- Nights and Keys are all drawn in the window, and the routing scaffolding it
+-- took to get here has been deleted rather than left behind.
 --
--- That is deliberate rather than lazy. Folding six windows into one is a
--- refactor that touches every one of them, and doing it in the same change as
--- new widgets would mean a broken dashboard and a broken roster at once, with
--- no way to tell which broke. The tab is real, the route is real, and the
--- panel replaces the route one screen at a time.
---
--- RAIDERS AND BOSSES ARE REPLACED. They are drawn by UI/RaidersPanel.lua and
--- UI/BossesPanel.lua and no longer route anywhere. The windows they replaced
--- still load and are still reachable by slash command — nothing has been
--- deleted in the same change that added a screen, so a panel that turns out
--- wrong in game leaves the old answer standing.
+-- The windows those panels replaced still load and are still reachable by
+-- slash command. Nothing was deleted in the same change that added a screen,
+-- so a panel that turns out wrong in game leaves the old answer standing —
+-- see `/syl due window`, `/syl raids`, `/syl bosses`, `/syl roster`.
 
 local SYL = _G.ShowUsYourLoot
-local Theme = SYL.Theme
 
 local TabPanels = {}
 SYL.TabPanels = TabPanels
 
--- key, heading, what it answers, and the window that answers it today.
-local ROUTES = {
-    {
-        mode = "keys",
-        title = "Mythic+ keys",
-        blurb = "What your characters are holding, and what your guild is "
-            .. "holding if they run this addon with key sharing on. Nothing "
-            .. "can read another player's bags, so the list only ever holds "
-            .. "what somebody's addon sent.",
-        button = "Print keys to chat",
-        open = function()
-            SlashCmdList["SHOWUSYOURLOOT"]("keys")
-        end,
-    },
-}
-
-local function CreateRoutePanel(parent, route)
-    local panel = CreateFrame("Frame", nil, parent)
-
-    panel:SetPoint("TOPLEFT", 16, -100)
-    panel:SetPoint("BOTTOMRIGHT", -16, 52)
-
-    local title = Theme.CreateText(panel, Theme.sizes.title, "textPrimary")
-    title:SetPoint("TOPLEFT", 2, -4)
-    title:SetText(string.upper(route.title))
-
-    local blurb = Theme.CreateText(panel, Theme.sizes.row, "textSecondary")
-    blurb:SetPoint("TOPLEFT", 2, -30)
-    blurb:SetWidth(520)
-    blurb:SetJustifyH("LEFT")
-    blurb:SetWordWrap(true)
-    blurb:SetText(route.blurb)
-
-    local open = Theme.CreateButton(panel, 170, 26, route.button, route.open)
-    open:SetPoint("TOPLEFT", 2, -116)
-
-    local previous = open
-
-    if route.second then
-        local second = Theme.CreateButton(
-            panel, 150, 26, route.second, route.openSecond
-        )
-
-        second:SetPoint("LEFT", previous, "RIGHT", 8, 0)
-        previous = second
-    end
-
-    if route.third then
-        local third = Theme.CreateButton(
-            panel, 150, 26, route.third, route.openThird
-        )
-
-        third:SetPoint("LEFT", previous, "RIGHT", 8, 0)
-    end
-
-    -- Said plainly rather than left for somebody to work out from the fact
-    -- that a button opens a different window.
-    local note = Theme.CreateText(panel, Theme.sizes.rowSmall, "textMuted")
-    note:SetPoint("TOPLEFT", 2, -152)
-    note:SetWidth(520)
-    note:SetJustifyH("LEFT")
-    note:SetWordWrap(true)
-    note:SetText(
-        "This tab opens the existing window for now. It is being moved into "
-        .. "the main window one screen at a time."
-    )
-
-    panel:Hide()
-
-    return panel
-end
-
--- Returns mode -> panel. MainWindow shows one and hides the rest.
+-- Returns mode -> panel. MainWindow shows one and hides the rest, so the keys
+-- here have to match the tab keys exactly — a tab whose key names no panel
+-- selects a mode nothing matches, which blanks the strip and draws the body
+-- anyway, and reads as a rendering glitch rather than a bad link.
 function TabPanels.CreateAll(parent, config)
     local panels = {}
 
@@ -112,10 +38,7 @@ function TabPanels.CreateAll(parent, config)
     panels.raiders = SYL.RaidersPanel.Create(parent)
     panels.bosses = SYL.BossesPanel.Create(parent)
     panels.nights = SYL.NightsPanel.Create(parent)
-
-    for _, route in ipairs(ROUTES) do
-        panels[route.mode] = CreateRoutePanel(parent, route)
-    end
+    panels.keys = SYL.KeysPanel.Create(parent)
 
     return panels
 end

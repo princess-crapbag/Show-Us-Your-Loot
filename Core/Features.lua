@@ -76,6 +76,12 @@ Features.LIST = {
             .. "to whoever received it. Changes the score.",
     },
     {
+        key = "keyRequests",
+        label = "Ask for guild keystones",
+        cost = "Lets you ask a guildie to run their key, and them to ask you. "
+            .. "Sends a message to that one person. Off unless you turn it on.",
+    },
+    {
         key = "developer",
         label = "Developer tools",
         cost = "Adds /syl dev and the event inspector. For diagnosing the "
@@ -108,6 +114,10 @@ local DEFAULTS = {
     -- points between two real people and a guild is entitled to say they would
     -- rather it did not.
     tradeTracking = true,
+
+    -- Off, like everything else that sends a message to another player. It is
+    -- also the only one that sends to a named person rather than to a channel.
+    keyRequests = false,
 
     developer = false,
 }

@@ -510,6 +510,20 @@ function SYL:OpenMainWindow()
     SYL.WindowStack.ToggleWindow(CreateMainWindow())
 end
 
+-- Opens the window already showing one tab. Added for the key request
+-- notification, which tells somebody a request arrived and then has to be able
+-- to put them on the screen that answers it — "/syl keys to answer" printed in
+-- chat is only useful if typing it lands somewhere.
+function SYL:OpenMainWindowAt(mode)
+    local window = CreateMainWindow()
+
+    SYL.WindowStack.ShowWindow(window)
+
+    if mode then
+        SetMode(mode, nil)
+    end
+end
+
 function SYL:RefreshMainWindow()
     if frame and frame:IsShown() then
         UpdateRows()
