@@ -275,20 +275,33 @@ DashboardWidgets.RENDERERS.recording = function(tile)
         table.insert(pieces, state[1] .. " " .. (state[2] and "on" or "off"))
     end
 
+    -- ONE LINE, BOTH HALVES. The strip is 54px tall, which leaves its body 18
+    -- — room for a single row of text. A stacked summary and caption, which is
+    -- what every other tile uses, would draw on top of each other here.
+    local stale = latest == 0
+
+    local when = SYL.Theme.CreateText(
+        tile.body, SYL.Theme.sizes.rowSmall, stale and "warning" or "textMuted"
+    )
+
+    when:SetPoint("RIGHT", -2, 0)
+    when:SetJustifyH("RIGHT")
+    when:SetText(
+        #drops .. " drops, " .. #nights .. " nights"
+        .. (stale
+            and " · nothing captured yet"
+            or (" · last captured " .. SYL.Utilities.FormatDateTime(latest)))
+    )
+
     local summary = SYL.Theme.CreateText(
         tile.body, SYL.Theme.sizes.rowSmall, "textPrimary"
     )
-    summary:SetPoint("TOPLEFT", 2, -2)
-    summary:SetText(table.concat(pieces, "   ·   "))
 
-    -- The whole point of this widget: a date three weeks old says something
-    -- is wrong far faster than a total that is merely lower than expected.
-    DashboardParts.Caption(tile,
-        #drops .. " drops, " .. #nights .. " nights this season"
-        .. (latest > 0
-            and (" · last captured " .. SYL.Utilities.FormatDateTime(latest))
-            or " · nothing captured yet"),
-        latest == 0 and "warning" or "textMuted")
+    summary:SetPoint("LEFT", 2, 0)
+    summary:SetPoint("RIGHT", when, "LEFT", -12, 0)
+    summary:SetJustifyH("LEFT")
+    summary:SetWordWrap(false)
+    summary:SetText(table.concat(pieces, "   ·   "))
 end
 
 -- Waiting on the calendar -------------------------------------------------

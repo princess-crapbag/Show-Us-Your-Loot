@@ -2,10 +2,18 @@
 --
 -- The dashboard: six tiles on a fixed grid, plus a full-width strip.
 --
--- THE GRID IS HARD-CODED, and that is the point. Three equal columns, a top
--- row 30% taller than the bottom one — 286 against 220. Sizing to content
--- would let the two list tiles decide their own height, which is the very
--- ratio being pinned, and the layout would shift every time a number changed.
+-- THE RATIO IS FIXED, THE HEIGHTS ARE NOT, and the difference matters.
+--
+-- Aimee asked for a top row 30% taller than the bottom one. Fixed pixels —
+-- 286 and 220 — were the first attempt and they did not fit: with the strip
+-- and the gaps that is 580px of content in a frame 444px tall inside a 596px
+-- window, so the bottom row hung off the end of the screen.
+--
+-- So the rows are computed from the height actually available, holding tall =
+-- 1.3 x short. That keeps her ratio exactly, fills the window rather than
+-- guessing at it, and means a resized window lays out properly instead of
+-- clipping. What must not happen is sizing to *content*, which would let the
+-- two list tiles decide their own height — the very ratio being pinned.
 --
 -- Tiles are built once and refilled on every show. Rebuilding frames per
 -- refresh leaks one set per refresh, and the dashboard refreshes whenever
@@ -22,9 +30,32 @@ SYL.DashboardTab = DashboardTab
 
 local COLUMNS = 3
 local GAP = 10
-local TALL_ROW = 286
-local SHORT_ROW = 220
 local STRIP_HEIGHT = 54
+
+-- Aimee's number: the top row is 30% taller than the bottom one.
+local TALL_RATIO = 1.3
+
+-- Only used before the frame has been laid out once, which is the very first
+-- draw. Proportioned the same way so the first frame is not visibly different.
+local FALLBACK_SHORT = 160
+
+-- Returns the two row heights for the space there is. Solving
+-- tall + gap + short + gap + strip = height, with tall = ratio x short.
+local function RowHeights(available, hasStrip)
+    local spare = available
+        - (GAP * 2)
+        - (hasStrip and (STRIP_HEIGHT + GAP) or 0)
+
+    local short = spare / (TALL_RATIO + 1)
+
+    -- A window dragged very small should clip gracefully rather than compute
+    -- negative heights and throw.
+    if not short or short < 60 then
+        short = FALLBACK_SHORT
+    end
+
+    return math.floor(short * TALL_RATIO), math.floor(short)
+end
 
 local function CreateTile(parent)
     local tile = CreateFrame("Button", nil, parent)
@@ -117,12 +148,29 @@ function DashboardTab.Create(parent, config)
         local column, row = 0, 0
         local width = (self:GetWidth() - GAP * (COLUMNS - 1)) / COLUMNS
 
-        -- GetWidth is zero before the frame has been laid out once, which
-        -- happens on the very first show. A sane fallback keeps the first
-        -- draw from collapsing to nothing.
+        -- GetWidth and GetHeight are zero before the frame has been laid out
+        -- once, which happens on the very first show. Sane fallbacks keep the
+        -- first draw from collapsing to nothing.
         if not width or width <= 1 then
             width = 300
         end
+
+        local hasStrip = false
+
+        for _, widget in ipairs(widgets) do
+            if (widget.span or 1) >= COLUMNS then
+                hasStrip = true
+            end
+        end
+
+        local available = self:GetHeight()
+
+        if not available or available <= 1 then
+            available = FALLBACK_SHORT * (TALL_RATIO + 1) + GAP * 2
+                + (hasStrip and (STRIP_HEIGHT + GAP) or 0)
+        end
+
+        local tallRow, shortRow = RowHeights(available, hasStrip)
 
         for index, widget in ipairs(widgets) do
             local tile = self.tiles[index] or CreateTile(self)
@@ -152,7 +200,7 @@ function DashboardTab.Create(parent, config)
                 tile:SetHeight(STRIP_HEIGHT)
             else
                 tile:SetWidth(width)
-                tile:SetHeight(row == 0 and TALL_ROW or SHORT_ROW)
+                tile:SetHeight(row == 0 and tallRow or shortRow)
             end
 
             local x = column * (width + GAP)
@@ -160,7 +208,7 @@ function DashboardTab.Create(parent, config)
 
             -- Rows above this one, at whichever height each of them was.
             for above = 0, row - 1 do
-                y = y + (above == 0 and TALL_ROW or SHORT_ROW) + GAP
+                y = y + (above == 0 and tallRow or shortRow) + GAP
             end
 
             tile:SetPoint("TOPLEFT", x, -y)

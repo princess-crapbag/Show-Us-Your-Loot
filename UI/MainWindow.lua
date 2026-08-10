@@ -243,7 +243,9 @@ local function CreateTitleBar(parent)
         end
     end)
 
-    view.settingsButton:SetPoint("TOPRIGHT", -34, -18)
+        -- Clear of the close button, which is 32px wide at -6: that spans -38 to
+    -- -6, so anything starting nearer than -44 sits underneath it.
+view.settingsButton:SetPoint("TOPRIGHT", -44, -14)
 
     SYL.Tooltips.Attach(
         view.settingsButton,
