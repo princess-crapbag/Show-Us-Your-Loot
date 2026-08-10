@@ -20,9 +20,9 @@ upgrade, who turned up, and what each boss has given.
 
 - **Repo:** https://github.com/princess-crapbag/Show-Us-Your-Loot (public)
 - **CurseForge:** project 1642383, live at **v0.2.0-alpha**
-- **`main` is 41 commits ahead of that tag.** All of it is on GitHub and in
+- **`main` is 44 commits ahead of that tag.** All of it is on GitHub and in
   Aimee's game. **None of it has reached a user.**
-- 100 Lua files in the `.toc`, 15 test suites in `tools/`.
+- 105 Lua files in the `.toc`, 17 test suites in `tools/`.
 
 **Aimee runs the addon from a symlink**, `Interface/AddOns/ShowUsYourLoot ->
 Desktop/ShowUsYourLoot`. Edits are live in game immediately; only a `/reload`
@@ -35,11 +35,14 @@ late. That was the top item on this page for a day and it is closed. What she
 reported back became the work below: several tabs were placeholders, and not
 every list of people honoured the raid team / guild / everyone order.
 
-**The Raiders board has NOT drawn.** It was built after she went to bed. Static
-checks and 15 suites pass, which establishes that it loads, that every path
-runs and that the pane's arithmetic agrees with the bar beside it — not that a
-bar is legible, that the average line lands where the eye expects, or that 16
-rows fit the space they were measured for.
+**The three new tabs have NOT drawn.** Raiders, Bosses and Nights were all
+built after she went to bed. Static checks and 17 suites pass, which
+establishes that they load, that every path runs, and that the numbers agree
+with each other — not that a bar is legible, that the average line lands where
+the eye expects, that 16 rows fit the space they were measured for, or that a
+calendar cell is big enough to read. **Every layout constant in them was
+measured against a 900×596 window on paper and has never been seen.** Expect
+to spend the first ten minutes nudging sizes.
 
 **2. The fairness maths has still never run on a real raid night.** Five passes
 have now changed how attendance is counted, how droughts are measured, what
@@ -103,7 +106,7 @@ again:
 python -m venv .venv && .venv/Scripts/python -m pip install lupa
 ```
 
-Fifteen suites. Each reads its Lua straight out of the addon, so none can
+Seventeen suites. Each reads its Lua straight out of the addon, so none can
 drift from the code, and each exits non-zero on failure. `release.yml` runs the
 lot before building a zip, so a failing suite blocks a release.
 
@@ -125,6 +128,13 @@ The four that matter most:
   way that screen can be wrong while looking fine.
 - **`test_audience`** — the raid team / guild / everyone order, the computed
   default's fall-through, and the three surfaces that used to ignore it.
+- **`test_bossespanel`** — **counts calls to `LootTable.GetMissing`** rather
+  than trusting that the journal walk stays behind its button. A panel that
+  quietly walked it would look completely normal and freeze the game.
+- **`test_nightspanel`** — the calendar arithmetic, and that two sessions on
+  one night stay one night. Its past-midnight fixture is a full 24 hours apart
+  on purpose: a realistic gap lands on the same day in some timezones and not
+  others, so the first version passed or failed depending on the machine.
 
 **Every test written this session was confirmed to fail on a planted fault
 before being trusted.** Do the same. A test that has never failed proves
@@ -148,9 +158,14 @@ comment to get under the limit** — that happened twice before the escape hatch
 existed.
 
 **A new screen does not have to grow `MainWindow`.** `UI/TabPanels.lua` builds
-the panels and hands back `mode -> panel`, so the Raiders board was added
-without touching `MainWindow` at all. The size limit is not what stands between
-here and the remaining tabs.
+the panels and hands back `mode -> panel`, so three whole tabs were added
+without touching `MainWindow` by a line. The size limit is not what stands
+between here and the remaining tab.
+
+**A panel is two files, not one.** Raiders, Bosses and Nights each went over
+400 lines as a single file and each split the same way: the grid or the rail in
+one, the detail pane in the other. Assume that shape from the start rather than
+writing one file and splitting it afterwards.
 
 ### Write commit messages from the diff, not from the intent
 
@@ -175,16 +190,29 @@ order is the argument and deleting the finished ones hides it.
 
 ### Tier 1 — what she asked for after loading it
 
-1. **The route panels are stubs.** Raiders, Nights, Bosses and Keys each drew a
-   heading, a blurb and a button opening the old window. **1a Raiders is DONE**
-   — `UI/RaidersPanel.lua`. Remaining, in value order: **1b Bosses** (boss rail
-   plus that boss's loot table, defaulting to items that have *not* dropped;
-   needs no new data source, the Journal is already read — open question is
-   that it lists drops for any spec, so "never dropped" includes items nobody
-   in the raid can use), **1c Keys** (the request flow is fully specified in §4
-   of the pre-rewrite file and in the mockups), **1d Nights** (the past half —
-   month calendar, shading, kill counts — needs nothing new; only the accented
-   *next* night is blocked on item 3).
+1. **The route panels were stubs.** Raiders, Nights, Bosses and Keys each drew
+   a heading, a blurb and a button opening the old window. **Three of the four
+   are DONE** and only Keys still routes.
+
+   - **1a Raiders — DONE.** `UI/RaidersPanel.lua`, `UI/RaidersDetail.lua`.
+   - **1b Bosses — DONE.** `UI/BossesPanel.lua`, `UI/BossLoot.lua`. Boss rail
+     plus that boss's loot table, defaulting to what has *not* dropped. The
+     any-spec caveat is printed on the pane rather than left in a comment:
+     the Journal lists what a boss can drop for every specialisation, so
+     "never dropped" includes items nobody in the raid can use.
+   - **1d Nights — DONE except the accent.** `UI/NightsPanel.lua`,
+     `UI/NightStats.lua`, `Core/NightIndex.lua`. Month grid with a week
+     toggle, nights shaded with their kill count, one stat panel below. The
+     **next** raid night is still not drawn — that is item 3, not an oversight,
+     and the caption says so.
+   - **1c Keys — STILL A ROUTE.** The only one left. The sortable list is
+     easy; the request flow is the rest of it and is fully specified (role
+     picker on the ask; approve, tentative, deny, whisper, dismiss for the
+     holder; a "requests to you" list so a dismissed popup is never a lost
+     request; per account throughout; online only; only Denied gets "Ask
+     again"; cleared at reset in the existing sweep). **It sends messages
+     between players, so like officer sync it needs a second client more than
+     it needs code** — which is why it was left rather than guessed at.
 2. **DONE. Audience scope on every list of people.** Three surfaces never asked
    `Core/Audience.lua`: the Readiness tile (called `RaidTeam.Filter` directly,
    so it was the one list that could not widen), the end-of-night summary (swept
@@ -530,9 +558,11 @@ Each of these cost real time.
 which is why `.pkgmeta` keeps them out of the user-facing changelog.
 
 The late 2026-08-09 session, after Aimee confirmed the dashboard drew: the
-audience scope wired into the three screens that never asked for it, and the
-Raiders tab turned from a routing stub into a board with a detail pane that
-shows the arithmetic behind a raider's number.
+audience scope wired into the three screens that never asked for it, then
+Raiders, Bosses and Nights turned from routing stubs into real screens — a
+board with a detail pane that shows the arithmetic behind a raider's number, a
+boss rail with the loot table that boss still owes you, and a month calendar
+keyed on the night a raid belongs to rather than the day its clock reached.
 
 The earlier 2026-08-09 session, in order: the audience scope and quiet-by-default chat,
 the record-id backfill, the Timewalking drought fix, recruits before they join,
