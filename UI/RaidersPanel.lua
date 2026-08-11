@@ -289,6 +289,47 @@ function RaidersPanel.Create(parent)
         .. "Shared with every other list of people."
     )
 
+    -- THE ROSTER AND PLAYERS WINDOWS ARE REACHED FROM HERE. This tab used to
+    -- be a panel of three buttons that opened them, and turning it into a real
+    -- board deleted all three — which left the roster behind /syl roster and
+    -- nothing else, so it read as having been removed. It had not; there was
+    -- simply no longer a door.
+    --
+    -- The intended end state is Players and Roster merged into this board,
+    -- because the difference between those two screens was always the audience
+    -- and that is the button above. Until that is built these open the windows
+    -- that answer it today, which is what the tab did before.
+    frame.rosterButton = Theme.CreateButton(frame, 110, 20, "Roster", function()
+        if SYL.OpenRosterWindow then
+            SYL:OpenRosterWindow()
+        end
+    end)
+
+    frame.rosterButton:SetPoint("LEFT", frame.audienceButton, "RIGHT", 10, 0)
+
+    SYL.Tooltips.Attach(
+        frame.rosterButton,
+        "Open the roster",
+        "Who is on the raid team, their roles, and adding somebody who has "
+        .. "not joined the guild yet. Ticking TEAM there is what the raid team "
+        .. "scope on this board reads."
+    )
+
+    frame.playersButton = Theme.CreateButton(frame, 110, 20, "Players", function()
+        if SYL.OpenPlayerWindow then
+            SYL:OpenPlayerWindow()
+        end
+    end)
+
+    frame.playersButton:SetPoint("LEFT", frame.rosterButton, "RIGHT", 8, 0)
+
+    SYL.Tooltips.Attach(
+        frame.playersButton,
+        "Open players",
+        "Per-player totals: upgrades, attendance and drought, with a detail "
+        .. "window on any row."
+    )
+
     -- The detail pane, on the right and always present. An empty pane that
     -- says what to do beats a pane that appears on first click, which reads
     -- as the window changing shape under you.

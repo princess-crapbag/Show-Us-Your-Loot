@@ -279,6 +279,15 @@ check(
     trialist and trialist["notRankedReason"],
 )
 
+# --- the way back to the roster --------------------------------------------
+#
+# Turning this tab from a routing panel into a board deleted the three buttons
+# that were the only way into the roster and players windows, which left the
+# roster behind /syl roster and nothing else — it read as having been removed.
+# Asserted because a missing button is invisible to every other test here.
+for name in ("rosterButton", "playersButton"):
+    check(f"the panel still offers {name}", panel[name] is not None)
+
 # --- the detail pane renders for each of those ----------------------------
 for label, entry in (
     ("a ranked raider", selunne),
