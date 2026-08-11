@@ -120,7 +120,15 @@ function Sync.Send(record)
     -- Still one message in practice: a drop header is well under a single
     -- chunk. It goes through the chunker anyway so there is one wire format
     -- rather than two.
-    return SYL.SyncTransport.Send(Encode(record), record.id)
+    local sent = SYL.SyncTransport.Send(Encode(record), record.id)
+
+    -- The roll list follows as its own payload rather than being folded into
+    -- the header. Two reasons: the header stays exactly the shape older
+    -- clients already parse, and a roll list that fails to arrive leaves a
+    -- record that is merely partial rather than one that is missing.
+    SYL.SyncRolls.Send(record)
+
+    return sent
 end
 
 -- Only merges what is missing. A record captured locally is always richer,
@@ -189,6 +197,13 @@ end
 -- Called by the transport once a payload has arrived complete and from a
 -- sender it is willing to accept.
 local function OnPayload(payload, sender)
+    -- Roll lists and backfill requests share the transport and are handled by
+    -- Core/SyncRolls.lua. Dispatched on the protocol marker rather than by
+    -- registering a second prefix, so there is still one channel to audit.
+    if SYL.SyncRolls.OnPayload(payload, sender) then
+        return
+    end
+
     local decoded = Decode(payload)
 
     if not decoded or not decoded.id then

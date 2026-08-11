@@ -109,7 +109,7 @@ CommandList.ENTRIES = {
     },
     {
         command = "sync",
-        description = "Officer sync status and where drops came from",
+        description = "Sync status — add 'backfill' to ask for missing roll lists",
     },
     {
         command = "theme",

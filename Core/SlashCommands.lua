@@ -143,7 +143,25 @@ COMMANDS.tonight = function()
     SYL.RaidSummary.ReportCurrent()
 end
 
-COMMANDS.sync = function()
+COMMANDS.sync = function(remainder)
+    if SYL.Utilities.Trim(remainder or "") == "backfill" then
+        if not SYL.Sync.IsEnabled() then
+            SYL:Write("Officer sync is switched off in Settings.")
+
+            return
+        end
+
+        local asked = SYL.SyncRolls.RequestBackfill()
+
+        SYL:Write(asked == 0
+            and "Nothing to backfill — every drop here has its roll list."
+            or ("Asked the raid for roll lists on " .. asked
+                .. (asked == 1 and " drop." or " drops.")
+                .. " Anybody who captured them will answer."))
+
+        return
+    end
+
     SYL.Sync.ReportStatus()
 end
 

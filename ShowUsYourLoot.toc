@@ -33,6 +33,7 @@ Core\LootHistoryStore.lua
 Core\LootHistory.lua
 Core\SyncTransport.lua
 Core\Sync.lua
+Core\SyncRolls.lua
 Core\Events.lua
 Core\Analytics.lua
 Core\PlayerHistory.lua
