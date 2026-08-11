@@ -19,11 +19,76 @@ SYL.Links = Links
 
 local MAX_LINKS = 8
 
-local DEFAULTS = {
-    { label = "Warcraft Logs", url = "https://www.warcraftlogs.com/" },
-    { label = "Raider.IO", url = "https://raider.io/" },
-    { label = "Guild Discord", url = "" },
-}
+-- BUILT FROM YOUR OWN GUILD, not hardcoded. Both sites key a guild page on
+-- region, realm and guild name, and the client knows all three — so the
+-- default links land on this guild's own page rather than on a site's front
+-- door, and they do it for anybody who installs the addon rather than only
+-- for the person whose URLs were pasted in.
+--
+-- Falls back to the front page when the client has not answered yet, which is
+-- the case at login before GUILD_ROSTER_UPDATE arrives, and for anybody not
+-- in a guild at all.
+local REGIONS = { "us", "kr", "eu", "tw", "cn" }
+
+local function Region()
+    if not GetCurrentRegion then
+        return "us"
+    end
+
+    local ok, index = pcall(GetCurrentRegion)
+
+    return (ok and REGIONS[index]) or "us"
+end
+
+-- Both sites use the same slug shape: lowercase, spaces and apostrophes out,
+-- hyphens between words. "Twisting Nether" becomes twisting-nether.
+local function Slug(name)
+    if type(name) ~= "string" or name == "" then
+        return nil
+    end
+
+    local slug = name:gsub("'", ""):gsub("%s+", "-"):lower()
+
+    return slug ~= "" and slug or nil
+end
+
+Links.Slug = Slug
+
+local function GuildPaths()
+    local guild = SYL.Guild and SYL.Guild.GetGuildName and SYL.Guild.GetGuildName()
+    local realm = GetRealmName and GetRealmName()
+
+    local guildSlug = Slug(guild)
+    local realmSlug = Slug(realm)
+
+    if not guildSlug or not realmSlug then
+        return nil
+    end
+
+    return Region() .. "/" .. realmSlug .. "/" .. guildSlug
+end
+
+Links.GuildPaths = GuildPaths
+
+local function Defaults()
+    local path = GuildPaths()
+
+    return {
+        {
+            label = "Warcraft Logs",
+            url = path
+                and ("https://www.warcraftlogs.com/guild/" .. path)
+                or "https://www.warcraftlogs.com/",
+        },
+        {
+            label = "Raider.IO",
+            url = path
+                and ("https://raider.io/guilds/" .. path)
+                or "https://raider.io/",
+        },
+        { label = "Guild Discord", url = "" },
+    }
+end
 
 local function Store()
     if not ShowUsYourLootDB then
@@ -33,7 +98,7 @@ local function Store()
     if not ShowUsYourLootDB.links then
         ShowUsYourLootDB.links = {}
 
-        for _, link in ipairs(DEFAULTS) do
+        for _, link in ipairs(Defaults()) do
             table.insert(ShowUsYourLootDB.links, {
                 label = link.label,
                 url = link.url,
@@ -42,6 +107,46 @@ local function Store()
     end
 
     return ShowUsYourLootDB.links
+end
+
+-- The front pages the first version shipped. A link still holding exactly one
+-- of these was never edited by anybody, so replacing it with the guild page is
+-- an upgrade rather than overwriting somebody's choice.
+local FRONT_PAGES = {
+    ["https://www.warcraftlogs.com/"] = "Warcraft Logs",
+    ["https://raider.io/"] = "Raider.IO",
+}
+
+-- Run when the guild name becomes known, which is not at login — the roster
+-- arrives on GUILD_ROSTER_UPDATE, and the links are seeded before that. So
+-- this is a second pass rather than a migration: a migration would have to
+-- guess a guild name it cannot have yet.
+--
+-- Only ever touches a URL that is still one of the shipped front pages, so a
+-- link somebody typed is never changed. Returns how many moved.
+function Links.RefreshDefaults()
+    local store = Store()
+
+    if not store or not GuildPaths() then
+        return 0
+    end
+
+    local defaults = {}
+
+    for _, link in ipairs(Defaults()) do
+        defaults[link.label] = link.url
+    end
+
+    local changed = 0
+
+    for _, link in ipairs(store) do
+        if FRONT_PAGES[link.url or ""] == link.label and defaults[link.label] then
+            link.url = defaults[link.label]
+            changed = changed + 1
+        end
+    end
+
+    return changed
 end
 
 function Links.List()
@@ -184,5 +289,12 @@ function Links.ShowCopyBox(link)
         copyFrame.hint:SetText("Press Ctrl-C to copy. Escape closes this.")
     end
 
-    copyFrame:Show()
+    -- Through the stack rather than Show(), so it is placed clear of the
+    -- windows already open. It used to show itself, which meant it opened
+    -- centred on top of the main window every time.
+    if SYL.WindowStack then
+        SYL.WindowStack.ShowWindow(copyFrame)
+    else
+        copyFrame:Show()
+    end
 end

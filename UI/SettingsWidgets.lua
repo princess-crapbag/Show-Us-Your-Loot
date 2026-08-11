@@ -1,20 +1,22 @@
 -- UI/SettingsWidgets.lua
 --
--- The dashboard widget list in Settings: a tick per widget, and arrows to
--- move one up or down.
+-- The dashboard widget list in Settings: a tick per widget.
 --
 -- Its own file because UI/SettingsRows.lua is already size-exempt, and adding
 -- a third section to it would mean either growing an exempt file or trimming
 -- comments to fit. Neither is a real fix. This is one section, built the same
 -- way the other two are and called from the same place.
 --
--- ARROWS RATHER THAN DRAG. Aimee asked for drag-to-reorder "if it doesnt
--- break the addon". Dragging inside a WoW settings panel means tracking the
--- cursor against a list of frames and re-anchoring on every move, which is a
--- lot of machinery for a list of eight; two arrows do the same job, cannot
--- drop a widget somewhere ambiguous, and are reachable without a mouse. The
--- saved order is identical either way, so a drag handle can replace them
--- later without touching Core/Dashboard.lua.
+-- REORDERING IS GONE, and only the buttons are. Aimee: "i cant see most of
+-- the dashboard widgets to rearrange them. im not sure people need to be able
+-- to rearrange them anymore." Every widget is a fixed size on a fixed grid, so
+-- moving one swaps two tiles and changes nothing else — which is not worth the
+-- two buttons per row it cost, or the height they forced.
+--
+-- Core/Dashboard.lua keeps Move, GetOrder and SetOrder untouched, and the
+-- saved order is still read and honoured. Nothing has been deleted: putting
+-- the control back is this file again, and any order somebody already saved
+-- still draws exactly as it did.
 
 local SYL = _G.ShowUsYourLoot
 local Theme = SYL.Theme
@@ -22,30 +24,36 @@ local Theme = SYL.Theme
 local SettingsWidgets = {}
 SYL.SettingsWidgets = SettingsWidgets
 
--- 48, not 34. The section is 380px wide and the note wraps at about 286 of
--- it, so four of the seven notes run to two lines: 3 top inset + 14 label + 2
--- + 26 of note is 45, and a 34px row put the second line through the next
--- row's label.
-local ROW_HEIGHT = 48
+-- 24 and three across, which is what the rest of the settings window uses.
+-- It was 48 and one per line to fit a two-line note under every label; the
+-- note is a tooltip now, for the same reason the feature costs are.
+local ROW_HEIGHT = 24
+local COLUMNS = 3
 local HEADING_HEIGHT = 26
 
 local rows = {}
 
 function SettingsWidgets.SectionHeight()
-    return HEADING_HEIGHT + #SYL.Dashboard.WIDGETS * ROW_HEIGHT + 24
+    return HEADING_HEIGHT
+        + SYL.SettingsRows.GridRows(#SYL.Dashboard.WIDGETS, COLUMNS) * ROW_HEIGHT
+        + 24
 end
 
 local function CreateRow(parent, index, widget, onChanged)
     local row = CreateFrame("Frame", nil, parent)
 
+    local column = (index - 1) % COLUMNS
+    local line = math.floor((index - 1) / COLUMNS)
+    local width = (parent:GetWidth() or 360) / COLUMNS
+
     row:SetHeight(ROW_HEIGHT)
-    row:SetPoint("TOPLEFT", 0, -(index - 1) * ROW_HEIGHT)
-    row:SetPoint("TOPRIGHT", 0, -(index - 1) * ROW_HEIGHT)
+    row:SetWidth(width - 6)
+    row:SetPoint("TOPLEFT", column * width, -(line * ROW_HEIGHT))
 
     local box = CreateFrame("Button", nil, row)
 
     box:SetSize(14, 14)
-    box:SetPoint("TOPLEFT", 2, -3)
+    box:SetPoint("LEFT", 2, 0)
 
     box.background = Theme.CreateSolidTexture(box, "button", "BACKGROUND")
     box.background:SetAllPoints()
@@ -58,34 +66,16 @@ local function CreateRow(parent, index, widget, onChanged)
         onChanged()
     end)
 
-    local label = Theme.CreateText(row, Theme.sizes.row, "textPrimary")
-    label:SetPoint("TOPLEFT", box, "TOPRIGHT", 8, 1)
-    label:SetPoint("RIGHT", -70, 0)
+    local label = Theme.CreateText(row, Theme.sizes.rowSmall, "textPrimary")
+    label:SetPoint("LEFT", box, "RIGHT", 8, 0)
+    label:SetPoint("RIGHT", -4, 0)
     label:SetJustifyH("LEFT")
+    label:SetWordWrap(false)
     label:SetText(widget.label)
 
-    local note = Theme.CreateText(row, Theme.sizes.rowSmall, "textMuted")
-    note:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -2)
-    note:SetPoint("RIGHT", -70, 0)
-    note:SetJustifyH("LEFT")
-    note:SetWordWrap(true)
-    note:SetText(widget.note or "")
-
-    local down = Theme.CreateButton(row, 24, 18, "v", function()
-        if SYL.Dashboard.Move(widget.key, 1) then
-            onChanged()
-        end
-    end)
-
-    down:SetPoint("TOPRIGHT", -4, -4)
-
-    local up = Theme.CreateButton(row, 24, 18, "^", function()
-        if SYL.Dashboard.Move(widget.key, -1) then
-            onChanged()
-        end
-    end)
-
-    up:SetPoint("RIGHT", down, "LEFT", -4, 0)
+    -- The note is a hover rather than a second line, which is what let the
+    -- section go from seven tall rows to three short ones.
+    SYL.Tooltips.Attach(row, widget.label, widget.note or "")
 
     row.box = box
     row.widget = widget

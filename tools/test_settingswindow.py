@@ -105,6 +105,66 @@ check("the window is not", window <= content, f"{window} vs {content}")
 check("and is still usable rather than collapsed", window >= 320, window)
 check("so it has to scroll", SYL.SettingsRows.NeedsScrolling() is True)
 
+# --- the guild links -------------------------------------------------------
+#
+# The defaults point at this guild's own page rather than at a site's front
+# door, built from region, realm and guild name — all three of which the client
+# knows, so it works for anybody who installs the addon rather than only for
+# whoever pasted their URLs in.
+check(
+    "a slug is lowercase and hyphenated",
+    SYL.Links.Slug("Twisting Nether") == "twisting-nether",
+    SYL.Links.Slug("Twisting Nether"),
+)
+check(
+    "and drops apostrophes",
+    SYL.Links.Slug("Cho'gall") == "chogall",
+    SYL.Links.Slug("Cho'gall"),
+)
+check("an empty name has no slug", SYL.Links.Slug("") is None)
+
+# The stubbed client is in no guild, so there is no path and the links stay on
+# the front pages — which is the fallback that must not break anybody.
+lua.execute("ShowUsYourLootDB.links = nil")
+
+urls = [link["url"] for link in SYL.Links.List().values()]
+
+check(
+    "with no guild, the links are still valid front pages",
+    "https://www.warcraftlogs.com/" in urls and "https://raider.io/" in urls,
+    urls,
+)
+
+# With a guild, an untouched front page is upgraded and an edited one is not.
+lua.execute(
+    """
+    ShowUsYourLoot.Guild.GetGuildName = function() return 'Show Us Your Loot' end
+    GetRealmName = function() return "Cho'gall" end
+    GetCurrentRegion = function() return 1 end
+
+    ShowUsYourLootDB.links = {
+        { label = 'Warcraft Logs', url = 'https://www.warcraftlogs.com/' },
+        { label = 'Raider.IO', url = 'https://raider.io/mine' },
+    }
+    """
+)
+
+moved = SYL.Links.RefreshDefaults()
+links = {link["label"]: link["url"] for link in SYL.Links.List().values()}
+
+check("one untouched default was upgraded", moved == 1, moved)
+check(
+    "and it points at the guild page",
+    links["Warcraft Logs"]
+    == "https://www.warcraftlogs.com/guild/us/chogall/show-us-your-loot",
+    links["Warcraft Logs"],
+)
+check(
+    "a link somebody edited is left alone",
+    links["Raider.IO"] == "https://raider.io/mine",
+    links["Raider.IO"],
+)
+
 print()
 print("FAILURES:", failures or "none")
 sys.exit(1 if failures else 0)

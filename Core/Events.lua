@@ -153,6 +153,14 @@ end
 local lastGuildCount
 
 local function OnGuildRosterUpdate()
+    -- The guild name is only knowable once the roster has arrived, and the
+    -- default Warcraft Logs and Raider.IO links point at that guild's page.
+    -- Seeded at login they would have to be front pages, so they are upgraded
+    -- here — and only if nobody has edited them.
+    if SYL.Links and SYL.Links.RefreshDefaults then
+        SYL.Links.RefreshDefaults()
+    end
+
     local count = SYL.Guild.Refresh()
 
     -- A recruit who has now joined stops being a placeholder and becomes a

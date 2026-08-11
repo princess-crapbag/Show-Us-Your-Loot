@@ -11,7 +11,10 @@ local Theme = SYL.Theme
 local Widgets = SYL.Widgets
 local SettingsRows = SYL.SettingsRows
 
-local WINDOW_WIDTH = 420
+-- Wider than it was, because the content is now three columns across rather
+-- than one down. 560 still leaves room beside a 900px main window on any
+-- monitor the main window itself fits on.
+local WINDOW_WIDTH = 560
 
 local frame
 

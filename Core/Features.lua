@@ -30,34 +30,44 @@ SYL.Features = Features
 -- Ordered, because this is also the order they appear in Settings.
 --
 -- `cost` is what the feature spends when it is on, in the user's terms rather
--- than in milliseconds. It is shown under the label, so turning something off
--- is an informed choice rather than a guess.
+-- than in milliseconds. It is the tooltip on the row: it used to be a second
+-- line under every label, which made the settings window taller than a
+-- monitor once there were nine of these.
+--
+-- `short` is the same feature named for a tick in a three-column grid. `label`
+-- stays the full name and is what the tooltip heading and the reload notice
+-- say, so nothing is only ever known by its abbreviation.
 Features.LIST = {
     {
         key = "raidBuffs",
+        short = "Raid buffs",
         label = "Raid buff coverage",
         cost = "Reads your roster's classes when the roster window is open.",
     },
     {
         key = "raiderIO",
+        short = "Mythic+ scores",
         label = "Mythic+ scores",
         cost = "Needs the Raider.IO addon. Adds a column to the players and "
             .. "roster windows.",
     },
     {
         key = "lootTables",
+        short = "Boss loot tables",
         label = "Boss loot tables",
         cost = "Reads the Encounter Journal the first time you press Loot "
             .. "tables, which takes a moment.",
     },
     {
         key = "sync",
+        short = "Officer sync",
         label = "Officer sync",
         cost = "The only feature that sends anything to other players. Off "
             .. "unless you turn it on.",
     },
     {
         key = "keystoneSharing",
+        short = "Share keys",
         label = "Share Mythic+ keys with the guild",
         cost = "Tells your guild which key this character holds, and remembers "
             .. "theirs. Needs them to run the addon too. Off unless you turn "
@@ -65,24 +75,28 @@ Features.LIST = {
     },
     {
         key = "tradeAdvisor",
+        short = "Trade advisor",
         label = "Trade window advisor",
         cost = "Opens a small window when you win something, listing who else "
             .. "rolled on it. Sends nothing to anyone.",
     },
     {
         key = "tradeTracking",
+        short = "Follow trades",
         label = "Follow traded loot",
         cost = "Watches your own trades, and credits an item you traded away "
             .. "to whoever received it. Changes the score.",
     },
     {
         key = "keyRequests",
+        short = "Ask for keys",
         label = "Ask for guild keystones",
         cost = "Lets you ask a guildie to run their key, and them to ask you. "
             .. "Sends a message to that one person. Off unless you turn it on.",
     },
     {
         key = "developer",
+        short = "Developer tools",
         label = "Developer tools",
         cost = "Adds /syl dev and the event inspector. For diagnosing the "
             .. "addon itself.",

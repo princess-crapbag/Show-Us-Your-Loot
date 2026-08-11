@@ -38,9 +38,16 @@ local ROW_HEIGHT = 24
 local QUALITY_TOP = -8
 local HEADING_HEIGHT = 18
 local NOTE_HEIGHT = 30
-local SECTION_GAP = 44
+local SECTION_GAP = 30
 local FOOTER_HEIGHT = 60
-local FEATURE_ROW_HEIGHT = 38
+-- Three across. Nine features one per line was 342px of a window that has to
+-- fit on a monitor alongside everything else.
+local FEATURE_COLUMNS = 3
+local QUALITY_COLUMNS = 3
+
+-- Two, not three: these labels are sentences rather than names, and an action
+-- row carries its current value in the label as well.
+local TOGGLE_COLUMNS = 2
 
 local rows = {}
 
@@ -79,6 +86,13 @@ local function QualityColor(quality)
     return nil
 end
 
+-- How many rows a list of `count` takes at `columns` across. Every section
+-- that lays out in a grid measures its own height with this, so a section
+-- cannot disagree with the window about how tall it is.
+function SettingsRows.GridRows(count, columns)
+    return math.ceil(count / math.max(1, columns or 1))
+end
+
 local function CreateSettingRow(parent, index, labelText, onClick, options)
     options = options or {}
 
@@ -86,9 +100,25 @@ local function CreateSettingRow(parent, index, labelText, onClick, options)
     local height = options.height or ROW_HEIGHT
     local isAction = options.isAction
 
+    -- COLUMNS, because a settings screen that is taller than the monitor is
+    -- one where the last section cannot be reached. Nine features stacked one
+    -- per line is 342px of window; three across is 72. The width comes off the
+    -- container rather than a constant so the two cannot drift.
+    local columns = math.max(1, options.columns or 1)
+
     row:SetHeight(height)
-    row:SetPoint("TOPLEFT", 0, -((index - 1) * height))
-    row:SetPoint("TOPRIGHT", 0, -((index - 1) * height))
+
+    if columns == 1 then
+        row:SetPoint("TOPLEFT", 0, -((index - 1) * height))
+        row:SetPoint("TOPRIGHT", 0, -((index - 1) * height))
+    else
+        local column = (index - 1) % columns
+        local line = math.floor((index - 1) / columns)
+        local width = (parent:GetWidth() or 360) / columns
+
+        row:SetWidth(width - 6)
+        row:SetPoint("TOPLEFT", column * width, -(line * height))
+    end
 
     row.highlight = Theme.CreateSolidTexture(row, "rowHover", "BACKGROUND")
     row.highlight:SetAllPoints()
@@ -198,7 +228,8 @@ local function AddSection(parent, title, offsetY)
 end
 
 local function QualityBlockBottom()
-    return QUALITY_TOP - HEADING_HEIGHT - #ItemQuality.ORDER * ROW_HEIGHT
+    return QUALITY_TOP - HEADING_HEIGHT
+        - SettingsRows.GridRows(#ItemQuality.ORDER, QUALITY_COLUMNS) * ROW_HEIGHT
 end
 
 local function ToggleSectionTop()
@@ -209,7 +240,9 @@ function SettingsRows.BuildQualitySection(parent)
     local container =
         AddSection(parent, "RECORD THESE ITEM QUALITIES", QUALITY_TOP)
 
-    container:SetHeight(#ItemQuality.ORDER * ROW_HEIGHT)
+    container:SetHeight(
+        SettingsRows.GridRows(#ItemQuality.ORDER, QUALITY_COLUMNS) * ROW_HEIGHT
+    )
 
     for index, quality in ipairs(ItemQuality.ORDER) do
         local row = CreateSettingRow(
@@ -223,7 +256,9 @@ function SettingsRows.BuildQualitySection(parent)
                 )
 
                 SettingsRows.Refresh()
-            end
+            end,
+
+            { columns = QUALITY_COLUMNS }
         )
 
         local red, green, blue = QualityColor(quality)
@@ -325,7 +360,8 @@ local TOGGLES = {
 
 local function FeatureSectionTop()
     return ToggleSectionTop() - HEADING_HEIGHT
-        - #TOGGLES * ROW_HEIGHT - NOTE_HEIGHT - SECTION_GAP
+        - SettingsRows.GridRows(#TOGGLES, TOGGLE_COLUMNS) * ROW_HEIGHT
+        - NOTE_HEIGHT - SECTION_GAP
 end
 
 -- Where the dashboard widget section starts, and the shared section builder
@@ -334,7 +370,8 @@ end
 -- shares. See the header there for why it is not a third block in here.
 function SettingsRows.WidgetSectionTop()
     return FeatureSectionTop() - HEADING_HEIGHT
-        - #SYL.Features.LIST * FEATURE_ROW_HEIGHT - SECTION_GAP
+        - SettingsRows.GridRows(#SYL.Features.LIST, FEATURE_COLUMNS) * ROW_HEIGHT
+        - SECTION_GAP
 end
 
 -- Returns the container and the heading. Callers that tear a section down
@@ -390,7 +427,9 @@ end
 function SettingsRows.BuildToggleSection(parent)
     local container = AddSection(parent, "BEHAVIOUR", ToggleSectionTop())
 
-    container:SetHeight(#TOGGLES * ROW_HEIGHT)
+    container:SetHeight(
+        SettingsRows.GridRows(#TOGGLES, TOGGLE_COLUMNS) * ROW_HEIGHT
+    )
 
     for index, toggle in ipairs(TOGGLES) do
         local isAction = toggle.action ~= nil
@@ -423,7 +462,7 @@ function SettingsRows.BuildToggleSection(parent)
                 SettingsRows.Refresh()
             end,
 
-            { isAction = isAction }
+            { isAction = isAction, columns = TOGGLE_COLUMNS }
         )
 
         if not isAction then
@@ -445,7 +484,7 @@ function SettingsRows.BuildToggleSection(parent)
     local note = Theme.CreateText(parent, Theme.sizes.rowSmall, "textMuted")
 
     local noteTop = ToggleSectionTop() - HEADING_HEIGHT
-        - #TOGGLES * ROW_HEIGHT - 6
+        - SettingsRows.GridRows(#TOGGLES, TOGGLE_COLUMNS) * ROW_HEIGHT - 6
 
     note:SetPoint("TOPLEFT", 20, noteTop)
     note:SetPoint("TOPRIGHT", -20, noteTop)
@@ -469,13 +508,15 @@ function SettingsRows.BuildFeatureSection(parent)
     local container =
         AddSection(parent, "FEATURES", FeatureSectionTop())
 
-    container:SetHeight(#SYL.Features.LIST * FEATURE_ROW_HEIGHT)
+    container:SetHeight(
+        SettingsRows.GridRows(#SYL.Features.LIST, FEATURE_COLUMNS) * ROW_HEIGHT
+    )
 
     for index, feature in ipairs(SYL.Features.LIST) do
         local row = CreateSettingRow(
             container,
             index,
-            feature.label,
+            feature.short or feature.label,
             function()
                 local enabled = SYL.Features.Toggle(feature.key)
 
@@ -483,22 +524,15 @@ function SettingsRows.BuildFeatureSection(parent)
                 SettingsRows.Refresh()
             end,
 
-            { height = FEATURE_ROW_HEIGHT }
+            { columns = FEATURE_COLUMNS }
         )
 
-        -- Label to the top of a two-line row rather than centred on it.
-        row.label:ClearAllPoints()
-        row.label:SetPoint("TOPLEFT", row.box, "TOPRIGHT", 8, 1)
-        row.label:SetPoint("RIGHT", -4, 0)
-
-        row.costText =
-            Theme.CreateText(row, Theme.sizes.rowSmall, "textMuted")
-
-        row.costText:SetPoint("TOPLEFT", row.label, "BOTTOMLEFT", 0, -2)
-        row.costText:SetPoint("RIGHT", -4, 0)
-        row.costText:SetJustifyH("LEFT")
-        row.costText:SetWordWrap(true)
-        row.costText:SetText(feature.cost or "")
+        -- THE COST MOVED TO A TOOLTIP. It used to be a second line under every
+        -- feature, which is what made each row 38px and the section 342 — the
+        -- single largest thing pushing the window off the bottom of the
+        -- screen. It is still one hover away, and it is read once rather than
+        -- every time somebody opens settings for a different reason.
+        SYL.Tooltips.Attach(row, feature.label, feature.cost or "")
 
         row.isChecked = function()
             return SYL.Features.IsEnabled(feature.key)

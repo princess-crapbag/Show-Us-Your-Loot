@@ -130,9 +130,15 @@ function WindowStack.ToggleWindow(frame)
     WindowStack.TrackWindow(frame)
 
     if not frame:IsShown() then
+        -- SHOWN FIRST, THEN PLACED. A frame that has never been laid out
+        -- answers nil to GetLeft and GetBottom, so placing it before showing
+        -- meant the layout could not measure what it was placing and fell
+        -- through to the cascade — a few pixels off centre, which is to say
+        -- on top of the main window. The one frame of movement is worth it.
+        frame:Show()
+
         PlaceOnce(frame)
 
-        frame:Show()
         frame:Raise()
 
         return true
@@ -154,8 +160,10 @@ end
 -- Pressing the same row twice should not close what you just asked to see.
 function WindowStack.ShowWindow(frame)
     WindowStack.TrackWindow(frame)
-    PlaceOnce(frame)
 
     frame:Show()
+
+    PlaceOnce(frame)
+
     frame:Raise()
 end
