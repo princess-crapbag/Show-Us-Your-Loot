@@ -189,11 +189,77 @@ moved = SYL.Links.RefreshDefaults()
 links = {link["label"]: link["url"] for link in SYL.Links.List().values()}
 
 check("one untouched default was upgraded", moved == 1, moved)
+
+# A link already holding the DERIVED url — which shipped once — is upgraded to
+# the known one too. Without this, somebody who reloaded before the guild was
+# known would keep the derived link forever while a fresh install got the right
+# one: the worst of both.
+lua.execute(
+    """
+    ShowUsYourLootDB.links = {
+        {
+            label = 'Warcraft Logs',
+            url = 'https://www.warcraftlogs.com/guild/us/area-52/Show%20Us%20Your%20Kitties',
+        },
+    }
+    """
+)
+
+check("a stale derived link is upgraded as well", SYL.Links.RefreshDefaults() == 1)
 check(
-    "and it points at the guild page",
+    "to the one that cannot be derived",
+    SYL.Links.List()[1]["url"]
+    == "https://www.warcraftlogs.com/guild/reports-list/733227",
+    SYL.Links.List()[1]["url"],
+)
+
+lua.execute(
+    """
+    ShowUsYourLootDB.links = {
+        { label = 'Warcraft Logs', url = 'https://www.warcraftlogs.com/' },
+        { label = 'Raider.IO', url = 'https://raider.io/mine' },
+    }
+    """
+)
+
+SYL.Links.RefreshDefaults()
+links = {link["label"]: link["url"] for link in SYL.Links.List().values()}
+# Aimee's guild is in the known table, because Warcraft Logs keys a guild on a
+# numeric id nothing in the client exposes. Everybody in that guild gets it
+# without doing anything, which is the point — a link she sets on her own
+# client never reaches the guildies she hands the addon to.
+check(
+    "a known guild gets the link that cannot be derived",
     links["Warcraft Logs"]
-    == "https://www.warcraftlogs.com/guild/us/area-52/Show%20Us%20Your%20Kitties",
+    == "https://www.warcraftlogs.com/guild/reports-list/733227",
     links["Warcraft Logs"],
+)
+
+# And a guild that is NOT in the table gets the derived link rather than
+# somebody else's logs. This addon is on CurseForge; a hardcoded URL would
+# point every stranger who installs it at Aimee's guild.
+lua.execute(
+    """
+    ShowUsYourLoot.Guild.GetGuildName = function() return 'Some Other Guild' end
+    GetRealmName = function() return 'Stormrage' end
+
+    ShowUsYourLootDB.links = nil
+    """
+)
+
+other = {link["label"]: link["url"] for link in SYL.Links.List().values()}
+
+check(
+    "an unknown guild gets its own derived link, not Aimee's",
+    other["Warcraft Logs"]
+    == "https://www.warcraftlogs.com/guild/us/stormrage/Some%20Other%20Guild",
+    other["Warcraft Logs"],
+)
+check(
+    "and raider.io is derived for them too",
+    other["Raider.IO"]
+    == "https://raider.io/guilds/us/stormrage/Some%20Other%20Guild",
+    other["Raider.IO"],
 )
 check(
     "a link somebody edited is left alone",

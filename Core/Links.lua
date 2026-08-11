@@ -85,20 +85,44 @@ end
 
 Links.GuildPaths = GuildPaths
 
+-- Guild pages that cannot be worked out from region, realm and name.
+--
+-- Warcraft Logs keys a guild on a numeric id — /guild/reports-list/733227 —
+-- and nothing in the client exposes that number, so it cannot be derived the
+-- way the raider.io URL can. The only way to have it is to know it.
+--
+-- KEYED ON GUILD AND REALM, not hardcoded outright. Aimee's point was that a
+-- link she sets on her own client does not reach the guildies she hands the
+-- addon to, which is true and is what this fixes: everybody in Show Us Your
+-- Kitties on Area 52 gets it without doing anything. Everybody NOT in that
+-- guild gets the derived link instead, which is the reason it is a table
+-- rather than a constant — this addon is on CurseForge, and a hardcoded URL
+-- would point every stranger who installs it at somebody else's logs.
+--
+-- Adding a guild here is one line. Anyone who wants a different link for their
+-- own guild still has /syl link add, which wins over all of this.
+local KNOWN_GUILDS = {
+    ["us/area-52/Show%20Us%20Your%20Kitties"] = {
+        ["Warcraft Logs"] =
+            "https://www.warcraftlogs.com/guild/reports-list/733227",
+    },
+}
+
 local function Defaults()
     local path = GuildPaths()
+    local known = path and KNOWN_GUILDS[path] or {}
 
     return {
         {
             label = "Warcraft Logs",
-            url = path
-                and ("https://www.warcraftlogs.com/guild/" .. path)
+            url = known["Warcraft Logs"]
+                or (path and ("https://www.warcraftlogs.com/guild/" .. path))
                 or "https://www.warcraftlogs.com/",
         },
         {
             label = "Raider.IO",
-            url = path
-                and ("https://raider.io/guilds/" .. path)
+            url = known["Raider.IO"]
+                or (path and ("https://raider.io/guilds/" .. path))
                 or "https://raider.io/",
         },
         { label = "Guild Discord", url = "" },
@@ -152,11 +176,37 @@ function Links.RefreshDefaults()
         defaults[link.label] = link.url
     end
 
+    -- A URL is replaceable if it is still something this addon put there: the
+    -- original front page, or the derived guild link from before a better one
+    -- was known. Anything else was typed by a person and is left alone.
+    --
+    -- The derived form matters because it already shipped. Somebody who
+    -- reloaded once is holding it, and without this they would keep it forever
+    -- while a new install got the right link — the worst of both.
+    local path = GuildPaths()
+
+    local replaceable = {
+        ["Warcraft Logs"] = {
+            ["https://www.warcraftlogs.com/"] = true,
+            [path and ("https://www.warcraftlogs.com/guild/" .. path) or ""] = true,
+        },
+        ["Raider.IO"] = {
+            ["https://raider.io/"] = true,
+            [path and ("https://raider.io/guilds/" .. path) or ""] = true,
+        },
+    }
+
     local changed = 0
 
     for _, link in ipairs(store) do
-        if FRONT_PAGES[link.url or ""] == link.label and defaults[link.label] then
-            link.url = defaults[link.label]
+        local allowed = replaceable[link.label]
+        local wanted = defaults[link.label]
+
+        if allowed and wanted
+            and allowed[link.url or ""]
+            and link.url ~= wanted
+        then
+            link.url = wanted
             changed = changed + 1
         end
     end
