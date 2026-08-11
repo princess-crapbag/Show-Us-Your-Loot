@@ -55,7 +55,9 @@ Loot history, attendance and fairness analytics for guilds using Group Loot.
 > what that costs. Alpha is communicated by the file's release type, which is
 > set per upload, not by this toggle.
 
-**Editor** — WYSIWYG unless you want Markdown.
+**Editor** — WYSIWYG. There is no BBCode option, whatever an older draft of
+this file implied; Markdown is the only alternative and its formatting does not
+come out right either.
 
 **License** — All Rights Reserved, matching `LICENSE` and the `.toc`.
 
@@ -67,6 +69,11 @@ Loot history, attendance and fairness analytics for guilds using Group Loot.
 
 ## Description — paste this
 
+PLAIN TEXT, NOT BBCODE. The earlier version of this file used [b] tags and
+they are not supported — CurseForge offers WYSIWYG and Markdown, and the
+tags paste in as literal text. This pastes into the WYSIWYG editor as is;
+bold the section headings there if you want them to stand out.
+
 Rewritten for 0.3.0, the first non-alpha release. Three things in the
 previous version had become false: it opened on an Alpha caveat saying the
 due list had never had a night of data through it, it described the ranking
@@ -74,18 +81,19 @@ as nights-since-upgrade rather than loot per night, and it said officer sync
 never sends roll lists. It sends them now.
 
 ```
-[b]Group Loot remembers who won. This remembers who passed.[/b]
+Group Loot remembers who won. This remembers who passed.
 
 Show Us Your Loot records every group-loot drop in your raid — the item, who
-won it, what they rolled, and [i]every player who was eligible along with what
-each of them chose[/i]. That last part is the bit nothing else keeps, and it is
+won it, what they rolled, and every player who was eligible along with what
+each of them chose. That last part is the bit nothing else keeps, and it is
 what makes the rest of this possible.
 
-[b]This is not a loot council addon.[/b] It does not decide who gets an item
-and it does not change how loot is awarded. It uses Blizzard's default Group
-Loot and answers the questions that come up afterwards.
+This is not a loot council addon. It does not decide who gets an item and it
+does not change how loot is awarded. It uses Blizzard's default Group Loot and
+answers the questions that come up afterwards.
 
-[b]It is useful on the very first drop[/b]
+
+It is useful on the very first drop
 
 Most history addons need a tier of data before they tell you anything. This one
 does not. The moment you win something, a small window names everyone who
@@ -98,7 +106,8 @@ for you, so it only ever tells you who asked.
 
 If you do trade the item, the score follows it to whoever received it.
 
-[b]What it records[/b]
+
+What it records
 
 Every group-loot drop, taken from Blizzard's Loot History API rather than from
 chat: the item, the winner, the roll, and the full list of eligible players and
@@ -109,68 +118,80 @@ That distinction matters more than it sounds: roll lists only name players an
 item could drop for, so a healer who raided all night without being eligible
 for a single drop would otherwise look absent.
 
-[b]What it answers[/b]
 
-- [b]Who is due?[/b] Ranked by loot taken per raid night, so somebody with
-  perfect attendance ranks above somebody there half the time on the same
-  amount of loot. Need is worth 100, offspec and greed 20 each, transmog
-  nothing. Click any raider to see exactly where their number came from —
-  every win that counted and what each was worth. Nobody with fewer than three
-  nights is ranked; they are listed with the reason instead.
-- [b]Who turned up?[/b] Attendance from the roster, not inferred from loot.
-- [b]What has this boss never given us?[/b] A loot table per boss showing what
-  it can drop and has not, kept separate by difficulty.
-- [b]When did we raid?[/b] A month calendar of your raid nights, each shaded
-  with what died, and a stat panel for any day you click.
-- [b]How did tonight go?[/b] A summary when you leave the instance, leading
-  with how many people went home without an upgrade.
+What it answers
 
-Need, offspec, transmog and greed are counted apart from each other
-throughout. A transmog win is not an upgrade, and folding them together makes
-loot look fairer than it was.
+Who is due? Ranked by loot taken per raid night, so somebody with perfect
+attendance ranks above somebody there half the time on the same amount of loot.
+Need is worth 100, offspec and greed 20 each, transmog nothing. Click any
+raider to see exactly where their number came from — every win that counted and
+what each was worth. Nobody with fewer than three nights is ranked; they are
+listed with the reason instead.
 
-[b]Mythic+ keys[/b]
+Who turned up? Attendance from the roster, not inferred from loot.
 
-Every key your characters hold, kept current at login, when a dungeon
-finishes, and when a key is rerolled. Turn on key sharing and it shows your
-guild's too, for anyone running the addon with the same switch on — nothing
-can read another player's bags, so that is the only way it can work.
+What has this boss never given us? A loot table per boss showing what it can
+drop and has not, kept separate by difficulty.
+
+When did we raid? A month calendar of your raid nights, each shaded with what
+died, and a stat panel for any day you click.
+
+How did tonight go? A summary when you leave the instance, leading with how
+many people went home without an upgrade.
+
+Need, offspec, transmog and greed are counted apart from each other throughout.
+A transmog win is not an upgrade, and folding them together makes loot look
+fairer than it was.
+
+
+Mythic+ keys
+
+Every key your characters hold, kept current at login, when a dungeon finishes,
+and when a key is rerolled. Turn on key sharing and it shows your guild's too,
+for anyone running the addon with the same switch on — nothing can read another
+player's bags, so that is the only way it can work.
 
 You can also ask a guildie to run theirs. The request is whispered to that one
 person and never broadcast, so two people asking for the same key never learn
 about each other. Off by default.
 
-[b]Raid schedule[/b]
+
+Raid schedule
 
 Tell it which nights you raid once, and it answers "when is the next raid
 night" from then on. Mark somebody out for a week with one line. It can also
 read your in-game guild calendar, and never overwrites a night you typed in.
 
-[b]Officer sync[/b]
 
-Off by default. When enabled it shares drops with other officers in your raid
-— never outside your own group, never a message a player sees — so loot is
-still recorded when you were not online for it.
+Officer sync
 
-[b]Everything can be switched off[/b]
+Off by default. When enabled it shares drops with other officers in your raid —
+never outside your own group, never a message a player sees — so loot is still
+recorded when you were not online for it.
+
+
+Everything can be switched off
 
 Raid buff coverage, Mythic+ scores, boss loot tables, officer sync, key
 sharing, key requests, the trade advisor and trade tracking are each a switch
-in Settings, and each says what it costs when it is on. Anything switched off
-is not built at all rather than built and hidden.
+in Settings, and each says what it costs when it is on. Anything switched off is
+not built at all rather than built and hidden.
 
-[b]Your data[/b]
+
+Your data
 
 Everything is stored locally in your SavedVariables. Nothing is ever deleted
-unless you clear it deliberately, and archived seasons are never touched.
-Hiding a row and ignoring a row are both reversible.
+unless you clear it deliberately, and archived seasons are never touched. Hiding
+a row and ignoring a row are both reversible.
 
-[b]Commands[/b]
 
-/syl opens the window. The minimap button does the same on left click, and
-lists every command on right click. /syl help prints the rest.
+Commands
 
-[b]A note on how young this is[/b]
+/syl opens the window. The minimap button does the same on left click, and lists
+every command on right click. /syl help prints the rest.
+
+
+A note on how young this is
 
 History starts the day you install it and cannot be backfilled. The addon has
 been used in live raids and the numbers have been checked against real nights,
