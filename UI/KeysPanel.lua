@@ -65,7 +65,13 @@ local function Build()
         })
     end
 
-    if SYL.KeystoneSync.IsEnabled() then
+    -- Features.IsEnabled, not KeystoneSync.IsEnabled. The second is a runtime
+    -- flag set by Enable() at login, so it reads false for the whole session
+    -- if the feature was switched on afterwards — and the panel then told
+    -- somebody their sharing was off while the settings screen and the
+    -- recording strip both said on. The setting is what the user changed and
+    -- is what they should be told about.
+    if SYL.Features.IsEnabled("keystoneSharing") then
         for _, shared in ipairs(SYL.KeystoneSync.List()) do
             table.insert(entries, {
                 name = shared.name,
@@ -233,7 +239,7 @@ Refresh = function()
         end
 
         frame.empty:SetText(
-            SYL.KeystoneSync.IsEnabled()
+            SYL.Features.IsEnabled("keystoneSharing")
                 and ("No keys yet. Yours appears once you have one, and other "
                     .. "people's appear when they run this addon with key "
                     .. "sharing on — nothing can read another player's bags.")
@@ -281,8 +287,9 @@ Refresh = function()
     SYL.KeyRequestList.Refresh(frame.pane)
 
     frame.caption:SetText(
-        #entries .. " keys · resets " .. (SYL.KeystoneSync.IsEnabled()
-            and "weekly, with your realm" or "weekly")
+        #entries .. " keys · resets weekly with your realm"
+        .. (SYL.Features.IsEnabled("keystoneSharing")
+            and "" or " · sharing off, so this is only your characters")
     )
 end
 

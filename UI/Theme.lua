@@ -18,8 +18,32 @@ local GetItemInfo = C_Item and C_Item.GetItemInfo or _G.GetItemInfo
 local GetItemInfoInstant =
     C_Item and C_Item.GetItemInfoInstant or _G.GetItemInfoInstant
 
-local GetItemQualityColor =
-    C_Item and C_Item.GetItemQualityColor or _G.GetItemQualityColor
+-- Resolved at call time rather than into an upvalue at load. A client that
+-- exposes neither spelling made this nil, and every item row and tooltip that
+-- asked for a colour then threw. See the same note in UI/SettingsRows.lua,
+-- where it took out the whole settings window.
+local function LookUpQualityColor(quality)
+    local lookup = (C_Item and C_Item.GetItemQualityColor)
+        or _G.GetItemQualityColor
+
+    if lookup then
+        local ok, red, green, blue = pcall(lookup, quality)
+
+        if ok and red then
+            return red, green, blue
+        end
+    end
+
+    local colors = _G.ITEM_QUALITY_COLORS
+
+    if colors and colors[quality] then
+        local color = colors[quality]
+
+        return color.r, color.g, color.b
+    end
+
+    return nil
+end
 
 -- The active palette. Populated by Theme.Apply, which runs at load once the
 -- saved setting is known; the starting value keeps the UI safe if anything
@@ -390,7 +414,7 @@ function Theme.GetItemQualityColor(itemLink)
         return nil
     end
 
-    local red, green, blue = GetItemQualityColor(quality)
+    local red, green, blue = LookUpQualityColor(quality)
 
     if not red then
         return nil

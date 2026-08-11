@@ -219,7 +219,12 @@ g.ResetSchedule()
 
 lua.execute("function MakeTile() return { body = StubFrame(), rows = {}, title = StubFrame() } end")
 
-for label in ("nextNight", "whoIsOut"):
+# One tile, not two. "Who is out" had a tile of its own for about a day, and a
+# seventh tile forces the dashboard grid onto a third row inside a window that
+# cannot grow — every tile shrank to two usable lines and the full-width strip
+# fell off the bottom of the frame. Absences live in the next-raid-night tile
+# now, which answers the same question anyway.
+for label in ("nextNight",):
     for state in ("empty", "configured"):
         if state == "configured":
             S.SetWeekday(TUESDAY, True)

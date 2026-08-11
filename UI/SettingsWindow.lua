@@ -58,12 +58,47 @@ local function CreateSettingsWindow()
 
     closeCorner:SetPoint("TOPRIGHT", -6, -6)
 
-    SettingsRows.BuildQualitySection(frame)
-    SettingsRows.BuildToggleSection(frame)
-    SettingsRows.BuildFeatureSection(frame)
+    -- THE CONTENT SCROLLS, THE CHROME DOES NOT. Every feature added is another
+    -- 38px of settings, and the window used to be sized to fit all of it — so
+    -- it grew past the bottom of the screen and the last sections were simply
+    -- unreachable. The window is capped to the screen now and this carries the
+    -- overflow.
+    local scroll = CreateFrame("ScrollFrame", nil, frame)
+
+    scroll:SetPoint("TOPLEFT", 4, -72)
+    scroll:SetPoint("BOTTOMRIGHT", -4, 52)
+
+    local content = CreateFrame("Frame", nil, scroll)
+
+    content:SetSize(WINDOW_WIDTH - 8, SettingsRows.ContentHeight())
+
+    scroll:SetScrollChild(content)
+
+    -- The wheel is the only way to reach the bottom, so it is not optional.
+    -- Clamped rather than free: scrolling past the end leaves a blank window
+    -- with no indication that anything is above it.
+    scroll:EnableMouseWheel(true)
+    scroll:SetScript("OnMouseWheel", function(self, delta)
+        local range = math.max(
+            0, content:GetHeight() - self:GetHeight()
+        )
+
+        local position = math.min(
+            range, math.max(0, self:GetVerticalScroll() - delta * 28)
+        )
+
+        self:SetVerticalScroll(position)
+    end)
+
+    frame.scroll = scroll
+    frame.content = content
+
+    SettingsRows.BuildQualitySection(content)
+    SettingsRows.BuildToggleSection(content)
+    SettingsRows.BuildFeatureSection(content)
 
     SYL.SettingsWidgets.Build(
-        frame,
+        content,
         SettingsRows.WidgetSectionTop(),
         SettingsRows.AddSection
     )

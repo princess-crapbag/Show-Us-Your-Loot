@@ -79,10 +79,14 @@ end
 
 -- Who is out --------------------------------------------------------------
 --
--- Absences are typed. That is not a placeholder for something better later:
--- an addon makes no HTTP requests, so the Discord channel where this guild
+-- Its own tile rather than a couple of rows under the next raid night. The two
+-- are related, but this one is a list that grows with the guild and that one is
+-- a date — folding them meant the names were the first thing squeezed out.
+--
+-- Absences are typed, and that is not a placeholder for something better. An
+-- addon makes no HTTP requests, so the Discord channel where this guild
 -- actually posts them cannot be read from in game by any route at all. The
--- empty state says so, because "nobody is out" and "nothing can see your
+-- empty state says so, because "nobody is out" and "nothing here can see your
 -- Discord" are very different claims.
 SYL.DashboardWidgets.RENDERERS.whoIsOut = function(tile)
     local today = SYL.RaidSchedule.TodayKey()
@@ -100,7 +104,7 @@ SYL.DashboardWidgets.RENDERERS.whoIsOut = function(tile)
 
     DashboardParts.Headline(tile, #out, #out == 1 and "player out" or "players out")
 
-    for index = 1, math.min(5, #out) do
+    for index = 1, math.min(DashboardParts.RowCapacity(tile), #out) do
         local absence = out[index]
 
         DashboardParts.Row(tile, index,

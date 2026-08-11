@@ -134,7 +134,10 @@ function KeyRequestList.Refresh(pane)
 
     local requests = SYL.KeystoneRequests.Incoming()
 
-    if not SYL.KeystoneRequests.IsEnabled() then
+    -- The setting rather than the runtime flag, for the same reason KeysPanel
+    -- reads Features: the runtime one is set at login, so switching the
+    -- feature on mid-session left the panel insisting it was off.
+    if not SYL.Features.IsEnabled("keyRequests") then
         pane.empty:SetText(
             "Key requests are switched off. Turn them on in Settings to let "
             .. "guildies ask to run your key, and to ask for theirs."

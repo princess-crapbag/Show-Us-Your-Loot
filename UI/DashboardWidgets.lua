@@ -59,7 +59,7 @@ DashboardWidgets.RENDERERS.lastNight = function(tile)
                 upgrades = upgrades + 1
             end
 
-            if shown < 6 then
+            if shown < DashboardParts.RowCapacity(tile) then
                 shown = shown + 1
 
                 DashboardParts.PlayerRow(
@@ -114,7 +114,7 @@ DashboardWidgets.RENDERERS.due = function(tile)
         return
     end
 
-    for index = 1, math.min(6, #entries) do
+    for index = 1, math.min(DashboardParts.RowCapacity(tile), #entries) do
         local entry = entries[index]
 
         DashboardParts.PlayerRow(
@@ -129,7 +129,7 @@ DashboardWidgets.RENDERERS.due = function(tile)
     local average = SYL.LootScore.Average(entries)
 
     DashboardParts.Caption(tile,
-        #entries .. " ranked · raid average "
+        #entries .. " shown · raid average "
         .. string.format("%.1f", average)
         .. " per night · " .. SYL.Audience.Note())
 end
@@ -231,32 +231,6 @@ DashboardWidgets.RENDERERS.tier = function(tile)
         .. " drops recorded across " .. pulled .. " bosses.")
 end
 
--- Links -------------------------------------------------------------------
-DashboardWidgets.RENDERERS.links = function(tile)
-    local links = SYL.Links.List()
-
-    if #links == 0 then
-        DashboardParts.Empty(tile,
-            "No links yet. /syl link add Logs https://… adds one. Clicking a "
-            .. "link opens a box to copy from, because an addon cannot open a "
-            .. "browser or write to your clipboard.")
-
-        return
-    end
-
-    for index = 1, math.min(6, #links) do
-        local link = links[index]
-        local row = DashboardParts.Row(tile, index, link.label, "copy", "textPrimary", "accent")
-
-        row:EnableMouse(true)
-        row:SetScript("OnMouseUp", function()
-            SYL.Links.ShowCopyBox(link)
-        end)
-    end
-
-    DashboardParts.Caption(tile, "Click one to copy it.")
-end
-
 -- Recording ---------------------------------------------------------------
 DashboardWidgets.RENDERERS.recording = function(tile)
     local settings = ShowUsYourLootDB and ShowUsYourLootDB.settings or {}
@@ -290,28 +264,83 @@ DashboardWidgets.RENDERERS.recording = function(tile)
     -- what every other tile uses, would draw on top of each other here.
     local stale = latest == 0
 
-    local when = SYL.Theme.CreateText(
-        tile.body, SYL.Theme.sizes.rowSmall, stale and "warning" or "textMuted"
+    -- The counts moved onto the title, because the body line is now shared
+    -- with the links and there is exactly one line. Nothing was dropped to
+    -- make room; it reads as a subtitle on the strip's own heading.
+    tile.title:SetText(
+        "RECORDING   ·   " .. #drops .. " drops, " .. #nights .. " nights"
+        .. (stale
+            and "   ·   nothing captured yet"
+            or ("   ·   last captured "
+                .. SYL.Utilities.FormatDateTime(latest)))
     )
 
-    when:SetPoint("RIGHT", -2, 0)
-    when:SetJustifyH("RIGHT")
-    when:SetText(
-        #drops .. " drops, " .. #nights .. " nights"
-        .. (stale
-            and " · nothing captured yet"
-            or (" · last captured " .. SYL.Utilities.FormatDateTime(latest)))
-    )
+    -- LINKS LIVE HERE NOW. They had a tile of their own and did not need one —
+    -- three lines of text in a space sized for six — and giving it up is what
+    -- made room for Who is out without pushing the grid onto a third row.
+    --
+    -- Laid out right to left so the row stays anchored to the right edge
+    -- however many links there are, and so adding one never pushes the last
+    -- one off the end.
+    local links = SYL.Links.List()
+    local anchor, rightmost = nil, nil
+
+    for index = #links, 1, -1 do
+        local link = links[index]
+
+        local button = CreateFrame("Button", nil, tile.body)
+
+        local label = SYL.Theme.CreateText(
+            button, SYL.Theme.sizes.rowSmall, "accent"
+        )
+
+        label:SetAllPoints()
+        label:SetJustifyH("RIGHT")
+        label:SetText(link.label)
+
+        button:SetHeight(16)
+        button:SetWidth(SYL.Theme.MeasureText(SYL.Theme.sizes.rowSmall, link.label) + 6)
+
+        if anchor then
+            button:SetPoint("RIGHT", anchor, "LEFT", -14, 0)
+        else
+            button:SetPoint("RIGHT", -2, 0)
+            rightmost = button
+        end
+
+        anchor = button
+
+        button:SetScript("OnEnter", function()
+            SYL.Theme.SetTextColor(label, "textPrimary")
+        end)
+
+        button:SetScript("OnLeave", function()
+            SYL.Theme.SetTextColor(label, "accent")
+        end)
+
+        -- An addon cannot open a browser or write to the clipboard, so this
+        -- is a box to copy from rather than a link that goes anywhere.
+        button:SetScript("OnClick", function()
+            SYL.Links.ShowCopyBox(link)
+        end)
+    end
 
     local summary = SYL.Theme.CreateText(
         tile.body, SYL.Theme.sizes.rowSmall, "textPrimary"
     )
 
     summary:SetPoint("LEFT", 2, 0)
-    summary:SetPoint("RIGHT", when, "LEFT", -12, 0)
     summary:SetJustifyH("LEFT")
     summary:SetWordWrap(false)
     summary:SetText(table.concat(pieces, "   ·   "))
+
+    if anchor then
+        summary:SetPoint("RIGHT", anchor, "LEFT", -16, 0)
+    else
+        summary:SetPoint("RIGHT", -2, 0)
+    end
+
+    tile.linksAnchor = rightmost
 end
 
 --------------------------------------------------------------------------

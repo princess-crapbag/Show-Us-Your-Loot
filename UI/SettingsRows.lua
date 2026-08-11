@@ -31,7 +31,11 @@ local ROW_HEIGHT = 24
 
 -- Layout is derived from the content rather than hardcoded, so adding a
 -- quality or a toggle cannot silently push the last row through the footer.
-local QUALITY_TOP = -104
+-- The first section sits just inside the scrolling area rather than 104px
+-- below the window's own top. The title, subtitle and separator are drawn on
+-- the window and do not scroll, so the content no longer has to leave room for
+-- them — everything else derives from this, so the whole stack moved with it.
+local QUALITY_TOP = -8
 local HEADING_HEIGHT = 18
 local NOTE_HEIGHT = 30
 local SECTION_GAP = 44
@@ -42,8 +46,38 @@ local rows = {}
 
 -- Quality colours come from the client so they match the item names in the
 -- list views rather than an approximation of them.
-local GetItemQualityColor =
-    C_Item and C_Item.GetItemQualityColor or _G.GetItemQualityColor
+--
+-- RESOLVED AT CALL TIME, NOT AT LOAD. Read once into an upvalue, a client that
+-- exposes neither spelling left this nil — and calling a nil threw on the
+-- first quality row, which killed the whole section and left the settings
+-- window showing one heading and nothing else. Two different faults produced
+-- that same empty screen; this was the second.
+--
+-- Falls back to the colour table and then to plain white, because a row whose
+-- text is the wrong colour is a cosmetic complaint and a settings window that
+-- will not build is not.
+local function QualityColor(quality)
+    local lookup = (C_Item and C_Item.GetItemQualityColor)
+        or _G.GetItemQualityColor
+
+    if lookup then
+        local ok, red, green, blue = pcall(lookup, quality)
+
+        if ok and red then
+            return red, green, blue
+        end
+    end
+
+    local colors = _G.ITEM_QUALITY_COLORS
+
+    if colors and colors[quality] then
+        local color = colors[quality]
+
+        return color.r, color.g, color.b
+    end
+
+    return nil
+end
 
 local function CreateSettingRow(parent, index, labelText, onClick, options)
     options = options or {}
@@ -140,15 +174,25 @@ local function AddSection(parent, title, offsetY)
     heading:SetPoint("TOPLEFT", 20, offsetY)
     heading:SetText(title)
 
-    -- Kept on the container so a section that tears itself down can take its
-    -- heading with it. The heading is parented to the window, not to the
-    -- container, so hiding the container alone leaves it behind.
-    container.heading = heading
-
     local container = CreateFrame("Frame", nil, parent)
 
     container:SetPoint("TOPLEFT", 20, offsetY - 18)
     container:SetPoint("TOPRIGHT", -20, offsetY - 18)
+
+    -- Kept on the container so a section that tears itself down can take its
+    -- heading with it. The heading is parented to the window, not to the
+    -- container, so hiding the container alone leaves it behind.
+    --
+    -- THIS LINE WAS ABOVE THE DECLARATION and `container` was therefore a nil
+    -- global, so AddSection threw on its first call. The window drew its first
+    -- heading and then nothing at all — no qualities, no toggles, no features —
+    -- and looked like an empty settings screen rather than a crash.
+    --
+    -- It is the third time a local-used-before-declaration has shipped here.
+    -- syl_check cannot see it: it is not an SYL.Module.Member reference and not
+    -- a bare module global, so neither rule applies. luacheck is the tool that
+    -- catches this class and it is still the open tooling item in HANDOFF.md.
+    container.heading = heading
 
     return container
 end
@@ -182,7 +226,7 @@ function SettingsRows.BuildQualitySection(parent)
             end
         )
 
-        local red, green, blue = GetItemQualityColor(quality)
+        local red, green, blue = QualityColor(quality)
 
         -- The whole point of this row is that it is the colour it names, so
         -- it must survive a palette change rather than being repainted back
@@ -303,12 +347,44 @@ function SettingsRows.AddSection(parent, title, offsetY)
     return container, container.heading
 end
 
-function SettingsRows.WindowHeight()
+-- How tall the content wants to be, which is not the same as how tall the
+-- window may be.
+function SettingsRows.ContentHeight()
     local contentBottom =
         math.abs(SettingsRows.WidgetSectionTop())
         + SYL.SettingsWidgets.SectionHeight()
 
     return contentBottom + FOOTER_HEIGHT
+end
+
+-- Never taller than the screen it has to fit on.
+--
+-- This used to return the content height and nothing else, which was fine
+-- while the content was short. Every feature added since is another 38px, and
+-- the window quietly grew past the bottom of a 1080p screen — the answer to
+-- "why is settings cut off" was that it was 1300 pixels tall and honest about
+-- it. The content scrolls now, so this is a window size rather than a total.
+local MIN_HEIGHT = 320
+local SCREEN_MARGIN = 80
+
+function SettingsRows.WindowHeight()
+    local wanted = SettingsRows.ContentHeight()
+
+    local screen = UIParent and UIParent.GetHeight and UIParent:GetHeight()
+
+    if not screen or screen <= 1 then
+        return wanted
+    end
+
+    local allowed = math.max(MIN_HEIGHT, screen - SCREEN_MARGIN)
+
+    return math.min(wanted, math.floor(allowed))
+end
+
+-- Whether the content is taller than the window can be, which is what decides
+-- if a scroll bar is worth drawing at all.
+function SettingsRows.NeedsScrolling()
+    return SettingsRows.ContentHeight() > SettingsRows.WindowHeight() + 1
 end
 
 function SettingsRows.BuildToggleSection(parent)

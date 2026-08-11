@@ -46,13 +46,27 @@ local FALLBACK_SHORT = 160
 local FALLBACK_WIDTH = (900 - 32 - GAP * (COLUMNS - 1)) / COLUMNS
 
 -- Returns the two row heights for the space there is. Solving
--- tall + gap + short + gap + strip = height, with tall = ratio x short.
-local function RowHeights(available, hasStrip)
+--
+--   tall + (rows - 1) x short + gaps + strip = height,  tall = ratio x short
+--
+-- ROWS IS A PARAMETER AND USED TO BE ASSUMED. This solved for exactly two
+-- rows, which was true of every dashboard that had ever existed — and then a
+-- seventh tile was added, three rows were needed, and the arithmetic still
+-- budgeted for two. The grid ran off the bottom of the window: the strip
+-- landed below the frame's own backdrop, so the game world showed through it
+-- and the whole thing read as transparent tiles rather than as a layout that
+-- did not fit.
+--
+-- Anything that changes the tile count reaches this. Widgets can be switched
+-- off, reordered and added, so the count is exactly the thing not to assume.
+local function RowHeights(available, rows, hasStrip)
+    rows = math.max(1, rows or 2)
+
     local spare = available
-        - (GAP * 2)
+        - (GAP * math.max(0, rows - 1))
         - (hasStrip and (STRIP_HEIGHT + GAP) or 0)
 
-    local short = spare / (TALL_RATIO + 1)
+    local short = spare / (TALL_RATIO + (rows - 1))
 
     -- A window dragged very small should clip gracefully rather than compute
     -- negative heights and throw.
@@ -61,6 +75,23 @@ local function RowHeights(available, hasStrip)
     end
 
     return math.floor(short * TALL_RATIO), math.floor(short)
+end
+
+-- How many rows of ordinary tiles the grid needs, and whether a full-width
+-- strip follows them. Counted before anything is positioned, because the row
+-- heights depend on it and the heights decide the positions.
+local function CountRows(widgets)
+    local tiles, hasStrip = 0, false
+
+    for _, widget in ipairs(widgets) do
+        if (widget.span or 1) >= COLUMNS then
+            hasStrip = true
+        else
+            tiles = tiles + 1
+        end
+    end
+
+    return math.max(1, math.ceil(tiles / COLUMNS)), hasStrip
 end
 
 local function CreateTile(parent)
@@ -169,22 +200,17 @@ function DashboardTab.Create(parent, config)
             width = FALLBACK_WIDTH
         end
 
-        local hasStrip = false
-
-        for _, widget in ipairs(widgets) do
-            if (widget.span or 1) >= COLUMNS then
-                hasStrip = true
-            end
-        end
+        local gridRows, hasStrip = CountRows(widgets)
 
         local available = self:GetHeight()
 
         if not available or available <= 1 then
-            available = FALLBACK_SHORT * (TALL_RATIO + 1) + GAP * 2
+            available = FALLBACK_SHORT * (TALL_RATIO + gridRows - 1)
+                + GAP * math.max(0, gridRows - 1)
                 + (hasStrip and (STRIP_HEIGHT + GAP) or 0)
         end
 
-        local tallRow, shortRow = RowHeights(available, hasStrip)
+        local tallRow, shortRow = RowHeights(available, gridRows, hasStrip)
 
         for index, widget in ipairs(widgets) do
             local tile = self.tiles[index] or CreateTile(self)

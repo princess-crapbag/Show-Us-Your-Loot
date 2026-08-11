@@ -107,6 +107,35 @@ function DashboardParts.Caption(tile, text, colorKey)
     return caption
 end
 
+-- How many rows actually fit in this tile, right now.
+--
+-- Renderers used to draw a hardcoded six, which was right for the only tile
+-- height that had ever existed. Row heights are computed from the space
+-- available and shrink as soon as the grid needs another row, and a tile is
+-- not a scroll frame — rows past the bottom are drawn outside the body rather
+-- than clipped, so they land on whatever is underneath.
+--
+-- The caption is pinned to the bottom of the tile, so its space is held back
+-- unless the caller says there will not be one.
+local CAPTION_SPACE = 14
+
+function DashboardParts.RowCapacity(tile, hasCaption)
+    local height = tile.body and tile.body:GetHeight() or 0
+
+    -- Before the first layout GetHeight is zero. Six is what the tall row fits
+    -- and is what every renderer used to assume, so the first draw looks the
+    -- same as it always did and the next one corrects it.
+    if not height or height <= 1 then
+        return 6
+    end
+
+    local usable = height
+        - (tile.rowTop or 0)
+        - (hasCaption == false and 0 or CAPTION_SPACE)
+
+    return math.max(1, math.floor(usable / ROW_HEIGHT))
+end
+
 function DashboardParts.Empty(tile, text)
     local message = Theme.CreateText(tile.body, Theme.sizes.rowSmall, "textMuted")
 

@@ -255,15 +255,30 @@ local function CreateTitleBar(parent)
 
     -- Settings sat in the footer, in the row used every raid night, and is
     -- opened about once a month. A corner is where a thing like that belongs.
-    view.settingsButton = Theme.CreateButton(parent, 26, 22, "*", function()
+    view.settingsButton = Theme.CreateButton(parent, 26, 22, "", function()
         if SYL.OpenSettingsWindow then
             SYL:OpenSettingsWindow()
         end
     end)
 
-        -- Clear of the close button, which is 32px wide at -6: that spans -38 to
+    -- An actual cog rather than a character that looks a bit like one. This
+    -- was "*", which is what a settings button looks like when nobody has
+    -- drawn one — the shape people are hunting for in a corner is a gear, and
+    -- an asterisk reads as a footnote marker.
+    --
+    -- The label is left in place and empty: Theme.CreateButton owns it, and
+    -- removing it would mean the button no longer matches every other button.
+    local gear = view.settingsButton:CreateTexture(nil, "ARTWORK")
+
+    gear:SetTexture("Interface\\Buttons\\UI-OptionsButton")
+    gear:SetSize(16, 16)
+    gear:SetPoint("CENTER", 0, 0)
+
+    view.settingsButton.icon = gear
+
+    -- Clear of the close button, which is 32px wide at -6: that spans -38 to
     -- -6, so anything starting nearer than -44 sits underneath it.
-view.settingsButton:SetPoint("TOPRIGHT", -44, -14)
+    view.settingsButton:SetPoint("TOPRIGHT", -44, -14)
 
     SYL.Tooltips.Attach(
         view.settingsButton,

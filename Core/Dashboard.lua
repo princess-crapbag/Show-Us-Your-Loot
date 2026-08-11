@@ -45,13 +45,6 @@ Dashboard.WIDGETS = {
         span = 1,
     },
     {
-        key = "whoIsOut",
-        label = "Who is out",
-        note = "Absences you have typed in. An addon cannot read Discord.",
-        tab = "nights",
-        span = 1,
-    },
-    {
         key = "due",
         label = "Who is due",
         note = "Your raid team, ranked by what they have taken per night.",
@@ -73,26 +66,35 @@ Dashboard.WIDGETS = {
         span = 1,
     },
     {
-        key = "links",
-        label = "Links",
-        note = "Your own URLs, copied from a box. Addons cannot open a browser.",
-        tab = "settings",
+        key = "whoIsOut",
+        label = "Who is out",
+        note = "Absences you have typed in. An addon cannot read Discord.",
+        tab = "nights",
         span = 1,
     },
     {
         key = "recording",
         label = "Recording",
-        note = "Whether capture is on, and when it last saw anything.",
+        note = "What is being captured, and your links, on one line.",
         tab = "settings",
         span = 3,
     },
 }
 
 -- The order the mocks were signed off in.
+-- SIX TILES AND A STRIP, and the count is not incidental. The grid is two
+-- rows of three inside a window fixed at 900x596; a seventh tile forces a
+-- third row, which shrinks every tile to the point where the list widgets
+-- have room for two entries. That shipped for a day and read as a broken
+-- dashboard, which it was.
+--
+-- Links lost its tile to make room for Who is out, and lost nothing by it: it
+-- was three lines of text in a tile sized for six, and it now sits on the
+-- recording strip beside the capture states. Who is out earns a tile because
+-- it is a list that grows; Links never was.
 local DEFAULT_ORDER = {
     "lastNight", "nextNight", "due",
     "readiness", "tier", "whoIsOut",
-    "links",
     "recording",
 }
 

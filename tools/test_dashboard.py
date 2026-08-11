@@ -119,6 +119,26 @@ for widget in dash.WIDGETS.values():
 
 check("recording spans the full width", dash.Get("recording")["span"] == 3)
 
+# SIX TILES AND A STRIP, and the count is load-bearing rather than incidental.
+# The grid is two rows of three in a window fixed at 900x596. A seventh tile
+# forces a third row: every tile shrinks to about two usable lines and the
+# strip lands below the frame's own backdrop, where the game world shows
+# through it. That shipped for a day and read as "the dashboard is broken",
+# which is exactly what it was.
+#
+# Adding one means widening the window or accepting that, and this is the
+# assertion that makes it a decision rather than an accident.
+tiles, strips = 0, 0
+
+for widget in dash.WIDGETS.values():
+    if widget["span"] and widget["span"] >= 3:
+        strips += 1
+    else:
+        tiles += 1
+
+check("the grid is exactly two rows of three", tiles == 6)
+check("plus one full-width strip", strips == 1)
+
 # This used to assert that next raid night declared `needs = "calendar"`, and
 # it was right to until the schedule could be typed. Nothing on the dashboard
 # is blocked on the guild calendar any more — see Core/RaidSchedule.lua — so
