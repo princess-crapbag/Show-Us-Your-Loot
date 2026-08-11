@@ -279,14 +279,40 @@ check(
     trialist and trialist["notRankedReason"],
 )
 
-# --- the way back to the roster --------------------------------------------
+# --- the roster is part of this tab now ------------------------------------
 #
-# Turning this tab from a routing panel into a board deleted the three buttons
-# that were the only way into the roster and players windows, which left the
-# roster behind /syl roster and nothing else — it read as having been removed.
-# Asserted because a missing button is invisible to every other test here.
-for name in ("rosterButton", "playersButton"):
-    check(f"the panel still offers {name}", panel[name] is not None)
+# Board and Roster are the same people asked two questions, and the answer to
+# the second decides who appears in the first — ticking TEAM is what the scope
+# button reads. They were two windows reached from two buttons; now they are a
+# toggle, and the full roster window is still one button away for the things
+# that do not belong in a column of ticks.
+for name in ("viewButton", "rosterButton"):
+    check(f"the panel offers {name}", panel[name] is not None)
+
+for label, action in (
+    ("switching to the roster", lambda: SYL.RaidersPanel.SetView("roster")),
+    ("selecting nobody there", lambda: SYL.RaidersPanel.Refresh()),
+    ("switching back to the board", lambda: SYL.RaidersPanel.SetView("board")),
+    ("toggling straight from the board", lambda: SYL.RaidersPanel.ToggleView()),
+):
+    try:
+        action()
+        check(f"it refreshes {label}", True)
+    except Exception as err:  # noqa: BLE001
+        check(f"it refreshes {label}", False, err)
+
+# The roster view is built from the same scope as the board, so a scope that
+# hides everybody has to leave it empty rather than throwing.
+lua.execute("ShowUsYourLootDB.settings.audienceScope = 'team'")
+
+try:
+    SYL.RaidersPanel.SetView("roster")
+    check("the roster view survives a scope that hides everybody", True)
+except Exception as err:  # noqa: BLE001
+    check("the roster view survives a scope that hides everybody", False, err)
+
+lua.execute("ShowUsYourLootDB.settings.audienceScope = 'everyone'")
+SYL.RaidersPanel.SetView("board")
 
 # --- the detail pane renders for each of those ----------------------------
 for label, entry in (

@@ -44,8 +44,10 @@ local VISIBLE_ROWS = 16
 
 local frame
 local rows = {}
+local rosterRows = {}
 local offset = 0
 local selectedKey
+local view = "board"
 local Refresh
 
 --------------------------------------------------------------------------
@@ -170,12 +172,19 @@ end
 -- Refresh
 --------------------------------------------------------------------------
 
+local function HideRows(list)
+    for _, row in ipairs(list) do
+        row:Hide()
+    end
+end
+
 Refresh = function()
     if not frame then
         return
     end
 
-    local entries, beforeScope = Build()
+    frame.viewButton.label:SetText(view == "board" and "Board" or "Roster")
+
     local scope = SYL.Audience.Get()
 
     frame.audienceButton.label:SetText(SYL.Audience.Label(scope))
@@ -184,6 +193,25 @@ Refresh = function()
         scope == "everyone" and "textPrimary" or "accent"
     )
 
+    if view == "roster" then
+        SYL.RaidersRoster.Refresh({
+            frame = frame,
+            boardRows = rows,
+            rosterRows = rosterRows,
+            visibleRows = VISIBLE_ROWS,
+            listTop = LIST_TOP,
+            offset = offset,
+            selectedKey = selectedKey,
+            onChanged = Refresh,
+            selected = selectedKey and FindByKey(Build(), selectedKey) or nil,
+        })
+
+        return
+    end
+
+    HideRows(rosterRows)
+
+    local entries, beforeScope = Build()
     local maxOffset = math.max(0, #entries - VISIBLE_ROWS)
 
     if offset > maxOffset then
@@ -191,9 +219,7 @@ Refresh = function()
     end
 
     if #entries == 0 then
-        for _, row in ipairs(rows) do
-            row:Hide()
-        end
+        HideRows(rows)
 
         frame.average:Hide()
 
@@ -257,6 +283,17 @@ end
 
 RaidersPanel.Refresh = Refresh
 
+function RaidersPanel.SetView(next)
+    view = (next == "roster") and "roster" or "board"
+    offset = 0
+
+    Refresh()
+end
+
+function RaidersPanel.ToggleView()
+    RaidersPanel.SetView(view == "board" and "roster" or "board")
+end
+
 --------------------------------------------------------------------------
 -- Building
 --------------------------------------------------------------------------
@@ -299,35 +336,42 @@ function RaidersPanel.Create(parent)
     -- because the difference between those two screens was always the audience
     -- and that is the button above. Until that is built these open the windows
     -- that answer it today, which is what the tab did before.
-    frame.rosterButton = Theme.CreateButton(frame, 110, 20, "Roster", function()
+    -- Board or Roster, which is the merge. The two used to be separate windows
+    -- reached from separate buttons, and they are the same people asked two
+    -- questions: who is owed loot, and who is on the team. The second decides
+    -- who appears in the first, so making it a toggle rather than a trip to
+    -- another window is most of the value.
+    frame.viewButton = Theme.CreateButton(frame, 90, 20, "Board", function()
+        RaidersPanel.ToggleView()
+    end)
+
+    frame.viewButton:SetPoint("LEFT", frame.audienceButton, "RIGHT", 10, 0)
+
+    SYL.Tooltips.Attach(
+        frame.viewButton,
+        "Board / Roster",
+        "The board ranks who is owed loot. The roster is who could raid, with "
+        .. "a tick for the team and their role — and ticking TEAM there is "
+        .. "what the scope button beside this reads."
+    )
+
+    -- Searching, buff coverage and adding somebody who has not joined the
+    -- guild yet all still live in the full window. None of them belong in a
+    -- list whose job is a column of ticks, and removing the last route to
+    -- them once already made the roster look deleted.
+    frame.rosterButton = Theme.CreateButton(frame, 110, 20, "Full roster", function()
         if SYL.OpenRosterWindow then
             SYL:OpenRosterWindow()
         end
     end)
 
-    frame.rosterButton:SetPoint("LEFT", frame.audienceButton, "RIGHT", 10, 0)
+    frame.rosterButton:SetPoint("LEFT", frame.viewButton, "RIGHT", 8, 0)
 
     SYL.Tooltips.Attach(
         frame.rosterButton,
-        "Open the roster",
-        "Who is on the raid team, their roles, and adding somebody who has "
-        .. "not joined the guild yet. Ticking TEAM there is what the raid team "
-        .. "scope on this board reads."
-    )
-
-    frame.playersButton = Theme.CreateButton(frame, 110, 20, "Players", function()
-        if SYL.OpenPlayerWindow then
-            SYL:OpenPlayerWindow()
-        end
-    end)
-
-    frame.playersButton:SetPoint("LEFT", frame.rosterButton, "RIGHT", 8, 0)
-
-    SYL.Tooltips.Attach(
-        frame.playersButton,
-        "Open players",
-        "Per-player totals: upgrades, attendance and drought, with a detail "
-        .. "window on any row."
+        "The full roster window",
+        "Search, raid buff coverage, and adding a recruit who is not in the "
+        .. "guild yet. /syl players is still the per-player history."
     )
 
     -- The detail pane, on the right and always present. An empty pane that

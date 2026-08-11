@@ -99,6 +99,7 @@ UI\ScheduleWidgets.lua
 UI\KeyRequestList.lua
 UI\KeysPanel.lua
 UI\RaidersDetail.lua
+UI\RaidersRoster.lua
 UI\RaidersPanel.lua
 UI\BossLoot.lua
 UI\BossesPanel.lua
