@@ -19,8 +19,9 @@ Blizzard's Loot History API plus chat-captured loot, and answers who is due an
 upgrade, who turned up, and what each boss has given.
 
 - **Repo:** https://github.com/princess-crapbag/Show-Us-Your-Loot (public)
-- **CurseForge:** project 1642383, live at **v0.2.0-alpha**. 0.3.0 is
-  written and the `.toc` is bumped; it needs the tag pushed and nothing else.
+- **CurseForge:** project 1642383, live at **v0.3.0** — the first non-alpha
+  release, shipped 2026-08-10. Uploaded as `12.0.7 release`, build type
+  `retail non-alpha non-debug`. **Real people can download this now.**
 - **`main` is 54 commits ahead of that tag.** All of it is on GitHub and in
   Aimee's game. **None of it has reached a user.**
 - 117 Lua files in the `.toc`, 24 test suites in `tools/`.
@@ -51,11 +52,17 @@ as license to skip looking at the next one.
 | Sync roll lists | **A second client**, same as above. `/syl sync backfill` on one and the roll lists should appear on the other |
 | `/syl schedule import` | A guild calendar with events in it. `Core/GuildCalendar.lua` is unverified against a live client — if it finds nothing, distrust it before `Core/RaidSchedule.lua`, which is tested and depends on none of it |
 
-**2. The fairness maths has still never run on a real raid night.** Five passes
-have now changed how attendance is counted, how droughts are measured, what
-counts as an upgrade, who is on the list at all, and replaced the drought with
-a weighted score. Not one has been watched with real data. Treat every number
-as plausible rather than correct.
+**2. The fairness maths has now run on a real raid night, once.** An LFR run on
+2026-08-10: 24 raiders, one night, five drops, five upgrades, zero transmog or
+greed, and the numbers agreed with each other. Attendance and loot capture are
+both proven on live data.
+
+**What that run could NOT prove**, because it is one night with one team
+member: the ranking itself. It surfaced a real fault by hiding it — `/syl due`
+was still sorting by drought while the board sorted by share, and with one
+ranked raider the two agree by accident. Fixed, but the lesson stands: a
+one-raider night validates the pipeline, not the ordering. The first full guild
+night with several ranked raiders is still worth watching closely.
 
 The next raid remains the highest-value event for this project.
 
@@ -72,7 +79,15 @@ identically in a terminal.
 Releasing: write the CHANGELOG entry, bump `## Version:` in the `.toc` **by
 hand**, commit, tag, push the tag. See CURSEFORGE.md.
 
-**The addon is invisible on CurseForge, and this is not a moderation problem.**
+**The CurseForge invisibility should now be fixed, and is worth confirming.**
+v0.3.0 is the first non-alpha file, and CurseForge indexes a project by its
+latest non-alpha one. Search for the exact phrase in a day or so; if it still
+returns six unrelated addons and not this one, the diagnosis below was wrong
+and something else is going on.
+
+The original diagnosis, for reference:
+
+**The addon was invisible on CurseForge, and it was not a moderation problem.**
 Verified against the live site 2026-08-09: searching the exact phrase returns
 six unrelated addons and not this one, and the project's own Files tab reads
 "No Results" until "Show alpha files" is ticked. All three uploads are type
@@ -367,10 +382,13 @@ first `SendChatMessage` in the addon.
 
 ### Tier 5 — shipping
 
-17. **The LFR run**, with `/syl due` before and after.
-18. **Release from alpha** once the maths has been watched. Also fixes the
-    CurseForge invisibility.
-19. **F10 — re-take the screenshots.** All seven stale. Do this last.
+17. **DONE. The LFR run.** See page one for what it proved and what it did not.
+18. **DONE. Released as v0.3.0**, the first non-alpha file.
+19. **F10 — re-take the screenshots. THIS IS THE TOP ITEM NOW.** All seven
+    predate the tabs and show a UI that no longer exists — a dashboard that is
+    not there, a footer of buttons that is gone, and windows that are panels.
+    They are the first thing anybody sees on a page that is finally findable,
+    and they currently advertise a different addon. Aimee is doing these.
 
 ### Open decisions from tonight, both small
 
