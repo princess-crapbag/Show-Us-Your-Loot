@@ -22,7 +22,7 @@ upgrade, who turned up, and what each boss has given.
 - **CurseForge:** project 1642383, live at **v0.2.0-alpha**
 - **`main` is 54 commits ahead of that tag.** All of it is on GitHub and in
   Aimee's game. **None of it has reached a user.**
-- 117 Lua files in the `.toc`, 22 test suites in `tools/`.
+- 117 Lua files in the `.toc`, 24 test suites in `tools/`.
 
 **Aimee runs the addon from a symlink**, `Interface/AddOns/ShowUsYourLoot ->
 Desktop/ShowUsYourLoot`. Edits are live in game immediately; only a `/reload`
@@ -103,7 +103,8 @@ after the LFR test.
 
 ### The tests
 
-They need `lupa`, which embeds a Lua interpreter. **It is already installed on
+They need `lupa`, which embeds a Lua interpreter, and `luaparser`,
+which parses Lua into an AST for the scope check. **It is already installed on
 the system python on this machine** — `python tools/test_load.py` runs as is.
 There is no `.venv`, despite what this file used to say; if it is ever needed
 again:
@@ -338,9 +339,21 @@ first `SendChatMessage` in the addon.
     the five item helpers are a module — but it is 12 call sites across 8 files
     and the test suites load those modules individually, so it ripples further
     than it looks. Never delete a comment to get under the limit.
-14. **`luacheck` with WoW globals.** The one open tooling item: catches a local
-    used before its declaration, which nothing here covers and which shipped
-    once as `HideTarget`. `lupa` is installed, so there is a Lua interpreter.
+14. **DONE, and not with luacheck. `tools/syl_scope.py`.** A local used before
+    its declaration is caught now, and `syl_check` fails on it — so
+    `release.yml` blocks a release that contains one.
+
+    luacheck wants a Lua toolchain and a triage across a hundred files, and
+    there is no Lua on this machine. `luaparser` is a pip install, gives a real
+    AST rather than another regex, and answers the one question that had
+    actually cost time. It is a **dev dependency**, and if it is missing the
+    check says it skipped that section rather than failing.
+
+    **The first draft reported ten findings on a clean codebase** — parameters,
+    loop variables, `if` branches, field names and table keys were all being
+    read as variables. Every one was noise, and a checker that is usually wrong
+    is worse than none. `tools/test_scope.py` carries every one of those shapes
+    as a fixture alongside the two faults that really shipped.
 15. **The personal-loot asymmetry.** Dormant, not wrong — see §4.
 16. **NOTES Phases 2, 3, 5, 6.** Phase 6 is item 7.
 

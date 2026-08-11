@@ -41,8 +41,14 @@ jobs:
           # a shallow clone gives it nothing to work with.
           fetch-depth: 0
 
+      # luaparser is what lets syl_check see a local used before it is
+      # declared — the class that has shipped three times and that no regex
+      # here can catch. Without it the check still runs and says it skipped
+      # that section, which would silently stop guarding a release.
       - name: Check the Lua before shipping it
-        run: python tools/syl_check.py
+        run: |
+          python -m pip install --quiet luaparser
+          python tools/syl_check.py
 
       # The test suites, all of which run the shipped Lua rather than a copy
       # of it: every file in the .toc parses and then loads against a stubbed
@@ -55,7 +61,7 @@ jobs:
       # tests still run locally.
       - name: Run the tests
         run: |
-          python -m pip install --quiet lupa
+          python -m pip install --quiet lupa luaparser
           for suite in tools/test_*.py; do
             echo "--- $suite"
             python "$suite" || exit 1

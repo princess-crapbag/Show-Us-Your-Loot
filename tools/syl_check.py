@@ -440,7 +440,47 @@ def main() -> int:
                 line = code[:m.start()].count("\n") + 1
                 warnings.append(f"{name}:{line}: SYL.{mod}.{mem} never assigned")
 
+    # A local used before it is declared, which every rule above is blind to.
+    #
+    # Its own module because it needs a real parser rather than a regex, and
+    # that parser is a pip dependency — missing it skips this section and says
+    # so, rather than failing a run on a machine that has not installed it.
+    scope_note = None
+
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+        import syl_scope
+
+        if not syl_scope.AVAILABLE:
+            scope_note = (
+                "scope check skipped — pip install luaparser to catch a local "
+                "used before it is declared"
+            )
+        else:
+            for name in listed:
+                path = ROOT / name
+
+                if not path.exists():
+                    continue
+
+                found = syl_scope.check_source(
+                    path.read_text(encoding="utf-8"), name
+                )
+
+                for _, line, ident, declared in found or []:
+                    problems.append(
+                        f"{name}:{line}: '{ident}' is used before the local "
+                        f"declared on line {declared}, so it reads a nil global"
+                    )
+    except ImportError:
+        scope_note = "scope check skipped — tools/syl_scope.py not importable"
+
     print(f"Checked {len(listed)} files listed in the .toc.\n")
+
+    if scope_note:
+        print(scope_note + "\n")
+
     if problems:
         print(f"PROBLEMS ({len(problems)})")
         for p in problems:
