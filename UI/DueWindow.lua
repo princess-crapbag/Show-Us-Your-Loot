@@ -68,7 +68,10 @@ local function Entries()
 
     entries = SYL.Audience.Filter(entries, SYL.Audience.Get())
 
-    return SYL.DueList.Sort(entries), beforeScope
+    -- Same ranking as /syl due and the Raiders board. This window is
+    -- superseded by the board and still reachable with /syl due window, and a
+    -- superseded screen that ranks by an older rule is worse than no screen.
+    return SYL.LootScore.Rank(entries), beforeScope
 end
 
 -- What went into the numbers, said out loud, exactly as `/syl due` does. A

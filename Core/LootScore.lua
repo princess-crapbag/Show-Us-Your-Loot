@@ -334,6 +334,18 @@ function LootScore.Breakdown(entry)
     return rows
 end
 
+-- ATTACH AND SORT TOGETHER, because doing one without the other is how two
+-- screens end up ranking by different rules. /syl due sorted by drought for
+-- days after the board moved to share: with one ranked raider they agreed by
+-- accident, and with a roster they would have named different people as most
+-- owed. Same reasoning as Players.ResolveToMain and TradeTracker
+-- .CreditedIdentity — one choke point, so there is nothing to keep in step.
+function LootScore.Rank(entries, drops)
+    LootScore.Attach(entries, drops or SYL.GetAllDrops())
+
+    return LootScore.Sort(entries)
+end
+
 function LootScore.Describe(entry)
     if not entry.ranked then
         return entry.notRankedReason or "not ranked"

@@ -66,8 +66,7 @@ local function Build()
 
     entries = SYL.Audience.Filter(entries, SYL.Audience.Get())
 
-    SYL.LootScore.Attach(entries, drops)
-    SYL.LootScore.Sort(entries)
+    SYL.LootScore.Rank(entries, drops)
 
     return entries, beforeScope
 end

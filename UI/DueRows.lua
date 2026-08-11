@@ -132,6 +132,9 @@ function DueRows.Fill(row, entry, rank)
         Theme.SetTextColor(cells.last, "textMuted")
     end
 
-    cells.status:SetText(SYL.DueList.Describe(entry))
+    -- The number the list is SORTED by, not a different one. The window ranks
+    -- by share now, and a row showing a drought beside a share ordering is two
+    -- claims at once — the reader has no way to tell which produced the order.
+    cells.status:SetText(SYL.LootScore.Describe(entry))
     Theme.SetTextColor(cells.status, "textMuted")
 end

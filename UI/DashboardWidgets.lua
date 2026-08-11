@@ -103,8 +103,7 @@ DashboardWidgets.RENDERERS.due = function(tile)
 
     entries = SYL.Audience.Filter(entries, SYL.Audience.Get())
 
-    SYL.LootScore.Attach(entries, drops)
-    SYL.LootScore.Sort(entries)
+    SYL.LootScore.Rank(entries, drops)
 
     if #entries == 0 then
         DashboardParts.Empty(tile,

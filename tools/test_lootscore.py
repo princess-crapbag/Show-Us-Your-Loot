@@ -203,6 +203,62 @@ starred = drop("P1", STATE.NeedMainSpec)
 score.ToggleStar(starred)
 check("a star moves no total", totals_for([starred])["P1"].score == 100)
 
+# --- one ranking, used by every screen -------------------------------------
+#
+# /syl due ranked by nights-since-upgrade for days after the board moved to
+# share. With one ranked raider the two agreed by accident; with a roster they
+# would have named different people as most owed, which is the failure this
+# project treats as fatal.
+#
+# LootScore.Rank is Attach and Sort together, so a caller cannot do one and
+# forget the other — the same reasoning as Players.ResolveToMain.
+lua.execute("""
+    function RankOrder()
+        -- Four nights each, so everybody clears the floor except the trial.
+        local entries = {
+            { key = 'heavy',  name = 'Heavy',  nights = 4 },
+            { key = 'light',  name = 'Light',  nights = 4 },
+            { key = 'trial',  name = 'Trial',  nights = 1 },
+        }
+
+        local drops = {
+            -- Heavy took a Need, worth 100. Light took a greed, worth 20.
+            {
+                timestamp = 1, itemLink = 'bop',
+                instanceType = 'raid', difficultyID = 16,
+                rolls = { { isWinner = true, guid = 'heavy', state = 0 } },
+            },
+            {
+                timestamp = 2, itemLink = 'bop',
+                instanceType = 'raid', difficultyID = 16,
+                rolls = { { isWinner = true, guid = 'light', state = 3 } },
+            },
+        }
+
+        ShowUsYourLoot.LootScore.Rank(entries, drops)
+
+        local names = {}
+
+        for _, entry in ipairs(entries) do
+            table.insert(names, entry.name)
+        end
+
+        return table.concat(names, ',')
+    end
+""")
+
+order = lua.globals().RankOrder()
+
+# Lowest share first: Light took 20 over four nights, Heavy took 100 over four.
+# The trial is unranked and goes last whatever their score.
+ok = order == "Light,Heavy,Trial"
+
+print(("ok   " if ok else "FAIL ") + "Rank puts the least-taken first and the unranked last")
+
+if not ok:
+    print("       got: " + str(order))
+    failures.append("Rank ordering")
+
 print()
 print("FAILURES:", failures or "none")
 sys.exit(1 if failures else 0)

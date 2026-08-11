@@ -209,7 +209,14 @@ function Reports.Due(limit)
     local beforeScope = #entries
 
     entries = SYL.Audience.Filter(entries, scope)
-    entries = SYL.DueList.Sort(entries)
+
+    -- SHARE, NOT DROUGHT, and that is the whole point of this change. The
+    -- board and the dashboard tile have ranked by score-per-night since
+    -- weighted loot value replaced the drought; this command was left behind
+    -- ranking by nights-since-upgrade. With one ranked raider the two agree by
+    -- accident. With a roster they name different people as most owed, and two
+    -- lists disagreeing about that is how an officer stops trusting both.
+    SYL.LootScore.Rank(entries)
 
     if #entries == 0 then
         SYL:Print(
@@ -221,9 +228,9 @@ function Reports.Due(limit)
     end
 
     SYL:Print(
-        "Longest without an upgrade — "
+        "Owed the most, by loot taken per raid night — "
         .. SYL.Audience.Note(scope)
-        .. ", transmog and greed do not count:"
+        .. ":"
     )
 
     for index = 1, math.min(limit or 10, #entries) do
@@ -232,8 +239,10 @@ function Reports.Due(limit)
         SYL:Write(
             "  " .. index .. ". "
             .. tostring(entry.name)
-            .. " — " .. SYL.DueList.Describe(entry)
-            .. " (" .. entry.nights .. " raided)"
+            .. " — " .. SYL.LootScore.Describe(entry)
+            .. " (" .. entry.nights
+            .. (entry.nights == 1 and " night, " or " nights, ")
+            .. (entry.lootScore or 0) .. " points)"
         )
     end
 
@@ -244,10 +253,14 @@ function Reports.Due(limit)
     -- that used to be here described a setting that no longer exists, and the
     -- two "some items were left out" warnings counted chat records this
     -- calculation never reads any more.
+    -- The old sentence said transmog and greed do not count, which was true
+    -- of the drought and is not true of the score: greed is worth 20 and
+    -- transmog nothing, so both count and only one is free.
     SYL:Write(
-        "  Group-loot Need and offspec wins only, on bind-on-pickup items, "
-        .. "from nights that counted as raid nights. The vault, Mythic+ "
-        .. "chests, the catalyst and BoEs do not reset a drought."
+        "  Need 100, offspec 20, greed 20, transmog 0, divided by raid nights "
+        .. "attended. Group loot on bind-on-pickup items only, from nights "
+        .. "that counted. Under " .. SYL.LootScore.MIN_NIGHTS
+        .. " nights nobody is ranked."
     )
 end
 
