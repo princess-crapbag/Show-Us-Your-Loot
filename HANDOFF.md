@@ -20,9 +20,9 @@ upgrade, who turned up, and what each boss has given.
 
 - **Repo:** https://github.com/princess-crapbag/Show-Us-Your-Loot (public)
 - **CurseForge:** project 1642383, live at **v0.2.0-alpha**
-- **`main` is 52 commits ahead of that tag.** All of it is on GitHub and in
+- **`main` is 54 commits ahead of that tag.** All of it is on GitHub and in
   Aimee's game. **None of it has reached a user.**
-- 116 Lua files in the `.toc`, 21 test suites in `tools/`.
+- 117 Lua files in the `.toc`, 22 test suites in `tools/`.
 
 **Aimee runs the addon from a symlink**, `Interface/AddOns/ShowUsYourLoot ->
 Desktop/ShowUsYourLoot`. Edits are live in game immediately; only a `/reload`
@@ -47,6 +47,7 @@ as licence to skip looking at the next one.
 | The trade advisor | A raid. It opens a window unprompted mid-fight, which is the one thing here that can be actively annoying rather than merely wrong |
 | The trade tracker | A real trade. If the event ordering is wrong the symptom is **silence** — nothing recorded, nothing saying why |
 | Key requests | **A second client.** Every rule is covered locally; nothing has watched a message arrive. Aimee has a second account |
+| Sync roll lists | **A second client**, same as above. `/syl sync backfill` on one and the roll lists should appear on the other |
 | `/syl schedule import` | A guild calendar with events in it. `Core/GuildCalendar.lua` is unverified against a live client — if it finds nothing, distrust it before `Core/RaidSchedule.lua`, which is tested and depends on none of it |
 
 **2. The fairness maths has still never run on a real raid night.** Five passes
@@ -111,7 +112,7 @@ again:
 python -m venv .venv && .venv/Scripts/python -m pip install lupa
 ```
 
-Twenty-one suites. Each reads its Lua straight out of the addon, so none can
+Twenty-two suites. Each reads its Lua straight out of the addon, so none can
 drift from the code, and each exits non-zero on failure. `release.yml` runs the
 lot before building a zip, so a failing suite blocks a release.
 
@@ -309,9 +310,16 @@ first `SendChatMessage` in the addon.
    slots are captured when both sides accept and committed on
    `LE_GAME_ERR_TRADE_COMPLETE`. If that ordering is wrong in practice the
    symptom is silence — nothing is recorded and nothing says why.
-8. **E8 — sync backfill, or turn sync off.** Officer sync still sends drop
-   headers only, so synced records sit outside the fairness maths as `partial`.
-   Needs two clients more than it needs code.
+8. **DONE. E8 — sync sends roll lists.** `Core/SyncRolls.lua`. A received drop
+   stops being `partial`, so Analytics counts it and the pass data is there for
+   drops the officer did not personally witness. `/syl sync backfill` asks the
+   raid for the lists already missing.
+
+   **What sync transmits is now wider**, and the argument for that being safe
+   is in the file header rather than assumed — same channel, same audience,
+   and only what the game already showed everybody in the raid.
+
+   **Untested between two clients**, like key requests.
 9. **E6 — reposition.** The unique asset is the pass data. Suggested line:
    *"Group Loot remembers who won. This remembers who passed."*
 10. **E7 — reconsider All Rights Reserved.** Tells an officer they are stranded
