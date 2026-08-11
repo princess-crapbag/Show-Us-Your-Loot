@@ -19,7 +19,8 @@ Blizzard's Loot History API plus chat-captured loot, and answers who is due an
 upgrade, who turned up, and what each boss has given.
 
 - **Repo:** https://github.com/princess-crapbag/Show-Us-Your-Loot (public)
-- **CurseForge:** project 1642383, live at **v0.2.0-alpha**
+- **CurseForge:** project 1642383, live at **v0.2.0-alpha**. 0.3.0 is
+  written and the `.toc` is bumped; it needs the tag pushed and nothing else.
 - **`main` is 54 commits ahead of that tag.** All of it is on GitHub and in
   Aimee's game. **None of it has reached a user.**
 - 117 Lua files in the `.toc`, 24 test suites in `tools/`.
@@ -76,8 +77,15 @@ Verified against the live site 2026-08-09: searching the exact phrase returns
 six unrelated addons and not this one, and the project's own Files tab reads
 "No Results" until "Show alpha files" is ticked. All three uploads are type
 Alpha, and CurseForge indexes projects by their latest non-alpha file.
-**Shipping a tag without the `-alpha` suffix fixes both.** Aimee wants that
-after the LFR test.
+**Shipping a tag without the `-alpha` suffix fixes both.** The LFR test is
+done, so this is ready:
+
+```
+git tag v0.3.0 && git push origin v0.3.0
+```
+
+The CHANGELOG entry is written and `## Version:` says 0.3.0. Nothing else
+needs doing, and nothing has been tagged — no user has any of this yet.
 
 ---
 

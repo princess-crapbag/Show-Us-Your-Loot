@@ -3,137 +3,158 @@
 What changed, for the person installing it. The commit history explains why;
 this says what you will notice.
 
-## Unreleased
+## 0.3.0 — 2026-08-10
+
+**The first release that is not an alpha.** Every earlier upload was marked
+Alpha, and CurseForge indexes a project by its latest non-alpha file — which is
+why searching for this addon turned up six other things and not this one.
 
 ### Added
-- **A dashboard, and it is what the window opens on.** Six tiles plus a status
-  strip: last raid night, next raid night, who is due, readiness, tier
-  progress, links, and whether the addon is actually recording. Click any tile
-  to open the tab it is about. Every widget can be switched off and reordered
+
+- **A dashboard, and it is what the window opens on.** Six tiles plus a
+  full-width strip: last raid night, next raid night, who is due, readiness,
+  tier progress and who is out, with recording and your links along the bottom.
+  Click any tile to open the tab it is about. Every widget can be switched off
   in Settings.
-- **The window has tabs now** — Dashboard, Loot, Raiders, Nights, Bosses,
-  Keys, Archives — and **Settings moved to a cogwheel** in the top corner. The
-  six footer buttons are gone; every one of them was a tab or the cogwheel.
+- **The window has tabs** — Dashboard, Loot, Raiders, Calendar, Bosses, Keys,
+  Archives — and **Settings moved to a cogwheel** in the top corner. The six
+  footer buttons are gone; every one of them was a tab or the cogwheel.
+- **Raiders is a board, not a table.** One bar per raider, its length being
+  what they have taken per raid night, with the raid average drawn across it.
+  Click anyone and the pane on the right shows where their number came from:
+  every win that counted, what each was worth, and the total those add up to.
+  A **Roster** view on the same tab is where you tick who is on the team and
+  set their role — the two are the same people asked two questions, and the
+  answer to the second decides who appears in the first.
+- **Bosses is a rail and a loot table**, and it opens on what a boss has
+  **never** given you. That is the one thing the loot list cannot tell you.
+  Reading the Adventure Guide is a button rather than automatic, because it
+  walks every raid tier and moves your own Journal selection.
+- **Calendar** — a month of your raid nights, each shaded with what died, and a
+  dense stat panel for whichever day you click. Two sessions in one evening are
+  one night, and a raid running past midnight belongs to the night it started.
+- **Keys** — every Mythic+ key the addon knows about, sortable, and you can ask
+  a guildie to run theirs. A request is whispered to that one person and never
+  broadcast: two people asking for the same key never learn about each other.
+  Answer with Yes, Maybe or No, and only a No can be asked again. Dismissing a
+  request hides it from the count and keeps it on the list until the weekly
+  reset, so closing a popup can never lose one. Off by default.
+- **The trade window advisor.** When you win something, a small window names
+  everyone who rolled Need or offspec and lost, most owed first, with the clock
+  on your two hours. **It works on the very first drop with no history at all**,
+  which nothing else here does. An addon cannot click a trade button, so this
+  only ever tells you who asked.
+- **Traded loot follows the item.** Trade away something you won and the score
+  credits whoever received it. Every traded item used to be two wrong numbers
+  at once: you kept credit for loot you gave away, and the person wearing it
+  looked like they had gone without.
+- **A raid schedule that needs no calendar.** `/syl schedule days tue wed` once,
+  and the next raid night is answered from then on. `/syl out Dravok 7 holiday`
+  marks somebody out for a week and `/syl in Dravok` cancels it.
+  `/syl schedule import` reads your in-game guild calendar on top of that, and
+  never overwrites a night you typed. Absences are typed because an addon
+  cannot read your Discord.
 - **Loot is scored rather than counted.** A Need win is worth 100, offspec and
-  greed 20 each, transmog 0 and no deduction. Who is due is now ranked by
-  score divided by raid nights attended, so somebody with perfect attendance
-  ranks above somebody there half the time on the same amount of loot. Nobody
-  with fewer than three nights is ranked at all — they are listed with the
-  reason, rather than sorted to the top on an empty score.
-- **Links.** A few URLs of your own on the dashboard. Click one and it opens
-  a box with the address selected to copy — an addon cannot open a browser or
-  write to your clipboard. `/syl link add <name> <url>` adds one,
-  `/syl link remove <name>` takes it away, `/syl link` lists them.
-- **The roster hides characters nobody has played for a month.** An **Active**
-  button on the roster window, on by default. Anyone joining the guild is
-  never hidden by it, and neither is anyone the client has not reported on
-  yet. Press it for everyone.
+  greed 20 each, transmog 0 and no deduction. Who is due is ranked by score
+  divided by raid nights attended, so somebody with perfect attendance ranks
+  above somebody there half the time on the same amount of loot. Nobody with
+  fewer than three nights is ranked at all — they are listed with the reason,
+  rather than sorted to the top on an empty score.
+- **Links.** A few URLs of your own, on the recording strip. Click one and it
+  opens a box with the address selected to copy — an addon cannot open a
+  browser or write to your clipboard. The Warcraft Logs and Raider.IO defaults
+  point at your own guild page, built from your realm and guild name.
+  `/syl link add <name> <url>` replaces one.
+- **Officer sync sends roll lists.** A received drop is no longer partial, so
+  it counts in the analytics and can say who lost as well as who won.
+  `/syl sync backfill` asks the raid for the lists you are missing. Still off
+  by default, still raid channel only, still guild members only.
 - **Mythic+ keystones, yours and your guild's.** `/syl keys` lists what your
   characters hold, kept current at login, when a dungeon finishes, and when a
   key is rerolled. Turn on **Share Mythic+ keys with the guild** in Settings
-  under Features and it also shows everyone else's — for anyone in your guild
-  running the addon with the same switch on. Nothing can read another
-  player's bags, so that is the only way it can work. What goes out is one
-  line about the character you are on: dungeon, key level, class. No loot, no
-  attendance, and nothing anybody sees in chat. Keys older than a week are
-  dropped rather than shown stale. Off by default.
+  and it also shows everyone else's — for anyone in your guild running the
+  addon with the same switch on. Nothing can read another player's bags, so
+  that is the only way it can work. What goes out is one line about the
+  character you are on: dungeon, key level, class. Off by default.
+- **The roster hides characters nobody has played for a month.** An **Active**
+  button, on by default. Anyone joining the guild is never hidden by it, and
+  neither is anyone the client has not reported on yet.
 - **Add someone who is joining but is not in the guild yet.**
-  `/syl addraider Aimee-Silvermoon mage`. They appear on the roster marked
-  **Joining**, count towards raid buff coverage, and can be put on the raid
-  team before they arrive — so "we have no Mage" is right for the raid you are
-  actually bringing. The class has to be typed because the client cannot look
-  up a character it has never seen. When they join the guild they move onto
-  the roster by themselves, keeping their team place and role.
-  `/syl dropraider Name-Realm` removes one.
+  `/syl addraider Aimee-Silvermoon mage`. They appear marked **Joining**, count
+  towards raid buff coverage, and can be put on the raid team before they
+  arrive. When they join they move onto the roster by themselves, keeping their
+  team place and role. `/syl dropraider Name-Realm` removes one.
 - **Sort the loot list by any column.** Click PLAYER, ITEM, TYPE, WHERE or
-  DATE; click again to reverse. It opens on newest first, as before.
-- **Ignore a record.** Tick rows and press **Ignore** to take them out of
-  every number — the due list, droughts, player stats — for when a capture is
-  simply wrong. The rows stay in the list, marked, and it is reversible.
-  Nothing is deleted.
+  DATE; click again to reverse.
+- **Ignore a record.** Tick rows and press **Ignore** to take them out of every
+  number, for when a capture is simply wrong. The rows stay in the list,
+  marked, and it is reversible. Nothing is deleted.
 - **Hide or ignore every copy of an item.** Hold Shift when you press either
-  button. Hiding one Dawn Crystal used to leave the other two.
-- **Features can be switched off.** Settings has a Features list: raid buff
-  coverage, Mythic+ scores, boss loot tables, officer sync and the developer
-  tools. Each says what it costs when it is on. Anything switched off is not
-  built at all rather than built and hidden, so a `/reload` applies it.
-- **Windows no longer open on top of each other.** They are laid out as a set
-  and centered as a group, so opening the loot list and the due list puts them
-  side by side. Drag a window and the addon stops rearranging that one.
-- **Officer sync can send messages longer than 255 bytes.** Groundwork only:
-  what it sends is unchanged, still drop headers and never roll lists.
-- **The list says how many rows are selected.** On the summary line, beside
-  the item and hidden counts. There was a separate label for it that drew on
-  top of that sentence.
-- **Show the raid team, the guild, or everyone.** A button on the due list and
-  the players window switches between the three, and `/syl scope` does the
-  same from chat. Both windows share the one setting.
+  button.
+- **Features can be switched off.** Settings has a Features list — raid buff
+  coverage, Mythic+ scores, boss loot tables, officer sync, key sharing, key
+  requests, the trade advisor, following traded loot and the developer tools.
+  Each says what it costs. Anything switched off is not built at all rather
+  than built and hidden, so a `/reload` applies it.
+- **Show the raid team, the guild, or everyone.** One button, shared by every
+  screen that lists people, and `/syl scope` does the same from chat.
 
 ### Changed
-- **A drought is now reset by one thing only:** a Need or offspec win, on a
+
+- **Everything that ranks people ranks the same way.** `/syl due` sorted by
+  nights-since-upgrade for a while after the board had moved to
+  score-per-night. With one raider the two agree by accident; with a roster
+  they name different people as most owed.
+- **A drought is reset by one thing only:** a Need or offspec win, on a
   bind-on-pickup item, from group loot, on a night that counted as a raid
-  night. Everything else — the vault, Mythic+ chests, the catalyst, delves,
-  personal loot handed out mid-raid, and BoEs — is still recorded and still
-  on the loot list, but no longer changes who is due.
-- **"Count gear taken without a roll towards droughts" is gone**, along with
-  `/syl personalloot`. It only ever fed the calculation above, and that
-  calculation no longer counts any of it under any setting.
-- **The due list and the players window now open on your raid team.** They
-  used to open on everyone the addon had ever seen, which includes anybody
-  you pugged a raid or a key with — and somebody seen once who won nothing
-  ranks *above* a raider of two years, because one night without an upgrade
-  is still a drought. If nobody is marked as being on the team they open on
-  your guild instead, and if you are not in a guild, on everyone. Mark the
-  team in the roster window's TEAM column.
-- **Loot is no longer announced in chat as it is recorded.** It is still
-  recorded — the addon just does not say so every time, and a full clear no
-  longer fills your chat with lines nobody asked for. Turn it back on in
+  night. The vault, Mythic+ chests, the catalyst, delves, personal loot handed
+  out mid-raid and BoEs are all still recorded and still on the loot list, but
+  no longer change who is due.
+- **Settings fits on a screen.** Item qualities and features are three columns
+  across rather than one long list, and what a feature costs is a tooltip
+  rather than a second line under every row.
+- **Lists of people default to your raid team**, then your guild, then
+  everyone — whichever is the narrowest that can still show somebody. Keys is
+  the exception, because half the names on a key list are not people you raid
+  with.
+- **Loot is no longer announced in chat as it is recorded.** Turn it back on in
   Settings or with `/syl announce`. Existing installs are switched off once,
   with a message saying so.
-- **"Guild only" on the players window is now part of the scope button**, and
-  "Whole guild" is called **Include non-raiders**, which is what it does: it
-  adds guild members with no recorded history to the list.
-- **One line at login instead of two.** "Show Us Your Loot loaded!" said
-  nothing the "Ready." line a moment later does not.
-- **The Refresh button is gone.** Every window already redraws when it opens
-  and whenever anything changes, so it was a button that did nothing you
-  could see.
+- **"Count gear taken without a roll towards droughts" is gone**, along with
+  `/syl personalloot`.
+- **The Refresh button is gone.** Every window already redraws when it opens.
 - **`/syl recent`, `/syl player` and `/syl count` are gone**, replaced by the
-  loot list and its filters, which read the same records and rather more.
+  loot list and its filters.
 - **`/syl dev`, `api`, `debug` and `output` are off the minimap menu.** They
   still work when typed and are listed by `/syl help all`.
 
 ### Fixed
-- **Keystones now expire at your realm's actual weekly reset** rather than
-  seven days after the addon heard about them. A key learned on Monday used to
-  survive Tuesday's reset and sit in the list claiming to be current.
+
+- **Windows no longer open on top of each other.** They were being positioned
+  before they were shown, and a window that has never been drawn cannot be
+  measured — so the layout gave up and dropped them a few pixels from centre,
+  which is to say onto whatever was already there.
+- **The settings window was empty.** It drew its first heading and then nothing
+  at all: no qualities, no toggles, no features. It read as an empty screen
+  rather than the crash it actually was.
+- **Keystones expire at your realm's actual weekly reset** rather than seven
+  days after the addon heard about them.
 - **Dates read MM-DD-YYYY everywhere.** Three different formats were in use
-  depending on which window drew the row — `08/05/2026`, `08/05/26` and
-  `2026-08-05`. The date filter boxes take MM-DD-YYYY now too, and still
-  accept the old YYYY-MM-DD if you paste one.
+  depending on which window drew the row. The date filter boxes take
+  MM-DD-YYYY too, and still accept YYYY-MM-DD if you paste one.
 - **Some older records could not be ticked at all.** Rows captured before
-  records carried an id drew a checkbox that did nothing: Select all skipped
-  them, and Hide and Ignore could never reach them. They are given an id at
-  login now and behave like any other row. The addon says how many it fixed,
-  once. Aimee hit this with twenty records that survived a Select all → Hide
-  and looked like a bug in Hide.
-- **Clear now clears the toggles too** — This season, Gear only and Raids
-  only, not just the search box, the dropdowns and the dates. A list that
-  said it was cleared while Gear only was still on was hiding every reagent,
-  which is how the twenty above went unnoticed. Show hidden is deliberately
-  left alone: everything else narrows the list, so clearing shows more, and
-  that one would show less.
+  records carried an id drew a checkbox that did nothing. They are given one at
+  login now, and the addon says how many it fixed, once.
+- **Clear now clears the toggles too** — This season, Gear only and Raids only,
+  not just the search box, the dropdowns and the dates.
 - **A Timewalking raid could wipe somebody's drought.** Raid nights have never
-  counted Timewalking, Story, Follower or Event difficulties — but *wins* were
-  counted from everywhere, so a Timewalking raid on a Tuesday reset the clock
-  without adding a night. A raider two months dry showed zero dry nights and
-  dropped off the list the list exists to build. Upgrades now count only from
-  content that would have counted as a night. Ordinary LFR is unaffected: it
-  is group loot with real rolls and counts on both sides, as it always did.
+  counted Timewalking, Story, Follower or Event difficulties, but *wins* were
+  counted from everywhere — so a Timewalking raid on a Tuesday reset the clock
+  without adding a night. Ordinary LFR is unaffected: it is group loot with
+  real rolls and counts on both sides.
 - **The chosen output window was remembered by position, not by identity.**
-  Deleting any chat window shifts the ones below it, so the addon started
-  writing into whichever window had moved into that slot. It remembers the
-  window's name now.
+  Deleting any chat window shifted the ones below it, so the addon started
+  writing into whichever window had moved into that slot.
 
 ## 0.2.0-alpha
 
