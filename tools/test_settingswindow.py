@@ -105,6 +105,33 @@ check("the window is not", window <= content, f"{window} vs {content}")
 check("and is still usable rather than collapsed", window >= 320, window)
 check("so it has to scroll", SYL.SettingsRows.NeedsScrolling() is True)
 
+# --- and on a real screen it does not ---------------------------------------
+#
+# THE PHANTOM SCROLL. ContentHeight used to include the footer, which is drawn
+# on the window rather than inside the scroll frame — so the scroll child was
+# 60px taller than anything in it and the window scrolled past the end of its
+# own content, with no bar to explain why.
+#
+# The assertion that catches it: given room, the viewport is exactly the
+# content and there is nothing to scroll to.
+lua.execute("UIParent.GetHeight = function() return 900 end")
+
+content = SYL.SettingsRows.ContentHeight()
+window = SYL.SettingsRows.WindowHeight()
+
+check(
+    "given a real screen, the window fits its content exactly",
+    window == content + 124,
+    f"{window} vs {content} + 124",
+)
+check(
+    "and there is nothing to scroll",
+    SYL.SettingsRows.NeedsScrolling() is False,
+)
+check("without being taller than the screen", window <= 900 - 80, window)
+
+lua.execute("UIParent.GetHeight = function() return 100 end")
+
 # --- the guild links -------------------------------------------------------
 #
 # The defaults point at this guild's own page rather than at a site's front

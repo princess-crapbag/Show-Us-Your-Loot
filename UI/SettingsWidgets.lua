@@ -27,7 +27,7 @@ SYL.SettingsWidgets = SettingsWidgets
 -- 24 and three across, which is what the rest of the settings window uses.
 -- It was 48 and one per line to fit a two-line note under every label; the
 -- note is a tooltip now, for the same reason the feature costs are.
-local ROW_HEIGHT = 24
+local ROW_HEIGHT = 20
 local COLUMNS = 3
 local HEADING_HEIGHT = 26
 

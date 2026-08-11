@@ -27,7 +27,7 @@ local ItemQuality = SYL.ItemQuality
 local SettingsRows = {}
 SYL.SettingsRows = SettingsRows
 
-local ROW_HEIGHT = 24
+local ROW_HEIGHT = 20
 
 -- Layout is derived from the content rather than hardcoded, so adding a
 -- quality or a toggle cannot silently push the last row through the footer.
@@ -38,7 +38,7 @@ local ROW_HEIGHT = 24
 local QUALITY_TOP = -8
 local HEADING_HEIGHT = 18
 local NOTE_HEIGHT = 30
-local SECTION_GAP = 30
+local SECTION_GAP = 24
 local FOOTER_HEIGHT = 60
 -- Three across. Nine features one per line was 342px of a window that has to
 -- fit on a monitor alongside everything else.
@@ -124,7 +124,14 @@ local function CreateSettingRow(parent, index, labelText, onClick, options)
     row.highlight:SetAllPoints()
     row.highlight:Hide()
 
-    row.label = Theme.CreateText(row, Theme.sizes.row, "textPrimary")
+    -- rowSmall in a grid, row when it is the only thing on the line. A column
+    -- is a third of the width and the label was set at the size used for a
+    -- full-width row, so it filled its cell and read as oversized.
+    row.label = Theme.CreateText(
+        row,
+        columns > 1 and Theme.sizes.rowSmall or Theme.sizes.row,
+        "textPrimary"
+    )
     row.label:SetPoint("RIGHT", -4, 0)
     row.label:SetText(labelText)
 
@@ -384,14 +391,20 @@ function SettingsRows.AddSection(parent, title, offsetY)
     return container, container.heading
 end
 
--- How tall the content wants to be, which is not the same as how tall the
--- window may be.
-function SettingsRows.ContentHeight()
-    local contentBottom =
-        math.abs(SettingsRows.WidgetSectionTop())
-        + SYL.SettingsWidgets.SectionHeight()
+-- The title, subtitle and separator above the scrolling area, and the rule and
+-- Close button below it. Both are drawn on the window and neither scrolls.
+local CHROME_HEIGHT = 124
 
-    return contentBottom + FOOTER_HEIGHT
+-- How tall the CONTENT is — the part that scrolls, and nothing else.
+--
+-- This used to add FOOTER_HEIGHT, which is the footer drawn on the window
+-- rather than inside the scroll frame. The scroll child was therefore 60px
+-- taller than anything in it, so the window scrolled past the end of its own
+-- content with no bar to explain why: a phantom scroll.
+function SettingsRows.ContentHeight()
+    return math.abs(SettingsRows.WidgetSectionTop())
+        + SYL.SettingsWidgets.SectionHeight()
+        + 8
 end
 
 -- Never taller than the screen it has to fit on.
@@ -405,7 +418,9 @@ local MIN_HEIGHT = 320
 local SCREEN_MARGIN = 80
 
 function SettingsRows.WindowHeight()
-    local wanted = SettingsRows.ContentHeight()
+    -- The content plus the chrome it sits between, so a window that fits shows
+    -- everything and scrolls nowhere.
+    local wanted = SettingsRows.ContentHeight() + CHROME_HEIGHT
 
     local screen = UIParent and UIParent.GetHeight and UIParent:GetHeight()
 
@@ -421,7 +436,8 @@ end
 -- Whether the content is taller than the window can be, which is what decides
 -- if a scroll bar is worth drawing at all.
 function SettingsRows.NeedsScrolling()
-    return SettingsRows.ContentHeight() > SettingsRows.WindowHeight() + 1
+    return SettingsRows.ContentHeight()
+        > (SettingsRows.WindowHeight() - CHROME_HEIGHT) + 1
 end
 
 function SettingsRows.BuildToggleSection(parent)
