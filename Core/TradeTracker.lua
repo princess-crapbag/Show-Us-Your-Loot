@@ -28,7 +28,7 @@
 -- both sides have accepted, and committed only when
 -- LE_GAME_ERR_TRADE_COMPLETE confirms it landed. Capturing at completion
 -- records nothing; committing at acceptance records trades that were
--- cancelled a moment later.
+-- canceled a moment later.
 
 local SYL = _G.ShowUsYourLoot
 

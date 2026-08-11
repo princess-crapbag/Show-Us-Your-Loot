@@ -56,7 +56,7 @@ end
 -- take on purpose rather than inherit from a transport change.
 --
 -- The envelope is `PROTOCOL \t id \t index \t count \t data`, so a receiver
--- running the old single-message version sees a protocol field it recognises
+-- running the old single-message version sees a protocol field it recognizes
 -- followed by fields it does not, and Decode returns nil rather than
 -- misreading it.
 local CHUNK_PROTOCOL = "C1"

@@ -224,7 +224,7 @@ end
 -- Whether anything has been read already, without reading any more.
 --
 -- IsAvailable walks a tier when it finds nothing, which is the right
--- behaviour for a button press and the wrong one for a mouseover: hovering a
+-- behavior for a button press and the wrong one for a mouseover: hovering a
 -- row must never cost several seconds.
 function Journal.IsReady()
     return next(bridge) ~= nil

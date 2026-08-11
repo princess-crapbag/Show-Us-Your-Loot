@@ -58,7 +58,7 @@ this says what you will notice.
   tools. Each says what it costs when it is on. Anything switched off is not
   built at all rather than built and hidden, so a `/reload` applies it.
 - **Windows no longer open on top of each other.** They are laid out as a set
-  and centred as a group, so opening the loot list and the due list puts them
+  and centered as a group, so opening the loot list and the due list puts them
   side by side. Drag a window and the addon stops rearranging that one.
 - **Officer sync can send messages longer than 255 bytes.** Groundwork only:
   what it sends is unchanged, still drop headers and never roll lists.
@@ -139,7 +139,7 @@ this says what you will notice.
 
 A large update. Several of these change the numbers the addon reports, so
 they are worth reading before your next raid night. Nothing is deleted by any
-of it — history recorded under the old behaviour stays, and the counting is
+of it — history recorded under the old behavior stays, and the counting is
 corrected when it is read.
 
 ### Added
@@ -189,7 +189,7 @@ corrected when it is read.
   too — and it is a number an officer would otherwise quote in a loot dispute
   and be wrong.
 - **Only gear is announced in chat.** Every quality is still recorded, but a
-  Mythic+ run no longer repeats every grey and reagent back at you.
+  Mythic+ run no longer repeats every gray and reagent back at you.
 - **Archive Season moved to the Archives tab** and is quieter. It ends the
   season, which is a once-a-tier action, and it was sitting top right on the
   loot list where a new user finds it first.
@@ -231,13 +231,13 @@ corrected when it is read.
 - **Guild rank could change between refreshes** for anyone with alts. It is
   the main's rank.
 - **Guild members who had never raided had no class**, so most of a large
-  guild showed up in the roster with no colour.
+  guild showed up in the roster with no color.
 - **Alts declared in a public note were missed** if the character had an
   officer note of any kind — a trial date was enough. Both notes are read now.
 - **Delves were filed as world loot**, alongside a quest reward from a city.
 - **The same person appeared twice in the Player filter**, once per capture
   path, so filtering to them hid half their loot.
-- **Item names and class colours went grey** everywhere except the main list
+- **Item names and class colors went gray** everywhere except the main list
   after changing the theme, until a `/reload`.
 - **Shift-clicking a chat-captured row pasted a broken link** into chat.
 - **Hovering a dungeon boss froze the game for seconds.**
@@ -273,7 +273,7 @@ corrected when it is read.
   rolls, and this is the window that tells you which.
 - **Escape closes windows**, like every other panel in the game.
 - **`/syl resetwindows`** puts every window back to its default size and
-  centres it.
+  centers it.
 
 ### Fixed
 - **Scrolling hid rows as you went.** A scrolled list showed fewer and fewer

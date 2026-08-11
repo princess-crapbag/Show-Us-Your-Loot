@@ -82,8 +82,8 @@ end
 --------------------------------------------------------------------------
 
 -- The staircase of squares in the bottom right corner. Drawn from theme
--- textures rather than a Blizzard art file so it recolours with the palette
--- like everything else, instead of staying grey on a light scheme.
+-- textures rather than a Blizzard art file so it recolors with the palette
+-- like everything else, instead of staying gray on a light scheme.
 local function CreateGripMarks(grip)
     local size, gap = 3, 2
 
@@ -178,7 +178,7 @@ function Widgets.ResetSizes()
         if entry.frame then
             entry.frame:SetSize(entry.width, entry.height)
 
-            -- Centred as well, because a window big enough to need this is
+            -- Centered as well, because a window big enough to need this is
             -- usually also somewhere unhelpful.
             entry.frame:ClearAllPoints()
             entry.frame:SetPoint("CENTER")
@@ -212,7 +212,7 @@ function Widgets.MakeResizable(frame, config)
     -- SetResizeBounds replaced SetMinResize; still guarded, because a client
     -- that has neither would otherwise error at window creation and take the
     -- whole window with it. SetMinResize had no maximum, so old clients keep
-    -- the old behaviour.
+    -- the old behavior.
     if frame.SetResizeBounds then
         frame:SetResizeBounds(minWidth, minHeight, maxWidth, maxHeight)
     elseif frame.SetMinResize then
@@ -336,7 +336,7 @@ function Widgets.LinkHoverToRow(child, row)
     end)
 end
 
--- The frame, chrome and resize behaviour every list window shares: a titled
+-- The frame, chrome and resize behavior every list window shares: a titled
 -- panel with a summary line under it, a close button in the corner, and a
 -- grip that grows the list.
 --

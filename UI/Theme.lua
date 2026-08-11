@@ -1,10 +1,10 @@
 -- UI/Theme.lua
 --
--- Every colour, font size and spacing value the UI uses. Frame code should
--- never hardcode a colour: change the look here and the whole addon follows.
+-- Every color, font size and spacing value the UI uses. Frame code should
+-- never hardcode a color: change the look here and the whole addon follows.
 --
 -- The palette is a dark panel with a single accent, taken from the addon's
--- existing chat colour (|cff33ff99) so the window and the chat output read as
+-- existing chat color (|cff33ff99) so the window and the chat output read as
 -- the same product.
 
 local SYL = _G.ShowUsYourLoot
@@ -20,7 +20,7 @@ local GetItemInfoInstant =
 
 -- Resolved at call time rather than into an upvalue at load. A client that
 -- exposes neither spelling made this nil, and every item row and tooltip that
--- asked for a colour then threw. See the same note in UI/SettingsRows.lua,
+-- asked for a color then threw. See the same note in UI/SettingsRows.lua,
 -- where it took out the whole settings window.
 local function LookUpQualityColor(quality)
     local lookup = (C_Item and C_Item.GetItemQualityColor)
@@ -51,10 +51,10 @@ end
 Theme.colors = SYL.Palettes.Get(SYL.Palettes.DEFAULT).colors
 Theme.paletteKey = SYL.Palettes.DEFAULT
 
--- Anything Theme colours is recorded here so a palette change can repaint it
+-- Anything Theme colors is recorded here so a palette change can repaint it
 -- in place. Without this, switching would only affect windows built after the
 -- change, and the settings window doing the switching would keep its old
--- colours — the one window guaranteed to be open at the time.
+-- colors — the one window guaranteed to be open at the time.
 --
 -- These are strong references, which is fine: frames and their regions live
 -- for the session anyway, and WoW has no way to destroy one.
@@ -110,14 +110,14 @@ function Theme.SetTextColor(fontString, colorKey)
     painted.texts[fontString] = key
 end
 
--- A colour the palette does not own: item quality, class, a Mythic+ score.
+-- A color the palette does not own: item quality, class, a Mythic+ score.
 --
 -- Setting these raw was the bug. Every such font string had been through
 -- SetTextColor at least once — at creation, if nothing else — so it stayed on
 -- the repaint list under a palette key it no longer wore, and changing theme
--- flattened purple item names and class-coloured raiders back to plain text.
+-- flattened purple item names and class-colored raiders back to plain text.
 --
--- Deregistering states the truth: this string's colour is not the palette's
+-- Deregistering states the truth: this string's color is not the palette's
 -- business. Rows are reused, so a later SetTextColor puts it back on the list.
 function Theme.SetCustomTextColor(fontString, red, green, blue, alpha)
     fontString:SetTextColor(red, green, blue, alpha or 1)
@@ -183,13 +183,13 @@ end
 -- Switching palette
 --------------------------------------------------------------------------
 
--- Repaints everything Theme has ever coloured.
+-- Repaints everything Theme has ever colored.
 --
--- Only what the palette owns. Colours that come from somewhere else — item
+-- Only what the palette owns. Colors that come from somewhere else — item
 -- quality, class, a Mythic+ score — are set through SetCustomTextColor, which
 -- takes the string off this list precisely so that changing theme does not
 -- flatten them. The main window redraws below and would have restored its own
--- rows, but every other window would have stayed grey until a /reload.
+-- rows, but every other window would have stayed gray until a /reload.
 function Theme.Apply(key, skipRefresh)
     local palette = SYL.Palettes.Get(key) or SYL.Palettes.Get(SYL.Palettes.DEFAULT)
 
@@ -220,7 +220,7 @@ function Theme.Apply(key, skipRefresh)
     end
 
     -- Rows paint per record, so the list needs a redraw rather than a
-    -- recolour. RefreshMainWindow already does nothing when the window is
+    -- recolor. RefreshMainWindow already does nothing when the window is
     -- closed; the guard here is for Apply running at load, before the UI
     -- files have finished defining it.
     if not skipRefresh and SYL.RefreshMainWindow then
@@ -301,7 +301,7 @@ function Theme.CreateButton(parent, width, height, text, onClick)
 end
 
 -- Tabs carry their selected state themselves rather than being disabled, so
--- the selected one still reads as text rather than as a greyed-out control.
+-- the selected one still reads as text rather than as a grayed-out control.
 function Theme.CreateTab(parent, text, onClick)
     local tab = CreateFrame("Button", nil, parent)
 
@@ -376,7 +376,7 @@ function Theme.GetItemIcon(itemLink)
 end
 
 -- Drop records store the winner's class file name, so their names can be
--- class-coloured. Chat-derived loot records cannot: they hold only a name.
+-- class-colored. Chat-derived loot records cannot: they hold only a name.
 function Theme.GetClassColor(classFile)
     if not classFile or classFile == "" then
         return nil
@@ -400,7 +400,7 @@ function Theme.GetClassColor(classFile)
 end
 
 -- Returns nil when the item is not cached yet, which the caller uses as a
--- signal to retry shortly rather than to render a wrong colour permanently.
+-- signal to retry shortly rather than to render a wrong color permanently.
 function Theme.GetItemQualityColor(itemLink)
     if not itemLink then
         return nil

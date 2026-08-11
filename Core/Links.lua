@@ -306,7 +306,7 @@ function Links.ShowCopyBox(link)
 
     -- Through the stack rather than Show(), so it is placed clear of the
     -- windows already open. It used to show itself, which meant it opened
-    -- centred on top of the main window every time.
+    -- centered on top of the main window every time.
     if SYL.WindowStack then
         SYL.WindowStack.ShowWindow(copyFrame)
     else

@@ -143,7 +143,7 @@ function RIO.GetSummary(name, realm)
     return summary
 end
 
--- Colours come from Raider.IO when it is there, so a score reads the same
+-- Colors come from Raider.IO when it is there, so a score reads the same
 -- here as it does everywhere else the player sees one. The fallback is the
 -- addon's own highlight rather than an invented scale: inventing one would
 -- imply a threshold this addon has no business asserting.

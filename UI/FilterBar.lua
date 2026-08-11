@@ -76,7 +76,7 @@ end
 -- Date inputs
 --------------------------------------------------------------------------
 
--- Invalid text is left in place and coloured, rather than being wiped. Losing
+-- Invalid text is left in place and colored, rather than being wiped. Losing
 -- what someone typed is worse than showing it is not accepted yet.
 local function ApplyDate(input, state, key, endOfDay, onChange)
     local text = input.editBox:GetText()

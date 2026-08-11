@@ -184,7 +184,7 @@ function Reports.APIReport()
     end
 end
 
--- Answers "who should we favour on the next drop" in chat, which is where it
+-- Answers "who should we favor on the next drop" in chat, which is where it
 -- gets asked. See Core/DueList.lua for what "due" is taken to mean.
 function Reports.Due(limit)
     local sessions = SYL.GetAllRaids()

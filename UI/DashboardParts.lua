@@ -1,7 +1,7 @@
 -- UI/DashboardParts.lua
 --
 -- The pieces every dashboard tile is built from: a striped row, a
--- class-coloured player row, the big number, the caption pinned to the bottom,
+-- class-colored player row, the big number, the caption pinned to the bottom,
 -- and the "nothing yet" message.
 --
 -- Split from UI/DashboardWidgets.lua, which holds one renderer per widget.
@@ -20,7 +20,7 @@ local ROW_HEIGHT = 17
 -- Small builders, shared by the renderers
 --------------------------------------------------------------------------
 
--- A line of "label ......... value". Returns the frame so a caller can colour
+-- A line of "label ......... value". Returns the frame so a caller can color
 -- either half without reaching back through the tile.
 function DashboardParts.Row(tile, index, leftText, rightText, leftColor, rightColor)
     local row = CreateFrame("Frame", nil, tile.body)
@@ -57,7 +57,7 @@ function DashboardParts.Row(tile, index, leftText, rightText, leftColor, rightCo
     return row, left, right
 end
 
--- The class-coloured version, for anything that names a player.
+-- The class-colored version, for anything that names a player.
 function DashboardParts.PlayerRow(tile, index, name, class, valueText, valueColor)
     local row, left = DashboardParts.Row(tile, index, name, valueText, "textPrimary", valueColor)
 

@@ -18,10 +18,10 @@ local DUPLICATE_WINDOW_SECONDS = 30
 local DUPLICATE_TIME_BUCKET_SECONDS = 2
 
 local function ExtractItemInformation(message)
-    -- The colour wrapper first. A link without its |cff… prefix and closing
+    -- The color wrapper first. A link without its |cff… prefix and closing
     -- |r displays correctly but cannot be pasted into chat, and that is the
     -- form that was being stored. The bare fragment stays as a fallback for
-    -- any line that genuinely arrives without colour codes.
+    -- any line that genuinely arrives without color codes.
     local itemLink =
         message:match("(|c%x+|Hitem:.-|h%[.-%]|h|r)")
         or message:match("(|Hitem:.-|h%[.-%]|h)")
@@ -226,7 +226,7 @@ end
 -- The filter defaults to recording every quality, which is right — a fresh
 -- install should never quietly miss loot — and announcing every quality is
 -- not the same decision. With both on, one Mythic+ run doubled the user's
--- loot chat by repeating every grey and every reagent back at them, prefixed.
+-- loot chat by repeating every gray and every reagent back at them, prefixed.
 -- A reviewer named this specifically as the thing that gets an addon
 -- uninstalled, and they are right: it is the only part of this that talks
 -- unprompted, in the channel people actually read.

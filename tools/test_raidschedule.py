@@ -9,7 +9,7 @@ optional import on top rather than the thing it all depends on.
 
 TWO RULES CARRY THE DESIGN AND BOTH ARE ASSERTED HERE.
 
-An import never overwrites something a person typed. An officer who cancelled
+An import never overwrites something a person typed. An officer who canceled
 Wednesday has said something the calendar has not caught up with, and an import
 that overruled them would make the addon argue with whoever maintains it.
 
@@ -126,14 +126,14 @@ check("asked on a raid day, tonight counts", S.NextNight("2026-08-11")[0] == "20
 
 # --- manual beats the pattern ---------------------------------------------
 #
-# Cancelling Wednesday must push the answer to the following Tuesday, not
+# Canceling Wednesday must push the answer to the following Tuesday, not
 # quietly leave Wednesday in place.
-S.SetNight("2026-08-12", lua.table(source="manual", cancelled=True))
+S.SetNight("2026-08-12", lua.table(source="manual", canceled=True))
 
-check("a cancelled night is not a raid night", S.IsRaidNight("2026-08-12")[0] is False)
-check("and says it was cancelled", S.IsRaidNight("2026-08-12")[1] == "cancelled")
+check("a canceled night is not a raid night", S.IsRaidNight("2026-08-12")[0] is False)
+check("and says it was canceled", S.IsRaidNight("2026-08-12")[1] == "canceled")
 check(
-    "the next night after Tuesday skips the cancelled Wednesday",
+    "the next night after Tuesday skips the canceled Wednesday",
     S.NextNight("2026-08-12")[0] == "2026-08-18",
     S.NextNight("2026-08-12")[0],
 )

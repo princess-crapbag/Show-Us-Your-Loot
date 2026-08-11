@@ -181,7 +181,7 @@ local function Refresh()
     end
 
     local entries = SYL.PlayerHistory.Build(currentKey, SYL.GetAllDrops())
-    local totals = SYL.PlayerHistory.Summarise(entries)
+    local totals = SYL.PlayerHistory.Summarize(entries)
 
     UpdateHeaderText(currentEntry, totals)
 

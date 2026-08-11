@@ -92,7 +92,7 @@ reset()
 
 entry, message = incoming.Add("Aimee-Silvermoon", "mage")
 check("a valid recruit is added", entry is not None and entry["class"] == "MAGE")
-check("the class is upper-cased for the colour and buff tables", entry["class"] == "MAGE")
+check("the class is upper-cased for the color and buff tables", entry["class"] == "MAGE")
 
 entry, message = incoming.Add("Aimee-Silvermoon", "wizard")
 check("an invented class is refused", entry is None)

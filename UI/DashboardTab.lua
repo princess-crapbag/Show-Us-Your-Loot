@@ -141,7 +141,7 @@ end
 -- HIDDEN, NOT REPARENTED. The first version called region:SetParent(nil),
 -- which is not a thing to rely on for a texture or a font string — and it
 -- leaked either way, because Theme keeps a strong reference to every region
--- it has coloured. Hiding is enough: a hidden region draws nothing, and
+-- it has colored. Hiding is enough: a hidden region draws nothing, and
 -- DashboardParts reuses what is already there rather than making more.
 function DashboardTab.ClearTile(tile)
     for _, region in ipairs({ tile.body:GetRegions() }) do

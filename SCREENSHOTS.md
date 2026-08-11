@@ -20,7 +20,7 @@ retaking until it is right.
 ## Before you shoot
 
 - `/syl theme` until it is on **Nightfall**, so every shot matches. Mixed
-  colour schemes across a gallery reads as inconsistency rather than as a
+  color schemes across a gallery reads as inconsistency rather than as a
   feature. There is one deliberate exception, shot 9.
 - Move the window somewhere with a plain background behind it. A busy raid
   encounter behind a data window makes the data unreadable.
@@ -59,7 +59,7 @@ it is not a toy.
 
 **6 — Settings.** `/syl settings`
 
-Quality tracking, the colour scheme row, sync toggle, minimap toggle. Answers
+Quality tracking, the color scheme row, sync toggle, minimap toggle. Answers
 "can I turn things off" before it gets asked in the comments.
 
 **7 — The minimap command menu.** Right-click the minimap button

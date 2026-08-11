@@ -30,7 +30,7 @@ function Utilities.GetPlayerFullName()
     return name
 end
 
--- Strips colour codes and trailing punctuation from a name pulled out of a
+-- Strips color codes and trailing punctuation from a name pulled out of a
 -- chat message, which is never guaranteed to be clean.
 function Utilities.NormalizePlayerName(name)
     if not name or name == "" then
@@ -92,7 +92,7 @@ end
 -- A link the chat box will accept.
 --
 -- Chat capture stored only the |Hitem:…|h[Name]|h part, dropping the |cff…
--- colour prefix and the |r that closes it. That renders fine in a font string,
+-- color prefix and the |r that closes it. That renders fine in a font string,
 -- which is why it went unnoticed, but shift-clicking such a row inserted a
 -- broken link into chat: the recipient sees raw escape codes rather than an
 -- item, which for an addon whose whole subject is items is not a small thing.

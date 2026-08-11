@@ -36,7 +36,7 @@ local DETECTED_ROLES = {
     DAMAGER = "DPS",
 }
 
-function RaidTeam.NormaliseDetectedRole(role)
+function RaidTeam.NormalizeDetectedRole(role)
     return DETECTED_ROLES[role or ""] or nil
 end
 
@@ -165,7 +165,7 @@ end
 -- Remembered rather than applied: this is what the game said, and a manual
 -- choice outranks it.
 function RaidTeam.RememberDetectedRole(key, detected)
-    local role = RaidTeam.NormaliseDetectedRole(detected)
+    local role = RaidTeam.NormalizeDetectedRole(detected)
 
     if not role then
         return

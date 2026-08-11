@@ -242,7 +242,7 @@ function SyncRolls.AnswerBackfill(ids)
 end
 
 -- Routing, so Core/Sync.lua has one place to hand a payload it did not
--- recognise. Returns true when this file dealt with it.
+-- recognize. Returns true when this file dealt with it.
 function SyncRolls.OnPayload(payload, sender)
     if type(payload) ~= "string" then
         return false

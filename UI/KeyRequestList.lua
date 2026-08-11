@@ -101,7 +101,7 @@ local function Row(pane, index)
 
     -- Prefills rather than sends. The addon does not talk unless asked, and
     -- "asked" means the person typed the message, not that they pressed a
-    -- button labelled with somebody else's name.
+    -- button labeled with somebody else's name.
     row.whisper = Button("Whisper", 168, function()
         if ChatFrame_OpenChat then
             ChatFrame_OpenChat("/w " .. tostring(row.sender) .. " ")

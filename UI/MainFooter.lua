@@ -32,7 +32,7 @@ local GAP = 6
 -- should add a line rather than rebuild the loop.
 local BUTTONS = {}
 
--- handlers carries the behaviour MainWindow owns and this file cannot reach.
+-- handlers carries the behavior MainWindow owns and this file cannot reach.
 -- Only onClose now: the Refresh button is gone, because every window
 -- already redraws on show and on every change, so it was a button whose
 -- honest label would have been "do nothing, slowly".

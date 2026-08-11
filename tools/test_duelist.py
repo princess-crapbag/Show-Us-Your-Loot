@@ -14,7 +14,7 @@ surface dropped off it. Every difficulty below is checked in both directions.
 Core/Utilities.lua and Core/LootHistoryAPI.lua are loaded for real, so the
 difficulty tables and the Need/offspec rule under test are the shipped ones
 rather than a copy that can drift. The registry and the roster are stubbed:
-they are someone else's behaviour.
+they are someone else's behavior.
 
 Needs `lupa` — see tools/test_lootmessages.py for the setup.
 
@@ -66,7 +66,7 @@ for module in ("Utilities.lua", "LootHistoryAPI.lua"):
     lua.execute((CORE / module).read_text(encoding="utf-8"))
 
 # Stubs. ResolveToMain is identity because alt folding is tested by its own
-# behaviour, not here; RaidsOnly mirrors RaidSession.IsRaidSession, which is
+# behavior, not here; RaidsOnly mirrors RaidSession.IsRaidSession, which is
 # the same IsRaidContent call the fix now makes on the drops side.
 lua.execute(
     """
@@ -82,7 +82,7 @@ lua.execute(
     }
 
     -- Identity, because no fixture here has been traded. The real one hands
-    -- back the recipient for a drop that was; that behaviour has its own
+    -- back the recipient for a drop that was; that behavior has its own
     -- suite in test_tradetracker, and stubbing it keeps this file about the
     -- one rule it was written for.
     SYL.TradeTracker = {

@@ -138,7 +138,7 @@ end
 --
 -- This is the "capture was wrong" case: a record that should never have
 -- existed, or one that would be counted twice. excludedFromAnalytics was
--- already on every record and already honoured by the due list, the player
+-- already on every record and already honored by the due list, the player
 -- stats, the personal-loot maths and the item tooltip — nothing had ever
 -- been able to set it.
 --

@@ -1,6 +1,6 @@
 -- Core/CommandList.lua
 --
--- The catalogue of /syl commands, in the order they should be presented.
+-- The catalog of /syl commands, in the order they should be presented.
 --
 -- One list feeds both `/syl help` and the minimap menu, so the two can never
 -- drift apart. Entries with an `argument` cannot simply be run: clicking them
@@ -113,7 +113,7 @@ CommandList.ENTRIES = {
     },
     {
         command = "theme",
-        description = "Change the colour scheme",
+        description = "Change the color scheme",
     },
     {
         developer = true,
@@ -122,7 +122,7 @@ CommandList.ENTRIES = {
     },
     {
         command = "resetwindows",
-        description = "Put every window back to its default size and centre",
+        description = "Put every window back to its default size and center",
     },
     { command = "capture", description = "Toggle Loot History capture" },
     { developer = true, command = "dev", description = "Open the developer window" },
@@ -210,7 +210,7 @@ end
 
 -- What to say when a command does not exist.
 --
--- The whole catalogue used to be printed, which is twenty-nine lines of chat
+-- The whole catalog used to be printed, which is twenty-nine lines of chat
 -- in response to a typo, with the thing you meant somewhere inside it. Two
 -- lines and a guess is more use.
 function CommandList.UnknownCommand(command)

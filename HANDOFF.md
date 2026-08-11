@@ -33,12 +33,12 @@ is needed. There is no build step for local testing.
 **1. The dashboard has drawn, and Aimee confirmed it works.** Loaded 2026-08-09
 late. That was the top item on this page for a day and it is closed. What she
 reported back became the work below: several tabs were placeholders, and not
-every list of people honoured the raid team / guild / everyone order.
+every list of people honored the raid team / guild / everyone order.
 
 **Raiders, Bosses and Nights have drawn too, and the sizing is good** —
 confirmed 2026-08-10. Every layout constant in them was measured on paper
 against a 900×596 window, and they came out right first time; do not take that
-as licence to skip looking at the next one.
+as license to skip looking at the next one.
 
 **Four things have never been seen, and they need three different tests:**
 

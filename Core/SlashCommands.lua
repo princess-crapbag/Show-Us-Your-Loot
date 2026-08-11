@@ -189,7 +189,7 @@ COMMANDS.resetwindows = function()
     SYL:Print(
         reset
         .. (reset == 1 and " open window" or " open windows")
-        .. " put back to the default size and centred. Saved sizes cleared."
+        .. " put back to the default size and centered. Saved sizes cleared."
     )
 end
 
@@ -235,7 +235,7 @@ COMMANDS.dev = function()
 end
 
 -- With a name, jumps straight to that scheme; without one, cycles. Cycling
--- is the useful default, since choosing a colour is a matter of looking at it
+-- is the useful default, since choosing a color is a matter of looking at it
 -- rather than knowing what it is called.
 COMMANDS.theme = function(argument)
     local requested = argument and argument:lower():gsub("^%s+", ""):gsub("%s+$", "")
@@ -252,7 +252,7 @@ COMMANDS.theme = function(argument)
             end
 
             SYL:Print(
-                "No colour scheme called \"" .. requested .. "\". Try: "
+                "No color scheme called \"" .. requested .. "\". Try: "
                 .. table.concat(names, ", ") .. "."
             )
 
@@ -264,7 +264,7 @@ COMMANDS.theme = function(argument)
         palette = SYL.Theme.Apply(SYL.Palettes.Next(SYL.Theme.paletteKey))
     end
 
-    SYL:Print("Colour scheme: " .. palette.name .. " — " .. palette.note .. ".")
+    SYL:Print("Color scheme: " .. palette.name .. " — " .. palette.note .. ".")
 end
 
 COMMANDS.output = function()

@@ -1,7 +1,7 @@
 -- Core/Events.lua
 --
 -- Registration and dispatch only. Every handler here should be a thin
--- forwarder into the module that owns the behaviour, so that adding a new
+-- forwarder into the module that owns the behavior, so that adding a new
 -- data source never means growing this file.
 
 local SYL = _G.ShowUsYourLoot
@@ -18,7 +18,7 @@ local function OnAddonLoaded(loadedAddonName)
     SYL.DatabaseInitialize()
     SYL.LootHistoryStore.RebuildIndex()
 
-    -- Before any window is built, so frames are created in the saved colours
+    -- Before any window is built, so frames are created in the saved colors
     -- rather than being built in one palette and repainted into another.
     SYL.Theme.Apply(ShowUsYourLootDB.settings.palette, true)
 
@@ -120,7 +120,7 @@ local function OnKeystoneMayHaveChanged()
 
         -- Only on a real change. This runs on bag updates, which fire
         -- constantly, and a broadcast per bag update would be a broadcast per
-        -- looted grey.
+        -- looted gray.
         SYL.KeystoneSync.OnOwnKeyChanged()
     end
 end

@@ -14,7 +14,7 @@
 -- two buttons per row it cost, or the height they forced.
 --
 -- Core/Dashboard.lua keeps Move, GetOrder and SetOrder untouched, and the
--- saved order is still read and honoured. Nothing has been deleted: putting
+-- saved order is still read and honored. Nothing has been deleted: putting
 -- the control back is this file again, and any order somebody already saved
 -- still draws exactly as it did.
 

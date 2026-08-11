@@ -263,7 +263,7 @@ function GuildCalendar.ImportDeclines(dayKey)
     local year, month, day = tostring(dayKey):match("^(%d+)%-(%d+)%-(%d+)$")
 
     if not year then
-        return 0, "That is not a date this addon recognises."
+        return 0, "That is not a date this addon recognizes."
     end
 
     local declines, err = GuildCalendar.ReadDeclines(

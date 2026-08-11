@@ -52,14 +52,14 @@ Decided:
 Resolved while building: shift-clicking a row body already inserts the
 item link into chat, which is a WoW convention worth keeping. So the
 checkbox is the selection target and shift-click on a *checkbox* extends
-the range. Both requested behaviours, neither at the cost of linking.
+the range. Both requested behaviors, neither at the cost of linking.
 
 ## Still open
 
 - **Nothing in the addon has been run in game since the Loot History
   rework.** `python tools/syl_check.py` proves the files parse, that the
   .toc matches disk, and that every `SYL.Module.Member` reference
-  resolves — it cannot prove behaviour. The next raid is the real test.
+  resolves — it cannot prove behavior. The next raid is the real test.
 - Officer sync still sends drop headers only, never roll lists, so synced
   records sit out of the fairness maths. `/syl sync` reports how much of
   a season that covers. Chunked roll lists or a backfill handshake are
@@ -228,7 +228,7 @@ It then proposed reading other players' gear by inspection.
 `NotifyInspect` is throttled and async and cannot cover 25 people at drop
 time. But SimulationCraft works precisely because it reads *your own*
 character, where `GetInventoryItemLink("player", slot)` is unrestricted,
-complete and instant. The inspect problem is an artefact of assuming one
+complete and instant. The inspect problem is an artifact of assuming one
 client reads everyone.
 
 **Decided: self-report, not inspection.** Each client reports its own
@@ -307,7 +307,7 @@ positioning rather than a compromise.
 ### Phase 6 — trade tracking
 
 Group Loot's defining mechanic is that a win is tradable for two hours,
-and nothing tracks whether the winner honoured it. `TRADE_SHOW` and
+and nothing tracks whether the winner honored it. `TRADE_SHOW` and
 `TRADE_ACCEPT_UPDATE` plus slot scanning give "X traded Y to Z". Only the
 winner's client knows, so it is another self-report. DueList should then
 credit the recipient rather than the winner — another correctness fix
@@ -321,7 +321,7 @@ access. So this splits in two.
 In game, a soft dependency on the installed addon — 442M downloads, so
 nearly everyone has it. `RaiderIO.GetProfile(name, realm)` returns
 `mythicKeystoneProfile`, `raidProfile` and `recruitmentProfile`;
-`RaiderIO.GetScoreColor(score)` gives consistent colouring. Guarded, with
+`RaiderIO.GetScoreColor(score)` gives consistent coloring. Guarded, with
 `## OptionalDeps: RaiderIO` in the .toc. Their data is a static bundle
 shipped with their releases, so it lags live by days — fine for roster
 context, wrong for anything time sensitive.
@@ -352,7 +352,7 @@ checkable, which is why they go first.
 
 Phase 0, Phase 1, Raider.IO and the loot tables. `syl_check.py` is clean
 across all 57 files, which proves they parse and that every reference
-resolves — it cannot prove behaviour.
+resolves — it cannot prove behavior.
 
 **Core/Players.lua** — the registry, account level, with
 `ResolveToMain` as the single choke point. DueList, Analytics and
@@ -412,7 +412,7 @@ Read from source where possible rather than from descriptions.
 
 ### RCLootCouncil — the one worth copying from
 
-Ace3-based, and organised as **nine modules loaded from Modules/Modules.xml**:
+Ace3-based, and organized as **nine modules loaded from Modules/Modules.xml**:
 lootFrame, versionCheck, votingFrame, sessionFrame, options, History/
 lootHistory, History/CSVImport, TradeUI, Sync. Core is separate from
 modules, and Classes/ splits Data, Services and Utils.
@@ -462,7 +462,7 @@ to expire items past the two-hour window. That is the event set to copy.
 
 ElvUI's appeal is that every module can be switched off and the rest keeps
 working. Same principle here, and RCLootCouncil already proves the file
-layout: one feature, one file, one enable flag, checked at load and honoured
+layout: one feature, one file, one enable flag, checked at load and honored
 at runtime.
 
 **Decided direction:** a registry where each feature declares a key, a

@@ -40,8 +40,8 @@ function ListScrollBar.Create(parent, config)
     local track = Theme.CreateSolidTexture(slider, "rowAlt", "BACKGROUND")
     track:SetAllPoints()
 
-    -- Built through Theme so it repaints with the palette. A thumb coloured
-    -- once at creation stays the old scheme's colour after a theme change,
+    -- Built through Theme so it repaints with the palette. A thumb colored
+    -- once at creation stays the old scheme's color after a theme change,
     -- which is the bug the theme layer exists to prevent.
     local thumb = Theme.CreateSolidTexture(slider, "accent", "ARTWORK")
 

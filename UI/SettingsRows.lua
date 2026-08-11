@@ -1,7 +1,7 @@
 -- UI/SettingsRows.lua
 --
 -- The contents of the settings window: the row widget, the quality list, the
--- behaviour toggles, and how tall all of that is.
+-- behavior toggles, and how tall all of that is.
 --
 -- Split from UI/SettingsWindow.lua, which crossed the size limit the same way
 -- RosterWindow did before it — by holding the chrome, the content and the
@@ -9,7 +9,7 @@
 -- in it.
 --
 -- ROWS ARE OF TWO KINDS AND HAVE TO LOOK IT. Most are checkboxes bound to a
--- saved setting. Two are not settings at all: the colour scheme and the output
+-- saved setting. Two are not settings at all: the color scheme and the output
 -- window cycle through values when pressed, and drawing those as checkboxes
 -- meant drawing a box that could never be ticked.
 --
@@ -51,7 +51,7 @@ local TOGGLE_COLUMNS = 2
 
 local rows = {}
 
--- Quality colours come from the client so they match the item names in the
+-- Quality colors come from the client so they match the item names in the
 -- list views rather than an approximation of them.
 --
 -- RESOLVED AT CALL TIME, NOT AT LOAD. Read once into an upvalue, a client that
@@ -60,8 +60,8 @@ local rows = {}
 -- window showing one heading and nothing else. Two different faults produced
 -- that same empty screen; this was the second.
 --
--- Falls back to the colour table and then to plain white, because a row whose
--- text is the wrong colour is a cosmetic complaint and a settings window that
+-- Falls back to the color table and then to plain white, because a row whose
+-- text is the wrong color is a cosmetic complaint and a settings window that
 -- will not build is not.
 local function QualityColor(quality)
     local lookup = (C_Item and C_Item.GetItemQualityColor)
@@ -263,7 +263,7 @@ function SettingsRows.BuildQualitySection(parent)
 
         local red, green, blue = QualityColor(quality)
 
-        -- The whole point of this row is that it is the colour it names, so
+        -- The whole point of this row is that it is the color it names, so
         -- it must survive a palette change rather than being repainted back
         -- to plain text.
         if red then
@@ -295,20 +295,20 @@ local TOGGLES = {
     {
         -- Cycles rather than opening a menu, and repaints immediately, so
         -- picking one is a matter of clicking until it looks right instead of
-        -- reading colour names and guessing.
-        label = "Colour scheme",
+        -- reading color names and guessing.
+        label = "Color scheme",
         action = function()
             local palette =
                 SYL.Theme.Apply(SYL.Palettes.Next(SYL.Theme.paletteKey))
 
             SYL:Print(
-                "Colour scheme: " .. palette.name .. " — " .. palette.note .. "."
+                "Color scheme: " .. palette.name .. " — " .. palette.note .. "."
             )
         end,
         describe = function()
             local palette = SYL.Theme.Current()
 
-            return "Colour scheme: " .. (palette and palette.name or "unknown")
+            return "Color scheme: " .. (palette and palette.name or "unknown")
         end,
     },
     {
@@ -334,7 +334,7 @@ local TOGGLES = {
     {
         -- Says gear, because that is now all it announces. Every quality is
         -- still recorded; announcing every quality was what doubled the
-        -- user's loot chat with greys after a Mythic+ run.
+        -- user's loot chat with grays after a Mythic+ run.
         label = "Announce gear in chat when it is recorded",
         key = "announceCaptures",
     },
@@ -425,7 +425,7 @@ function SettingsRows.NeedsScrolling()
 end
 
 function SettingsRows.BuildToggleSection(parent)
-    local container = AddSection(parent, "BEHAVIOUR", ToggleSectionTop())
+    local container = AddSection(parent, "BEHAVIOR", ToggleSectionTop())
 
     container:SetHeight(
         SettingsRows.GridRows(#TOGGLES, TOGGLE_COLUMNS) * ROW_HEIGHT
@@ -478,7 +478,7 @@ function SettingsRows.BuildToggleSection(parent)
         table.insert(rows, row)
     end
 
-    -- The one setting here that changes a number rather than a behaviour, and
+    -- The one setting here that changes a number rather than a behavior, and
     -- the only one whose default is a judgement call rather than an obvious
     -- choice. Saying why beats leaving an officer to discover it.
     local note = Theme.CreateText(parent, Theme.sizes.rowSmall, "textMuted")

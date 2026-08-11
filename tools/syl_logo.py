@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate the CurseForge project logo.
 
-CurseForge requires a 400x400 PNG that is not a blank single colour square,
+CurseForge requires a 400x400 PNG that is not a blank single color square,
 and it is a required field on the submission form rather than something that
 can be added later — so not having one blocks the whole thing.
 
@@ -11,7 +11,7 @@ not a commission: it is generated, deterministic, and meant to be replaced by
 something better whenever that exists.
 
 The design is the same accent mark the addon puts left of every window title,
-over the Nightfall window colour, with a rolled d100 as the subject — the
+over the Nightfall window color, with a rolled d100 as the subject — the
 thing the addon actually watches.
 
 Run: python tools/syl_logo.py

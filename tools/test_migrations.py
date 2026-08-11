@@ -103,7 +103,7 @@ for name, setting, boundary in MIGRATIONS:
     print()
 
 # ---------------------------------------------------------------------------
-# BackfillRecordIDs — not version guarded, so it is checked by behaviour
+# BackfillRecordIDs — not version guarded, so it is checked by behavior
 # rather than by boundary: a record with no id cannot be ticked by anything.
 # ---------------------------------------------------------------------------
 

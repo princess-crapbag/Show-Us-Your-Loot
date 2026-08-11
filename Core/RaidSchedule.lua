@@ -182,7 +182,7 @@ end
 -- Explicit nights
 --------------------------------------------------------------------------
 
--- `cancelled` is a manual entry that says a night is NOT happening, which a
+-- `canceled` is a manual entry that says a night is NOT happening, which a
 -- recurring pattern otherwise insists on. Stored rather than deleted, because
 -- deleting would just let the pattern put it straight back.
 function RaidSchedule.SetNight(dayKey, options)
@@ -207,7 +207,7 @@ function RaidSchedule.SetNight(dayKey, options)
     store.nights[dayKey] = {
         source = options.source or "manual",
         title = options.title,
-        cancelled = options.cancelled or nil,
+        canceled = options.canceled or nil,
         addedAt = time(),
     }
 
@@ -236,14 +236,14 @@ end
 
 -- Whether the guild is raiding on a given day, and why it thinks so. A
 -- cancellation answers false with its reason intact, so a caller can say
--- "cancelled" rather than "nothing scheduled" — those are different things and
+-- "canceled" rather than "nothing scheduled" — those are different things and
 -- only one of them means somebody should be asked.
 function RaidSchedule.IsRaidNight(dayKey)
     local explicit = RaidSchedule.GetNight(dayKey)
 
     if explicit then
-        if explicit.cancelled then
-            return false, "cancelled"
+        if explicit.canceled then
+            return false, "canceled"
         end
 
         return true, explicit.source

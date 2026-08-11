@@ -164,7 +164,7 @@ DashboardWidgets.RENDERERS.readiness = function(tile)
 
     if SYL.Features.IsEnabled("raidBuffs") then
         local coverage = SYL.RaidBuffs.BuildCoverage(roster)
-        local covered, total = SYL.RaidBuffs.Summarise(coverage)
+        local covered, total = SYL.RaidBuffs.Summarize(coverage)
         local missing = SYL.RaidBuffs.Missing(coverage)
 
         for position = 1, math.min(2, #missing) do

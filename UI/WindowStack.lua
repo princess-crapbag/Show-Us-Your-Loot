@@ -14,7 +14,7 @@ SYL.WindowStack = WindowStack
 -- things were wrong with that.
 --
 -- NOTHING EVER CALLED Raise(). Every window is created at the same strata and
--- opens dead centre, so the second one lands exactly on top of the first. A
+-- opens dead center, so the second one lands exactly on top of the first. A
 -- footer button then "toggled" a window that was already open but completely
 -- covered — which hid it, changing nothing visible, so the button read as
 -- broken. Pressing it again brought it back, still underneath. The fix is
@@ -23,7 +23,7 @@ SYL.WindowStack = WindowStack
 --
 -- THEY ALL OPENED IN THE SAME PLACE. Where a window goes is UI/WindowLayout.
 -- This file only decides when to ask it, and what to do when it cannot find
--- anywhere: step off centre so at least the title bars are distinguishable.
+-- anywhere: step off center so at least the title bars are distinguishable.
 
 local CASCADE_STEP = 30
 local CASCADE_WRAP = 6
@@ -89,7 +89,7 @@ end
 
 -- For a window that already knows where it wants to be.
 --
--- The two detail windows are anchored off-centre on purpose, so they sit
+-- The two detail windows are anchored off-center on purpose, so they sit
 -- beside the list that opened them rather than on top of it. Cascading those
 -- would replace a deliberate position with an arbitrary one.
 function WindowStack.KeepPlacement(frame)
@@ -111,7 +111,7 @@ local function PlaceOnce(frame)
         return
     end
 
-    -- The screen is full, or the frame has no size yet. Step off centre so at
+    -- The screen is full, or the frame has no size yet. Step off center so at
     -- least the title bars are distinguishable.
     local step = cascadeIndex % CASCADE_WRAP
 
@@ -133,7 +133,7 @@ function WindowStack.ToggleWindow(frame)
         -- SHOWN FIRST, THEN PLACED. A frame that has never been laid out
         -- answers nil to GetLeft and GetBottom, so placing it before showing
         -- meant the layout could not measure what it was placing and fell
-        -- through to the cascade — a few pixels off centre, which is to say
+        -- through to the cascade — a few pixels off center, which is to say
         -- on top of the main window. The one frame of movement is worth it.
         frame:Show()
 

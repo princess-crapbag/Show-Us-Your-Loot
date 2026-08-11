@@ -3,8 +3,8 @@
 -- Buttons that are on or off and show which.
 --
 -- Every filter button in this addon was the same fifteen lines: flip a
--- boolean, recolour the label to match, reset the scroll, refresh. Written
--- out each time, which is how one of them ends up not recolouring and looking
+-- boolean, recolor the label to match, reset the scroll, refresh. Written
+-- out each time, which is how one of them ends up not recoloring and looking
 -- broken while working perfectly.
 --
 -- The caller keeps the state. This owns only the appearance of it, because a

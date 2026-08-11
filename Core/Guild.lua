@@ -24,7 +24,7 @@ local ONLINE_INDEX = 9
 local PUBLIC_NOTE_INDEX = 7
 local OFFICER_NOTE_INDEX = 8
 -- The locale-independent name ("DEATHKNIGHT"), not the display one, since it
--- is used as a key for class colours and buff lookups.
+-- is used as a key for class colors and buff lookups.
 local CLASS_FILE_INDEX = 11
 local GUID_INDEX = 17
 

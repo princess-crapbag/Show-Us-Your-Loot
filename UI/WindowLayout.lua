@@ -28,7 +28,7 @@ local SCREEN_MARGIN = 20
 -- the first. This is the rest.
 --
 -- Each window is a rectangle and the ones already open are obstacles. Try
--- centre first, because a single window belongs in the middle of the screen;
+-- center first, because a single window belongs in the middle of the screen;
 -- then try beside, above and below each window already up, nearest first;
 -- fall back to the cascade when the screen is genuinely full.
 --
@@ -104,15 +104,15 @@ end
 local function FindSpot(width, height, rects)
     local screenWidth, screenHeight = ScreenBounds()
 
-    local centreLeft = (screenWidth - width) / 2
-    local centreBottom = (screenHeight - height) / 2
+    local centerLeft = (screenWidth - width) / 2
+    local centerBottom = (screenHeight - height) / 2
 
-    if Fits(centreLeft, centreBottom, width, height, rects) then
-        return centreLeft, centreBottom
+    if Fits(centerLeft, centerBottom, width, height, rects) then
+        return centerLeft, centerBottom
     end
 
     -- Beside first, then stacked, because screens are wider than they are
-    -- tall and a window pushed sideways stays readable next to its neighbour.
+    -- tall and a window pushed sideways stays readable next to its neighbor.
     local candidates = {}
 
     for _, rect in ipairs(rects) do
@@ -122,14 +122,14 @@ local function FindSpot(width, height, rects)
         table.insert(candidates, { rect.left, rect.bottom - WINDOW_GAP - height })
     end
 
-    -- Nearest the centre wins, so windows cluster rather than scattering into
+    -- Nearest the center wins, so windows cluster rather than scattering into
     -- the corners.
     table.sort(candidates, function(left, right)
-        local leftDistance = math.abs(left[1] - centreLeft)
-            + math.abs(left[2] - centreBottom)
+        local leftDistance = math.abs(left[1] - centerLeft)
+            + math.abs(left[2] - centerBottom)
 
-        local rightDistance = math.abs(right[1] - centreLeft)
-            + math.abs(right[2] - centreBottom)
+        local rightDistance = math.abs(right[1] - centerLeft)
+            + math.abs(right[2] - centerBottom)
 
         return leftDistance < rightDistance
     end)
@@ -148,9 +148,9 @@ end
 --------------------------------------------------------------------------
 --
 -- Finding a gap for the newcomer is not enough, and the arithmetic says why.
--- The first window opens centred, 900 wide on a 1920 screen: that leaves 490
+-- The first window opens centered, 900 wide on a 1920 screen: that leaves 490
 -- either side, and the next window is 660. There is no gap. Every window
--- after the first would fall through to the cascade, which is the behaviour
+-- after the first would fall through to the cascade, which is the behavior
 -- F3 was raised about.
 --
 -- So the set gets laid out together rather than one at a time. Two windows
@@ -229,7 +229,7 @@ local function Arrange(frames)
         return false
     end
 
-    -- The block is centred, so one window still lands in the middle of the
+    -- The block is centered, so one window still lands in the middle of the
     -- screen and two land either side of it.
     local top = (screenHeight + totalHeight) / 2
 

@@ -356,7 +356,7 @@ end
 
 -- The summary lives in Core/RaidSummary.lua and needs to close the night off
 -- once it has reported, so the next pull opens a fresh session rather than
--- reopening one already summarised.
+-- reopening one already summarized.
 function RaidSession.ClearCurrent()
     currentSessionID = nil
 end

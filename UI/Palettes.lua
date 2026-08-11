@@ -1,6 +1,6 @@
 -- UI/Palettes.lua
 --
--- The colour schemes the window can wear. Theme.lua owns the mechanics of
+-- The color schemes the window can wear. Theme.lua owns the mechanics of
 -- applying one; this file is only the values, so adding a scheme never means
 -- touching frame code.
 --
@@ -10,7 +10,7 @@
 -- read than simply writing them out.
 --
 -- Overlay note: rowAlt, rowHover, button and buttonHover sit *on top of* the
--- window colour. On dark schemes they are white at low alpha; on light ones
+-- window color. On dark schemes they are white at low alpha; on light ones
 -- they must be black, or they wash out to invisible.
 
 local SYL = _G.ShowUsYourLoot
@@ -22,7 +22,7 @@ Palettes.list = {
     {
         key = "graphite",
         name = "Graphite",
-        note = "Neutral dark grey",
+        note = "Neutral dark gray",
         colors = {
             window = { 0.145, 0.150, 0.160, 0.97 },
             border = { 0.32, 0.33, 0.35, 1 },
@@ -43,7 +43,7 @@ Palettes.list = {
     {
         key = "slate",
         name = "Slate",
-        note = "Cool blue-grey, mid tone",
+        note = "Cool blue-gray, mid tone",
         colors = {
             window = { 0.225, 0.265, 0.320, 0.97 },
             border = { 0.40, 0.46, 0.54, 1 },

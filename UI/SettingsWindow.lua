@@ -2,7 +2,7 @@
 --
 -- The settings window: the frame, the title, and the close button.
 --
--- Everything inside it — the quality list, the behaviour toggles and the
+-- Everything inside it — the quality list, the behavior toggles and the
 -- layout maths that decide how tall the window has to be — lives in
 -- UI/SettingsRows.lua.
 

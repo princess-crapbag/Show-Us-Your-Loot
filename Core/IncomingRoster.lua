@@ -32,7 +32,7 @@ local SYL = _G.ShowUsYourLoot
 local IncomingRoster = {}
 SYL.IncomingRoster = IncomingRoster
 
--- The locale-independent names, which is what class colours, the buff table
+-- The locale-independent names, which is what class colors, the buff table
 -- and the roster rows all key on.
 IncomingRoster.CLASSES = {
     "DEATHKNIGHT", "DEMONHUNTER", "DRUID", "EVOKER", "HUNTER", "MAGE",

@@ -5,7 +5,7 @@
 -- Addons have no network access, so nothing here posts anywhere. It produces
 -- a block you select and copy — which is all a Discord thread needs.
 --
--- Output is deliberately plain text with no colour codes or item links: those
+-- Output is deliberately plain text with no color codes or item links: those
 -- are WoW escape sequences and would paste as garbage outside the game.
 
 local SYL = _G.ShowUsYourLoot
@@ -18,7 +18,7 @@ local function Plain(text)
         return tostring(text)
     end
 
-    -- Strip colour codes and unwrap hyperlinks down to the item name.
+    -- Strip color codes and unwrap hyperlinks down to the item name.
     text = text:gsub("|c%x%x%x%x%x%x%x%x", "")
     text = text:gsub("|r", "")
     text = text:gsub("|H.-|h(%[.-%])|h", "%1")

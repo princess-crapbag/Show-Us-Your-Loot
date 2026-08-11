@@ -12,7 +12,7 @@
 -- of the one it makes for sync, which talks to other people.
 --
 -- THE SAVED ORDER IS A DUMB LIST OF NAMES, and it has to stay dumb. A name it
--- does not recognise is skipped; a widget missing from the list is appended.
+-- does not recognize is skipped; a widget missing from the list is appended.
 -- Both cases then draw a working dashboard rather than an empty one, which is
 -- what makes an order saved by an older version safe to read.
 

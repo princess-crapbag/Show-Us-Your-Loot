@@ -37,7 +37,7 @@ only question is what.
 ## The constraint that was relaxed
 
 The original handoff said: *"No server. No external database. No required
-companion app."* That has been set aside deliberately in favour of browser
+companion app."* That has been set aside deliberately in favor of browser
 access and sync.
 
 One part of it still holds and should keep holding: **a raider who installs

@@ -8,7 +8,7 @@ Three of them, and each failed differently:
 
   * The Readiness tile called RaidTeam.Filter directly, so it was the one
     people-list in the addon that could not widen. With nobody ticked it drew
-    an empty state while every neighbouring tile fell through to the guild.
+    an empty state while every neighboring tile fell through to the guild.
     RaidTeam.Filter also tests entry.key alone, so an officer who ticked the
     alt somebody actually raids on had that person fail their own team test.
     Covered here as ALT_CASES.
@@ -25,7 +25,7 @@ Three of them, and each failed differently:
 
 Audience.lua, Filters.lua and RaidSummary.lua are loaded for real. The
 registry, the roster and the guild are stubbed — they are someone else's
-behaviour, and stubbing them is what lets a fixture put one person's alt on the
+behavior, and stubbing them is what lets a fixture put one person's alt on the
 team and nothing else.
 
 Needs `lupa` — see tools/test_lootmessages.py for the setup.

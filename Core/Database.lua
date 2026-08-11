@@ -123,8 +123,8 @@ local function InitializeSettings()
         ShowUsYourLootDB.settings.syncEnabled = false
     end
 
-    -- Which colour scheme the window wears. Stored as a key rather than as
-    -- colour values, so editing a palette improves every existing install
+    -- Which color scheme the window wears. Stored as a key rather than as
+    -- color values, so editing a palette improves every existing install
     -- instead of only new ones.
     --
     -- Taken from Palettes rather than repeated here: two copies of a default

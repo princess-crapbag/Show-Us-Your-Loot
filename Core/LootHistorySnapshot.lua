@@ -25,7 +25,7 @@
 -- Each entry in rollInfos:
 --   playerName   name WITHOUT realm ("Dravok") -- ambiguous across realms
 --   playerGUID   "Player-160-0C155216" -- the only safe identity key
---   playerClass  class file name ("HUNTER"), usable for class colouring
+--   playerClass  class file name ("HUNTER"), usable for class coloring
 --   state        Enum.EncounterLootDropRollState
 --   roll         1-100, ABSENT unless the player actually rolled
 --   isWinner     boolean

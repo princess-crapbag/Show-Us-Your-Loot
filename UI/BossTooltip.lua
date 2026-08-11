@@ -23,7 +23,7 @@ local BossTooltip = {}
 SYL.BossTooltip = BossTooltip
 
 -- Long tables would run off the screen, and the point is a glance rather
--- than a catalogue. The remainder is counted rather than dropped silently.
+-- than a catalog. The remainder is counted rather than dropped silently.
 local MAX_LINES = 12
 
 local function Color(key)

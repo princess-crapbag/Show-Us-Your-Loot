@@ -102,7 +102,7 @@ local function SetDays(words)
 
         if not weekday then
             SYL:Write(
-                "Not a day I recognise: " .. words[index]
+                "Not a day I recognize: " .. words[index]
                 .. ". Try mon tue wed thu fri sat sun."
             )
 

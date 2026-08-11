@@ -150,7 +150,7 @@ local function GetMissing(boss, mayWalk)
     local missing = {}
 
     for _, item in ipairs(items) do
-        -- The journal decorates names with colour codes; drop records do not.
+        -- The journal decorates names with color codes; drop records do not.
         local plain = item.name
             and item.name:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
             or nil

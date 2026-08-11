@@ -331,7 +331,7 @@ function Analytics.Sort(stats, key, reversed)
     return stats
 end
 
-function Analytics.Summarise(stats)
+function Analytics.Summarize(stats)
     local totals = {
         players = #stats,
         guildMembers = 0,

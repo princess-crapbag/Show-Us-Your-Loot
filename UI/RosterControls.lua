@@ -56,7 +56,7 @@ function RosterControls.UpdateCoverage(frame, roster)
     end
 
     local coverage = SYL.RaidBuffs.BuildCoverage(roster)
-    local covered, total = SYL.RaidBuffs.Summarise(coverage)
+    local covered, total = SYL.RaidBuffs.Summarize(coverage)
     local missing = SYL.RaidBuffs.Missing(coverage)
 
     frame.coverageText:SetText(

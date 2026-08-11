@@ -265,7 +265,7 @@ check(
 rows = SYL.LootScore.Breakdown(selunne) if selunne is not None else None
 first = rows[1] if rows is not None else None
 
-check("a Need win is labelled Need", first is not None and first["label"] == "Need")
+check("a Need win is labeled Need", first is not None and first["label"] == "Need")
 check("and is counted once", first is not None and first["count"] == 1)
 
 # Under MIN_NIGHTS nobody is ranked, and share must be nil rather than zero —

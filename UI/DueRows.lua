@@ -116,7 +116,7 @@ function DueRows.Fill(row, entry, rank)
     cells.dry:SetText(entry.nightsSinceUpgrade)
 
     -- The top three are the answer to "who next", so they are the only ones
-    -- worth colouring. Everything below is context.
+    -- worth coloring. Everything below is context.
     Theme.SetTextColor(
         cells.dry, rank <= 3 and "accent" or "textPrimary"
     )

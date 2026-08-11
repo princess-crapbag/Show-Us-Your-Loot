@@ -121,7 +121,7 @@ Refresh = function()
     frame.audienceButton.label:SetText(SYL.Audience.Label(scope))
 
     -- Accented while narrowed, plain at "Everyone", which is the same grammar
-    -- the recency button uses: coloured means something is being left out.
+    -- the recency button uses: colored means something is being left out.
     Theme.SetTextColor(
         frame.audienceButton.label,
         scope == "everyone" and "textPrimary" or "accent"

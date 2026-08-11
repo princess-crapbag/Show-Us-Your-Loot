@@ -79,7 +79,7 @@ def render_all(label_prefix):
 lua.execute("ShowUsYourLootDB = nil")
 SYL.DatabaseInitialize()
 
-check("a fresh database initialises", lua.globals().ShowUsYourLootDB is not None)
+check("a fresh database initializes", lua.globals().ShowUsYourLootDB is not None)
 render_all("empty")
 
 # The grid itself, not just the renderers.

@@ -5,7 +5,7 @@
 -- Guilds have written this down for twenty years and never in the same way.
 -- "Alt of Aimee", "Aimee's alt", "Main: Aimee", "(Aimee)", or just "Aimee".
 -- The patterns below cover what people actually type, and anything not
--- recognised is left alone rather than guessed at.
+-- recognized is left alone rather than guessed at.
 --
 -- NOTHING HERE APPLIES ITSELF.
 --
@@ -115,7 +115,7 @@ function AltDetect.EnsureGuildMembers()
                 -- a member who has never been in a raid, and this is the one
                 -- place it reaches the registry. Leaving it out meant every
                 -- guild member who had not yet raided appeared in the roster
-                -- window with no class colour and no icon — which is most of
+                -- window with no class color and no icon — which is most of
                 -- a large guild, and exactly the people that window was
                 -- rebuilt to show.
                 class = member.class,

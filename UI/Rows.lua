@@ -55,7 +55,7 @@ local function AddItemCell(row, setKey)
 end
 
 -- Returns false when the item is not in the client cache yet, so the caller
--- can retry rather than leaving a wrongly coloured name on screen.
+-- can retry rather than leaving a wrongly colored name on screen.
 function Rows.SetRowItem(row, itemLink, fallbackName)
     row.itemLink = itemLink
 
@@ -171,7 +171,7 @@ function Rows.SetRowIgnored(row, ignored)
 end
 
 --------------------------------------------------------------------------
--- Shared row behaviour
+-- Shared row behavior
 --------------------------------------------------------------------------
 
 -- The whole row is a single button: one mouse-interactive frame means hover,
@@ -198,8 +198,8 @@ local function AttachItemRowScripts(row)
     -- opens the row's detail, where a view provides one.
     row:SetScript("OnClick", function(self)
         if self.itemLink and IsModifiedClick("CHATLINK") then
-            -- Normalised on the way out rather than on the way in, so
-            -- records captured before the colour wrapper was kept still
+            -- Normalized on the way out rather than on the way in, so
+            -- records captured before the color wrapper was kept still
             -- paste a usable link.
             ChatEdit_InsertLink(
                 SYL.Utilities.NormalizeItemLink(self.itemLink)

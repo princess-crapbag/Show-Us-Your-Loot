@@ -36,7 +36,7 @@ KeystoneRequestSync.ANSWER = ANSWER
 -- Format
 --------------------------------------------------------------------------
 
--- Version first, so a future change can be recognised and dropped rather than
+-- Version first, so a future change can be recognized and dropped rather than
 -- misread. Everything here is short enough that chunking never applies — the
 -- longest payload this sends is nine characters.
 function KeystoneRequestSync.Encode(kind, value)

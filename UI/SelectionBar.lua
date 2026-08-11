@@ -6,7 +6,7 @@
 -- How many rows are ticked is reported by the summary line above, not here —
 -- see DescribeCount in UI/LootListView.lua.
 --
--- Owns the click behaviour for the row checkboxes too, since selection state
+-- Owns the click behavior for the row checkboxes too, since selection state
 -- and the actions on it belong together.
 
 local SYL = _G.ShowUsYourLoot

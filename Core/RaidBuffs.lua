@@ -155,7 +155,7 @@ function RaidBuffs.Missing(coverage)
     return missing
 end
 
-function RaidBuffs.Summarise(coverage)
+function RaidBuffs.Summarize(coverage)
     local covered = 0
 
     for _, entry in ipairs(coverage or {}) do

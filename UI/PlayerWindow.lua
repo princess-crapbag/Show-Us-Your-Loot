@@ -104,7 +104,7 @@ Refresh = function()
         offset = maxOffset
     end
 
-    local totals = Analytics.Summarise(stats)
+    local totals = Analytics.Summarize(stats)
 
     -- Said out loud, because two characters counted as one person is the
     -- kind of thing an officer argues with a list about.

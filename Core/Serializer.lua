@@ -21,7 +21,7 @@ local JSON_ESCAPES = {
     ["\t"] = "\\t",
 
     -- A raw pipe is WoW's escape-sequence marker. Left alone, the edit box
-    -- renders |cff...|Hitem:...|h[Name]|h|r as the coloured link text and the
+    -- renders |cff...|Hitem:...|h[Name]|h|r as the colored link text and the
     -- item ID is lost the moment the JSON is copied out. | is valid JSON
     -- that decodes back to "|", and the renderer leaves it alone.
     ["|"] = "\\u007c",

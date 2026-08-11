@@ -17,9 +17,9 @@ Two things block the form and are worth having ready:
    anywhere in the addon docs and is the single most likely thing to stop you
    at minute one.
 2. **A logo.** Required on the submission form, not addable later. Minimum
-   400×400, 1:1, `.png`, and explicitly **not** a blank single-colour square.
+   400×400, 1:1, `.png`, and explicitly **not** a blank single-color square.
    `python tools/syl_logo.py` writes one to `dist/logo-400.png` in the
-   addon's own colours. Replace it whenever something better exists.
+   addon's own colors. Replace it whenever something better exists.
 
 ---
 

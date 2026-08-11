@@ -18,7 +18,7 @@ local Theme = SYL.Theme
 local RosterRows = {}
 SYL.RosterRows = RosterRows
 
--- The roster stores the locale-independent class name because it keys colours
+-- The roster stores the locale-independent class name because it keys colors
 -- and buff lookups. This turns it back into the one the player reads.
 local function ClassLabel(classFile)
     if not classFile then

@@ -162,7 +162,7 @@ local function CreateRow(index)
     return row
 end
 
--- The button says what will happen, or why it will not. A greyed button with
+-- The button says what will happen, or why it will not. A grayed button with
 -- no explanation is the thing this is avoiding: "offline" and "you already
 -- asked" are different problems and only one of them is worth waiting on.
 local function DrawAsk(row, entry)

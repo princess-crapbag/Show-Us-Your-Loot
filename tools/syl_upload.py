@@ -251,7 +251,7 @@ def build_payload(db: dict) -> dict:
 # Config and transport
 # ---------------------------------------------------------------------------
 
-def normalise_url(raw: str) -> str:
+def normalize_url(raw: str) -> str:
     """Reduce whatever was pasted to scheme://host.
 
     Two things people paste that are not the API root: the Data API URL,
@@ -303,7 +303,7 @@ def configure() -> dict:
         "savedvariables": ask(
             "Path to ShowUsYourLoot.lua", "savedvariables", DEFAULT_SAVEDVARS
         ),
-        "supabase_url": normalise_url(ask(
+        "supabase_url": normalize_url(ask(
             "Supabase project URL (https://xxxx.supabase.co)", "supabase_url"
         )),
         "anon_key": ask("Supabase anon key", "anon_key"),
@@ -323,7 +323,7 @@ def configure() -> dict:
 
 
 def endpoint(config: dict) -> str:
-    return normalise_url(config["supabase_url"]) + "/rest/v1/rpc/syl_upload"
+    return normalize_url(config["supabase_url"]) + "/rest/v1/rpc/syl_upload"
 
 
 def upload(config: dict, payload: dict) -> dict:
@@ -394,7 +394,7 @@ def main() -> int:
 
     if args.check:
         print("SavedVariables :", config["savedvariables"])
-        print("Project URL    :", normalise_url(config["supabase_url"]))
+        print("Project URL    :", normalize_url(config["supabase_url"]))
         print("Will POST to   :", endpoint(config))
         print("API key        :", config["anon_key"][:14] + "…")
         print("Guild key      :", "*" * len(config["guild_key"]))

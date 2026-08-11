@@ -174,7 +174,7 @@ local function Merge(decoded, sender)
         recordedBy = sender,
         source = "SYNC",
 
-        -- No roll list travelled with this, and analytics must not treat an
+        -- No roll list traveled with this, and analytics must not treat an
         -- absent list as "nobody rolled".
         partial = true,
         rolls = {},

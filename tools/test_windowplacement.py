@@ -2,10 +2,10 @@
 
 Geometry is easy to get subtly wrong and impossible to eyeball from the code,
 so the rules are checked directly: placed windows sit inside the screen, clear
-of each other, and centred as a group.
+of each other, and centered as a group.
 
 The arithmetic that motivated this is worth keeping in view. The main window
-is 900 wide on a 1920 screen; centred, it leaves 490 either side, and the due
+is 900 wide on a 1920 screen; centered, it leaves 490 either side, and the due
 window is 660. There is no gap to put it in. Placing each new window into a
 hole around the existing ones therefore fails almost every time — which is
 what F3 was raised about — and the fix is to lay the set out together.
@@ -111,11 +111,11 @@ def on_screen(box):
             and box[1] + box[3] <= SCREEN_H - MARGIN)
 
 
-# One window is centred, as it should be.
+# One window is centered, as it should be.
 ok, frames = arrange((900, 596))
 placed = boxes(frames)
 check("a lone window is laid out", ok)
-check("and is centred",
+check("and is centered",
       ok and abs(placed[0][0] - (SCREEN_W - 900) / 2) < 1,
       f"got {placed}")
 
@@ -154,12 +154,12 @@ ok, _ = arrange((SCREEN_W, 400))
 check("a window wider than the screen is refused", not ok)
 
 # FindSpot is the fallback for when something has been dragged. With the
-# centred main window there is genuinely no 660-wide gap, and saying so is
+# centered main window there is genuinely no 660-wide gap, and saying so is
 # the correct answer.
 lua.execute("""
 rects = { { left = 510, bottom = 242, right = 1410, top = 838 } }
 """)
-check("no gap beside a centred main window, and it says so",
+check("no gap beside a centered main window, and it says so",
       FindSpot(660, 500, lua.globals().rects) is None)
 
 check("a small window does find a gap",

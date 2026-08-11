@@ -62,7 +62,7 @@ parent = lua.globals().SECTION_PARENT
 
 for label, builder in (
     ("the quality section", SYL.SettingsRows.BuildQualitySection),
-    ("the behaviour section", SYL.SettingsRows.BuildToggleSection),
+    ("the behavior section", SYL.SettingsRows.BuildToggleSection),
     ("the feature section", SYL.SettingsRows.BuildFeatureSection),
 ):
     try:

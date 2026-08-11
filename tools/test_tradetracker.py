@@ -10,7 +10,7 @@ at all, because then the officer has two lists and no way to tell which lies.
 The event order is the other half. TRADE_ACCEPT_UPDATE fires while the slots
 are still readable; by the time the trade has completed the frame is closed and
 GetTradePlayerItemLink answers nothing. So the slots are captured at acceptance
-and committed at LE_GAME_ERR_TRADE_COMPLETE, and a trade that is cancelled in
+and committed at LE_GAME_ERR_TRADE_COMPLETE, and a trade that is canceled in
 between must record nothing at all.
 
 Needs `lupa` — see tools/test_lootmessages.py for the setup.
@@ -215,11 +215,11 @@ g.DoTrade("Selunne", lua.table("item:1:bonus"), False)
 check("accepting alone credits nothing", g.TradedTo() is None, g.TradedTo())
 check("and the score stays with the winner", g.ScoreFor("Aimee") == 100, g.ScoreFor("Aimee"))
 
-# Cancelled after both accepted: the slots were staged and must be dropped.
+# Canceled after both accepted: the slots were staged and must be dropped.
 SYL.TradeTracker.OnTradeClosed()
 SYL.TradeTracker.OnInfoMessage(TRADE_COMPLETE)
 
-check("a cancelled trade credits nothing", g.TradedTo() is None, g.TradedTo())
+check("a canceled trade credits nothing", g.TradedTo() is None, g.TradedTo())
 
 # --- one side accepting is not both ---------------------------------------
 #

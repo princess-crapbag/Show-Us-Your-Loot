@@ -124,7 +124,7 @@ end
 function RaidSummary.ReportIfFinished()
     local session = SYL.RaidSession.GetCurrent()
 
-    if not session or session.summarised then
+    if not session or session.summarized then
         return false
     end
 
@@ -135,7 +135,7 @@ function RaidSummary.ReportIfFinished()
 
     local lines = RaidSummary.Build(session)
 
-    session.summarised = true
+    session.summarized = true
 
     SYL.RaidSession.ClearCurrent()
 

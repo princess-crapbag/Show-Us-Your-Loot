@@ -21,7 +21,7 @@ SYL.Tooltips = Tooltips
 -- changes what you were looking at.
 --
 -- Attached with HookScript rather than SetScript, because the buttons already
--- use OnEnter and OnLeave for their hover colour and replacing that would
+-- use OnEnter and OnLeave for their hover color and replacing that would
 -- leave them stuck lit.
 function Tooltips.Attach(frame, title, body)
     if not frame then

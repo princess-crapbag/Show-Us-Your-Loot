@@ -27,7 +27,7 @@ PlayerRows.COLUMNS = {
     { key = "nights", label = "NIGHTS", width = 50, gap = 8 },
     -- ELIGIBLE, not ROLLED ON. The number is how many drops this player could
     -- have won — every roll list they appeared on — and a pass or a no-roll
-    -- puts you on that list exactly as a Need does. Labelled "ROLLED ON" it
+    -- puts you on that list exactly as a Need does. Labeled "ROLLED ON" it
     -- is the number an officer quotes in a loot dispute, and it would be
     -- wrong in the direction that loses the argument for the quiet raider who
     -- passes on everything.

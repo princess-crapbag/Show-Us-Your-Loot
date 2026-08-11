@@ -5,7 +5,7 @@ is exactly why they need pinning down in a test — nothing about the code looks
 wrong when they break.
 
 IT NEVER BROADCASTS. A request is whispered to one named person. A guild-wide
-"three people want this key" turns a favour into an auction, and the holder is
+"three people want this key" turns a favor into an auction, and the holder is
 the only one who needs the full picture. The channel every message goes out on
 is asserted here, because switching WHISPER to GUILD is a one-word change that
 would work perfectly and quietly destroy the design.

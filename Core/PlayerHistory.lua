@@ -84,7 +84,7 @@ end
 -- Counts that describe the list above it. Kept apart from Analytics because
 -- that builds every player at once and this answers about one, and running
 -- the whole thing to read a single row would be wasteful.
-function PlayerHistory.Summarise(entries)
+function PlayerHistory.Summarize(entries)
     local totals = {
         eligible = #entries,
 

@@ -3,7 +3,7 @@
 -- Which item qualities are worth recording.
 --
 -- This gates capture, not display: an untracked quality is never written to
--- the database at all. That is the point — it keeps grey vendor trash and
+-- the database at all. That is the point — it keeps gray vendor trash and
 -- green drops out of a season's records entirely — but it also means the
 -- setting is not retroactive in either direction. Records already saved stay
 -- saved, and items skipped while a quality was off are gone for good.
@@ -20,7 +20,7 @@ local GetItemInfo = C_Item and C_Item.GetItemInfo or _G.GetItemInfo
 ItemQuality.ORDER = { 0, 1, 2, 3, 4, 5, 6, 7 }
 
 ItemQuality.NAMES = {
-    [0] = "Poor (grey)",
+    [0] = "Poor (gray)",
     [1] = "Common (white)",
     [2] = "Uncommon (green)",
     [3] = "Rare (blue)",

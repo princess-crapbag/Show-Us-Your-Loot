@@ -8,7 +8,7 @@ the game loads the addon, at which point the error names the line rather than
 the ordering mistake that caused it.
 
 WHAT THIS CANNOT DO. The stubs below are the shape of the WoW API, not its
-behaviour — frames do nothing, textures record nothing, and no event ever
+behavior — frames do nothing, textures record nothing, and no event ever
 fires. So this catches load-order and nil-at-load faults and nothing else. A
 clean run means the addon will load, not that it will work.
 
@@ -96,7 +96,7 @@ lua.execute(
     TradeFrameRecipientNameText = {
         GetText = function() return TRADE_RECIPIENT end,
     }
-    -- Honours a date table, the way the client's does. Returning a constant
+    -- Honors a date table, the way the client's does. Returning a constant
     -- for every argument made any calendar arithmetic untestable: twelve
     -- different months all resolved to the same instant, so a grid built from
     -- this could be wrong in every cell and still look consistent.

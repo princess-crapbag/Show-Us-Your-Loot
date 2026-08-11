@@ -6,7 +6,7 @@
 -- is whispered to one person over the addon channel and nothing is ever
 -- broadcast. Two people asking Dravok for the same key never learn about each
 -- other, which is deliberate: a guild-wide "3 people want this key" turns a
--- favour into an auction, and the person holding the key is the only one who
+-- favor into an auction, and the person holding the key is the only one who
 -- needs the full picture.
 --
 -- IT IS A SEPARATE FEATURE FROM SHARING, and off by default like everything
@@ -101,7 +101,7 @@ function KeystoneRequests.IsOnline(name)
 end
 
 -- Returns false and a reason, so a button can explain itself in a tooltip
--- rather than being mysteriously greyed out.
+-- rather than being mysteriously grayed out.
 function KeystoneRequests.CanAsk(name)
     if not enabled then
         return false, "Key requests are switched off in Settings."

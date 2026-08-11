@@ -1,7 +1,7 @@
 -- UI/MainWindow.lua
 --
 -- The main loot window: chrome, navigation and view state. Rendering lives in
--- UI/LootListView.lua, scrolling in UI/ScrollArea.lua, and every colour and
+-- UI/LootListView.lua, scrolling in UI/ScrollArea.lua, and every color and
 -- size in UI/Theme.lua.
 
 local SYL = _G.ShowUsYourLoot
@@ -283,7 +283,7 @@ local function CreateTitleBar(parent)
     SYL.Tooltips.Attach(
         view.settingsButton,
         "Settings",
-        "Colour scheme, what gets recorded, which dashboard widgets are on, "
+        "Color scheme, what gets recorded, which dashboard widgets are on, "
         .. "and the features that can be switched off."
     )
 end
