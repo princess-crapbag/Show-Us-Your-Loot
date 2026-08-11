@@ -77,7 +77,7 @@ local TABS = {
     { key = "dashboard", label = "Dashboard" },
     { key = "feed", label = "Loot" },
     { key = "raiders", label = "Raiders" },
-    { key = "nights", label = "Nights" },
+    { key = "nights", label = "Calendar" },
     { key = "bosses", label = "Bosses" },
     { key = "keys", label = "Keys" },
     { key = "archives", label = "Archives" },

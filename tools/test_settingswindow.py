@@ -123,6 +123,15 @@ check(
 )
 check("an empty name has no slug", SYL.Links.Slug("") is None)
 
+# The guild name is NOT slugified — it keeps its spaces and capitals and is
+# percent-encoded. Hyphenating it the way a realm is hyphenated produced a URL
+# that 404s, which is how this was found.
+check(
+    "a guild name keeps its capitals and encodes its spaces",
+    SYL.Links.Encode("Show Us Your Kitties") == "Show%20Us%20Your%20Kitties",
+    SYL.Links.Encode("Show Us Your Kitties"),
+)
+
 # The stubbed client is in no guild, so there is no path and the links stay on
 # the front pages — which is the fallback that must not break anybody.
 lua.execute("ShowUsYourLootDB.links = nil")
@@ -138,8 +147,8 @@ check(
 # With a guild, an untouched front page is upgraded and an edited one is not.
 lua.execute(
     """
-    ShowUsYourLoot.Guild.GetGuildName = function() return 'Show Us Your Loot' end
-    GetRealmName = function() return "Cho'gall" end
+    ShowUsYourLoot.Guild.GetGuildName = function() return 'Show Us Your Kitties' end
+    GetRealmName = function() return 'Area 52' end
     GetCurrentRegion = function() return 1 end
 
     ShowUsYourLootDB.links = {
@@ -156,7 +165,7 @@ check("one untouched default was upgraded", moved == 1, moved)
 check(
     "and it points at the guild page",
     links["Warcraft Logs"]
-    == "https://www.warcraftlogs.com/guild/us/chogall/show-us-your-loot",
+    == "https://www.warcraftlogs.com/guild/us/area-52/Show%20Us%20Your%20Kitties",
     links["Warcraft Logs"],
 )
 check(

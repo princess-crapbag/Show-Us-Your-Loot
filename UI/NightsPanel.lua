@@ -309,7 +309,7 @@ function NightsPanel.Create(parent)
 
     local title = Theme.CreateText(frame, Theme.sizes.title, "textPrimary")
     title:SetPoint("TOPLEFT", 2, -4)
-    title:SetText("NIGHTS")
+    title:SetText("CALENDAR")
 
     frame.prev = Theme.CreateButton(frame, 28, 20, "<", function()
         NightsPanel.Step(-1)

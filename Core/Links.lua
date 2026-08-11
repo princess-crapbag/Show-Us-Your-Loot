@@ -40,8 +40,11 @@ local function Region()
     return (ok and REGIONS[index]) or "us"
 end
 
--- Both sites use the same slug shape: lowercase, spaces and apostrophes out,
--- hyphens between words. "Twisting Nether" becomes twisting-nether.
+-- THE REALM AND THE GUILD ARE ENCODED DIFFERENTLY, which cost a 404 before
+-- Aimee pasted a working URL. The realm is slugified — lowercase, apostrophes
+-- dropped, spaces to hyphens, so "Area 52" is area-52. The guild name is not:
+-- it keeps its spaces and its capitals and is percent-encoded, so "Show Us
+-- Your Kitties" is Show%20Us%20Your%20Kitties.
 local function Slug(name)
     if type(name) ~= "string" or name == "" then
         return nil
@@ -54,18 +57,30 @@ end
 
 Links.Slug = Slug
 
+-- Spaces only. A guild name can hold an apostrophe and both sites expect it
+-- left alone rather than stripped, unlike a realm.
+local function Encode(name)
+    if type(name) ~= "string" or name == "" then
+        return nil
+    end
+
+    return (name:gsub("%s", "%%20"))
+end
+
+Links.Encode = Encode
+
 local function GuildPaths()
     local guild = SYL.Guild and SYL.Guild.GetGuildName and SYL.Guild.GetGuildName()
     local realm = GetRealmName and GetRealmName()
 
-    local guildSlug = Slug(guild)
+    local guildName = Encode(guild)
     local realmSlug = Slug(realm)
 
-    if not guildSlug or not realmSlug then
+    if not guildName or not realmSlug then
         return nil
     end
 
-    return Region() .. "/" .. realmSlug .. "/" .. guildSlug
+    return Region() .. "/" .. realmSlug .. "/" .. guildName
 end
 
 Links.GuildPaths = GuildPaths
