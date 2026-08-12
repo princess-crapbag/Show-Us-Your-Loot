@@ -3,6 +3,34 @@
 What changed, for the person installing it. The commit history explains why;
 this says what you will notice.
 
+## 0.3.1 — 2026-08-11
+
+**Updated for patch 12.1.0.** Without this the game marks the addon out of
+date and will not load it unless you tick "Load out of date AddOns".
+
+### Fixed
+
+- **Archiving a season now actually starts you fresh.** Tier progress, the
+  Raiders board, who is due, attendance and the calendar were all still
+  counting archived seasons, so archiving changed nothing on screen: a new
+  tier opened with the last tier's bosses listed and everybody carrying their
+  old score. They read the current season only now.
+
+  Nothing was deleted to fix this and nothing needs clearing. Your archived
+  seasons are untouched and still readable on the Archives tab — the numbers
+  were in the right place all along, and the screens were reading past them.
+
+- **Settings no longer opens on top of the main window.** Once you had dragged
+  any window, the step that decides where a new one goes was handed nothing to
+  work around, and then left the window exactly where it was built — dead
+  center, which is where the main window sits. Windows you have moved are
+  counted now, and a window that cannot find a clear gap steps aside instead of
+  sitting still. On a full screen it can still overlap; it will no longer land
+  squarely on top.
+
+- The addon list no longer labels this ALPHA. It stopped being an alpha at
+  0.3.0 and the tag was left behind.
+
 ## 0.3.0 — 2026-08-10
 
 **The first release that is not an alpha.** Every earlier upload was marked

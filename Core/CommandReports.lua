@@ -187,7 +187,7 @@ end
 -- Answers "who should we favor on the next drop" in chat, which is where it
 -- gets asked. See Core/DueList.lua for what "due" is taken to mean.
 function Reports.Due(limit)
-    local sessions = SYL.GetAllRaids()
+    local sessions = SYL.GetActiveRaids()
 
     if #sessions == 0 then
         SYL:Print("No raid nights recorded yet.")
@@ -199,7 +199,7 @@ function Reports.Due(limit)
         return
     end
 
-    local entries = SYL.DueList.Build(SYL.GetAllDrops(), sessions)
+    local entries = SYL.DueList.Build(SYL.GetActiveDrops(), sessions)
 
     entries = SYL.DueList.FilterRecent(entries, sessions)
 
@@ -265,7 +265,9 @@ function Reports.Due(limit)
 end
 
 function Reports.Bosses(limit)
-    local bosses = SYL.BossStats.Build(SYL.GetAllDrops(), SYL.GetAllRaids())
+    local bosses = SYL.BossStats.Build(
+        SYL.GetActiveDrops(), SYL.GetActiveRaids()
+    )
 
     if #bosses == 0 then
         SYL:Print("No bosses recorded yet.")

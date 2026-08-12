@@ -218,7 +218,7 @@ lua.execute(
     """
     function BossRows()
         local bosses = ShowUsYourLoot.BossStats.Build(
-            ShowUsYourLoot.GetAllDrops(), ShowUsYourLoot.GetAllRaids()
+            ShowUsYourLoot.GetActiveDrops(), ShowUsYourLoot.GetActiveRaids()
         )
 
         ShowUsYourLoot.BossStats.SortByRecent(bosses)
@@ -273,7 +273,7 @@ lua.execute(
     """
     function FirstBoss()
         local bosses = ShowUsYourLoot.BossStats.Build(
-            ShowUsYourLoot.GetAllDrops(), ShowUsYourLoot.GetAllRaids()
+            ShowUsYourLoot.GetActiveDrops(), ShowUsYourLoot.GetActiveRaids()
         )
 
         ShowUsYourLoot.BossStats.SortByRecent(bosses)

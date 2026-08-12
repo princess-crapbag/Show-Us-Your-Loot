@@ -298,8 +298,8 @@ function TradeAdvisor.RankCandidates(record)
         return candidates
     end
 
-    local drops = SYL.GetAllDrops()
-    local entries = SYL.DueList.Build(drops, SYL.GetAllRaids())
+    local drops = SYL.GetActiveDrops()
+    local entries = SYL.DueList.Build(drops, SYL.GetActiveRaids())
 
     SYL.LootScore.Attach(entries, drops)
 

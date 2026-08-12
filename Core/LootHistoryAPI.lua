@@ -7,7 +7,16 @@
 -- exists; it asks the client and reports back. Core/LootHistory.lua owns the
 -- capture state and calls into here.
 --
--- Confirmed on a live 12.0.7 client (build 68974) via /syl api:
+-- Confirmed on a live 12.0.7 client (build 68974) via /syl api, and every line
+-- below re-confirmed unchanged on 12.1.0 (build 69273) on patch day. Nothing
+-- in this namespace moved across that patch: same five members, same enum keys
+-- and same numbering, same twelve events. Worth re-running after any patch,
+-- because the failure this file guards against is silent — a renamed enum key
+-- falls through to the fallback numbering below and the scores quietly change.
+--
+-- This says nothing about the *shape* of what a kill returns. /syl api reads
+-- the namespace, not a payload; Core/LootHistorySnapshot.lua records that, and
+-- it still rests on the 12.0.7 Rotmire kill.
 --
 --   C_LootHistory has exactly five members:
 --     GetAllEncounterInfos, GetInfoForEncounter, GetLootHistoryTime,
@@ -70,7 +79,8 @@ local rollStateNames
 -- counts state 1 as an upgrade and a type column that calls it Greed both
 -- look fine on their own.
 --
--- Read from the live Enum, with the observed 12.0.7 numbering as the fallback
+-- Read from the live Enum, with the observed 12.0.7 numbering — unchanged in
+-- 12.1.0 — as the fallback
 -- for a client that has not defined it yet. Named after Blizzard's own keys so
 -- the mapping is checkable against `/syl api` output rather than against
 -- memory.

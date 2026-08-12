@@ -170,7 +170,7 @@ lua.execute(
 
     function DayByKey(key)
         local days, byDay = ShowUsYourLoot.NightIndex.Build(
-            ShowUsYourLoot.GetAllRaids(), ShowUsYourLoot.GetAllDrops()
+            ShowUsYourLoot.GetActiveRaids(), ShowUsYourLoot.GetActiveDrops()
         )
 
         return byDay[key], #days
@@ -178,7 +178,7 @@ lua.execute(
 
     function OpeningMonth()
         local days = ShowUsYourLoot.NightIndex.Build(
-            ShowUsYourLoot.GetAllRaids(), ShowUsYourLoot.GetAllDrops()
+            ShowUsYourLoot.GetActiveRaids(), ShowUsYourLoot.GetActiveDrops()
         )
 
         local year, month = ShowUsYourLoot.NightIndex.LatestMonth(days)

@@ -58,8 +58,8 @@ local Refresh
 -- order. Composed rather than copied: DueList owns which wins are real, and a
 -- second opinion about that here is how two screens start disagreeing.
 local function Build()
-    local sessions = SYL.GetAllRaids()
-    local drops = SYL.GetAllDrops()
+    local sessions = SYL.GetActiveRaids()
+    local drops = SYL.GetActiveDrops()
 
     local entries = SYL.DueList.Build(drops, sessions)
     local beforeScope = #entries

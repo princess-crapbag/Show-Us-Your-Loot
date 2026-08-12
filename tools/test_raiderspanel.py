@@ -181,8 +181,8 @@ except Exception as err:  # noqa: BLE001
 lua.execute(
     """
     function BuildEntries()
-        local drops = ShowUsYourLoot.GetAllDrops()
-        local entries = ShowUsYourLoot.DueList.Build(drops, ShowUsYourLoot.GetAllRaids())
+        local drops = ShowUsYourLoot.GetActiveDrops()
+        local entries = ShowUsYourLoot.DueList.Build(drops, ShowUsYourLoot.GetActiveRaids())
 
         ShowUsYourLoot.LootScore.Attach(entries, drops)
         ShowUsYourLoot.LootScore.Sort(entries)

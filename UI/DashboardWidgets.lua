@@ -26,7 +26,7 @@ DashboardWidgets.RENDERERS = {}
 
 -- Last raid night ---------------------------------------------------------
 DashboardWidgets.RENDERERS.lastNight = function(tile)
-    local sessions = SYL.RaidSession.RaidsOnly(SYL.GetAllRaids())
+    local sessions = SYL.RaidSession.RaidsOnly(SYL.GetActiveRaids())
 
     if #sessions == 0 then
         DashboardParts.Empty(tile,
@@ -36,7 +36,7 @@ DashboardWidgets.RENDERERS.lastNight = function(tile)
         return
     end
 
-    -- The most recent night, whatever order the seasons stored them in.
+    -- The most recent night, whatever order the season stored them in.
     local latest
 
     for _, session in ipairs(sessions) do
@@ -51,7 +51,7 @@ DashboardWidgets.RENDERERS.lastNight = function(tile)
     local since = latest.startedAt or 0
     local shown, upgrades, total = 0, 0, 0
 
-    for _, drop in ipairs(SYL.GetAllDrops()) do
+    for _, drop in ipairs(SYL.GetActiveDrops()) do
         if not drop.excludedFromAnalytics and (drop.timestamp or 0) >= since then
             total = total + 1
 
@@ -96,8 +96,8 @@ end
 
 -- Who is due --------------------------------------------------------------
 DashboardWidgets.RENDERERS.due = function(tile)
-    local sessions = SYL.GetAllRaids()
-    local drops = SYL.GetAllDrops()
+    local sessions = SYL.GetActiveRaids()
+    local drops = SYL.GetActiveDrops()
 
     local entries = SYL.DueList.Build(drops, sessions)
 
@@ -193,7 +193,9 @@ end
 
 -- Tier progress -----------------------------------------------------------
 DashboardWidgets.RENDERERS.tier = function(tile)
-    local bosses = SYL.BossStats.Build(SYL.GetAllDrops(), SYL.GetAllRaids())
+    local bosses = SYL.BossStats.Build(
+        SYL.GetActiveDrops(), SYL.GetActiveRaids()
+    )
 
     if #bosses == 0 then
         DashboardParts.Empty(tile,
@@ -226,7 +228,7 @@ DashboardWidgets.RENDERERS.tier = function(tile)
             "textPrimary", "warning")
     end
 
-    DashboardParts.Caption(tile, (SYL.GetAllDrops() and #SYL.GetAllDrops() or 0)
+    DashboardParts.Caption(tile, #SYL.GetActiveDrops()
         .. " drops recorded across " .. pulled .. " bosses.")
 end
 
@@ -234,8 +236,8 @@ end
 DashboardWidgets.RENDERERS.recording = function(tile)
     local settings = ShowUsYourLootDB and ShowUsYourLootDB.settings or {}
 
-    local drops = SYL.GetAllDrops()
-    local nights = SYL.RaidSession.RaidsOnly(SYL.GetAllRaids())
+    local drops = SYL.GetActiveDrops()
+    local nights = SYL.RaidSession.RaidsOnly(SYL.GetActiveRaids())
 
     local latest = 0
 

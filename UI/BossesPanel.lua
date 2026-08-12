@@ -46,7 +46,9 @@ local Refresh
 --------------------------------------------------------------------------
 
 local function Build()
-    local bosses = SYL.BossStats.Build(SYL.GetAllDrops(), SYL.GetAllRaids())
+    local bosses = SYL.BossStats.Build(
+        SYL.GetActiveDrops(), SYL.GetActiveRaids()
+    )
 
     SYL.BossStats.SortByRecent(bosses)
 

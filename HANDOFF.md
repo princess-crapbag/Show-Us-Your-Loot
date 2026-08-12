@@ -14,7 +14,7 @@ Not shipped in the addon zip — see `.pkgmeta`.
 
 ## 1. Where the project stands
 
-WoW retail addon (Interface 120007, Midnight). Records group-loot drops from
+WoW retail addon (Interface 120100, Midnight). Records group-loot drops from
 Blizzard's Loot History API plus chat-captured loot, and answers who is due an
 upgrade, who turned up, and what each boss has given.
 
@@ -520,6 +520,19 @@ who is only there half the time", with no separate attendance bonus. Two
 raiders on 240 points are not equal if one earned it over thirteen nights and
 the other over seven.
 
+**Archiving a season is a boundary, not a label.** Decided 2026-08-11, on the
+first archive ever taken. Everything about a *person* — the Raiders board,
+`/syl due`, attendance, the Nights calendar, tier progress, the trade advisor,
+the end-of-night summary — reads the active season and nothing else, through
+`SYL.GetActiveDrops` and `SYL.GetActiveRaids`. A new tier starts everybody at
+zero, which is the whole reason an officer archives.
+
+`SYL.GetAllDrops` and `SYL.GetAllRaids` still exist and still span the
+archives. They are for questions about an *item* or about the database:
+the item tooltip's "has this ever dropped", `Core/DataExport.lua`, the loot
+list's all-seasons view, and the `allTime` counter in `LootHistoryStore`.
+Those four are the only callers left, and a fifth should have a reason.
+
 **Nobody under three nights is ranked.** Share is score over nights, so a trial
 with one night and no loot scores zero and would top the list ahead of raiders
 who have been there all tier. They are listed with the reason instead. Three
@@ -634,6 +647,26 @@ Each of these cost real time.
 
 ### This addon
 
+- **`GetAllDrops` is not `GetActiveDrops`, and for a year nothing could tell.**
+  With one season and no archives the two return the identical list, so
+  fifteen call sites picked the all-time one and every screen agreed with
+  every other. The first archive taken made all fifteen wrong at once: the
+  tier tile still showed the previous raid's bosses and the board still ranked
+  people on the previous tier's loot. It reads as data that will not delete —
+  the reason somebody goes looking for a reset — when the data is correct and
+  the screens are reading past it. `tools/test_seasons.py` covers it by
+  counting calls to the all-time accessors while driving the real panels,
+  because a panel making that call looks completely normal.
+- **A cascade that starts at zero moves nothing.** `WindowStack`'s fallback
+  runs only once placement has already failed, and its first step was a no-op
+  return — so the window kept its creation position, and every window here is
+  created with `SetPoint("CENTER")`. Settings opened squarely on the dashboard,
+  and it read as the layout being broken rather than as the fallback doing
+  nothing. The same function also dropped user-dragged windows from the
+  obstacle list, so dragging anything turned the layout off. `test_windowplacement`
+  stayed green through both: it lifts the arithmetic out of `WindowLayout.lua`,
+  and neither fault was in the arithmetic. `tools/test_windowstack.py` covers
+  the layer that decides *what to hand* the layout.
 - **A migration must guard on its own version, not on `DATABASE_VERSION`.**
   Written the second way it re-fires on every later schema bump and overrules a
   choice the user made after it ran.

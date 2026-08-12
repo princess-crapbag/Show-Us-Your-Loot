@@ -28,7 +28,7 @@ local function DropsDuring(session)
     local from = session.startedAt or 0
     local upTo = (session.endedAt or 0) + TAIL_SECONDS
 
-    for _, drop in ipairs(SYL.GetAllDrops()) do
+    for _, drop in ipairs(SYL.GetActiveDrops()) do
         local at = drop.timestamp or 0
 
         if at >= from and at <= upTo then

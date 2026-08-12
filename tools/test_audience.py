@@ -127,7 +127,10 @@ lua.execute(
 
     DROPS = {}
 
-    SYL.GetAllDrops = function() return DROPS end
+    -- The season-scoped accessor, because that is the one RaidSummary reads.
+    -- An end-of-night summary is about the night that just happened, so it
+    -- must not count an archived season.
+    SYL.GetActiveDrops = function() return DROPS end
     """
 )
 

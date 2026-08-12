@@ -180,7 +180,7 @@ local function Refresh()
         return
     end
 
-    local entries = SYL.PlayerHistory.Build(currentKey, SYL.GetAllDrops())
+    local entries = SYL.PlayerHistory.Build(currentKey, SYL.GetActiveDrops())
     local totals = SYL.PlayerHistory.Summarize(entries)
 
     UpdateHeaderText(currentEntry, totals)
@@ -301,7 +301,7 @@ local function CreateWindow()
 
     frame:SetScript("OnMouseWheel", function(_, delta)
         local entries =
-            SYL.PlayerHistory.Build(currentKey, SYL.GetAllDrops())
+            SYL.PlayerHistory.Build(currentKey, SYL.GetActiveDrops())
 
         local maxOffset = math.max(0, #entries - VISIBLE_ROWS)
 

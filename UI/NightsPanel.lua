@@ -54,7 +54,7 @@ local Refresh
 --------------------------------------------------------------------------
 
 local function Build()
-    return SYL.NightIndex.Build(SYL.GetAllRaids(), SYL.GetAllDrops())
+    return SYL.NightIndex.Build(SYL.GetActiveRaids(), SYL.GetActiveDrops())
 end
 
 local function StepMonth(by)

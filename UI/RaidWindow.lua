@@ -53,7 +53,7 @@ end
 local function Sessions()
     local sessions = {}
 
-    for _, session in ipairs(SYL.GetAllRaids()) do
+    for _, session in ipairs(SYL.GetActiveRaids()) do
         table.insert(sessions, session)
     end
 

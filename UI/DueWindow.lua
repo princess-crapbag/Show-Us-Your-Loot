@@ -53,9 +53,9 @@ local Refresh
 -- narrowed it. The second number is what tells an empty window whether there
 -- is no data or only nobody in scope, which need different sentences.
 local function Entries()
-    local sessions = SYL.GetAllRaids()
+    local sessions = SYL.GetActiveRaids()
 
-    local entries = SYL.DueList.Build(SYL.GetAllDrops(), sessions)
+    local entries = SYL.DueList.Build(SYL.GetActiveDrops(), sessions)
 
     if recentOnly then
         entries = SYL.DueList.FilterRecent(entries, sessions, RECENT_NIGHTS)
@@ -158,7 +158,7 @@ Refresh = function()
 
         if scoped then
             frame.emptyText:SetText(scoped)
-        elseif #SYL.GetAllRaids() == 0 then
+        elseif #SYL.GetActiveRaids() == 0 then
             frame.emptyText:SetText(
                 "No raid nights recorded yet. Attendance is read from the "
                 .. "group at each pull, so this fills in from the next boss "

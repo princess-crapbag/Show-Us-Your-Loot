@@ -14,7 +14,7 @@ answers the questions that come up afterwards.
 
 ## Installing
 
-Retail only, Interface 120007.
+Retail only, Interface 120100.
 
 **From a zip:**
 

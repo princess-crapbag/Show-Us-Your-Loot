@@ -117,11 +117,11 @@ lua.execute(
 
     -- Score per person, off the same call the board makes.
     function ScoreFor(name)
-        local drops = ShowUsYourLoot.GetAllDrops()
+        local drops = ShowUsYourLoot.GetActiveDrops()
         local totals = ShowUsYourLoot.LootScore.BuildTotals(drops)
 
         for _, entry in ipairs(
-            ShowUsYourLoot.DueList.Build(drops, ShowUsYourLoot.GetAllRaids())
+            ShowUsYourLoot.DueList.Build(drops, ShowUsYourLoot.GetActiveRaids())
         ) do
             if entry.name == name then
                 local total = totals[entry.key]
@@ -136,10 +136,10 @@ lua.execute(
     -- Whether the due list thinks this person has ever won an upgrade. The
     -- drought half of the same question the score answers.
     function EverWon(name)
-        local drops = ShowUsYourLoot.GetAllDrops()
+        local drops = ShowUsYourLoot.GetActiveDrops()
 
         for _, entry in ipairs(
-            ShowUsYourLoot.DueList.Build(drops, ShowUsYourLoot.GetAllRaids())
+            ShowUsYourLoot.DueList.Build(drops, ShowUsYourLoot.GetActiveRaids())
         ) do
             if entry.name == name then
                 return entry.everWon and true or false

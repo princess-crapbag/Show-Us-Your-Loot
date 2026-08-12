@@ -62,7 +62,7 @@ do
 end
 
 local function Bosses()
-    local bosses = BossStats.Build(SYL.GetAllDrops(), SYL.GetAllRaids())
+    local bosses = BossStats.Build(SYL.GetActiveDrops(), SYL.GetActiveRaids())
 
     return BossStats.SortByRecent(bosses)
 end

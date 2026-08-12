@@ -49,7 +49,7 @@ function RosterData.Build()
     end
 
     local _, attendance =
-        SYL.RaidSession.BuildAttendance(SYL.GetAllRaids())
+        SYL.RaidSession.BuildAttendance(SYL.GetActiveRaids())
 
     local roster = {}
 

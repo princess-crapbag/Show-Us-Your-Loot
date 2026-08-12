@@ -59,11 +59,24 @@ end
 local function OpenWindows(exclude)
     local open, userMoved = {}, false
 
+    -- A DRAGGED WINDOW IS STILL AN OBSTACLE. These were one if/elseif, so a
+    -- window the user had moved set the flag and was then left out of the
+    -- list entirely — the layout was told "somebody has moved something" and
+    -- handed nothing to avoid. WindowLayout tries center first, found an
+    -- empty screen, and put the new window dead center: on top of the main
+    -- window, which is the one people drag. Dragging any window at all
+    -- brought back the exact overlap F3 was raised about.
+    --
+    -- The two facts are separate. Moved means "do not rearrange it"; shown
+    -- means "do not cover it". WindowLayout.lua says as much — their layout,
+    -- our best effort around it.
     for _, frame in ipairs(order) do
         if frame:IsShown() then
             if frame.symlUserMoved then
                 userMoved = true
-            elseif frame ~= exclude then
+            end
+
+            if frame ~= exclude then
                 table.insert(open, frame)
             end
         end
@@ -113,13 +126,17 @@ local function PlaceOnce(frame)
 
     -- The screen is full, or the frame has no size yet. Step off center so at
     -- least the title bars are distinguishable.
-    local step = cascadeIndex % CASCADE_WRAP
-
+    --
+    -- STEPPING FROM 1, NOT FROM 0. This counted from zero and returned early
+    -- on the first one, which left the frame wherever it was created — and
+    -- every window in this addon is created with SetPoint("CENTER"), which is
+    -- where the main window is. So the one branch that runs when placement has
+    -- *failed* was the one that moved the window nowhere, and settings opened
+    -- exactly on top of the dashboard. Reaching here means something is
+    -- already in the way; there is no case where the answer is to sit still.
     cascadeIndex = cascadeIndex + 1
 
-    if step == 0 then
-        return
-    end
+    local step = (cascadeIndex - 1) % CASCADE_WRAP + 1
 
     frame:ClearAllPoints()
     frame:SetPoint("CENTER", step * CASCADE_STEP, -step * CASCADE_STEP)

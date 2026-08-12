@@ -341,7 +341,7 @@ end
 -- owed. Same reasoning as Players.ResolveToMain and TradeTracker
 -- .CreditedIdentity — one choke point, so there is nothing to keep in step.
 function LootScore.Rank(entries, drops)
-    LootScore.Attach(entries, drops or SYL.GetAllDrops())
+    LootScore.Attach(entries, drops or SYL.GetActiveDrops())
 
     return LootScore.Sort(entries)
 end

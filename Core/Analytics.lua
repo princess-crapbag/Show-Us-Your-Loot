@@ -128,7 +128,7 @@ function Analytics.BuildPlayerStats(drops)
     -- Nights come from the raid roster, not from loot. Someone eligible for
     -- nothing all evening still raided, and only the roster knows that.
     local _, attendanceByKey =
-        SYL.RaidSession.BuildAttendance(SYL.GetAllRaids())
+        SYL.RaidSession.BuildAttendance(SYL.GetActiveRaids())
 
     local now = time()
 
@@ -170,7 +170,7 @@ function Analytics.BuildPlayerStats(drops)
 
     -- Anyone who raided but never appeared in a single roll list is still a
     -- raider who got nothing, which is the whole question being asked.
-    local attendance = SYL.RaidSession.BuildAttendance(SYL.GetAllRaids())
+    local attendance = SYL.RaidSession.BuildAttendance(SYL.GetActiveRaids())
 
     for _, member in ipairs(attendance) do
         -- BuildAttendance already folds alts, so this key is a main's.

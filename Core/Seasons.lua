@@ -74,6 +74,18 @@ function SYL.GetActiveDrops()
     return season.drops
 end
 
+-- EVERY SEASON, ARCHIVES INCLUDED. Use this only for questions about an item
+-- or about the database itself — "has this ever dropped", "how much is
+-- recorded in total". Anything about a *person* belongs to one season.
+--
+-- Archiving is how a guild starts a tier fresh, and until this was written
+-- down every board, due list and attendance count read across the archives:
+-- the first archive ever taken changed nothing on screen, because with one
+-- season and no archives GetAll and GetActive had always returned the same
+-- list and nothing had ever told them apart.
+--
+-- Returns a copy. GetActiveDrops hands back the stored table by reference, so
+-- a caller that sorts what it is given must copy first.
 function SYL.GetAllDrops()
     local allDrops = {}
 
