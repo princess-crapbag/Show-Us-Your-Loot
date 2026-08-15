@@ -20,7 +20,28 @@ local FEED_FIELDS = {
     item = function(entry) return entry.itemName end,
     location = function(entry) return entry.where end,
     timestamp = function(entry) return entry.timestamp end,
-    wintype = function(entry) return entry.typeLabel end,
+    -- IGNORED AND BONUS ROLL ARE TYPES HERE, EVEN THOUGH THEY ARE NOT WIN
+    -- TYPES. Aimee asked for this in the Type section because that is where
+    -- she went looking for it, and it is the honest place: what somebody wants
+    -- from this dropdown is a way to gather rows that behave alike, and both
+    -- of these behave unlike every win type — an ignored row is counted
+    -- nowhere, and a bonus roll was never awarded by the raid at all.
+    --
+    -- The consequence, which is deliberate: filtering to Need no longer
+    -- returns an ignored Need win. That is the point of having ignored it, and
+    -- the TYPE column still shows what was rolled, so nothing is hidden from
+    -- the reader — only from the filter.
+    wintype = function(entry)
+        if entry.excludedFromAnalytics then
+            return "Ignored"
+        end
+
+        if entry.bonusRoll then
+            return "Bonus roll"
+        end
+
+        return entry.typeLabel
+    end,
 }
 
 function ListSources.GetFields(view)

@@ -198,6 +198,50 @@ function LootMessages.WasCreated(message)
     return MatchesAny(message, createdPatterns)
 end
 
+-- Whether this line came from a bonus roll rather than an ordinary pickup.
+--
+-- WHY IT IS WORTH KNOWING. A bonus roll is loot somebody received and it is
+-- NOT loot the raid awarded them — there is no Need or Greed on it and nobody
+-- passed for it, so it belongs in the feed and nowhere near the due score.
+-- That part already worked, and by accident rather than by design: a bonus
+-- roll arrives through chat capture and lands in `loot`, while the fairness
+-- maths reads `drops`, which is group loot only. What did not work was seeing
+-- it — the line was indistinguishable from any other pickup, so it could not
+-- be pointed at or filtered out.
+--
+-- Its own compiled set rather than a re-read of the four formats, because the
+-- self and other phrasings have to keep their existing order for the reason
+-- described above SELF_FORMATS, and a bonus-roll line is one or the other
+-- before it is a bonus roll.
+local BONUS_ROLL_FORMATS = {
+    "LOOT_ITEM_BONUS_ROLL",
+    "LOOT_ITEM_BONUS_ROLL_MULTIPLE",
+    "LOOT_ITEM_BONUS_ROLL_SELF",
+    "LOOT_ITEM_BONUS_ROLL_SELF_MULTIPLE",
+}
+
+local bonusRollPatterns
+
+function LootMessages.WasBonusRoll(message)
+    if type(message) ~= "string" then
+        return false
+    end
+
+    if not bonusRollPatterns then
+        bonusRollPatterns = {}
+
+        for _, name in ipairs(BONUS_ROLL_FORMATS) do
+            local format = _G[name]
+
+            if type(format) == "string" and format ~= "" then
+                table.insert(bonusRollPatterns, BuildPattern(format))
+            end
+        end
+    end
+
+    return MatchesAny(message, bonusRollPatterns)
+end
+
 -- Who received the item, or nil when the line could not be read.
 --
 -- nil rather than "Unknown", so the caller can tell a sentence it failed to

@@ -137,6 +137,11 @@ local function FromDrop(drop)
         typeLabel = LootFeed.TYPE_LABELS[typeKey],
         roll = drop.winnerRoll,
 
+        -- Carried onto the entry so the list can group by them without
+        -- reaching back into the record it was built from. A drop is group
+        -- loot and can never be a bonus roll, so only the flag travels.
+        excludedFromAnalytics = drop.excludedFromAnalytics,
+
         where = WhereOf(drop),
         instanceType = drop.instanceType,
         difficultyID = drop.difficultyID,
@@ -160,6 +165,13 @@ local function FromLoot(record)
 
         typeKey = typeKey,
         typeLabel = LootFeed.TYPE_LABELS[typeKey],
+
+        excludedFromAnalytics = record.excludedFromAnalytics,
+
+        -- Only chat-captured records can be one. A bonus roll has no Need or
+        -- Greed on it and never reaches the Loot History API at all, which is
+        -- why it has always been outside the fairness maths.
+        bonusRoll = record.bonusRoll,
 
         where = WhereOf(record),
         instanceType = record.instanceType,

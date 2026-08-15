@@ -45,7 +45,15 @@ block = "local LootMessages = {}\n" + block
 block += """
 _G.DetermineRecipient = LootMessages.DetermineRecipient
 _G.WasCreated = LootMessages.WasCreated
-_G.ResetPatterns = function() selfPatterns = nil end
+_G.WasBonusRoll = LootMessages.WasBonusRoll
+
+-- BOTH CACHES. The bonus-roll patterns are compiled separately from the rest,
+-- so a reset that cleared only selfPatterns would leave this locale's tests
+-- matching the previous locale's phrasing — passing, and proving nothing.
+_G.ResetPatterns = function()
+    selfPatterns = nil
+    bonusRollPatterns = nil
+end
 """
 
 PLAYER = "Aimee-Draenor"
@@ -67,6 +75,7 @@ Utilities = {{
 lua.execute(block)
 
 reset = lua.globals().ResetPatterns
+was_bonus_roll = lua.globals().WasBonusRoll
 determine = lua.globals().DetermineRecipient
 was_created = lua.globals().WasCreated
 
@@ -83,6 +92,11 @@ LOCALES = {
         LOOT_ITEM_PUSHED_SELF="You receive item: %s.",
         LOOT_ITEM_PUSHED="%s receives item: %s.",
         LOOT_ITEM_CREATED_SELF="You create: %s.",
+        # Blizzard's own bonus-roll phrasings. Without these the bonus-roll
+        # checks below skip themselves and prove nothing — which is exactly
+        # what happened the first time they were written.
+        LOOT_ITEM_BONUS_ROLL_SELF="You receive bonus loot: %s.",
+        LOOT_ITEM_BONUS_ROLL="%s receives bonus loot: %s.",
         _self=f"You receive loot: {LINK}.",
         _other=f"Thrall receives loot: {LINK}.",
         _pushed=f"You receive item: {LINK}.",
@@ -197,6 +211,24 @@ for locale, data in LOCALES.items():
                    bool(was_created(data["_created"])), True))
     checks.append(("plain loot is not flagged as created",
                    bool(was_created(data["_other"])), False))
+
+    # A bonus roll is loot somebody received and not loot the raid awarded
+    # them, so it belongs in the feed and nowhere near the due score. It has
+    # always been outside the maths because it arrives through chat capture
+    # rather than the Loot History API — this is about being able to SEE it,
+    # which was the part that did not work.
+    bonus_self = data.get("LOOT_ITEM_BONUS_ROLL_SELF")
+
+    if bonus_self:
+        checks.append((
+            "a bonus roll is flagged as one",
+            bool(was_bonus_roll(bonus_self.replace("%s", LINK))), True,
+        ))
+
+    checks.append(("ordinary loot is not a bonus roll",
+                   bool(was_bonus_roll(data["_other"])), False))
+    checks.append(("nor is a crafted item",
+                   bool(was_bonus_roll(data["_created"])), False))
     checks.append(("unreadable line -> nil",
                    determine("Something unrelated entirely."), None))
 

@@ -301,6 +301,11 @@ function LootCapture.HandleChatMessage(message)
 
     item.created = WasCreated(message)
 
+    -- Stamped at capture rather than derived later, because the chat line is
+    -- the only thing that ever knows. Once it has scrolled past, nothing about
+    -- the stored record says where the item came from.
+    item.bonusRoll = SYL.LootMessages.WasBonusRoll(message) or nil
+
     local hint = HintFor(item.itemID, timestamp)
     local recipient = DetermineRecipient(message)
 
