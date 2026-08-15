@@ -12,3 +12,9 @@ __pycache__/
 
 # Built addon zips. Reproducible from source, so not worth versioning.
 dist/
+
+# The superseded CurseForge screenshots, moved aside when the tabs UI made
+# them wrong. Every one is still in git history — `git show v0.3.1:"screenshots
+# /1 The main window, Drops tab.png"` gets any of them back — so a second copy
+# in the working tree is two megabytes buying nothing.
+screenshots/old/

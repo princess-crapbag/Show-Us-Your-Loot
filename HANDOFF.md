@@ -533,6 +533,21 @@ the item tooltip's "has this ever dropped", `Core/DataExport.lua`, the loot
 list's all-seasons view, and the `allTime` counter in `LootHistoryStore`.
 Those four are the only callers left, and a fifth should have a reason.
 
+**A lockout period is read, never written down.** Mythic 0 is weekly during a
+patch week and daily once the season opens — Midnight Season 2 flipped on
+2026-08-18. `Core/Lockouts.lua` stores the moment each lockout expires, taken
+from `GetSavedInstanceInfo`'s `reset`, so both periods are the same code and
+the flip needed no release. The season's dungeons come from
+`C_ChallengeMode.GetMapTable` for the same reason: a list typed in today would
+be wrong in three months and wrong silently. Mythic+ has no lockout and never
+has, so only Mythic 0 is tracked.
+
+The join between them is **by name**, because `GetMapTable` deals in
+challenge-mode map ids and `GetSavedInstanceInfo` knows only instance names,
+and nothing converts one to the other. A miss gives the dungeon its own column
+rather than dropping it: an unmatched name is untidy, a hidden lockout sends
+somebody to a dungeon they are saved to.
+
 **Nobody under three nights is ranked.** Share is score over nights, so a trial
 with one night and no loot scores zero and would top the list ahead of raiders
 who have been there all tier. They are listed with the reason instead. Three

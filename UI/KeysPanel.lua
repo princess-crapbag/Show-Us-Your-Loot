@@ -43,6 +43,7 @@ local rows = {}
 local offset = 0
 local sortKey, sortReversed = "level", false
 local askRole = "DPS"
+local view = "keys"
 local Refresh
 
 --------------------------------------------------------------------------
@@ -209,10 +210,59 @@ end
 -- Refresh
 --------------------------------------------------------------------------
 
+-- Everything belonging to the keys view, so switching is one loop rather than
+-- a list of Hide() calls that grows a bug every time a widget is added.
+--
+-- HIDING THE LIST IS NOT HIDING THE VIEW. The rows, the empty-state text, the
+-- caption and the request pane are four separate things, and leaving any of
+-- them up draws it straight through the grid. That has happened here before —
+-- see HANDOFF.md on the dashboard tiles.
+local function ShowKeysWidgets(shown)
+    for _, widget in ipairs(frame.keysWidgets or {}) do
+        if shown then
+            widget:Show()
+        else
+            widget:Hide()
+        end
+    end
+
+    if not shown then
+        for _, row in ipairs(rows) do
+            row:Hide()
+        end
+
+        frame.empty:Hide()
+    end
+end
+
 Refresh = function()
     if not frame then
         return
     end
+
+    frame.viewButton.label:SetText(view == "keys" and "Lockouts" or "Keys")
+
+    if view == "lockouts" then
+        ShowKeysWidgets(false)
+
+        frame.grid:Show()
+
+        local columns, characters = SYL.LockoutsGrid.Refresh()
+
+        frame.caption:SetText(
+            characters == 0
+                and ("No character has been seen yet. Each one appears the "
+                    .. "first time you log into it — nothing can read an alt's "
+                    .. "lockouts from here.")
+                or (characters .. " characters · " .. columns .. " dungeons · "
+                    .. "Mythic 0 only; Mythic+ has no lockout")
+        )
+
+        return
+    end
+
+    frame.grid:Hide()
+    ShowKeysWidgets(true)
 
     local entries = Build()
     local maxOffset = math.max(0, #entries - VISIBLE_ROWS)
@@ -307,6 +357,16 @@ function KeysPanel.SetRole(role)
     Refresh()
 end
 
+function KeysPanel.SetView(next)
+    view = (next == "lockouts") and "lockouts" or "keys"
+
+    Refresh()
+end
+
+function KeysPanel.ToggleView()
+    KeysPanel.SetView(view == "keys" and "lockouts" or "keys")
+end
+
 --------------------------------------------------------------------------
 -- Building
 --------------------------------------------------------------------------
@@ -350,10 +410,32 @@ function KeysPanel.Create(parent)
     frame.badge = Theme.CreateText(frame, Theme.sizes.rowSmall, "warning")
     frame.badge:SetPoint("LEFT", frame.roleButton, "RIGHT", 12, 0)
 
+    -- The second view. Keys is what the tab is named after, so it stays the
+    -- one that opens.
+    frame.viewButton = Theme.CreateButton(frame, 90, 20, "Lockouts", function()
+        KeysPanel.ToggleView()
+    end)
+
+    frame.viewButton:SetPoint("TOPRIGHT", -4, -2)
+
+    SYL.Tooltips.Attach(
+        frame.viewButton,
+        "Mythic 0 lockouts",
+        "Which of your characters is saved to which dungeon this season. "
+        .. "Mythic+ has no lockout; Mythic 0 resets weekly during a patch week "
+        .. "and daily once the season is open."
+    )
+
+    -- The pane joins this after it is built, a few lines down. Listing it here
+    -- would put a nil in the table and hide nothing.
+    frame.keysWidgets = { frame.roleButton, frame.badge }
+
     -- Column headers, clickable to sort.
     for _, column in ipairs(COLUMNS) do
         if column.sortable ~= false then
             local button = CreateFrame("Button", nil, frame)
+
+            table.insert(frame.keysWidgets, button)
 
             button:SetPoint("TOPLEFT", column.x, -HEADER_TOP)
             button:SetSize(column.width, 18)
@@ -376,6 +458,10 @@ function KeysPanel.Create(parent)
     end
 
     frame.pane = SYL.KeyRequestList.Create(frame, PANE_WIDTH, HEADER_TOP - 8)
+
+    table.insert(frame.keysWidgets, frame.pane)
+
+    frame.grid = SYL.LockoutsGrid.Create(frame)
 
     frame.empty = Theme.CreateText(frame, Theme.sizes.row, "textMuted")
     frame.empty:SetPoint("TOPLEFT", 2, -(LIST_TOP + 6))

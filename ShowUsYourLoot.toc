@@ -40,6 +40,7 @@ Core\PlayerHistory.lua
 Core\EncounterJournal.lua
 Core\LootTable.lua
 Core\Keystone.lua
+Core\Lockouts.lua
 Core\KeystoneSync.lua
 Core\IncomingRoster.lua
 Core\RaidTeam.lua
@@ -97,6 +98,7 @@ UI\DashboardTab.lua
 UI\DashboardWidgets.lua
 UI\ScheduleWidgets.lua
 UI\KeyRequestList.lua
+UI\LockoutsGrid.lua
 UI\KeysPanel.lua
 UI\RaidersDetail.lua
 UI\RaidersRoster.lua

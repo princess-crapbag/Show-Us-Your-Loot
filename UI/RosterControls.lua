@@ -227,14 +227,53 @@ local function CreateActions(frame, handlers)
                 end
             end)
 
+            -- Names the undo at the moment the mistake is made. Mapping the
+            -- wrong character is noticed immediately — the main appears on
+            -- lists they were never on — and this is the only sentence that
+            -- person is guaranteed to read.
             Finish(
                 applied .. " mapped as alts of " .. mainName
                 .. (refused > 0 and (", " .. refused .. " refused") or "")
-                .. ". This changes past numbers as well as future ones."
+                .. ". This changes past numbers as well as future ones. "
+                .. "Wrong? Tick them again and press Not an alt."
             )
         end)
 
     frame.altButton:SetPoint("LEFT", frame.mainInput, "RIGHT", 6, 0)
+
+    -- THE WAY BACK. "Alt of" was a one-way door for months: this screen could
+    -- map a character onto a main and had nothing that unmapped one, so a
+    -- mistake could only be undone by knowing that `/syl alts clear` exists.
+    -- Worse, the button beside it reads "Untick all", which is what somebody
+    -- looking for an undo presses — and it clears the ticks, reports nothing,
+    -- and leaves the mapping exactly where it was.
+    --
+    -- Takes no name, because unmapping does not need one: whoever these
+    -- characters point at, they stop pointing at them.
+    frame.unaltButton =
+        Theme.CreateButton(frame, 92, 22, "Not an alt", function()
+            local cleared, untouched = 0, 0
+
+            EachSelected(function(entry)
+                local ok = SYL.Players.ClearMain(entry.guid)
+
+                if ok then
+                    cleared = cleared + 1
+                else
+                    untouched = untouched + 1
+                end
+            end)
+
+            Finish(
+                cleared .. " back on their own"
+                .. (untouched > 0
+                    and (", " .. untouched .. " were not mapped to anyone")
+                    or "")
+                .. ". This changes past numbers as well as future ones."
+            )
+        end)
+
+    frame.unaltButton:SetPoint("LEFT", frame.altButton, "RIGHT", 6, 0)
 
     frame.clearButton =
         Theme.CreateButton(frame, 86, 22, "Untick all", function()
@@ -242,7 +281,7 @@ local function CreateActions(frame, handlers)
             handlers.onChanged()
         end)
 
-    frame.clearButton:SetPoint("LEFT", frame.altButton, "RIGHT", 12, 0)
+    frame.clearButton:SetPoint("LEFT", frame.unaltButton, "RIGHT", 12, 0)
 
     local Tip = SYL.Tooltips.Attach
 
@@ -261,9 +300,15 @@ local function CreateActions(frame, handlers)
     Tip(frame.altButton, "Alt of",
         "Maps every ticked character to the main named on the left. This "
         .. "changes past numbers as well as future ones, because two "
-        .. "characters then count as one person.")
+        .. "characters then count as one person. Not an alt undoes it.")
 
-    Tip(frame.clearButton, "Untick all", "Clears the ticked characters.")
+    Tip(frame.unaltButton, "Not an alt",
+        "Unmaps every ticked character, so each counts as itself again. Use "
+        .. "this to undo an Alt of. It needs no name in the box.")
+
+    Tip(frame.clearButton, "Untick all",
+        "Clears the ticked characters. This only changes what is selected — "
+        .. "it undoes nothing. To undo an Alt of, use Not an alt.")
 end
 
 -- handlers:

@@ -66,6 +66,18 @@ function AltCommands.ReportCurrent()
             .. " <- " .. table.concat(names, ", ")
         )
     end
+
+    -- THE WAY OUT, PRINTED WHERE THE PROBLEM IS READ. This listed the
+    -- mappings and stopped, so the one screen somebody reaches when a
+    -- character is stuck as the wrong person's alt showed them the mapping and
+    -- no way to remove it. Both routes are named because they are reached from
+    -- different places: an officer already in the roster window should not
+    -- have to leave it for chat, and somebody who found this from chat should
+    -- not have to guess which button on which tab.
+    SYL:Write(
+        "Undo one with /syl alts clear <name>, or tick them on the Raiders "
+        .. "tab's Roster view and press Not an alt."
+    )
 end
 
 function AltCommands.ReportScan()

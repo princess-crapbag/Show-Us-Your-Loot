@@ -102,6 +102,17 @@ local function OnPlayerLogin()
     -- What this character is holding, read once at login. See
     -- Core/Keystone.lua for why this can only ever be our own key.
     SYL.Keystone.Update()
+
+    -- And which dungeons it is saved to. This one is a round trip: the answer
+    -- comes back as UPDATE_INSTANCE_INFO, so asking is all that happens here.
+    if SYL.Features.IsEnabled("lockouts") then
+        SYL.Lockouts.Request()
+    end
+
+    -- Unconditional, like the record-id backfill: an absence written before
+    -- ids existed cannot be reconciled with anybody else's copy, and would be
+    -- re-sent as new forever.
+    SYL.RaidSchedule.BackfillAbsenceIDs()
 end
 
 -- The three ways a key changes: a run finishes and awards the next one, the
@@ -122,6 +133,26 @@ local function OnKeystoneMayHaveChanged()
         -- constantly, and a broadcast per bag update would be a broadcast per
         -- looted gray.
         SYL.KeystoneSync.OnOwnKeyChanged()
+    end
+end
+
+-- The server's answer to RequestRaidInfo, and the only moment the lockout list
+-- is actually readable. It also arrives unprompted whenever a lockout changes,
+-- which is how finishing a Mythic 0 lands in the grid without asking again.
+--
+-- Gated in the handler rather than at registration, for the same reason the
+-- trade events are: gating the registration would mean the event is only live
+-- for somebody who reloaded after switching the feature on, and a lockout
+-- missed for that reason looks like the addon being wrong about the dungeon.
+local function OnInstanceInfoUpdated()
+    if not SYL.Features.IsEnabled("lockouts") then
+        return
+    end
+
+    local entry, changed = SYL.Lockouts.Update()
+
+    if changed and entry then
+        SYL:DebugPrint("Lockouts now: " .. SYL.Lockouts.Describe(entry))
     end
 end
 
@@ -245,6 +276,7 @@ local HANDLERS = {
         SYL.TradeTracker.OnInfoMessage(messageType)
     end,
     CHALLENGE_MODE_COMPLETED = OnKeystoneMayHaveChanged,
+    UPDATE_INSTANCE_INFO = OnInstanceInfoUpdated,
     BAG_UPDATE_DELAYED = OnKeystoneMayHaveChanged,
     ITEM_CHANGED = OnKeystoneMayHaveChanged,
     PLAYER_LOGIN = OnPlayerLogin,

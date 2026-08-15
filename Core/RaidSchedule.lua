@@ -298,6 +298,35 @@ end
 
 -- from and to are inclusive day keys. A single day passes the same key twice,
 -- which keeps every reader on one shape.
+-- WHO SET IT, ALWAYS. An absence is the one thing this addon records that is
+-- somebody's claim about another person rather than something the client
+-- observed. Once these travel between guildies, "Talestra is out" with no
+-- author is unanswerable — the person who knows it is wrong cannot tell who to
+-- ask. Anybody may set one; everybody can see who did.
+function RaidSchedule.Author()
+    return (SYL.Keystone and SYL.Keystone.CharacterKey()) or "unknown"
+end
+
+-- AUTHOR-SCOPED, BECAUSE THESE TRAVEL. Each client is authoritative for the
+-- absences it wrote and broadcasts that whole set, so an id only has to be
+-- unique within one author — and prefixing the author makes it unique across
+-- the guild without anybody sharing a counter.
+local function NewAbsenceID(setBy)
+    local store = Store()
+
+    if not store then
+        return nil
+    end
+
+    store.absenceSerial = (store.absenceSerial or 0) + 1
+
+    return table.concat({
+        tostring(setBy or "?"),
+        tostring(time()),
+        tostring(store.absenceSerial),
+    }, "|")
+end
+
 function RaidSchedule.AddAbsence(name, fromKey, toKey, options)
     local store = Store()
 
@@ -307,14 +336,18 @@ function RaidSchedule.AddAbsence(name, fromKey, toKey, options)
 
     options = options or {}
 
+    local setBy = options.setBy or RaidSchedule.Author()
+
     local absence = {
+        id = options.id or NewAbsenceID(setBy),
         name = name,
         key = SYL.Players.GUIDForName(name) or nil,
         from = fromKey,
         to = toKey or fromKey,
         reason = options.reason,
         source = options.source or "manual",
-        addedAt = time(),
+        setBy = setBy,
+        addedAt = options.addedAt or time(),
     }
 
     table.insert(store.absences, absence)
@@ -332,6 +365,58 @@ function RaidSchedule.RemoveAbsence(index)
     table.remove(store.absences, index)
 
     return true
+end
+
+-- BY ID, NOT BY POSITION. Positions do not survive a merge: two clients
+-- reconciling their lists agree about what an absence *is* and never about
+-- where it sits in an array. The same lesson the drop records learned, which
+-- is why every record in this addon carries one.
+function RaidSchedule.RemoveAbsenceByID(id)
+    local store = Store()
+
+    if not store or not id then
+        return false
+    end
+
+    for index, absence in ipairs(store.absences) do
+        if absence.id == id then
+            table.remove(store.absences, index)
+
+            return true
+        end
+    end
+
+    return false
+end
+
+-- Run at login, unconditionally, because the guard is the nil itself. An
+-- absence written before ids existed is otherwise unreachable by anything that
+-- reconciles, and would be re-sent forever as a new one.
+function RaidSchedule.BackfillAbsenceIDs()
+    local store = Store()
+
+    if not store then
+        return 0
+    end
+
+    local assigned = 0
+
+    for index, absence in ipairs(store.absences or {}) do
+        if type(absence) == "table" and not absence.id then
+            absence.setBy = absence.setBy or RaidSchedule.Author()
+
+            absence.id = table.concat({
+                "legacy",
+                tostring(absence.setBy),
+                tostring(absence.addedAt or 0),
+                tostring(index),
+            }, "|")
+
+            assigned = assigned + 1
+        end
+    end
+
+    return assigned
 end
 
 function RaidSchedule.ClearExpired(beforeKey)
@@ -374,10 +459,17 @@ function RaidSchedule.WhoIsOut(dayKey)
         if absence.from <= dayKey and absence.to >= dayKey then
             table.insert(out, {
                 index = index,
+                id = absence.id,
                 name = absence.name,
                 key = absence.key,
                 reason = absence.reason,
                 source = absence.source,
+
+                -- Carried through so the calendar can name who said so. An
+                -- absence somebody disagrees with is a conversation, and it
+                -- needs a person on the other end of it.
+                setBy = absence.setBy,
+
                 from = absence.from,
                 to = absence.to,
                 multiDay = absence.from ~= absence.to,

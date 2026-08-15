@@ -85,8 +85,55 @@ local function HideFrom(panel, index)
     end
 end
 
-function NightStats.Render(panel, day)
+-- "Talestra (holiday) · set by Aimee". The author is on every line, because an
+-- absence is somebody's claim about another person rather than something the
+-- client saw, and the person who knows it is wrong needs to know who to ask.
+local function AbsenceLine(entry)
+    return tostring(entry.name)
+        .. (entry.reason and (" (" .. entry.reason .. ")") or "")
+        .. (entry.setBy and ("  ·  set by " .. entry.setBy) or "")
+end
+
+local function DescribeAbsences(dayKey)
+    if not dayKey then
+        return nil, 0
+    end
+
+    local out = SYL.RaidSchedule.WhoIsOut(dayKey)
+
+    if #out == 0 then
+        return nil, 0
+    end
+
+    local lines = {}
+
+    for _, entry in ipairs(out) do
+        table.insert(lines, AbsenceLine(entry))
+    end
+
+    return table.concat(lines, "\n"), #out
+end
+
+function NightStats.Render(panel, day, dayKey)
     if not day then
+        local absences, count = DescribeAbsences(dayKey)
+
+        -- A day with nobody there yet is still worth opening if somebody has
+        -- been marked out on it. Before this, every future day answered "no
+        -- night selected" and the absences were invisible on the one screen
+        -- built to answer "who is around".
+        if absences then
+            panel.heading:SetText(tostring(dayKey))
+            panel.subheading:SetText(
+                count .. (count == 1 and " person out" or " people out")
+                .. "\n" .. absences
+            )
+
+            HideFrom(panel, 1)
+
+            return
+        end
+
         panel.heading:SetText("No night selected")
         panel.subheading:SetText(
             "Pick a shaded day above. Shaded days are nights this addon "
@@ -107,12 +154,18 @@ function NightStats.Render(panel, day)
     local where = table.concat(day.instanceNames, ", ")
     local how = table.concat(day.difficultyNames, ", ")
 
+    -- Who was marked out, on a night that happened. rosterCount above is a
+    -- historical fact about who turned up; this is what was said beforehand,
+    -- and the two disagreeing is worth being able to see.
+    local absences = DescribeAbsences(dayKey or day.key)
+
     panel.subheading:SetText(
         (where ~= "" and where or "Unknown")
         .. (how ~= "" and ("  ·  " .. how) or "")
         .. (#day.sessions > 1
             and ("  ·  " .. #day.sessions .. " sessions, one night")
             or "")
+        .. (absences and ("\nOut: " .. absences) or "")
     )
 
     SetFigure(panel, 1, day.kills .. "/" .. day.pulls, "bosses killed")

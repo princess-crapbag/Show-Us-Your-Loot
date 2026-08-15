@@ -95,6 +95,13 @@ Features.LIST = {
             .. "Sends a message to that one person. Off unless you turn it on.",
     },
     {
+        key = "lockouts",
+        short = "Dungeon lockouts",
+        label = "Mythic 0 dungeon lockouts",
+        cost = "Asks the server which dungeons this character is saved to, at "
+            .. "login and after a dungeon. Sends nothing to anyone.",
+    },
+    {
         key = "developer",
         short = "Developer tools",
         label = "Developer tools",
@@ -132,6 +139,11 @@ local DEFAULTS = {
     -- Off, like everything else that sends a message to another player. It is
     -- also the only one that sends to a named person rather than to a channel.
     keyRequests = false,
+
+    -- On. It reads one server response at login and sends nothing, and the
+    -- grid is empty until a character has actually been played — so off would
+    -- mostly mean "collect nothing, then have nothing to show later".
+    lockouts = true,
 
     developer = false,
 }

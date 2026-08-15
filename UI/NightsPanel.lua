@@ -247,7 +247,12 @@ Refresh = function()
         cells[index]:Hide()
     end
 
-    SYL.NightStats.Render(frame.stats, selectedKey and byDay[selectedKey] or nil)
+    -- The key goes through even when there is no night on it. Absences are
+    -- about days that have not happened yet, so the day somebody most wants to
+    -- click is exactly the one with no record behind it.
+    SYL.NightStats.Render(
+        frame.stats, selectedKey and byDay[selectedKey] or nil, selectedKey
+    )
 
     frame.caption:SetText(
         raidedThisMonth .. " nights this month · " .. #days

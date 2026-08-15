@@ -72,7 +72,7 @@ lists every command on right click.
 | `/syl raids` | Every raid night |
 | `/syl roster` | Potential raiders, their classes and missing buffs |
 | `/syl bosses` | Kills, pulls and drops per boss |
-| `/syl alts` | Which characters count as the same person |
+| `/syl alts` | Which characters count as the same person; `/syl alts clear <name>` undoes one |
 | `/syl tonight` | Summary of the night in progress |
 | `/syl export` | Copy the whole history out |
 | `/syl settings` | Settings, including which qualities to record |
