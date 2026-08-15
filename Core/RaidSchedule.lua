@@ -494,6 +494,44 @@ function RaidSchedule.ClearExpired(beforeKey)
     return dropped
 end
 
+-- One person's absences covering one day, removed — but only the ones this
+-- client wrote. Returns how many went and how many were left alone because
+-- somebody else set them, so a caller can say which happened.
+--
+-- Somebody else's claim is theirs to retract: their client is authoritative
+-- for it and would put it straight back on the next broadcast, so deleting it
+-- here would look like it worked and then silently undo itself.
+function RaidSchedule.RemoveAbsencesFor(name, dayKey)
+    local store = Store()
+
+    if not store or not name or name == "" or not dayKey then
+        return 0, 0, nil
+    end
+
+    local wanted = tostring(name):lower()
+    local author = RaidSchedule.Author()
+    local removed, theirs, setByWhom = 0, 0, nil
+
+    for index = #store.absences, 1, -1 do
+        local absence = store.absences[index]
+
+        if tostring(absence.name):lower() == wanted
+            and absence.from <= dayKey and absence.to >= dayKey
+        then
+            if absence.setBy == author then
+                table.remove(store.absences, index)
+
+                removed = removed + 1
+            else
+                theirs = theirs + 1
+                setByWhom = absence.setBy or setByWhom
+            end
+        end
+    end
+
+    return removed, theirs, setByWhom
+end
+
 -- Everyone out on a given day. String comparison is safe because the keys are
 -- ISO and fixed width, which is the reason they are stored that way.
 function RaidSchedule.WhoIsOut(dayKey)

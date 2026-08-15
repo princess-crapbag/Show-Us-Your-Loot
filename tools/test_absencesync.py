@@ -266,6 +266,50 @@ check("and Talestra is still ours",
       "Talestra/" + AIMEE in lua.globals().OutNames(),
       lua.globals().OutNames())
 
+# --- the calendar's Back in button ----------------------------------------
+#
+# Day-scoped and author-scoped. Removing somebody else's claim would look like
+# it worked and then undo itself on their next broadcast, so it must refuse and
+# say who to ask instead.
+SYL.RaidSchedule.ReplaceAbsencesFrom(OFFICER, lua.table_from([]))
+SYL.RaidSchedule.ReplaceAbsencesFrom(OTHER, lua.table_from([]))
+
+SYL.RaidSchedule.AddAbsence("Nashri", "2026-08-20", "2026-08-20")
+SYL.RaidSchedule.ReplaceAbsencesFrom(OFFICER, lua.table_from([
+    lua.table_from({"id": "b|20|1", "name": "Zugzug", "from": "2026-08-20",
+                    "to": "2026-08-20"}),
+]))
+
+removed, theirs, whom = SYL.RaidSchedule.RemoveAbsencesFor(
+    "Nashri", "2026-08-20"
+)
+
+check("Back in removes what this client wrote",
+      removed == 1 and theirs == 0, (removed, theirs))
+
+removed, theirs, whom = SYL.RaidSchedule.RemoveAbsencesFor(
+    "Zugzug", "2026-08-20"
+)
+
+check("IT WILL NOT REMOVE SOMEBODY ELSE'S CLAIM",
+      removed == 0 and theirs == 1, (removed, theirs))
+check("and it names who to ask", whom == OFFICER, whom)
+check("so the absence is still there",
+      "Zugzug/" + OFFICER in lua.globals().OutNames(),
+      lua.globals().OutNames())
+
+# A day the absence does not cover is left alone, so marking somebody back on
+# Tuesday does not clear the week they booked off.
+SYL.RaidSchedule.AddAbsence("Nashri", "2026-08-20", "2026-08-27")
+
+removed, _, _ = SYL.RaidSchedule.RemoveAbsencesFor("Nashri", "2026-09-15")
+
+check("a day outside the range removes nothing", removed == 0, removed)
+
+removed, _, _ = SYL.RaidSchedule.RemoveAbsencesFor("Nashri", "2026-08-25")
+
+check("a day inside a multi-day range does remove it", removed == 1, removed)
+
 print()
 print("FAILURES:", failures or "none")
 sys.exit(1 if failures else 0)

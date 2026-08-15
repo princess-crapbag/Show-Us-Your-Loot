@@ -160,9 +160,23 @@ local function DrawDay(cell, dayNumber, dayKey, night, isSelected)
 
     if not night then
         cell.kills:SetText("")
-        cell.detail:SetText("")
 
-        Theme.SetTextColor(cell.day, "textMuted")
+        -- A DAY WITH NOTHING RECORDED IS NOT A BLANK DAY. The schedule knows
+        -- which weekdays this guild raids, and absences are typed against days
+        -- that have not happened — so an empty calendar was hiding both the
+        -- next raid night and everyone who had said they would miss it.
+        local scheduled = SYL.RaidSchedule.IsRaidNight(dayKey)
+        local out = #SYL.RaidSchedule.WhoIsOut(dayKey)
+
+        cell.detail:SetText(
+            (scheduled and "raid" or "")
+            .. ((scheduled and out > 0) and " · " or "")
+            .. (out > 0 and (out .. " out") or "")
+        )
+
+        Theme.SetTextColor(cell.detail, out > 0 and "warning" or "textSecondary")
+        Theme.SetTextColor(cell.day, scheduled and "textPrimary" or "textMuted")
+
         cell:Show()
 
         return
@@ -352,6 +366,17 @@ function NightsPanel.Create(parent)
     end
 
     frame.stats = SYL.NightStats.Create(frame, STATS_HEIGHT)
+
+    -- On the calendar rather than only behind /syl out, because a guildie will
+    -- never find a command nobody told them about. See UI/AbsenceControls.lua.
+    frame.absences = SYL.AbsenceControls.Create(frame, {
+        getSelectedDay = function()
+            return selectedKey
+        end,
+        onChanged = function()
+            NightsPanel.Refresh()
+        end,
+    })
 
     frame.caption = Theme.CreateText(frame, Theme.sizes.rowSmall, "textMuted")
     frame.caption:SetPoint("BOTTOMLEFT", 2, 2)
