@@ -1,8 +1,13 @@
 # Handoff — Show Us Your Loot
 
-Rewritten 2026-08-09, late, after the session that built the dashboard. The
-previous version had grown to 638 lines carrying design notes for things since
-built — the same fault it was rewritten for that morning.
+Rewritten 2026-08-09, after the session that built the dashboard; revised
+2026-08-15, after v0.3.2. The version before that had grown to 638 lines
+carrying design notes for things since built — the same fault it was rewritten
+for that morning, and the one to watch for here.
+
+**§3 is a record of an argued order of work, not a to-do list.** Most of it is
+marked DONE and kept because the order is the argument. What is actually open
+is on page one and in §3a.
 
 This file is what is **open**, what has been **decided**, and what has already
 **cost somebody time**. Finished work is in `git log`, which explains it better
@@ -19,52 +24,56 @@ Blizzard's Loot History API plus chat-captured loot, and answers who is due an
 upgrade, who turned up, and what each boss has given.
 
 - **Repo:** https://github.com/princess-crapbag/Show-Us-Your-Loot (public)
-- **CurseForge:** project 1642383, live at **v0.3.0** — the first non-alpha
-  release, shipped 2026-08-10. Uploaded as `12.0.7 release`, build type
-  `retail non-alpha non-debug`. **Real people can download this now.**
-- **`main` is 54 commits ahead of that tag.** All of it is on GitHub and in
-  Aimee's game. **None of it has reached a user.**
-- 117 Lua files in the `.toc`, 24 test suites in `tools/`.
+- **CurseForge:** project 1642383, live at **v0.3.2**, shipped 2026-08-15 as
+  `12.1.0 release`. **Real people can download this now.** v0.3.0 was the first
+  non-alpha; v0.3.1 was the 12.1.0 compatibility bump.
+- **`main` carries one commit past that tag** — the Absences split, which no
+  user can see. Check `git log v0.3.2..main` rather than trusting this line.
+- 124 Lua files in the `.toc`, 30 test suites in `tools/`.
 
 **Aimee runs the addon from a symlink**, `Interface/AddOns/ShowUsYourLoot ->
 Desktop/ShowUsYourLoot`. Edits are live in game immediately; only a `/reload`
-is needed. There is no build step for local testing.
+is needed. There is no build step for local testing. **Her SavedVariables are
+readable from here** —
+`_retail_/WTF/Account/ARCANGELA/SavedVariables/ShowUsYourLoot.lua` — which
+settles "is this a display bug or is the data like that" in one grep and has
+done twice. They are written on `/reload` and logout only, so a file that
+disagrees with what she just did is stale rather than wrong.
 
-### THE TWO MOST IMPORTANT THINGS ON THIS PAGE
+### THE THREE MOST IMPORTANT THINGS ON THIS PAGE
 
-**1. The dashboard has drawn, and Aimee confirmed it works.** Loaded 2026-08-09
-late. That was the top item on this page for a day and it is closed. What she
-reported back became the work below: several tabs were placeholders, and not
-every list of people honored the raid team / guild / everyone order.
+**1. TUESDAY 2026-08-18 IS THE VERIFICATION DAY.** Midnight Season 2 opens, and
+three separate claims get tested at once by things outside this addon's
+control:
 
-**Raiders, Bosses and Nights have drawn too, and the sizing is good** —
-confirmed 2026-08-10. Every layout constant in them was measured on paper
-against a 900×596 window, and they came out right first time; do not take that
-as license to skip looking at the next one.
+| What | What should happen | If it does not |
+|---|---|---|
+| Mythic 0 lockouts flip weekly → daily | The Keys grid countdowns change from `2d 19h` to hours, **with no release** | The design claim is wrong. `Core/Lockouts.lua` stores when each lockout expires and never which period is in force; stale multi-day timers on Wednesday mean it is reading something else |
+| `Enum.ItemBind` | `/syl api` prints two lines; the numbers on the second appear on the first | The warbound fallback numbering was used and may be wrong, so warbound gear is silently counting as upgrades again. **Nothing on screen would look wrong** |
+| The tier tile | Fills with real Season 2 bosses as they are pulled | It is reading a season boundary that is in the wrong place — check the active season's contents before the code |
 
-**Four things have never been seen, and they need three different tests:**
+**2. Three features have never run between two clients**, and Aimee has a
+second account. In rough order of how badly each fails:
 
 | What | Needs |
 |---|---|
-| The trade advisor | A raid. It opens a window unprompted mid-fight, which is the one thing here that can be actively annoying rather than merely wrong |
-| The trade tracker | A real trade. If the event ordering is wrong the symptom is **silence** — nothing recorded, nothing saying why |
-| Key requests | **A second client.** Every rule is covered locally; nothing has watched a message arrive. Aimee has a second account |
-| Sync roll lists | **A second client**, same as above. `/syl sync backfill` on one and the roll lists should appear on the other |
-| `/syl schedule import` | A guild calendar with events in it. `Core/GuildCalendar.lua` is unverified against a live client — if it finds nothing, distrust it before `Core/RaidSchedule.lua`, which is tested and depends on none of it |
+| **Absence sharing** | A second client. **Fails quietly**: a bad merge says somebody is available when they are not, which is worse than an error. Mark somebody out on one client, check the "set by" on the other, remove it, check it disappears |
+| Key requests | A second client. Every rule is covered locally; nothing has watched a message arrive |
+| Sync roll lists | A second client. `/syl sync backfill` on one and the roll lists should appear on the other |
 
-**2. The fairness maths has now run on a real raid night, once.** An LFR run on
-2026-08-10: 24 raiders, one night, five drops, five upgrades, zero transmog or
-greed, and the numbers agreed with each other. Attendance and loot capture are
-both proven on live data.
+**3. The fairness maths has run on real raid nights, but never on a full team.**
+The LFR run on 2026-08-10 proved attendance and loot capture on live data — and
+proved nothing about the ranking, because one ranked raider makes every
+ordering agree by accident. It hid a real fault that way: `/syl due` sorted by
+drought while the board sorted by share. **The first full guild night with
+several ranked raiders is still the highest-value event for this project**, and
+Tuesday is a raid night.
 
-**What that run could NOT prove**, because it is one night with one team
-member: the ranking itself. It surfaced a real fault by hiding it — `/syl due`
-was still sorting by drought while the board sorted by share, and with one
-ranked raider the two agree by accident. Fixed, but the lesson stands: a
-one-raider night validates the pipeline, not the ordering. The first full guild
-night with several ranked raiders is still worth watching closely.
-
-The next raid remains the highest-value event for this project.
+Still unverified against a live client: **`/syl schedule import`**
+(`Core/GuildCalendar.lua` — if it finds nothing, distrust it before
+`Core/RaidSchedule.lua`, which is tested and depends on none of it), and the
+**trade advisor** and **trade tracker**, which need a raid and a real trade
+respectively.
 
 ### The rule about releasing
 
@@ -79,32 +88,53 @@ identically in a terminal.
 Releasing: write the CHANGELOG entry, bump `## Version:` in the `.toc` **by
 hand**, commit, tag, push the tag. See CURSEFORGE.md.
 
-**The CurseForge invisibility should now be fixed, and is worth confirming.**
-v0.3.0 is the first non-alpha file, and CurseForge indexes a project by its
-latest non-alpha one. Search for the exact phrase in a day or so; if it still
-returns six unrelated addons and not this one, the diagnosis below was wrong
-and something else is going on.
+**Three releases have now gone out this way and all three worked**, so the
+process is not the risk it was. Watch the run finish anyway: `gh run watch`,
+then grep the log for `Uploading` — a red workflow does not mean nothing
+shipped, which §5 explains.
 
-The original diagnosis, for reference:
+**The CurseForge invisibility is fixed.** The addon was unfindable because all
+three early uploads were type Alpha and CurseForge indexes a project by its
+latest **non-alpha** file, so the project's own Files tab read "No Results"
+until "Show alpha files" was ticked. Shipping a tag without the `-alpha` suffix
+fixed both, from v0.3.0 onwards. Keep it that way: an alpha tag now would make
+the project invisible again and the cause would not be obvious a second time.
 
-**The addon was invisible on CurseForge, and it was not a moderation problem.**
-Verified against the live site 2026-08-09: searching the exact phrase returns
-six unrelated addons and not this one, and the project's own Files tab reads
-"No Results" until "Show alpha files" is ticked. All three uploads are type
-Alpha, and CurseForge indexes projects by their latest non-alpha file.
-**Shipping a tag without the `-alpha` suffix fixes both.** The LFR test is
-done, so this is ready:
-
-```
-git tag v0.3.0 && git push origin v0.3.0
-```
-
-The CHANGELOG entry is written and `## Version:` says 0.3.0. Nothing else
-needs doing, and nothing has been tagged — no user has any of this yet.
+**Version numbers are Aimee's call, and she reads them as a maintainer.**
+v0.3.2 shipped a feature set that looked like a minor bump, because in her
+words the warbound change is "not a change, it's fixing something I should have
+already accounted for" — the rule was always bind-on-pickup, and warbound gear
+was slipping through it. That reading is right. Do not argue semver at her; say
+what a number signals to a reader and let her choose.
 
 ---
 
 ## 2. Working here
+
+### A SLASH COMMAND IS NOT A FEATURE
+
+Aimee's, after it happened twice in one session, and it is the rule most likely
+to be broken by somebody who does not know it:
+
+> "when you add features or fix things for me, they also need to work for other
+> people who use the addon which means just putting a command in wont work"
+
+**She ships this to a guild.** A guildie will never find a command nobody told
+them about. Both times the failure looked complete from the inside and was not:
+
+- **Alt mapping** could be *created* from the roster screen and only *removed*
+  with `/syl alts clear`. A character stuck as somebody's alt dragged that
+  person onto every list, and the button beside "Alt of" said "Untick all" —
+  which is what a person hunting for an undo presses, and it changed nothing.
+- **Absences** could only be set with `/syl out <name>`, on a calendar that
+  displayed them nowhere.
+
+So: put the control on the panel that already shows the data, and treat the
+command as the second route. **Anything that can be created must be undoable
+from the same screen.** Then check the surfaces around it — the button tooltip,
+the message printed on success, and the report somebody lands on when they go
+looking. `/syl alts` listed the mappings and offered no way out of them, which
+is how the gap survived.
 
 ### The checks
 
@@ -136,11 +166,12 @@ again:
 python -m venv .venv && .venv/Scripts/python -m pip install lupa
 ```
 
-Twenty-two suites. Each reads its Lua straight out of the addon, so none can
-drift from the code, and each exits non-zero on failure. `release.yml` runs the
-lot before building a zip, so a failing suite blocks a release.
+Thirty suites. Each reads its Lua straight out of the addon, so none can drift
+from the code, and each exits non-zero on failure. `release.yml` runs the lot
+before building a zip, so a failing suite blocks a release.
 
-The four that matter most:
+The ones that matter most — and see "Testing this addon" in §5 for the ways a
+test here has managed to prove nothing while passing:
 
 - **`test_load`** — every file in the `.toc` loads, in order, against a stubbed
   client. Catches load-order faults and file-scope nils, which are not syntax
@@ -172,6 +203,19 @@ The four that matter most:
   drought together. Reverting the fix on either side alone fails it, which is
   the point: two lists disagreeing about who won an item is worse than both
   being wrong the same way.
+- **`test_seasons`** — the archive boundary. It counts calls to the all-time
+  accessors while driving the real panels, because a panel reading across
+  archives looks completely normal; comparing numbers would not catch it.
+- **`test_absencesync`** — the three ways sharing fails silently: a
+  half-delivered set committing a fragment, a removal not travelling, and one
+  author clobbering another.
+- **`test_archives`** — that a merge loses nothing and takes only the seasons
+  it was given. Merges **three** seasons with a fourth standing by, which is
+  the smallest fixture that can catch the removal walking the wrong way.
+- **`test_alts`** — the round trip. Whatever the roster screen can do to
+  identity it must be able to undo, and its last assertion checks the UI still
+  calls `ClearMain` at all, because no behavioural test can see a button that
+  was never built.
 
 **Every test written this session was confirmed to fail on a planted fault
 before being trusted.** Do the same. A test that has never failed proves
@@ -185,22 +229,29 @@ now covers it was written afterwards.
 `.toc`, so a new dependency inside `DueList` or `LootScore` breaks them at the
 first call. `TradeTracker` was the most recent.
 
-### Four files are over the size limit
+### Ten files are over the size limit
 
-None is exempt and none should be without a real reason:
-
-- `UI/MainWindow.lua` 517
-- `Core/SlashCommands.lua` 528
-- `Core/Utilities.lua` 439
-- `UI/RosterWindow.lua` 422
+None is exempt and none should be without a real reason. Run `syl_check` for
+the current list rather than trusting this one — it has been stale twice. As of
+2026-08-15 the worst are `Core/SlashCommands.lua`, `UI/MainWindow.lua`,
+`Core/Utilities.lua` and `Core/Database.lua`, all past 470.
 
 `Utilities` has the obvious seam: the item helpers (`GetItemLevel`,
 `GetItemIDFromLink`, `NormalizeItemLink`, `GetItemNameFromLink`,
-`IsBindOnEquip`) are a module — but it is 12 call sites across 8 files, and the
-test suites load those modules individually, so it ripples into `tools/` too.
-`SlashCommands` could shed the roster and link commands. **Never delete a
-comment to get under the limit** — that happened twice before the escape hatch
-existed.
+`IsBindOnEquip`, `IsWarbound`) are a module — but it is 12 call sites across 8
+files, and the test suites load those modules individually, so it ripples into
+`tools/` too. `SlashCommands` could shed the roster and link commands.
+**Never delete a comment to get under the limit** — that happened twice before
+the escape hatch existed.
+
+**Splitting works, and `Core/Absences.lua` is the worked example.**
+`RaidSchedule` was 578 lines doing two unrelated jobs and came apart into 293
+and 309 with nothing changed but the namespace and one accessor. Do it as its
+own commit: a move mixed with a change shows as hundreds of deleted and added
+lines and nobody can tell which are which. Two things caught what the move
+broke — `syl_check` found three internal calls that had been file-local and
+became nil globals, and a test failed on a call site held in a local that no
+search could match. Expect both.
 
 **A new screen does not have to grow `MainWindow`.** `UI/TabPanels.lua` builds
 the panels and hands back `mode -> panel`, so three whole tabs were added
@@ -222,6 +273,33 @@ otherwise. Check the diff before describing it.
 
 Commit identity is repo-local. `gh` is authenticated as `princess-crapbag`;
 pushes need no prompt. Never put a token in a URL.
+
+---
+
+## 3a. What is actually open, 2026-08-15
+
+Everything below in §3 predates v0.3.2 and is nearly all DONE. This is the live
+list.
+
+1. **Tuesday's three verifications.** The table on page one. The
+   `Enum.ItemBind` one is the only one where being wrong is invisible.
+2. **Second-client testing**, absence sharing first. Also on page one.
+3. **The remaining screenshots**, and then `SCREENSHOTS.md` rewritten or
+   retired. Aimee's, parked until the newer screens have data. Item 19.
+4. **`/syl archive <name>` names the wrong thing** — see §5. It has caught the
+   only person using it twice.
+5. **Ten files over the size limit.** `Absences.lua` is the worked example of
+   fixing one.
+6. **The changelog filed warbound under Changed**, and by Aimee's reading it is
+   a fix. Move it next release.
+7. Everything in Tiers 3–5 below still marked open: E6 repositioning, E7 the
+   licence, F7 the roster link, F9 Droptimizer, and the personal-loot
+   asymmetry in §4.
+
+Shipped in v0.3.2, so do not read these as open: the Mythic 0 lockout grid,
+absences on the calendar with buttons and guild sharing, archive rename and
+merge, warbound exclusion, bonus-roll labelling, the Ignored filter, alt
+unmapping, and the season-id repair.
 
 ---
 
@@ -383,12 +461,22 @@ first `SendChatMessage` in the addon.
 ### Tier 5 — shipping
 
 17. **DONE. The LFR run.** See page one for what it proved and what it did not.
-18. **DONE. Released as v0.3.0**, the first non-alpha file.
-19. **F10 — re-take the screenshots. THIS IS THE TOP ITEM NOW.** All seven
-    predate the tabs and show a UI that no longer exists — a dashboard that is
-    not there, a footer of buttons that is gone, and windows that are panels.
-    They are the first thing anybody sees on a page that is finally findable,
-    and they currently advertise a different addon. Aimee is doing these.
+18. **DONE. Released as v0.3.0**, the first non-alpha file, then v0.3.1 for
+    patch 12.1.0 and v0.3.2 for the work in §3a.
+19. **F10 — screenshots. PARTLY DONE, and parked at Aimee's request.** Five new
+    ones are on CurseForge and in `screenshots/`: Dashboard, Loot, Raiders
+    (Roster), Bosses, Settings. The numbering has gaps at 4, 6, 7 and 8 because
+    **the rest of the gallery is still the old shots** — the newer screens have
+    no data behind them yet to photograph. `screenshots/old/` is tracked for
+    exactly that reason; it was briefly gitignored as "superseded", which was
+    wrong, and git was missing images live on the page.
+
+    `SCREENSHOTS.md` is a ten-shot list describing the pre-tabs UI and matches
+    neither the new set nor her numbering. **Do not act on it.** Rewrite or
+    retire it once the remaining shots exist.
+
+    Nothing shows the Keys tab's Lockouts grid, which is the most
+    demonstrable thing added since.
 
 ### Open decisions from tonight, both small
 
@@ -533,6 +621,34 @@ the item tooltip's "has this ever dropped", `Core/DataExport.lua`, the loot
 list's all-seasons view, and the `allTime` counter in `LootHistoryStore`.
 Those four are the only callers left, and a fifth should have a reason.
 
+**Warbound gear is excluded, like a BoE.** Aimee's call, 2026-08-15, and she
+was right that it is a fix rather than a change: the rule was always that a
+drought resets on a **bind-on-pickup** win, and warbound gear was slipping
+through it. Account gear is not the upgrade of the raider who was standing
+there. `Utilities.IsWarbound` reads bind type from the stored link at the
+moment it is asked — the same trick `IsBindOnEquip` uses — so the rule applied
+to history already recorded and **no backfill was needed**. Unknown still
+counts, because an uncached item answers nil and reading that as warbound would
+stop counting real upgrades.
+
+**Anybody may mark anybody absent, and everybody sees who did.** Attribution
+instead of authorization, Aimee's call. Absences are the only thing this addon
+sends that is somebody's *claim* rather than something a client observed — a
+keystone is a fact about the sender's own bags, a drop header is what the whole
+raid watched. So every absence carries `setBy`, the calendar prints it on every
+line, and **the sender of an addon message decides the author, never the
+payload**, which is the only thing stopping a client broadcasting on somebody
+else's behalf. Each client owns what it wrote and broadcasts that whole set;
+removal needs no message of its own because a deleted absence simply is not in
+the next one.
+
+**`drops` is group loot; `loot` is chat capture; the fairness maths reads only
+`drops`.** Worth knowing before somebody "fixes" a bonus roll not counting. A
+bonus roll has no Need or Greed on it and never reaches the Loot History API,
+so it lands in `loot` and is counted nowhere — which is exactly the behavior
+Aimee asked for, arrived at by architecture rather than by rule. What was
+missing was only the label.
+
 **A lockout period is read, never written down.** Mythic 0 is weekly during a
 patch week and daily once the season opens — Midnight Season 2 flipped on
 2026-08-18. `Core/Lockouts.lua` stores the moment each lockout expires, taken
@@ -672,6 +788,48 @@ Each of these cost real time.
   the screens are reading past it. `tools/test_seasons.py` covers it by
   counting calls to the all-time accessors while driving the real panels,
   because a panel making that call looks completely normal.
+- **A season id was unique only to the second.** `GenerateSeasonID` was the
+  timestamp alone, and archiving then starting a new season is one keystroke —
+  so two seasons could share an id and become indistinguishable to anything
+  holding a reference to one. Ticking a season on the Archives tab ticked every
+  season sharing its id, and a merge would then have taken seasons nobody
+  chose. Ids carry a serial now and collisions are repaired at login. **Found
+  by writing the selection test, not by reading the code.**
+- **`/syl archive <name>` names the NEW season, not the one being archived.**
+  It has caught Aimee twice in a row: she typed the name she wanted on the
+  archive and it landed on the fresh season, leaving the active season called
+  "Season 1 tail" and later colliding with an existing archive's name. The
+  behaviour is defensible — you are naming what you are starting — but the
+  command reads the other way. Worth a rename, or at least a message that says
+  which season got the name.
+
+### Testing this addon
+
+- **A two-item fixture cannot catch an off-by-one in a removal loop.** Merging
+  two archives removes exactly one, and removing one index is the same job from
+  either end. It takes **three** before the renumbering bites. The first
+  version of `test_archives` asserted "the season not merged is untouched" and
+  passed with the loop walking the wrong way; only a three-way merge with a
+  fourth season standing by made the planted fault fail.
+- **A check guarded behind a fixture key that does not exist passes while
+  proving nothing.** The first bonus-roll test read
+  `data.get("LOOT_ITEM_BONUS_ROLL_SELF")` from a locale table that never
+  defined it, so it skipped itself in every locale and stayed green with the
+  feature stubbed to `return false`. **Planting the fault is what found it** —
+  nothing else would have.
+- **Stub frames answer anything, so a nil check on a frame field is not a nil
+  check.** `frame.headers or {}` took a function under the test stub and blew
+  up on `#`; `frame:GetFrameLevel() + 10` did arithmetic on a table. Keep view
+  state in module-level locals the way `UI/KeysPanel.lua` does, rather than
+  hanging it off the frame.
+- **`lupa` turns multiple Lua returns into a tuple.** `Update()` returning
+  `entry, changed` arrives as one object, so `entry.count` silently reads the
+  tuple's method and the failure looks like a code bug. Unpack every call to a
+  function returning more than one value — it has cost time four times now.
+- **A rename cannot find a call site held in a local.** `test_raidschedule`
+  holds `SYL.RaidSchedule` as `S`, so its absence calls read `S.AddAbsence` and
+  no search for `RaidSchedule.AddAbsence` would ever match them. `syl_check`
+  catches the Lua side of this; nothing catches the Python side but running it.
 - **A cascade that starts at zero moves nothing.** `WindowStack`'s fallback
   runs only once placement has already failed, and its first step was a no-op
   return — so the window kept its creation position, and every window here is
