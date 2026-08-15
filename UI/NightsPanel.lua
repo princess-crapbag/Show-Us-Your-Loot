@@ -165,7 +165,14 @@ local function DrawDay(cell, dayNumber, dayKey, night, isSelected)
         -- which weekdays this guild raids, and absences are typed against days
         -- that have not happened — so an empty calendar was hiding both the
         -- next raid night and everyone who had said they would miss it.
+        -- FORWARD ONLY. IsRaidNight answers "is this one of our weekdays",
+        -- which is true of every Tuesday back to the calendar's beginning. A
+        -- past day's truth is whether a raid was actually recorded, and
+        -- printing "raid" on one the addon has no record of claims something
+        -- it does not know — which is what put raid nights on the calendar
+        -- before the season had started.
         local scheduled = SYL.RaidSchedule.IsRaidNight(dayKey)
+            and dayKey >= SYL.RaidSchedule.TodayKey()
         local out = #SYL.RaidSchedule.WhoIsOut(dayKey)
 
         cell.detail:SetText(
@@ -277,6 +284,23 @@ end
 
 NightsPanel.Refresh = Refresh
 
+-- Back to now, in whichever view is open. The week offset has to be cleared as
+-- well as the month: week view counts from the current week, so leaving it at
+-- minus nine would land on today's date in a month it does not belong to.
+function NightsPanel.Today()
+    local todayKey = SYL.RaidSchedule.TodayKey()
+    local todayYear, todayMonth = todayKey:match("^(%d+)-(%d+)")
+
+    year = tonumber(todayYear) or year
+    month = tonumber(todayMonth) or month
+    weekOffset = 0
+    selectedKey = todayKey
+
+    Refresh()
+
+    return todayKey
+end
+
 function NightsPanel.Select(key)
     selectedKey = key
 
@@ -345,10 +369,22 @@ function NightsPanel.Create(parent)
     end)
     frame.next:SetPoint("LEFT", frame.monthLabel, "RIGHT", 10, 0)
 
+    frame.todayButton = Theme.CreateButton(frame, 60, 20, "Today", function()
+        NightsPanel.Today()
+    end)
+    frame.todayButton:SetPoint("LEFT", frame.next, "RIGHT", 12, 0)
+
+    SYL.Tooltips.Attach(
+        frame.todayButton,
+        "Today",
+        "Back to this month, with today selected. Three months of arrows is a "
+        .. "long way to walk back."
+    )
+
     frame.viewButton = Theme.CreateButton(frame, 80, 20, "Month", function()
         NightsPanel.ToggleView()
     end)
-    frame.viewButton:SetPoint("LEFT", frame.next, "RIGHT", 12, 0)
+    frame.viewButton:SetPoint("LEFT", frame.todayButton, "RIGHT", 8, 0)
 
     SYL.Tooltips.Attach(
         frame.viewButton,

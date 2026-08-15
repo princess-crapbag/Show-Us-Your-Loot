@@ -27,31 +27,113 @@ local AbsenceControls = {}
 SYL.AbsenceControls = AbsenceControls
 
 local INPUT_WIDTH = 150
+local SUGGESTIONS = 5
+local SUGGESTION_HEIGHT = 18
 
 local function OwnName()
     return (UnitName and UnitName("player")) or ""
+end
+
+-- Roster names starting with what has been typed. Prefix rather than
+-- substring: people type the beginning of a name, and a substring match on two
+-- letters offers most of the guild.
+function AbsenceControls.Match(typed, limit)
+    local found = {}
+
+    if type(typed) ~= "string" or typed == "" then
+        return found
+    end
+
+    local wanted = typed:lower()
+    local seen = {}
+
+    for _, entry in ipairs(SYL.RosterData.Build() or {}) do
+        local name = entry.name
+
+        if type(name) == "string"
+            and not seen[name]
+            and name:lower():sub(1, #wanted) == wanted
+        then
+            seen[name] = true
+
+            table.insert(found, name)
+        end
+    end
+
+    table.sort(found)
+
+    while #found > (limit or SUGGESTIONS) do
+        table.remove(found)
+    end
+
+    return found
+end
+
+-- Redraws the suggestion popup for whatever is in the box. Hidden when there
+-- is nothing to suggest, and when the only match is what has already been
+-- typed in full — offering somebody the word they just finished typing is
+-- noise the first time and an obstacle every time after.
+function AbsenceControls.RefreshSuggestions(frame)
+    if not frame or not frame.suggestions then
+        return 0
+    end
+
+    local typed = frame.nameInput.editBox:GetText() or ""
+    local matches = AbsenceControls.Match(typed, SUGGESTIONS)
+
+    if #matches == 0
+        or (#matches == 1 and matches[1]:lower() == typed:lower())
+    then
+        frame.suggestions:Hide()
+
+        return 0
+    end
+
+    for index, row in ipairs(frame.suggestionRows) do
+        local name = matches[index]
+
+        if name then
+            row.value = name
+            row.label:SetText(name)
+            row:Show()
+        else
+            row.value = nil
+            row:Hide()
+        end
+    end
+
+    frame.suggestions:SetHeight(SUGGESTION_HEIGHT * #matches)
+    frame.suggestions:Show()
+
+    return #matches
 end
 
 -- handlers:
 --   getSelectedDay()   the day key the calendar is showing, or nil
 --   onChanged()        redraw
 function AbsenceControls.Create(parent, handlers)
+    -- ON THE TOOLBAR, NOT ABOVE THE STAT PANEL. The month grid runs to six
+    -- rows and the stat panel is 152 tall; between them there is no room for a
+    -- control strip, and one put there lands on the last week of the month.
+    -- The top row has horizontal space going spare.
     local frame = CreateFrame("Frame", nil, parent)
 
-    frame:SetHeight(24)
-    frame:SetPoint("BOTTOMLEFT", 0, 174)
-    frame:SetPoint("BOTTOMRIGHT", 0, 174)
+    frame:SetHeight(22)
+    frame:SetPoint("TOPRIGHT", -2, -2)
+    frame:SetWidth(400)
 
     local label = Theme.CreateText(frame, Theme.sizes.rowSmall, "textMuted")
 
-    label:SetPoint("LEFT", 2, 0)
-    label:SetText("WHO IS OUT")
+    label:SetPoint("LEFT", 0, 0)
+    label:SetText("OUT")
 
     frame.nameInput = SYL.SearchBox.Create(
-        frame, INPUT_WIDTH, "Name", function() end, { bordered = true }
+        frame, INPUT_WIDTH, "Name", function()
+            AbsenceControls.RefreshSuggestions(frame)
+        end, { bordered = true }
     )
 
-    frame.nameInput:SetPoint("LEFT", label, "RIGHT", 10, 0)
+    frame.nameInput:SetPoint("LEFT", label, "RIGHT", 8, 0)
     frame.nameInput.editBox:SetText(OwnName())
 
     local function Selected()
@@ -87,6 +169,8 @@ function AbsenceControls.Create(parent, handlers)
 
     frame.outButton =
         Theme.CreateButton(frame, 90, 22, "Mark out", function()
+            frame.suggestions:Hide()
+
             local dayKey, name = Require()
 
             if not dayKey then
@@ -120,6 +204,8 @@ function AbsenceControls.Create(parent, handlers)
 
     frame.backButton =
         Theme.CreateButton(frame, 90, 22, "Back in", function()
+            frame.suggestions:Hide()
+
             local dayKey, name = Require()
 
             if not dayKey then
@@ -162,6 +248,60 @@ function AbsenceControls.Create(parent, handlers)
         end)
 
     frame.backButton:SetPoint("LEFT", frame.outButton, "RIGHT", 6, 0)
+
+    -- A popup rather than a reserved row. It exists only while somebody is
+    -- typing, so giving it permanent space would cost the grid a week of the
+    -- month for something visible a few seconds at a time. Raised above the
+    -- calendar because it is allowed to cover it.
+    frame.suggestions = CreateFrame("Frame", nil, frame)
+
+    frame.suggestions:SetPoint("TOPLEFT", frame.nameInput, "BOTTOMLEFT", 0, -2)
+    frame.suggestions:SetWidth(INPUT_WIDTH)
+    frame.suggestions:SetHeight(SUGGESTION_HEIGHT * SUGGESTIONS)
+    -- Guarded, because a frame that has not been laid out has no level to
+    -- add to and the answer is not always a number.
+    local level = frame:GetFrameLevel()
+
+    if type(level) == "number" then
+        frame.suggestions:SetFrameLevel(level + 10)
+    end
+    frame.suggestions:Hide()
+
+    local back =
+        Theme.CreateSolidTexture(frame.suggestions, "headerBar", "BACKGROUND")
+
+    back:SetAllPoints()
+
+    frame.suggestionRows = {}
+
+    for index = 1, SUGGESTIONS do
+        local row = CreateFrame("Button", nil, frame.suggestions)
+
+        row:SetPoint(
+            "TOPLEFT", 0, -(index - 1) * SUGGESTION_HEIGHT
+        )
+        row:SetSize(INPUT_WIDTH, SUGGESTION_HEIGHT)
+
+        row.label = Theme.CreateText(row, Theme.sizes.rowSmall, "textPrimary")
+        row.label:SetPoint("LEFT", 6, 0)
+
+        row:SetScript("OnClick", function(self)
+            if not self.value then
+                return
+            end
+
+            frame.nameInput.editBox:SetText(self.value)
+            frame.nameInput.editBox:ClearFocus()
+
+            if frame.nameInput.UpdatePlaceholder then
+                frame.nameInput.UpdatePlaceholder()
+            end
+
+            frame.suggestions:Hide()
+        end)
+
+        frame.suggestionRows[index] = row
+    end
 
     local Tip = SYL.Tooltips.Attach
 

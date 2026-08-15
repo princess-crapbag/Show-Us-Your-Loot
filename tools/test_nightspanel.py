@@ -250,6 +250,79 @@ for label, day in (("a night", night), ("no selection", None)):
     except Exception as err:  # noqa: BLE001
         check(f"the stat panel draws for {label}", False, err)
 
+# --- Today, and the schedule marker -------------------------------------
+#
+# Three months of arrows is a long way to walk back, so there is a button.
+lua.execute("ShowUsYourLoot.NightsPanel.Step(-4)")
+
+today = SYL.NightsPanel.Today()
+
+check("Today returns to the current day",
+      today == SYL.RaidSchedule.TodayKey(), today)
+
+# THE SCHEDULE IS FORWARD ONLY. IsRaidNight answers "is this one of our
+# weekdays", which is true of every Tuesday since the calendar began. Drawing
+# that on a past day claims a raid the addon has no record of — which is what
+# put raid nights on the calendar before the season had started.
+lua.execute(
+    """
+    ShowUsYourLoot.RaidSchedule.SetWeekday(3, true)   -- Tuesday
+    ShowUsYourLoot.RaidSchedule.SetWeekday(5, true)   -- Thursday
+
+    function ScheduledOn(key)
+        return ShowUsYourLoot.RaidSchedule.IsRaidNight(key)
+            and key >= ShowUsYourLoot.RaidSchedule.TodayKey()
+    end
+    """
+)
+
+todayKey = SYL.RaidSchedule.TodayKey()
+past = SYL.RaidSchedule.Offset(todayKey, -70)
+ahead = SYL.RaidSchedule.Offset(todayKey, 70)
+
+scheduledAhead = any(
+    lua.globals().ScheduledOn(SYL.RaidSchedule.Offset(ahead, day))
+    for day in range(0, 7)
+)
+scheduledBehind = any(
+    lua.globals().ScheduledOn(SYL.RaidSchedule.Offset(past, day))
+    for day in range(0, 7)
+)
+
+check("a raid night ahead of today is marked", scheduledAhead)
+check("A PAST WEEK IS NEVER MARKED AS A RAID NIGHT", not scheduledBehind,
+      f"{past} was drawn as scheduled")
+
+# --- the name box suggests roster names ----------------------------------
+#
+# Typing a whole name-realm to mark somebody out is what a slash command
+# already made people do.
+lua.execute(
+    """
+    ShowUsYourLoot.RosterData.Build = function()
+        return {
+            { name = 'Talestra' },
+            { name = 'Talenor' },
+            { name = 'Saebie' },
+        }
+    end
+    """
+)
+
+check("a prefix offers every roster name under it",
+      list(SYL.AbsenceControls.Match("tal", 5).values())
+      == ["Talenor", "Talestra"],
+      list(SYL.AbsenceControls.Match("tal", 5).values()))
+check("matching ignores case",
+      len(SYL.AbsenceControls.Match("TAL", 5)) == 2)
+check("a name nobody has is no suggestion",
+      len(SYL.AbsenceControls.Match("zzz", 5)) == 0)
+check("an empty box suggests nothing rather than everybody",
+      len(SYL.AbsenceControls.Match("", 5)) == 0)
+check("and the list is capped",
+      len(SYL.AbsenceControls.Match("", 1)) == 0
+      and len(SYL.AbsenceControls.Match("s", 1)) == 1)
+
 print()
 print("FAILURES:", failures or "none")
 sys.exit(1 if failures else 0)
