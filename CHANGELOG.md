@@ -3,6 +3,55 @@
 What changed, for the person installing it. The commit history explains why;
 this says what you will notice.
 
+## 0.4.0 — 2026-08-15
+
+### Added
+
+- **Mythic 0 lockouts, on the Keys tab.** A grid of your characters against
+  this season's dungeons, marked where each one is saved, with a countdown per
+  row. Mythic+ has no lockout so it is not tracked; Mythic 0 is weekly during a
+  patch week and daily once the season opens, and the addon never stores which
+  — it reads when each lockout actually expires, so the changeover needs no
+  update. The dungeon list comes from the game, so next season needs none
+  either.
+- **Absences on the calendar, with buttons.** Pick a day and mark somebody out
+  or back in. The box starts with your own character, so marking yourself out
+  is one click. Every absence records who set it and says so on the calendar.
+- **Share who is out with the guild.** Off by default, its own switch in
+  Settings. Everyone running the addon sees the same absences and who set each
+  one. You can only take back the ones you set — somebody else's is theirs to
+  remove, and the addon says who to ask.
+- **The calendar shows the nights you raid.** Days with nothing recorded used
+  to be blank, which was most of the future. Upcoming raid nights and anybody
+  marked out now show on the grid. **Today** returns from wherever you have
+  scrolled to.
+- **Archived seasons can be renamed and merged.** Tick them on the Archives
+  tab. Merging folds several into one — useful when a season boundary was
+  taken a few days before the tier really changed. Nothing is deleted, though
+  which season each record came from cannot be recovered afterwards, so it
+  asks twice.
+- **Type filter gains Ignored and Bonus roll**, so rows you have set aside can
+  be gathered in one place instead of hunted for.
+
+### Changed
+
+- **Warbound gear no longer counts toward score or drought.** It goes to the
+  account rather than to the raider who was standing there, which is the same
+  reason a bind-on-equip drop has never counted. This changes existing numbers
+  for anyone who has won one.
+- **Bonus rolls are labelled.** They already counted for nothing — a bonus
+  roll is not loot the raid awarded — but nothing on screen said so.
+
+### Fixed
+
+- **An alt mapping can be undone.** The roster screen could make one and had
+  no way to remove it, so a character stuck as somebody's alt dragged that
+  person onto every list, and the only way out was a command nobody had been
+  told about. There is a **Not an alt** button now, and four places say so.
+- **Two seasons could share an id** when one was archived and the next started
+  in the same second, which made them indistinguishable to anything holding a
+  reference to one. Existing collisions are repaired when you log in.
+
 ## 0.3.1 — 2026-08-11
 
 **Updated for patch 12.1.0.** Without this the game marks the addon out of

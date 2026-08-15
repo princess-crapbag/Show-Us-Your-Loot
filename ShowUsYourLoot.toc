@@ -2,7 +2,7 @@
 ## Title: Show Us Your Loot
 ## Notes: Loot history, attendance and fairness analytics for group loot.
 ## Author: Aimee
-## Version: 0.3.1
+## Version: 0.4.0
 ## SavedVariables: ShowUsYourLootDB
 ## OptionalDeps: RaiderIO
 ## X-Website: https://github.com/princess-crapbag/Show-Us-Your-Loot
