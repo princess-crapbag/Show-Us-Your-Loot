@@ -132,7 +132,10 @@ function ScrollArea.Create(parent, view, config)
 
     for index = 1, view.archiveVisibleRows do
         view.archiveRows[index] =
-            Rows.CreateArchiveRow(view.scrollChild, index, config.onArchiveView)
+            Rows.CreateArchiveRow(
+                view.scrollChild, index,
+                config.onArchiveView, config.onArchiveSelect
+            )
     end
 
     AttachScrollHandlers(view, config.onScrolled)

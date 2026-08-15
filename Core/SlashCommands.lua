@@ -17,10 +17,76 @@ local COMMANDS = {}
 
 COMMANDS.help = SYL.CommandList.Help
 COMMANDS.season = Reports.SeasonStatus
-COMMANDS.archives = Reports.Archives
+COMMANDS.archives = function(remainder)
+    local word, rest =
+        Utilities.Trim(remainder or ""):match("^(%S*)%s*(.*)$")
+
+    if word == "rename" then
+        return COMMANDS.archive_rename(rest)
+    end
+
+    if word == "merge" then
+        return COMMANDS.archive_merge(rest)
+    end
+
+    return Reports.Archives()
+end
 COMMANDS.api = Reports.APIReport
 COMMANDS.drops = function()
     Reports.Drops(RECENT_LIMIT)
+end
+
+-- Renaming and merging archives, by their number on /syl archives. The list is
+-- numbered there for exactly this reason: an archive has no other handle a
+-- person can type, and two seasons can share a name — which is most of why
+-- somebody is renaming one.
+COMMANDS.archive_rename = function(remainder)
+    local index, name =
+        Utilities.Trim(remainder or ""):match("^(%d+)%s+(.+)$")
+
+    if not index then
+        SYL:Print("Usage: /syl archives rename <number> <new name>")
+        SYL:Write("  The number is the one beside it in /syl archives.")
+
+        return
+    end
+
+    local ok, message = SYL.RenameArchive(tonumber(index), name)
+
+    SYL:Print(message)
+
+    if ok and SYL.RefreshMainWindow then
+        SYL:RefreshMainWindow()
+    end
+end
+
+COMMANDS.archive_merge = function(remainder)
+    local text = Utilities.Trim(remainder or "")
+    local numbers, name = text:match("^([%d%s]+)(.*)$")
+
+    local indexes = {}
+
+    for digits in tostring(numbers or ""):gmatch("%d+") do
+        table.insert(indexes, tonumber(digits))
+    end
+
+    if #indexes < 2 then
+        SYL:Print("Usage: /syl archives merge <number> <number> [new name]")
+        SYL:Write(
+            "  Folds them into one season. Nothing is deleted, but which "
+            .. "season each record came from cannot be recovered afterwards."
+        )
+
+        return
+    end
+
+    local ok, message = SYL.MergeArchives(indexes, name)
+
+    SYL:Print(message)
+
+    if ok and SYL.RefreshMainWindow then
+        SYL:RefreshMainWindow()
+    end
 end
 
 COMMANDS.rename = function(remainder)

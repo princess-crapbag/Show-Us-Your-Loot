@@ -172,6 +172,10 @@ local function UpdateRows()
         view.filterBar:Hide()
         view.selectionBar:HideAll()
 
+        if view.archiveBar then
+            view.archiveBar:Hide()
+        end
+
         view.countText:Hide()
         view.emptyText:Hide()
 
@@ -189,6 +193,17 @@ local function UpdateRows()
     end
 
     view.selectionBar:Update()
+
+    -- Renaming and merging belong to the archive list and nowhere else, so
+    -- the bar follows the tab rather than sitting there greyed out.
+    if view.archiveBar then
+        if view.mode == "archives" then
+            view.archiveBar.Refresh()
+            view.archiveBar:Show()
+        else
+            view.archiveBar:Hide()
+        end
+    end
 
     -- Nothing on the archive list is filterable, so the bar would only be
     -- misleading there.
@@ -407,6 +422,12 @@ local function CreateScrollArea(parent)
         onArchiveView = function(archiveIndex)
             SetMode("archive", archiveIndex)
         end,
+
+        onArchiveSelect = function(archiveIndex)
+            SYL.ArchiveControls.Toggle(view, archiveIndex)
+
+            UpdateRows()
+        end,
     })
 end
 
@@ -466,6 +487,12 @@ local function CreateMainWindow()
     view.mode = "dashboard"
 
     view.selectionBar = SYL.SelectionBar.Create(frame, view, {
+        onChanged = UpdateRows,
+    })
+
+    -- The archive list's own bar. Shown only on the Archives tab, because
+    -- renaming and merging seasons has no meaning anywhere else.
+    view.archiveBar = SYL.ArchiveControls.Create(frame, view, {
         onChanged = UpdateRows,
     })
     CreateScrollArea(frame)

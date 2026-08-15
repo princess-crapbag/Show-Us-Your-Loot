@@ -255,15 +255,45 @@ function Rows.CreateFeedRow(parent, index, onSelect, onActivate)
     return row
 end
 
-function Rows.CreateArchiveRow(parent, index, onView)
+function Rows.CreateArchiveRow(parent, index, onView, onSelect)
     local row = CreateFrame("Button", nil, parent)
 
     Widgets.AnchorRow(row, index, Widgets.ARCHIVE_ROW_HEIGHT)
     Widgets.AddRowBackgrounds(row, index)
 
+    -- Its own button, for the same reason the loot rows' is: clicking the row
+    -- body opens the season, and a tick that shared that click would mean
+    -- selecting one always opened it too.
+    local box = CreateFrame("Button", nil, row)
+
+    box:SetSize(14, 14)
+    box:SetPoint("LEFT", 12, 0)
+
+    box.edge = Theme.CreateSolidTexture(box, "border", "BACKGROUND")
+    box.edge:SetAllPoints()
+
+    box.fill = Theme.CreateSolidTexture(box, "window", "ARTWORK")
+    box.fill:SetPoint("TOPLEFT", 1, -1)
+    box.fill:SetPoint("BOTTOMRIGHT", -1, 1)
+
+    box.tick = Theme.CreateSolidTexture(box, "accent", "OVERLAY")
+    box.tick:SetSize(8, 8)
+    box.tick:SetPoint("CENTER")
+    box.tick:Hide()
+
+    box:SetScript("OnClick", function()
+        if onSelect then
+            onSelect(row.archiveIndex)
+        end
+    end)
+
+    Widgets.LinkHoverToRow(box, row)
+
+    row.selectBox = box
+
     row.nameText = Theme.CreateText(row, Theme.sizes.row, "textPrimary")
-    row.nameText:SetPoint("LEFT", 12, 0)
-    row.nameText:SetWidth(300)
+    row.nameText:SetPoint("LEFT", 34, 0)
+    row.nameText:SetWidth(280)
 
     row.countText =
         Theme.CreateText(row, Theme.sizes.rowSmall, "textSecondary")

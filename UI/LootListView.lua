@@ -369,6 +369,17 @@ function LootListView.UpdateArchiveRows(view)
 
             row.archiveIndex = archiveIndex
 
+            if row.selectBox then
+                local ticked =
+                    SYL.ArchiveControls.IsSelected(view, archiveIndex)
+
+                if ticked then
+                    row.selectBox.tick:Show()
+                else
+                    row.selectBox.tick:Hide()
+                end
+            end
+
             row:Show()
         else
             row:Hide()

@@ -118,6 +118,17 @@ function Reports.Archives()
             )
         )
     end
+
+    -- The numbers above are the handle. Printing the list without saying what
+    -- can be done with it is how renaming an archive stayed impossible-looking
+    -- for as long as it did.
+    SYL:Write(
+        "  /syl archives rename <number> <name>"
+        .. "  ·  /syl archives merge <number> <number> [name]"
+    )
+    SYL:Write(
+        "  Or tick them on the Archives tab and use the buttons there."
+    )
 end
 
 -- Dumps what the live client actually exposes, so the API surface can be

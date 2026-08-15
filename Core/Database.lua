@@ -16,8 +16,55 @@ local SYL = _G.ShowUsYourLoot
 -- 6: announceCaptures' default flipped to off. See MigrateAnnounceDefault.
 local DATABASE_VERSION = 6
 
+-- A SERIAL, BECAUSE THE CLOCK IS NOT ENOUGH. This was the timestamp alone, to
+-- the second, which is unique right up until two seasons are created in the
+-- same one — and archiving then immediately starting a new season is a single
+-- keystroke. Two seasons sharing an id are indistinguishable to anything that
+-- holds a reference to one: ticking a season on the Archives tab ticked every
+-- season that shared its id, and a merge would then take seasons nobody chose.
+--
+-- The serial lives in the database rather than in a local, so it keeps
+-- counting across sessions instead of restarting at one every login.
 local function GenerateSeasonID()
-    return "season-" .. date("%Y%m%d-%H%M%S")
+    local serial = 1
+
+    if ShowUsYourLootDB then
+        ShowUsYourLootDB.seasonSerial =
+            (ShowUsYourLootDB.seasonSerial or 0) + 1
+
+        serial = ShowUsYourLootDB.seasonSerial
+    end
+
+    return "season-" .. date("%Y%m%d-%H%M%S") .. "-" .. serial
+end
+
+-- Repairs seasons that already share one. Ids were only unique to the second
+-- until this was fixed, so an install that archived twice quickly is carrying
+-- a collision, and every operation keyed by id would act on both.
+local function EnsureUniqueSeasonIDs(database)
+    local seen = {}
+    local repaired = 0
+
+    local function Fix(season)
+        if type(season) ~= "table" then
+            return
+        end
+
+        if not season.id or seen[season.id] then
+            season.id = GenerateSeasonID()
+            repaired = repaired + 1
+        end
+
+        seen[season.id] = true
+    end
+
+    Fix(database.activeSeason)
+
+    for _, season in ipairs(database.archives or {}) do
+        Fix(season)
+    end
+
+    return repaired
 end
 
 local function CreateSeason(name)
@@ -200,6 +247,10 @@ function SYL.DatabaseInitialize()
     -- After EnsureSeasonStructure, so every season has its loot and drops
     -- tables to walk. A record with no id cannot be ticked by anything — see
     -- the note in Core/Migrations.lua.
+    -- Before anything can hold a reference to a season. Unconditional, and the
+    -- guard is the collision itself.
+    EnsureUniqueSeasonIDs(ShowUsYourLootDB)
+
     local backfilled = SYL.Migrations.BackfillRecordIDs(ShowUsYourLootDB)
 
     ShowUsYourLootDB.databaseVersion = DATABASE_VERSION
@@ -293,6 +344,117 @@ function SYL.RenameActiveSeason(newName)
     activeSeason.name = newName
 
     return true
+end
+
+-- THE LOCK IS ABOUT RECORDS, NOT THE LABEL. An archived season is sealed so
+-- nothing can be added to or removed from its history, which is the promise
+-- that makes archiving safe. A name is not history: it is what somebody typed,
+-- and until now typing it wrong was permanent, because RenameActiveSeason only
+-- ever reached the active one. Archiving before renaming is the ordinary way
+-- to do it and left no way back.
+function SYL.RenameArchive(index, newName)
+    newName = newName and
+        newName:gsub("^%s+", ""):gsub("%s+$", "")
+
+    if not newName or newName == "" then
+        return false, "Enter a season name."
+    end
+
+    local archives = SYL.GetArchives()
+    local season = archives[index]
+
+    if not season then
+        return false, "No archived season there."
+    end
+
+    local was = season.name
+
+    season.name = newName
+
+    return true, (was or "That season") .. " is now " .. newName .. "."
+end
+
+-- Folds several archives into one.
+--
+-- WHAT IT IS FOR: a season boundary taken on the wrong day. Archiving the day
+-- before the tier actually changed leaves a stub holding a handful of nights
+-- that belong to the season before it, and no amount of renaming makes three
+-- archives read like the two seasons that happened.
+--
+-- NOT REVERSIBLE, and the caller is expected to have said so. Nothing here
+-- deletes a record — every drop, item and night from every source lands in the
+-- result — but which season each came from is gone afterwards, and only a
+-- manual re-archive could put it back.
+--
+-- Indexes are sorted and removed from the back, because removing from the
+-- front renumbers everything after it and would take the wrong seasons.
+function SYL.MergeArchives(indexes, newName)
+    local archives = SYL.GetArchives()
+
+    if type(indexes) ~= "table" or #indexes < 2 then
+        return false, "Pick at least two archived seasons to merge."
+    end
+
+    local ordered = {}
+    local seen = {}
+
+    for _, index in ipairs(indexes) do
+        if not archives[index] then
+            return false, "No archived season there."
+        end
+
+        if not seen[index] then
+            seen[index] = true
+
+            table.insert(ordered, index)
+        end
+    end
+
+    if #ordered < 2 then
+        return false, "Pick at least two archived seasons to merge."
+    end
+
+    table.sort(ordered)
+
+    -- The oldest one is the survivor, so the merged season keeps the earliest
+    -- start date and reads as the whole span rather than as the day the merge
+    -- happened.
+    local target = archives[ordered[1]]
+    local merged = { drops = 0, loot = 0, raids = 0 }
+
+    for position = 2, #ordered do
+        local source = archives[ordered[position]]
+
+        for _, list in ipairs({ "drops", "loot", "raids" }) do
+            for _, record in ipairs(source[list] or {}) do
+                table.insert(target[list], record)
+
+                merged[list] = merged[list] + 1
+            end
+        end
+
+        if (source.startedAt or 0) > 0
+            and (source.startedAt < (target.startedAt or math.huge))
+        then
+            target.startedAt = source.startedAt
+        end
+
+        if (source.archivedAt or 0) > (target.archivedAt or 0) then
+            target.archivedAt = source.archivedAt
+        end
+    end
+
+    for position = #ordered, 2, -1 do
+        table.remove(archives, ordered[position])
+    end
+
+    if newName and newName:gsub("%s", "") ~= "" then
+        target.name = (newName:gsub("^%s+", ""):gsub("%s+$", ""))
+    end
+
+    return true, "Merged into " .. (target.name or "one season")
+        .. ": " .. merged.drops .. " drops, " .. merged.loot
+        .. " items and " .. merged.raids .. " nights moved."
 end
 
 function SYL.GetSeasonSummary(season)
