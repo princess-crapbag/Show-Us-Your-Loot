@@ -37,6 +37,9 @@ lua.execute(
             if link == 'uncached' then return nil end
             local bindType = 1
             if link == 'boe' then bindType = 2 end
+            -- 9 is Enum.ItemBind.ToWoWAccount. Account gear, so excluded from
+            -- the score on the same rule as the BoE beside it.
+            if link == 'warbound' then bindType = 9 end
             return 'n', link, 4, 600, 80, '', '', 1, '', '', 0, 4, 1, bindType
         end,
     }
@@ -116,6 +119,34 @@ check("but it still counts as a win", combined["P1"].wins == 2)
 
 # --- what does not count --------------------------------------------------
 check("a BoE scores nothing", totals_for([drop("P1", STATE.NeedMainSpec, link="boe")])["P1"] is None)
+check("and neither does warbound gear",
+      totals_for([drop("P1", STATE.NeedMainSpec, link="warbound")])["P1"] is None)
+
+# THE SCORE AND THE DROUGHT MUST AGREE. They are separate functions reading
+# the same drop, and two lists disagreeing about who won an item is worse than
+# both being wrong the same way — the reason the trade tracker's fix asserts
+# the same thing.
+utilities = lua.globals().ShowUsYourLoot.Utilities
+
+check("the score excludes exactly what the drought excludes",
+      utilities.IsWarbound("warbound") is True
+      and utilities.IsWarbound("boe") is False)
+
+# The numbering is read from the live Enum, with the observed values as a
+# fallback. A client that moves them must win, or a rename would silently
+# start counting account gear as somebody's upgrade.
+lua.execute(
+    """
+    Enum = { ItemBind = { ToWoWAccount = 77 } }
+    """
+)
+
+lua.execute((CORE / "Utilities.lua").read_text(encoding="utf-8"))
+
+reloaded = lua.globals().ShowUsYourLoot.Utilities
+
+check("THE LIVE ENUM BEATS THE FALLBACK",
+      77 in list(reloaded.WarboundBindTypes().values()))
 check(
     "a Timewalking win scores nothing",
     totals_for([drop("P1", STATE.NeedMainSpec, difficulty=33)])["P1"] is None,

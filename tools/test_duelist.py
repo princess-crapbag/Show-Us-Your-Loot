@@ -53,6 +53,12 @@ lua.execute(
 
             if link == 'boe' then
                 bindType = 2
+            elseif link == 'warbound' then
+                -- Enum.ItemBind.ToWoWAccount. Account gear rather than this
+                -- character's upgrade, so excluded like a BoE.
+                bindType = 9
+            elseif link == 'warbounduntilequipped' then
+                bindType = 8
             end
 
             return 'name', link, 4, 600, 80, '', '', 1, '', '', 0, 4, 1,
@@ -188,6 +194,12 @@ CASES = [
 BIND_CASES = [
     ("a bind-on-pickup win resets the clock", "bop", RESET),
     ("a BoE win does NOT reset it", "boe", IGNORED),
+
+    # Warbound gear goes to the account, not to the raider who was standing
+    # there, so it is excluded on the same reasoning as the BoE above.
+    ("a warbound win does NOT reset it", "warbound", IGNORED),
+    ("nor does warbound until equipped", "warbounduntilequipped", IGNORED),
+
     # Unknown must count. An uncached item answers nil, and reading that as
     # "BoE" would silently stop counting real upgrades.
     ("an uncached item counts rather than being assumed a BoE", "uncached", RESET),

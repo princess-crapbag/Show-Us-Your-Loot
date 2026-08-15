@@ -67,8 +67,17 @@ local function IsBindOnEquipWin(drop)
     return SYL.Utilities.IsBindOnEquip(drop.itemLink) == true
 end
 
+-- Same reasoning one step further out. A warbound item can be posted to any
+-- character on the account, so it is account gear rather than this raider's
+-- upgrade, and resetting their clock for it says they were looked after when
+-- the person standing in the raid may not have been. Unknown counts, exactly
+-- as it does for a BoE.
+local function IsWarboundWin(drop)
+    return SYL.Utilities.IsWarbound(drop.itemLink) == true
+end
+
 local function CountsTowardsDrought(drop)
-    if IsBindOnEquipWin(drop) then
+    if IsBindOnEquipWin(drop) or IsWarboundWin(drop) then
         return false
     end
 

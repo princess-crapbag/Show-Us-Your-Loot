@@ -61,7 +61,14 @@ LootHistoryAPI.CANDIDATE_EVENTS = {
     "CONFIRM_LOOT_ROLL",
 }
 
+-- ItemBind is not a loot-history enum, and it is listed here because this is
+-- the one report anybody runs against a live client. Core/Utilities.lua reads
+-- it to decide whether a drop is warbound, and a warbound drop is excluded
+-- from the score and the drought — so a renamed key would quietly start
+-- counting account gear as somebody's upgrade, with nothing on screen wrong.
+-- Printing it is how the fallback numbering gets checked rather than trusted.
 LootHistoryAPI.CANDIDATE_ENUMS = {
+    "ItemBind",
     "EncounterLootDropRollState",
     "LootHistoryFilter",
     "LootRollType",

@@ -76,6 +76,13 @@ local function Counts(drop)
         return false
     end
 
+    -- Warbound gear is account gear, not this character's upgrade. Same rule
+    -- as the BoE above and the same one the drought applies, kept beside it so
+    -- the score and the drought can never disagree about a drop.
+    if SYL.Utilities.IsWarbound(drop.itemLink) == true then
+        return false
+    end
+
     -- Records with no location predate the field and are almost certainly
     -- raid drops; treating unknown as "not a raid" would erase real history.
     if not drop.instanceType and not drop.difficultyID then

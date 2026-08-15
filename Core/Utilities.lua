@@ -185,6 +185,83 @@ function Utilities.IsBindOnEquip(itemLink)
     return bindType == BIND_ON_EQUIP
 end
 
+-- Warbound gear: account-wide rather than stuck on the character that won it.
+--
+-- EXCLUDED FROM THE NUMBERS, LIKE A BoE, and for the same reason. The rule
+-- already written down is that a drought resets on a bind-on-pickup win —
+-- gear this character now has to wear. A warbound item can be posted to any
+-- character on the account, so it is account gear rather than this raider's
+-- upgrade, and counting it would say somebody was looked after when the raider
+-- who was standing there may not have been. Aimee's call.
+--
+-- READ FROM THE LIVE ENUM, with the observed numbering as a fallback, the same
+-- way Core/LootHistoryAPI.lua handles the roll states. Bind types are Blizzard
+-- constants and a renamed key here would silently start counting warbound
+-- gear again — /syl api prints what the client actually exposes so the fallback
+-- can be checked rather than trusted.
+local WARBOUND_KEYS = {
+    ToWoWAccount = 9,
+    ToBnetAccount = 7,
+    ToBnetAccountUntilEquipped = 8,
+}
+
+local warboundValues
+
+local function WarboundValues()
+    if warboundValues then
+        return warboundValues
+    end
+
+    warboundValues = {}
+
+    for key, fallback in pairs(WARBOUND_KEYS) do
+        local value = fallback
+
+        if type(Enum) == "table"
+            and type(Enum.ItemBind) == "table"
+            and type(Enum.ItemBind[key]) == "number"
+        then
+            value = Enum.ItemBind[key]
+        end
+
+        warboundValues[value] = true
+    end
+
+    return warboundValues
+end
+
+-- Exposed so /syl api can print what this resolved to on the live client.
+function Utilities.WarboundBindTypes()
+    local values = {}
+
+    for value in pairs(WarboundValues()) do
+        table.insert(values, value)
+    end
+
+    table.sort(values)
+
+    return values
+end
+
+-- nil for "cannot tell", which every caller treats as not warbound. An
+-- uncached item answers nothing, and the safe default is the one that keeps
+-- counting rather than the one that quietly stops.
+function Utilities.IsWarbound(itemLink)
+    if type(itemLink) ~= "string" or itemLink == "" then
+        return nil
+    end
+
+    local success, bindType = pcall(function()
+        return select(14, C_Item.GetItemInfo(itemLink))
+    end)
+
+    if not success or type(bindType) ~= "number" then
+        return nil
+    end
+
+    return WarboundValues()[bindType] == true
+end
+
 -- MM-DD-YYYY throughout, which is where Aimee reads dates.
 --
 -- Three formats were in use before this: %m/%d/%Y, %m/%d/%y and %Y-%m-%d,

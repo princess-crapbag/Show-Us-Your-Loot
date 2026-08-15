@@ -180,6 +180,17 @@ function Reports.APIReport()
         end
     end
 
+    -- What the addon resolved those to, rather than what it hoped. These are
+    -- the bind types a drop is excluded from the score for, so seeing them
+    -- beside Enum.ItemBind above is the check that the fallback was not used
+    -- on a client that has moved the numbers.
+    local warbound = Utilities.WarboundBindTypes()
+
+    SYL:Write(
+        "Treated as warbound (excluded from score and drought): bindType "
+        .. (#warbound > 0 and table.concat(warbound, ", ") or "none")
+    )
+
     SYL:Write(
         "Events monitored: "
         .. #report.events.registered
