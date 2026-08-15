@@ -65,7 +65,7 @@ SYL.DashboardWidgets.RENDERERS.nextNight = function(tile)
         days == 0 and "Tonight" or (days == 1 and "Tomorrow" or ("in " .. days)),
         days > 1 and "days" or nil)
 
-    local out = SYL.RaidSchedule.WhoIsOut(dayKey)
+    local out = SYL.Absences.WhoIsOut(dayKey)
 
     DashboardParts.Row(tile, 1, "Raiding", SYL.RaidSchedule.WeekdayName(dayKey))
     DashboardParts.Row(tile, 2, "Out that night", #out,
@@ -91,7 +91,7 @@ end
 SYL.DashboardWidgets.RENDERERS.whoIsOut = function(tile)
     local today = SYL.RaidSchedule.TodayKey()
     local dayKey = SYL.RaidSchedule.NextNight(today) or today
-    local out = SYL.RaidSchedule.WhoIsOut(dayKey)
+    local out = SYL.Absences.WhoIsOut(dayKey)
 
     if #out == 0 then
         DashboardParts.Empty(tile,

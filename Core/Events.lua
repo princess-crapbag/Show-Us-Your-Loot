@@ -113,7 +113,7 @@ local function OnPlayerLogin()
     -- ids existed cannot be reconciled with anybody else's copy, and would be
     -- re-sent as new forever. Before the broadcast, so nothing goes out
     -- without an id on it.
-    SYL.RaidSchedule.BackfillAbsenceIDs()
+    SYL.Absences.BackfillAbsenceIDs()
 
     -- A fourth switch, and separate for the same reason as the other three:
     -- this one sends what you have typed about other people to the guild.

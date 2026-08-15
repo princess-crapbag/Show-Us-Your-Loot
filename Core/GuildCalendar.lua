@@ -276,7 +276,7 @@ function GuildCalendar.ImportDeclines(dayKey)
 
     local existing = {}
 
-    for _, entry in ipairs(SYL.RaidSchedule.WhoIsOut(dayKey)) do
+    for _, entry in ipairs(SYL.Absences.WhoIsOut(dayKey)) do
         existing[tostring(entry.name):lower()] = true
     end
 
@@ -284,7 +284,7 @@ function GuildCalendar.ImportDeclines(dayKey)
 
     for _, decline in ipairs(declines) do
         if decline.name and not existing[tostring(decline.name):lower()] then
-            SYL.RaidSchedule.AddAbsence(decline.name, dayKey, dayKey, {
+            SYL.Absences.AddAbsence(decline.name, dayKey, dayKey, {
                 reason = decline.status,
                 source = "calendar",
             })

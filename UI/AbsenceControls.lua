@@ -177,7 +177,7 @@ function AbsenceControls.Create(parent, handlers)
                 return
             end
 
-            local absence = SYL.RaidSchedule.AddAbsence(name, dayKey, dayKey)
+            local absence = SYL.Absences.AddAbsence(name, dayKey, dayKey)
 
             if not absence then
                 SYL:Print("Could not mark " .. name .. " out.")
@@ -213,7 +213,7 @@ function AbsenceControls.Create(parent, handlers)
             end
 
             local removed, theirs, setByWhom =
-                SYL.RaidSchedule.RemoveAbsencesFor(name, dayKey)
+                SYL.Absences.RemoveAbsencesFor(name, dayKey)
 
             if removed == 0 then
                 if theirs > 0 then

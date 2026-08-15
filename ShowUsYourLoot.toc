@@ -59,6 +59,7 @@ Core\NightIndex.lua
 Core\TradeAdvisor.lua
 Core\TradeTracker.lua
 Core\RaidSchedule.lua
+Core\Absences.lua
 Core\GuildCalendar.lua
 Core\ScheduleCommands.lua
 Core\AbsenceSync.lua

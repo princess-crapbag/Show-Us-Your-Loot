@@ -59,7 +59,7 @@ local function Report()
         return
     end
 
-    local out = SYL.RaidSchedule.WhoIsOut(dayKey)
+    local out = SYL.Absences.WhoIsOut(dayKey)
 
     SYL:Write(
         "Next raid night: " .. SYL.colors.addon
@@ -159,7 +159,7 @@ function ScheduleCommands.Schedule(remainder)
     end
 
     if action == "clear" then
-        SYL.RaidSchedule.ClearExpired()
+        SYL.Absences.ClearExpired()
 
         SYL:Write("Absences that have already passed were cleared.")
 
@@ -196,7 +196,7 @@ function ScheduleCommands.Out(remainder)
     local from = SYL.RaidSchedule.TodayKey()
     local to = days and SYL.RaidSchedule.Offset(from, math.max(0, days - 1)) or from
 
-    local absence = SYL.RaidSchedule.AddAbsence(name, from, to, {
+    local absence = SYL.Absences.AddAbsence(name, from, to, {
         reason = reason,
     })
 
@@ -234,8 +234,8 @@ function ScheduleCommands.Back(remainder)
     end
 
     local wanted = name:lower()
-    local author = SYL.RaidSchedule.Author()
-    local absences = SYL.RaidSchedule.AllAbsences()
+    local author = SYL.Absences.Author()
+    local absences = SYL.Absences.AllAbsences()
     local removed, theirs = 0, 0
     local setByWhom
 
@@ -250,7 +250,7 @@ function ScheduleCommands.Back(remainder)
     for index = #absences, 1, -1 do
         if tostring(absences[index].name):lower() == wanted then
             if absences[index].setBy == author then
-                SYL.RaidSchedule.RemoveAbsence(index)
+                SYL.Absences.RemoveAbsence(index)
 
                 removed = removed + 1
             else

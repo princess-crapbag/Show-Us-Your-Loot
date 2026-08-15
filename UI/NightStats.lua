@@ -99,7 +99,7 @@ local function DescribeAbsences(dayKey)
         return nil, 0
     end
 
-    local out = SYL.RaidSchedule.WhoIsOut(dayKey)
+    local out = SYL.Absences.WhoIsOut(dayKey)
 
     if #out == 0 then
         return nil, 0

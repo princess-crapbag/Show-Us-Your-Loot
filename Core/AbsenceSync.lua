@@ -161,9 +161,9 @@ end
 -- other one.
 function AbsenceSync.Own()
     local mine = {}
-    local author = SYL.RaidSchedule.Author()
+    local author = SYL.Absences.Author()
 
-    for _, absence in ipairs(SYL.RaidSchedule.AllAbsences() or {}) do
+    for _, absence in ipairs(SYL.Absences.AllAbsences() or {}) do
         if absence.setBy == author and absence.id then
             table.insert(mine, absence)
         end
@@ -221,7 +221,7 @@ function AbsenceSync.Commit(sender, absences)
         return 0
     end
 
-    SYL.RaidSchedule.ReplaceAbsencesFrom(sender, absences or {})
+    SYL.Absences.ReplaceAbsencesFrom(sender, absences or {})
 
     return #(absences or {})
 end
@@ -276,7 +276,7 @@ function AbsenceSync.Receive(sender, payload)
     -- what this client wrote, so committing our own set would replace those
     -- absences with a decoded copy of themselves and lose the fields that do
     -- not travel. Same guard, and the same comparison, as KeystoneSync.
-    if not sender or sender == SYL.RaidSchedule.Author() then
+    if not sender or sender == SYL.Absences.Author() then
         return nil
     end
 
@@ -295,7 +295,7 @@ local function OnMessage(prefix, payload, _, sender)
     end
 
     if payload == REQUEST then
-        if sender == SYL.RaidSchedule.Author() then
+        if sender == SYL.Absences.Author() then
             return
         end
 

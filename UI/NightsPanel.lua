@@ -173,7 +173,7 @@ local function DrawDay(cell, dayNumber, dayKey, night, isSelected)
         -- before the season had started.
         local scheduled = SYL.RaidSchedule.IsRaidNight(dayKey)
             and dayKey >= SYL.RaidSchedule.TodayKey()
-        local out = #SYL.RaidSchedule.WhoIsOut(dayKey)
+        local out = #SYL.Absences.WhoIsOut(dayKey)
 
         cell.detail:SetText(
             (scheduled and "raid" or "")

@@ -70,7 +70,7 @@ lua.execute(
     function OutNames()
         local names = {}
 
-        for _, absence in ipairs(SYL.RaidSchedule.AllAbsences()) do
+        for _, absence in ipairs(SYL.Absences.AllAbsences()) do
             table.insert(names,
                 absence.name .. '/' .. tostring(absence.setBy))
         end
@@ -82,14 +82,14 @@ lua.execute(
     """
 )
 
-AIMEE = SYL.RaidSchedule.Author()
+AIMEE = SYL.Absences.Author()
 OFFICER = "Borg-Area52"
 OTHER = "Dravok-Area52"
 
 check("this client knows who it is", AIMEE == "Aimee-Area52", AIMEE)
 
 # --- what we wrote is ours, and only ours, to broadcast -------------------
-SYL.RaidSchedule.AddAbsence("Talestra", "2026-08-20", "2026-08-24",
+SYL.Absences.AddAbsence("Talestra", "2026-08-20", "2026-08-24",
                             lua.table_from({"reason": "holiday"}))
 
 check("an absence records who set it",
@@ -100,7 +100,7 @@ check("and it carries an id", len(SYL.AbsenceSync.Own()) == 1,
 
 # Somebody else's absence must not go out from here — otherwise every client
 # echoes every other one and nobody's set is authoritative.
-SYL.RaidSchedule.ReplaceAbsencesFrom(OFFICER, lua.table_from([
+SYL.Absences.ReplaceAbsencesFrom(OFFICER, lua.table_from([
     lua.table_from({"id": "b|1|1", "name": "Saebie", "from": "2026-08-20",
                     "to": "2026-08-20", "reason": "work"}),
 ]))
@@ -113,7 +113,7 @@ check("BUT IS NOT REBROADCAST BY US",
       [dict(a) for a in []] or len(SYL.AbsenceSync.Own()))
 
 # --- 2. a removal travels because the set is replaced ---------------------
-SYL.RaidSchedule.ReplaceAbsencesFrom(OFFICER, lua.table_from([]))
+SYL.Absences.ReplaceAbsencesFrom(OFFICER, lua.table_from([]))
 
 check("AN EMPTY SET FROM AN AUTHOR CLEARS THEIR ABSENCES",
       "Saebie" not in lua.globals().OutNames(),
@@ -123,11 +123,11 @@ check("and leaves everybody else's alone",
       lua.globals().OutNames())
 
 # --- 3. one author cannot clobber another ---------------------------------
-SYL.RaidSchedule.ReplaceAbsencesFrom(OFFICER, lua.table_from([
+SYL.Absences.ReplaceAbsencesFrom(OFFICER, lua.table_from([
     lua.table_from({"id": "b|2|1", "name": "Saebie", "from": "2026-08-20",
                     "to": "2026-08-20"}),
 ]))
-SYL.RaidSchedule.ReplaceAbsencesFrom(OTHER, lua.table_from([
+SYL.Absences.ReplaceAbsencesFrom(OTHER, lua.table_from([
     lua.table_from({"id": "d|1|1", "name": "Likestoflash",
                     "from": "2026-08-21", "to": "2026-08-21"}),
 ]))
@@ -141,7 +141,7 @@ check("three authors coexist",
       names)
 
 # Replacing one leaves the other two untouched.
-SYL.RaidSchedule.ReplaceAbsencesFrom(OFFICER, lua.table_from([]))
+SYL.Absences.ReplaceAbsencesFrom(OFFICER, lua.table_from([]))
 
 names = lua.globals().OutNames()
 
@@ -151,7 +151,7 @@ check("replacing one author touches only their own",
       and "Likestoflash/" + OTHER in names,
       names)
 
-SYL.RaidSchedule.ReplaceAbsencesFrom(OTHER, lua.table_from([]))
+SYL.Absences.ReplaceAbsencesFrom(OTHER, lua.table_from([]))
 
 # --- the wire -------------------------------------------------------------
 encoded = SYL.AbsenceSync.Encode(7, 1, 2, lua.table_from({
@@ -196,7 +196,7 @@ check("a tab typed into a reason cannot break the framing",
 #
 # Driven through Commit rather than the event handler, because what is being
 # asserted is that a fragment never reaches the store.
-SYL.RaidSchedule.ReplaceAbsencesFrom(OFFICER, lua.table_from([
+SYL.Absences.ReplaceAbsencesFrom(OFFICER, lua.table_from([
     lua.table_from({"id": "b|3|1", "name": "Saebie", "from": "2026-08-20",
                     "to": "2026-08-20"}),
     lua.table_from({"id": "b|3|2", "name": "Arcangila", "from": "2026-08-20",
@@ -271,23 +271,23 @@ check("and Talestra is still ours",
 # Day-scoped and author-scoped. Removing somebody else's claim would look like
 # it worked and then undo itself on their next broadcast, so it must refuse and
 # say who to ask instead.
-SYL.RaidSchedule.ReplaceAbsencesFrom(OFFICER, lua.table_from([]))
-SYL.RaidSchedule.ReplaceAbsencesFrom(OTHER, lua.table_from([]))
+SYL.Absences.ReplaceAbsencesFrom(OFFICER, lua.table_from([]))
+SYL.Absences.ReplaceAbsencesFrom(OTHER, lua.table_from([]))
 
-SYL.RaidSchedule.AddAbsence("Nashri", "2026-08-20", "2026-08-20")
-SYL.RaidSchedule.ReplaceAbsencesFrom(OFFICER, lua.table_from([
+SYL.Absences.AddAbsence("Nashri", "2026-08-20", "2026-08-20")
+SYL.Absences.ReplaceAbsencesFrom(OFFICER, lua.table_from([
     lua.table_from({"id": "b|20|1", "name": "Zugzug", "from": "2026-08-20",
                     "to": "2026-08-20"}),
 ]))
 
-removed, theirs, whom = SYL.RaidSchedule.RemoveAbsencesFor(
+removed, theirs, whom = SYL.Absences.RemoveAbsencesFor(
     "Nashri", "2026-08-20"
 )
 
 check("Back in removes what this client wrote",
       removed == 1 and theirs == 0, (removed, theirs))
 
-removed, theirs, whom = SYL.RaidSchedule.RemoveAbsencesFor(
+removed, theirs, whom = SYL.Absences.RemoveAbsencesFor(
     "Zugzug", "2026-08-20"
 )
 
@@ -300,13 +300,13 @@ check("so the absence is still there",
 
 # A day the absence does not cover is left alone, so marking somebody back on
 # Tuesday does not clear the week they booked off.
-SYL.RaidSchedule.AddAbsence("Nashri", "2026-08-20", "2026-08-27")
+SYL.Absences.AddAbsence("Nashri", "2026-08-20", "2026-08-27")
 
-removed, _, _ = SYL.RaidSchedule.RemoveAbsencesFor("Nashri", "2026-09-15")
+removed, _, _ = SYL.Absences.RemoveAbsencesFor("Nashri", "2026-09-15")
 
 check("a day outside the range removes nothing", removed == 0, removed)
 
-removed, _, _ = SYL.RaidSchedule.RemoveAbsencesFor("Nashri", "2026-08-25")
+removed, _, _ = SYL.Absences.RemoveAbsencesFor("Nashri", "2026-08-25")
 
 check("a day inside a multi-day range does remove it", removed == 1, removed)
 

@@ -68,7 +68,7 @@ lua.execute(
     function OutNames(dayKey)
         local names = {}
 
-        for _, absence in ipairs(ShowUsYourLoot.RaidSchedule.WhoIsOut(dayKey)) do
+        for _, absence in ipairs(ShowUsYourLoot.Absences.WhoIsOut(dayKey)) do
             table.insert(names, absence.name)
         end
 
@@ -79,6 +79,11 @@ lua.execute(
 
 g = lua.globals()
 S = SYL.RaidSchedule
+
+# Absences moved to their own module; the date helpers and the schedule
+# itself stayed. Two handles rather than one, so this test says which half it
+# is exercising on every line.
+A = SYL.Absences
 
 # --- day arithmetic --------------------------------------------------------
 #
@@ -169,8 +174,8 @@ check(
 # --- absences are ranges ---------------------------------------------------
 g.ResetSchedule()
 
-S.AddAbsence("Dravok", "2026-08-10", "2026-08-16", lua.table(reason="holiday"))
-S.AddAbsence("Selunne", "2026-08-12", "2026-08-12", None)
+A.AddAbsence("Dravok", "2026-08-10", "2026-08-16", lua.table(reason="holiday"))
+A.AddAbsence("Selunne", "2026-08-12", "2026-08-12", None)
 
 check("somebody out all week is out mid week", g.OutNames("2026-08-13") == "Dravok", g.OutNames("2026-08-13"))
 check("both are out on the overlapping day", g.OutNames("2026-08-12") == "Dravok,Selunne", g.OutNames("2026-08-12"))
@@ -183,13 +188,13 @@ check("and the last day counts", "Dravok" in g.OutNames("2026-08-16"))
 
 # A range knows it is one, so the tile can print an end date instead of a
 # reason and not read as though somebody is out for a single evening.
-out = S.WhoIsOut("2026-08-13")
+out = A.WhoIsOut("2026-08-13")
 
 check("a range is marked as one", out[1]["multiDay"] is True)
-check("a single day is not", S.WhoIsOut("2026-08-12")[2]["multiDay"] is False)
+check("a single day is not", A.WhoIsOut("2026-08-12")[2]["multiDay"] is False)
 
 # --- clearing --------------------------------------------------------------
-check("expired absences are dropped", S.ClearExpired("2026-08-17") == 2, S.ClearExpired("2026-08-17"))
+check("expired absences are dropped", A.ClearExpired("2026-08-17") == 2, A.ClearExpired("2026-08-17"))
 check("and nothing is left out", g.OutNames("2026-08-13") == "", g.OutNames("2026-08-13"))
 
 # --- the calendar degrades rather than erroring ----------------------------
@@ -228,7 +233,7 @@ for label in ("nextNight",):
     for state in ("empty", "configured"):
         if state == "configured":
             S.SetWeekday(TUESDAY, True)
-            S.AddAbsence("Dravok", S.TodayKey(), S.Offset(S.TodayKey(), 6), None)
+            A.AddAbsence("Dravok", S.TodayKey(), S.Offset(S.TodayKey(), 6), None)
 
         try:
             SYL.DashboardWidgets.RENDERERS[label](g.MakeTile())
