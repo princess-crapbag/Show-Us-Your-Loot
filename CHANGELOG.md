@@ -3,7 +3,7 @@
 What changed, for the person installing it. The commit history explains why;
 this says what you will notice.
 
-## 0.4.0 — 2026-08-15
+## 0.3.2 — 2026-08-15
 
 ### Added
 
