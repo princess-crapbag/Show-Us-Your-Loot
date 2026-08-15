@@ -389,6 +389,55 @@ function RaidSchedule.RemoveAbsenceByID(id)
     return false
 end
 
+-- Everything one person wrote, replaced in one go.
+--
+-- THE AUTHOR IS THE UNIT OF TRUTH. A client broadcasts every absence it wrote
+-- and nothing else, so what arrives is the whole of that person's list and
+-- anything of theirs missing from it has been removed. Merging entry by entry
+-- would mean a deletion could only travel as a message of its own, and a
+-- missed one would leave somebody marked out forever.
+--
+-- Only ever called with a sender the addon channel reported, so nobody can
+-- replace a set that is not theirs.
+function RaidSchedule.ReplaceAbsencesFrom(author, absences)
+    local store = Store()
+
+    if not store or not author or author == "" then
+        return 0
+    end
+
+    local kept = {}
+
+    for _, absence in ipairs(store.absences or {}) do
+        if absence.setBy ~= author then
+            table.insert(kept, absence)
+        end
+    end
+
+    for _, absence in ipairs(absences or {}) do
+        if absence.id and absence.name and absence.from then
+            table.insert(kept, {
+                id = absence.id,
+                name = absence.name,
+                key = SYL.Players.GUIDForName(absence.name) or nil,
+                from = absence.from,
+                to = absence.to or absence.from,
+                reason = absence.reason,
+
+                -- Stamped from the sender rather than from the payload, so a
+                -- client cannot broadcast on somebody else's behalf.
+                setBy = author,
+                source = "shared",
+                addedAt = time(),
+            })
+        end
+    end
+
+    store.absences = kept
+
+    return #absences
+end
+
 -- Run at login, unconditionally, because the guard is the nil itself. An
 -- absence written before ids existed is otherwise unreachable by anything that
 -- reconciles, and would be re-sent forever as a new one.

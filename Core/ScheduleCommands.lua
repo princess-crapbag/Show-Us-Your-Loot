@@ -217,6 +217,8 @@ function ScheduleCommands.Out(remainder)
         .. (reason and (" — " .. reason) or "")
         .. "."
     )
+
+    SYL.AbsenceSync.OnOwnAbsencesChanged()
 end
 
 -- The undo. Named `in` because that is what somebody types after `out`, even
@@ -232,20 +234,44 @@ function ScheduleCommands.Back(remainder)
     end
 
     local wanted = name:lower()
+    local author = SYL.RaidSchedule.Author()
     local absences = SYL.RaidSchedule.AllAbsences()
-    local removed = 0
+    local removed, theirs = 0, 0
+    local setByWhom
 
+    -- ONLY WHAT THIS CLIENT WROTE. Once absences are shared, the list holds
+    -- other people's as well, and deleting one of those locally would achieve
+    -- nothing twice over: their client is authoritative for it and would put
+    -- it straight back on the next broadcast. Somebody else's claim is theirs
+    -- to retract, so this says who to ask instead of failing silently.
+    --
     -- Backwards, because removing by index while walking forwards skips the
     -- entry after every hit.
     for index = #absences, 1, -1 do
         if tostring(absences[index].name):lower() == wanted then
-            SYL.RaidSchedule.RemoveAbsence(index)
+            if absences[index].setBy == author then
+                SYL.RaidSchedule.RemoveAbsence(index)
 
-            removed = removed + 1
+                removed = removed + 1
+            else
+                theirs = theirs + 1
+                setByWhom = absences[index].setBy or setByWhom
+            end
         end
     end
 
     if removed == 0 then
+        if theirs > 0 then
+            SYL:Write(
+                name .. " was marked out by "
+                .. (setByWhom or "somebody else")
+                .. ", so only they can take it back. Ask them to run /syl in "
+                .. name .. "."
+            )
+
+            return
+        end
+
         SYL:Write("Nothing recorded for " .. name .. ".")
 
         return
@@ -254,5 +280,10 @@ function ScheduleCommands.Back(remainder)
     SYL:Write(
         name .. " is back — " .. removed
         .. (removed == 1 and " absence" or " absences") .. " removed."
+        .. (theirs > 0
+            and ("  " .. theirs .. " set by somebody else were left alone.")
+            or "")
     )
+
+    SYL.AbsenceSync.OnOwnAbsencesChanged()
 end

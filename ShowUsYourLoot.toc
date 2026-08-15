@@ -61,6 +61,7 @@ Core\TradeTracker.lua
 Core\RaidSchedule.lua
 Core\GuildCalendar.lua
 Core\ScheduleCommands.lua
+Core\AbsenceSync.lua
 Core\KeystoneRequests.lua
 Core\KeystoneRequestSync.lua
 Core\Export.lua

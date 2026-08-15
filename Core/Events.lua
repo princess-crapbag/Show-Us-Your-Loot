@@ -111,8 +111,20 @@ local function OnPlayerLogin()
 
     -- Unconditional, like the record-id backfill: an absence written before
     -- ids existed cannot be reconciled with anybody else's copy, and would be
-    -- re-sent as new forever.
+    -- re-sent as new forever. Before the broadcast, so nothing goes out
+    -- without an id on it.
     SYL.RaidSchedule.BackfillAbsenceIDs()
+
+    -- A fourth switch, and separate for the same reason as the other three:
+    -- this one sends what you have typed about other people to the guild.
+    if SYL.Features.IsEnabled("absenceSharing") then
+        SYL.AbsenceSync.Enable()
+
+        -- Ask once, then say our own. Everyone who hears the question answers,
+        -- so a fresh login is never more than one round trip out of date.
+        SYL.AbsenceSync.Request()
+        SYL.AbsenceSync.Announce()
+    end
 end
 
 -- The three ways a key changes: a run finishes and awards the next one, the

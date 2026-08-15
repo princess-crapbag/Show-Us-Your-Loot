@@ -95,6 +95,14 @@ Features.LIST = {
             .. "Sends a message to that one person. Off unless you turn it on.",
     },
     {
+        key = "absenceSharing",
+        short = "Share absences",
+        label = "Share who is out with the guild",
+        cost = "Sends the absences you have typed to your whole guild, and "
+            .. "shows you theirs. Everyone can see who set each one. Off "
+            .. "unless you turn it on.",
+    },
+    {
         key = "lockouts",
         short = "Dungeon lockouts",
         label = "Mythic 0 dungeon lockouts",
@@ -139,6 +147,11 @@ local DEFAULTS = {
     -- Off, like everything else that sends a message to another player. It is
     -- also the only one that sends to a named person rather than to a channel.
     keyRequests = false,
+
+    -- Off, like everything that talks — and this one talks about other people
+    -- rather than about you, which is why it is its own switch rather than
+    -- part of keystone sharing.
+    absenceSharing = false,
 
     -- On. It reads one server response at login and sends nothing, and the
     -- grid is empty until a character has actually been played — so off would
