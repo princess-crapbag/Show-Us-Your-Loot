@@ -101,8 +101,11 @@ they are not supported — CurseForge offers WYSIWYG and Markdown, and the
 tags paste in as literal text. This pastes into the WYSIWYG editor as is;
 bold the section headings there if you want them to stand out.
 
-Rewritten 2026-08-15, for 0.3.2, and fact-checked line by line against the
-code rather than against the previous copy. **No em dashes anywhere in it, on
+Rewritten 2026-08-15 for 0.3.2, fact-checked line by line against the code,
+then edited by Aimee and pasted live. **This block is her live text**, not the
+draft it came from: she added the bullet lists, Oxford commas, and moved the
+Retail-only line to the end. Copy it from here rather than rewriting from the
+draft. **No em dashes anywhere in it, on
 purpose**, so a rewrite that reintroduces one is a rewrite that stopped
 following the brief.
 
@@ -131,55 +134,44 @@ Six people rolled Need on the same weapon. One of them won it. Ask a month later
 
 Show Us Your Loot keeps it.
 
-Every group loot drop gets recorded off Blizzard's Loot History API: the item, who won, what they rolled, and every player who was eligible along with what each one chose. Need, offspec, greed, transmog or pass. That last part is what makes the rest of this work. Eleven people eligible and no upgrades reads completely differently depending on whether they passed or lost.
+Every group loot drop gets recorded off Blizzard's Loot History API: the item, who won, what they rolled, and every player who was eligible, along with what each one chose. Need, offspec, greed, transmog, or pass. That last part is what makes the rest of this work. Eleven people eligible and no upgrades reads completely differently depending on whether they passed or lost.
 
 This is not a loot council addon. It awards nothing and changes nothing about how loot is handed out. You keep using Group Loot. This answers the argument afterwards.
 
 
 Who is due
 
-Ranked by loot taken per raid night rather than by raw count, so somebody with perfect attendance sits above somebody who turns up half the time on the same amount of gear. Need is worth 100, offspec and greed 20 each, transmog nothing, divided by nights attended.
-
-Click any raider and you get the arithmetic. Every win that counted, what each one was worth, and the total those add up to. When somebody thinks their number is wrong, that is the screen they stand at.
-
-Under three raid nights nobody is ranked at all. They are listed with the reason instead, because one lucky night should not sit at the top of the list.
-
-Vault gear, M+ chests, catalyst, delves, BoEs, bonus rolls and warbound items are all recorded where your client can see them, and none of them move the ranking.
+* Ranked by loot taken per raid night rather than by raw count, so somebody with perfect attendance sits above somebody who turns up half the time on the same amount of gear. Need is worth 100, offspec and greed 20 each, transmog nothing, divided by the nights attended.
+* Click any raider and you get the arithmetic. Every win that counted, what each one was worth, and the total those add up to. When somebody thinks their number is wrong, that is the screen they stand at.
+* Under three raid nights nobody is ranked at all. They are listed with the reason instead, because one lucky night should not sit at the top of the list.
+* Vault gear, M+ chests, catalyst, delves, BoEs, bonus rolls, and warbound items are all recorded where your client can see them, and none of them move the ranking.
 
 
 It is useful on the first drop
 
-Win something and a small window opens naming everyone who rolled Need or offspec and lost, most owed first, with your two hour trade window counting down. That works on install night with no history behind it, because the roll list is complete the moment the item is awarded.
-
-An addon cannot click a trade button for you. It tells you who rolled and stops there. If you do hand the item over, the score follows it to whoever received it.
+* Win something and a small window opens naming everyone who rolled Need or offspec and lost, most owed first, with your two hour trade window counting down. That works on install night with no history behind it, because the roll list is complete the moment the item is awarded.
+* An addon cannot click a trade button for you. It tells you who rolled and stops there. If you do hand the item over, the score follows it to whoever received it.
 
 
 The rest of it
 
-Attendance is read from the group roster at every pull rather than worked out from loot, so a healer who was there all night without being eligible for a single drop still gets the night.
-
-Mythic+ keys for your own characters, and your guild's as well if they run this with key sharing on. A second view on the same tab shows which of your characters is already saved to which Mythic 0 this week.
-
-A month calendar of your raid nights. Mark somebody out for a day or a fortnight, or mark yourself out, and every absence carries the name of whoever set it.
-
-Boss loot tables showing what a boss has never given you, kept apart by difficulty. Reading the Adventure Guide is a button rather than something that happens on its own, because it walks every raid tier and moves your own Journal selection while it does.
-
-Seasons archive when a tier ends, and stay browsable afterwards.
+* Attendance is read from the group roster at every pull rather than worked out from loot, so a healer who was there all night without being eligible for a single drop still gets the night.
+* Mythic+ keys for your own characters, and your guild's as well if they run this with key sharing on. A second view on the same tab shows which of your characters is already saved to which Mythic 0 this week.
+* A month calendar of your raid nights. Mark somebody out for a day or a fortnight, or mark yourself out, and every absence carries the name of whoever set it.
+* Boss loot tables showing what a boss has never given you, kept apart by difficulty. Reading the Adventure Guide is a button rather than something that happens on its own, because it walks every raid tier and moves your own Journal selection while it does.
+* Seasons archive when a tier ends, and stay browsable afterwards.
 
 
 What it will not do
 
-History starts the day you install it. There is no backfill and there cannot be one.
+* History starts the day you install it. There is no backfill and there cannot be one.
+* Nothing can read another player's bags. Guild keys only appear for people running this with the same switch turned on.
+* Your client only sees other people's loot while you are grouped with them, so gear taken without a roll mostly counts yours.
+* Officer sync, key sharing, key requests and absence sharing each have their own switch and all four are off until you turn them on. Absence sharing goes to the whole guild with your name attached to anything you set.
+* Everything is stored in your SavedVariables. Exports are copy and paste. Addons have no network access at all, so nothing is uploaded and nothing reaches Discord.
 
-Nothing can read another player's bags. Guild keys only appear for people running this with the same switch turned on.
 
-Your client only sees other people's loot while you are grouped with them, so gear taken without a roll mostly counts yours.
-
-Officer sync, key sharing, key requests and absence sharing each have their own switch and all four are off until you turn them on. Absence sharing goes to the whole guild with your name attached to anything you set.
-
-Everything is stored in your SavedVariables. Exports are copy and paste. Addons have no network access at all, so nothing is uploaded and nothing reaches Discord.
-
-Retail only, patch 12.1.0. It is new, and comments are the fastest way to reach me if a number looks wrong.
+This is new, and comments are the fastest way to reach me if you have any feedback or concerns. Retail only, patch 12.1.0.
 ```
 
 ---
