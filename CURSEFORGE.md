@@ -44,7 +44,34 @@ Loot history, attendance and fairness analytics for guilds using Group Loot.
 
 **Main category** — Guild
 
-**Additional categories** — Data Export, Miscellaneous
+> Kept after a review on 2026-08-15. Every distinguishing feature is
+> guild-scoped, and Guild is where officers actually browse. Boss Encounters
+> is the bigger PvE pool, which is the argument against it: a loot-history
+> addon lands far below the boss mods there.
+
+**Additional categories** — Boss Encounters, Chat & Communication, Data
+Export, Tooltip
+
+> Four of a possible four, where three slots were being used and one of those
+> was filler. Each is earned in code rather than claimed:
+>
+> - **Boss Encounters** — `Core/BossStats.lua`, `Core/LootTable.lua`,
+>   `Core/EncounterJournal.lua`, `UI/BossLoot.lua`. It is the de facto raid
+>   bucket on CurseForge and the biggest single gap in the old set.
+> - **Chat & Communication** — six sync modules on the addon channel. Off by
+>   default, which does not make the capability less real.
+> - **Data Export** — `Core/DataExport.lua` with a versioned JSON schema, plus
+>   five export buttons. Earned rather than filler.
+> - **Tooltip** — `UI/ItemTooltip.lua` hooks the real game tooltip via
+>   `TooltipDataProcessor`. The weakest of the four; cut this one first if a
+>   slot is ever needed.
+>
+> **Miscellaneous was dropped.** Zero discovery value, and it was occupying a
+> slot two honest categories needed.
+>
+> Rejected deliberately: Bags & Inventory (the addon records loot after the
+> fact and never touches bags), Data Broker (no LDB feed exists, grepped),
+> Map & Minimap (a launcher button is not what that category is for).
 
 **Allow Comments** — On. It is the only bug channel this has.
 
@@ -74,129 +101,85 @@ they are not supported — CurseForge offers WYSIWYG and Markdown, and the
 tags paste in as literal text. This pastes into the WYSIWYG editor as is;
 bold the section headings there if you want them to stand out.
 
-Rewritten for 0.3.0, the first non-alpha release. Three things in the
-previous version had become false: it opened on an Alpha caveat saying the
-due list had never had a night of data through it, it described the ranking
-as nights-since-upgrade rather than loot per night, and it said officer sync
-never sends roll lists. It sends them now.
+Rewritten 2026-08-15, for 0.3.2, and fact-checked line by line against the
+code rather than against the previous copy. **No em dashes anywhere in it, on
+purpose**, so a rewrite that reintroduces one is a rewrite that stopped
+following the brief.
+
+Six claims in the drafts had to be pulled because the code does not support
+them, and they are the ones to watch for if this is ever rewritten again:
+
+- **"the game forgets who lost"** is wrong. Blizzard's Loot History API is
+  where these records come from, so the game does keep the roll list. It
+  discards it later, and does not divide it by attendance. The hook has to say
+  *kept*, not *recorded*.
+- **Anything about what other addons do or do not keep.** No competitor was
+  ever audited. That sentence lands on a page with comments enabled, next to
+  RCLootCouncil and Gargul.
+- **"records everything anybody received"** is contradicted by the addon's own
+  settings text: your client only sees other people's loot while you are
+  grouped with them.
+- **"alts count as one person"** only after somebody accepts a mapping.
+  `Core/AltDetect.lua` proposes and never applies.
+- **The Bosses tab** cannot say what never dropped until Loot tables has been
+  pressed. Promising it on install night sends people to an empty screen.
+- **"used in live raids every week"** was invented. One real raid night has
+  been through the fairness maths.
 
 ```
-Group Loot remembers who won. This remembers who passed.
+Six people rolled Need on the same weapon. One of them won it. Ask a month later who the other five were and nobody can tell you, because the game does not keep that list.
 
-Show Us Your Loot records every group-loot drop in your raid — the item, who
-won it, what they rolled, and every player who was eligible along with what
-each of them chose. That last part is the bit nothing else keeps, and it is
-what makes the rest of this possible.
+Show Us Your Loot keeps it.
 
-This is not a loot council addon. It does not decide who gets an item and it
-does not change how loot is awarded. It uses Blizzard's default Group Loot and
-answers the questions that come up afterwards.
+Every group loot drop gets recorded off Blizzard's Loot History API: the item, who won, what they rolled, and every player who was eligible along with what each one chose. Need, offspec, greed, transmog or pass. That last part is what makes the rest of this work. Eleven people eligible and no upgrades reads completely differently depending on whether they passed or lost.
+
+This is not a loot council addon. It awards nothing and changes nothing about how loot is handed out. You keep using Group Loot. This answers the argument afterwards.
 
 
-It is useful on the very first drop
+Who is due
 
-Most history addons need a tier of data before they tell you anything. This one
-does not. The moment you win something, a small window names everyone who
-rolled Need or offspec and lost, sorted by who is owed most, with the clock
-running on your two-hour trade window.
+Ranked by loot taken per raid night rather than by raw count, so somebody with perfect attendance sits above somebody who turns up half the time on the same amount of gear. Need is worth 100, offspec and greed 20 each, transmog nothing, divided by nights attended.
 
-That works on install night with no history at all, because the roll list is
-complete the moment the item is awarded. An addon cannot click a trade button
-for you, so it only ever tells you who asked.
+Click any raider and you get the arithmetic. Every win that counted, what each one was worth, and the total those add up to. When somebody thinks their number is wrong, that is the screen they stand at.
 
-If you do trade the item, the score follows it to whoever received it.
+Under three raid nights nobody is ranked at all. They are listed with the reason instead, because one lucky night should not sit at the top of the list.
+
+Vault gear, M+ chests, catalyst, delves, BoEs, bonus rolls and warbound items are all recorded where your client can see them, and none of them move the ranking.
 
 
-What it records
+It is useful on the first drop
 
-Every group-loot drop, taken from Blizzard's Loot History API rather than from
-chat: the item, the winner, the roll, and the full list of eligible players and
-their choices.
+Win something and a small window opens naming everyone who rolled Need or offspec and lost, most owed first, with your two hour trade window counting down. That works on install night with no history behind it, because the roll list is complete the moment the item is awarded.
 
-Raid nights are recorded separately, from the group roster read at every pull.
-That distinction matters more than it sounds: roll lists only name players an
-item could drop for, so a healer who raided all night without being eligible
-for a single drop would otherwise look absent.
+An addon cannot click a trade button for you. It tells you who rolled and stops there. If you do hand the item over, the score follows it to whoever received it.
 
 
-What it answers
+The rest of it
 
-Who is due? Ranked by loot taken per raid night, so somebody with perfect
-attendance ranks above somebody there half the time on the same amount of loot.
-Need is worth 100, offspec and greed 20 each, transmog nothing. Click any
-raider to see exactly where their number came from — every win that counted and
-what each was worth. Nobody with fewer than three nights is ranked; they are
-listed with the reason instead.
+Attendance is read from the group roster at every pull rather than worked out from loot, so a healer who was there all night without being eligible for a single drop still gets the night.
 
-Who turned up? Attendance from the roster, not inferred from loot.
+Mythic+ keys for your own characters, and your guild's as well if they run this with key sharing on. A second view on the same tab shows which of your characters is already saved to which Mythic 0 this week.
 
-What has this boss never given us? A loot table per boss showing what it can
-drop and has not, kept separate by difficulty.
+A month calendar of your raid nights. Mark somebody out for a day or a fortnight, or mark yourself out, and every absence carries the name of whoever set it.
 
-When did we raid? A month calendar of your raid nights, each shaded with what
-died, and a stat panel for any day you click.
+Boss loot tables showing what a boss has never given you, kept apart by difficulty. Reading the Adventure Guide is a button rather than something that happens on its own, because it walks every raid tier and moves your own Journal selection while it does.
 
-How did tonight go? A summary when you leave the instance, leading with how
-many people went home without an upgrade.
-
-Need, offspec, transmog and greed are counted apart from each other throughout.
-A transmog win is not an upgrade, and folding them together makes loot look
-fairer than it was.
+Seasons archive when a tier ends, and stay browsable afterwards.
 
 
-Mythic+ keys
+What it will not do
 
-Every key your characters hold, kept current at login, when a dungeon finishes,
-and when a key is rerolled. Turn on key sharing and it shows your guild's too,
-for anyone running the addon with the same switch on — nothing can read another
-player's bags, so that is the only way it can work.
+History starts the day you install it. There is no backfill and there cannot be one.
 
-You can also ask a guildie to run theirs. The request is whispered to that one
-person and never broadcast, so two people asking for the same key never learn
-about each other. Off by default.
+Nothing can read another player's bags. Guild keys only appear for people running this with the same switch turned on.
 
+Your client only sees other people's loot while you are grouped with them, so gear taken without a roll mostly counts yours.
 
-Raid schedule
+Officer sync, key sharing, key requests and absence sharing each have their own switch and all four are off until you turn them on. Absence sharing goes to the whole guild with your name attached to anything you set.
 
-Tell it which nights you raid once, and it answers "when is the next raid
-night" from then on. Mark somebody out for a week with one line. It can also
-read your in-game guild calendar, and never overwrites a night you typed in.
+Everything is stored in your SavedVariables. Exports are copy and paste. Addons have no network access at all, so nothing is uploaded and nothing reaches Discord.
 
-
-Officer sync
-
-Off by default. When enabled it shares drops with other officers in your raid —
-never outside your own group, never a message a player sees — so loot is still
-recorded when you were not online for it.
-
-
-Everything can be switched off
-
-Raid buff coverage, Mythic+ scores, boss loot tables, officer sync, key
-sharing, key requests, the trade advisor and trade tracking are each a switch
-in Settings, and each says what it costs when it is on. Anything switched off is
-not built at all rather than built and hidden.
-
-
-Your data
-
-Everything is stored locally in your SavedVariables. Nothing is ever deleted
-unless you clear it deliberately, and archived seasons are never touched. Hiding
-a row and ignoring a row are both reversible.
-
-
-Commands
-
-/syl opens the window. The minimap button does the same on left click, and lists
-every command on right click. /syl help prints the rest.
-
-
-A note on how young this is
-
-History starts the day you install it and cannot be backfilled. The addon has
-been used in live raids and the numbers have been checked against real nights,
-but it is new — comments are the fastest way to reach me if something reads
-wrong.
+Retail only, patch 12.1.0. It is new, and comments are the fastest way to reach me if a number looks wrong.
 ```
 
 ---
