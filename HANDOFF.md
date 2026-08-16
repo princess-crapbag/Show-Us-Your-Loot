@@ -311,152 +311,38 @@ the pre-rewrite version of this file. Numbered so they can be referred to.
 Items 2 and 5 are done; they are left in place with what was built, because the
 order is the argument and deleting the finished ones hides it.
 
-### Tier 1 — what she asked for after loading it
+### Tiers 1 to 4 — all but five items are done
 
-1. **DONE. The route panels were stubs.** Raiders, Nights, Bosses and Keys
-   each drew a heading, a blurb and a button opening the old window. **All
-   four are real screens now**, and `UI/TabPanels.lua` has lost the routing
-   scaffolding entirely rather than keeping an empty table.
+Items 1 to 8 are built and shipped: the four route panels became real screens
+(Raiders, Bosses, Nights, Keys), audience scope reached the three surfaces that
+never asked for it, the schedule and absences arrived without needing the
+in-game calendar, the score breakdown reads back the wins behind a total, and
+the trade advisor, trade tracker and roll-list sync all exist. Item 14 became
+`tools/syl_scope.py` rather than luacheck. `git log` carries the reasoning and
+what was rejected on the way, which is why the detail is not repeated here.
 
-   - **1a Raiders — DONE.** `UI/RaidersPanel.lua`, `UI/RaidersDetail.lua`.
-   - **1b Bosses — DONE.** `UI/BossesPanel.lua`, `UI/BossLoot.lua`. Boss rail
-     plus that boss's loot table, defaulting to what has *not* dropped. The
-     any-spec caveat is printed on the pane rather than left in a comment:
-     the Journal lists what a boss can drop for every specialisation, so
-     "never dropped" includes items nobody in the raid can use.
-   - **1d Nights — DONE except the accent.** `UI/NightsPanel.lua`,
-     `UI/NightStats.lua`, `Core/NightIndex.lua`. Month grid with a week
-     toggle, nights shaded with their kill count, one stat panel below. The
-     **next** raid night is still not drawn — that is item 3, not an oversight,
-     and the caption says so.
-   - **1c Keys — DONE.** `UI/KeysPanel.lua`, `UI/KeyRequestList.lua`,
-     `Core/KeystoneRequests.lua`, `Core/KeystoneRequestSync.lua`. Sortable
-     list, whispered requests, approve/maybe/no/whisper/dismiss, a durable
-     "requests to you" list, online only, only Denied reopens, swept at reset.
-     Off by default and registers no prefix until on.
+**What the order was arguing**, and the part worth keeping: Aimee's own list
+after first loading the addon came before every strategy item recovered from
+the older file, and the trade advisor went first among those **because it is
+the only feature with no cold start** — it works on install night with no
+history, where every other screen reads as empty. That is still the right
+tiebreak for anything new.
 
-     **Untested between two clients.** Every rule is covered locally, but
-     nothing has watched a message actually arrive. That is the next thing a
-     second account can prove.
+Still open from those tiers:
 
-     One deviation: the role picker is one control for the panel rather than a
-     menu per row. Reopen if the per-request version was wanted.
-2. **DONE. Audience scope on every list of people.** Three surfaces never asked
-   `Core/Audience.lua`: the Readiness tile (called `RaidTeam.Filter` directly,
-   so it was the one list that could not widen), the end-of-night summary (swept
-   the whole roster, then pointed at `/syl due`, which is scoped — it said nine
-   where the list showed three), and the player filter dropdown (plain
-   alphabetical, so a pug sat above the raid team).
-
-   The dropdown is **ordered, not filtered**, and that is the call worth
-   challenging: it drives the loot list, which is a record of drops rather than
-   a list of people, so removing a pug's name would leave a visible row no
-   filter could reach. Keys is exempt, per Aimee and per `UI/MainWindow.lua`.
-
-   The raid, boss and player-detail screens turned out **not** to need this —
-   they carry no list of people. Raid nights shows `rosterCount`, which is a
-   historical fact about who was there and must stay unscoped.
-
-### Tier 2 — the placeholder that needs a data source
-
-3. **DONE, and not the way this file expected. The schedule.**
-   `Core/RaidSchedule.lua`. Both tiles now answer, and neither needs the
-   calendar: the guild's usual raid days are typed once
-   (`/syl schedule days tue wed`) and answer "when is the next raid night"
-   forever. `Core/GuildCalendar.lua` imports the in-game calendar on top, and
-   an import never overwrites a typed night.
-4. **DONE. "Who is out"** — `/syl out <name> [days] [reason]`, ranges rather
-   than single days, `/syl in <name>` to undo.
-
-### Tier 3 — the strategy items never got to
-
-Recovered from the pre-rewrite file, section E. E4 became `Core/Audience.lua`;
-item 2 above finished it. E5 is effectively done — keystone sharing added the
-first `SendChatMessage` in the addon.
-
-5. **DONE, as part of 1a. E3 — the score breakdown.** `LootScore.Add` took a
-   weight, so a total had no route back to the wins behind it. It takes the
-   roll state now and `LootScore.Breakdown` reads it back. *(Storing item level
-   on each record — the other half of E3 — is still open, and still the cheap
-   change that turns item-count fairness into gearing fairness.)*
-6. **DONE. E1 — the trade-window advisor.** `Core/TradeAdvisor.lua`,
-   `UI/TradeAdvisorPanel.lua`. On a win it names everybody who rolled Need or
-   offspec and lost, most owed first, with the clock. Feature-toggled, on by
-   default, `/syl trade` reopens it.
-
-   **It is the only thing here with no cold start**, and that is the whole
-   reason it went first — it works on install night with no history, where
-   every screen built the night before reads as empty.
-
-   **The trade half is NOT built.** Nothing watches `TRADE_SHOW`,
-   `TRADE_ACCEPT_UPDATE` or `UI_INFO_MESSAGE` for
-   `LE_GAME_ERR_TRADE_COMPLETE`, so the addon still does not know whether the
-   item was actually handed over. That is item 7, and RCLootCouncil's
-   `Modules/TradeUI.lua` is the reference for it — target from
-   `TradeFrameRecipientNameText:GetText()`.
-
-   **No whisper button, deliberately.** It could exist; it was left off
-   because "the addon does not talk unless asked" is a rule a popup offering
-   to talk for you erodes one button at a time. Reopen if wanted.
-7. **DONE. E2 — trade tracking.** `Core/TradeTracker.lua`. Watches your own
-   trades and credits an item you traded away to whoever received it, through
-   a single choke point both `DueList` and `LootScore` call. Feature-toggled
-   as **Follow traded loot**, on by default.
-
-   **It is a self-report and cannot be anything else** — only the winner's
-   client knows a trade happened. Two people running the addon do not see each
-   other's trades, and an untracked trade leaves the credit where it is, which
-   is what happened before this existed.
-
-   **Untested against a real trade.** The event order is the risky part:
-   slots are captured when both sides accept and committed on
-   `LE_GAME_ERR_TRADE_COMPLETE`. If that ordering is wrong in practice the
-   symptom is silence — nothing is recorded and nothing says why.
-8. **DONE. E8 — sync sends roll lists.** `Core/SyncRolls.lua`. A received drop
-   stops being `partial`, so Analytics counts it and the pass data is there for
-   drops the officer did not personally witness. `/syl sync backfill` asks the
-   raid for the lists already missing.
-
-   **What sync transmits is now wider**, and the argument for that being safe
-   is in the file header rather than assumed — same channel, same audience,
-   and only what the game already showed everybody in the raid.
-
-   **Untested between two clients**, like key requests.
 9. **E6 — reposition.** The unique asset is the pass data. Suggested line:
    *"Group Loot remembers who won. This remembers who passed."*
 10. **E7 — reconsider All Rights Reserved.** Tells an officer they are stranded
     if the author stops. Aimee's call, no code.
-
-### Tier 4 — started here and unfinished
-
 11. **F7 — roster as a link.** Both decisions made; `Core/DataExport.lua` still
     sends seasons only, so there is nothing on the server to point a link at,
     and the Discord claim step does not exist. Not urgent, her words.
 12. **F9 — Droptimizer.** Web-side only; the addon makes no HTTP requests.
-13. **Four files over the size limit** — `MainWindow` 517, `SlashCommands` 509,
-    `Utilities` 439, `RosterWindow` 422. **This is no longer blocking the tab
-    work**: `TabPanels.CreateAll` is the seam, and Raiders was added without
-    `MainWindow` growing by a line. `Utilities` still has the obvious seam —
-    the five item helpers are a module — but it is 12 call sites across 8 files
-    and the test suites load those modules individually, so it ripples further
-    than it looks. Never delete a comment to get under the limit.
-14. **DONE, and not with luacheck. `tools/syl_scope.py`.** A local used before
-    its declaration is caught now, and `syl_check` fails on it — so
-    `release.yml` blocks a release that contains one.
-
-    luacheck wants a Lua toolchain and a triage across a hundred files, and
-    there is no Lua on this machine. `luaparser` is a pip install, gives a real
-    AST rather than another regex, and answers the one question that had
-    actually cost time. It is a **dev dependency**, and if it is missing the
-    check says it skipped that section rather than failing.
-
-    **The first draft reported ten findings on a clean codebase** — parameters,
-    loop variables, `if` branches, field names and table keys were all being
-    read as variables. Every one was noise, and a checker that is usually wrong
-    is worse than none. `tools/test_scope.py` carries every one of those shapes
-    as a fixture alongside the two faults that really shipped.
 15. **The personal-loot asymmetry.** Dormant, not wrong — see §4.
-16. **NOTES Phases 2, 3, 5, 6.** Phase 6 is item 7.
+16. **NOTES Phases 2, 3, 5, 6.** Phase 6 is item 7, which is built.
+
+Item 13, the size limit, has its own section in §2 and is no longer blocking
+anything.
 
 ### Tier 5 — shipping
 
@@ -478,7 +364,7 @@ first `SendChatMessage` in the addon.
     Nothing shows the Keys tab's Lockouts grid, which is the most
     demonstrable thing added since.
 
-### Open decisions from tonight, both small
+### Two small decisions, still open since 2026-08-09
 
 - **Is the due window superseded?** The Raiders board answers the same question
   better, but `UI/DueWindow.lua` has a recency toggle the board does not. Making
@@ -519,39 +405,26 @@ screenshotted into a chat and has been reset.
 The alternative is an officer typing the schedule in. Recommendation: both —
 read the in-game calendar, allow a manual override.
 
-### Designed and agreed, not built
+### The four designed screens are all built
 
-The mockups are settled and signed off. Each of these is a real tab today that
-opens the window already answering it, and says so on the panel.
+Raiders, Nights, Bosses and Keys were mockups signed off on 2026-08-09 and are
+real tabs now. Two things from that design survive as constraints rather than
+as history:
 
-- ~~**Raiders**~~ — **BUILT**, `UI/RaidersPanel.lua` and `UI/RaidersDetail.lua`.
-  A board, one bar per raider, length = loot taken per night, line at the raid
-  average, detail pane on click. **Aimee rejected two table designs before
-  this; do not go back to a table.** The pane's "where the score came from" is
-  the screen somebody stands at when they disagree with their number, so it
-  shows the arithmetic and is asserted to sum to the bar beside it. Not yet
-  drawn by the real client.
-- **Nights** — a month calendar with a week toggle, past nights shaded with
-  their kill count, the next one accented. Clicking a day fills one dense stat
-  panel below. The table that used to sit under it was deleted: it repeated the
-  grid.
-- **Bosses** — two panes, a fixed boss rail and that boss's loot table with
-  drop counts, defaulting to items that have **not** dropped. Needs no new data
-  source; the Encounter Journal is already read by the `lootTables` feature.
-  Open question: the Journal lists what a boss can drop for *any* spec, so
-  "never dropped" includes items nobody in your raid can use.
-- **Keys** — a sortable list, plus requesting somebody's key. The request flow
-  is fully specified: a role picker on the ask; approve, tentative, deny,
-  whisper and dismiss for the holder; a "requests to you" list so a dismissed
-  popup is never a lost request; per account throughout, so two people asking
-  for the same key never learn about each other; online only; only Denied gets
-  an "Ask again" button. Requests clear at reset, in the sweep that already
-  drops stale keys.
+- **Aimee rejected two table designs for Raiders before accepting the board.
+  Do not go back to a table.** One bar per raider, length being loot taken per
+  night, with the raid average drawn across it. The detail pane is the screen
+  somebody stands at when they disagree with their number, so it shows the
+  arithmetic and is asserted to sum to the bar beside it.
+- **A grid is still right where the data is boolean.** The Keys tab's Lockouts
+  view is a table on purpose — saved or not saved, eight columns, a handful of
+  rows, nothing to rank. The Raiders lesson is about hiding a comparison, not
+  about tables being wrong.
 
-**Folding the six separate windows into the main window is the refactor behind
-all of this**, and it was deliberately kept out of the dashboard change: a
-broken dashboard and a broken roster at once, with no way to tell which broke
-first.
+**Folding the six separate windows into the main window** is the refactor
+behind all of it and is still only partly done: the players and roster windows
+remain reachable only via `/syl players` and `/syl roster`.
+
 
 ### F7 — sharing the roster as a link
 
@@ -585,14 +458,6 @@ have counted as a raid night. `Core/PersonalLoot.lua` classifies with
 `GetContentType` and accepts raid, dungeon and scenario alike. Nothing reads it
 for the drought any more, so this is dormant rather than wrong — but if
 personal loot is ever wired back into a number, that is where it will disagree.
-
-### Tooling
-
-**`luacheck` with a WoW globals definition** remains the open item. It parses
-rather than pattern-matching and catches the one class nothing here covers: a
-local used before its declaration. `HideTarget` was called twenty lines above
-the `local function` that defined it, was a nil global, and shipped. Note that
-`lupa` is installed now, so there is a Lua interpreter on this machine.
 
 ---
 
@@ -871,15 +736,11 @@ Each of these cost real time.
 `git log`. The messages explain the reasoning and what was rejected on the way,
 which is why `.pkgmeta` keeps them out of the user-facing changelog.
 
-The late 2026-08-09 session, after Aimee confirmed the dashboard drew: the
-audience scope wired into the three screens that never asked for it, then
-Raiders, Bosses and Nights turned from routing stubs into real screens — a
-board with a detail pane that shows the arithmetic behind a raider's number, a
-boss rail with the loot table that boss still owes you, and a month calendar
-keyed on the night a raid belongs to rather than the day its clock reached.
+**Do not summarise it here.** This section used to hold a paragraph per
+session, and every one of them went stale the moment the next session started.
+`git log --oneline v0.3.0..` reads better and cannot be wrong.
 
-The earlier 2026-08-09 session, in order: the audience scope and quiet-by-default chat,
-the record-id backfill, the Timewalking drought fix, recruits before they join,
-keystone tracking and guild sharing, MM-DD-YYYY dates, weighted loot value, the
-dashboard and six-tab navigation, and thirteen defects found by three review
-passes and fixed.
+Three tags so far: **v0.3.0** the first non-alpha, **v0.3.1** for patch 12.1.0,
+**v0.3.2** for lockouts, absences, archives and warbound. The commit messages
+carry the reasoning and what was rejected on the way, which is why `.pkgmeta`
+keeps them out of the user-facing changelog.
