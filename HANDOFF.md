@@ -292,14 +292,118 @@ list.
    fixing one.
 6. **The changelog filed warbound under Changed**, and by Aimee's reading it is
    a fix. Move it next release.
-7. Everything in Tiers 3–5 below still marked open: E6 repositioning, E7 the
-   licence, F7 the roster link, F9 Droptimizer, and the personal-loot
-   asymmetry in §4.
+7. **E6 repositioning is effectively done.** The store description was
+   rewritten for 0.3.2 and opens on the pass data, in a scene rather than a
+   slogan. The tagline itself is gone. See CURSEFORGE.md, which now holds
+   Aimee's live text rather than the draft.
+8. Still genuinely open from Tiers 3–5: **E7 the licence** and the
+   **personal-loot asymmetry** in §4. Both are decisions, not work.
 
 Shipped in v0.3.2, so do not read these as open: the Mythic 0 lockout grid,
 absences on the calendar with buttons and guild sharing, archive rename and
 merge, warbound exclusion, bonus-roll labelling, the Ignored filter, alt
 unmapping, and the season-id repair.
+
+---
+
+## 3b. The web app, parked 2026-08-16
+
+**Aimee: "put a hold on all webapp stuff for now."** F7 and F9 are not open, they
+are parked. What follows is what a session of research turned up, recorded so
+it is not paid for twice. **Everything about Raidbots below is a snapshot of
+2026-08-16 and should be re-checked before it is relied on.** The repo findings
+do not go stale.
+
+### One live bug, and it is in the repo rather than in a feature
+
+**`README-SYNC.md` produces a broken setup today.** There are two
+access-control designs installed at once: `schema.sql` defines `syl_members`,
+and `web/supabase/migrate-email-access.sql` replaces the read policies with
+`syl_allowed`. The page's own no-access error says "an officer adds it to
+**syl_allowed**", while the guide teaches `insert into syl_members` in four
+places and never mentions running the migration at all. Follow it verbatim on a
+fresh project and you get signed in with no data and no pointer to the file
+that fixes it.
+
+Three smaller things found beside it:
+
+- **Email magic link is still the default**, in the UI and in the guide, though
+  Discord is the path that works. `README-SYNC.md` contradicts itself: step 1
+  says skip Discord, step 6.2 says "they sign in with Discord once".
+- **No token refresh and no expiry check.** Only `access_token` is captured;
+  the page keeps saying "Signed in" after it dies and then 401s. Sign-out is
+  local only and never calls `/auth/v1/logout`.
+- **`syl_allowed.role` defaults to `'officer'`**, so every address added by
+  hand becomes an officer.
+
+The page has not been touched since 2026-08-05 and is not deployed anywhere.
+The documented way to run it is `python -m http.server 8000`.
+
+### F9, and why the obvious build is the wrong one
+
+Raidbots **does** document machine-readable report files, on a page current as
+of 2026-08-16: `https://www.raidbots.com/simbot/report/{id}/data.json`, with
+`data.json` and `input.txt` described as "Always available". Three findings
+change the design:
+
+- **The documented URL cannot be fetched from a browser.** It 302s to
+  `/reports/{id}/data.json` and the redirect carries no
+  `access-control-allow-origin`, so the CORS check kills it. The *undocumented*
+  alias is served off Google Cloud Storage with `ACAO: *` and works. Confirmed
+  independently twice. Building on it means depending on a bucket config
+  Raidbots never promised.
+- **Sims expire after 28 days**, and an expired report and a typo both return
+  the same 403, so a page cannot tell them apart. Parse once at import and
+  store the result; never re-fetch.
+- **The terms are in tension with their own developer docs.** The TOU dated
+  2023-10-26 prohibits using Raidbots content "as input into or for the
+  development or training of ... algorithms, software, or related
+  technologies", which on a plain reading covers this feature, while the
+  Developers page invites you to fetch and cache the files. Aimee's call, and
+  worth an email to support@raidbots.com before building on it.
+
+**All three problems disappear if the file is dragged onto the page** rather
+than fetched. `web/index.html` already has a drop zone that sniffs content. The
+parser is the actual work and the ingest mode is a garnish.
+
+The join key is the profileset name, `instanceId/encounterId/difficulty/itemId/
+ilvl/enchantId/slot///`, but **the leading field count has changed across
+expansions**, so it must be validated against a real report rather than
+hardcoded. Nobody could validate the field names, because every report findable
+in search was already past its 28 days. Getting one live report is the first
+step of any F9 work.
+
+Free static data at `https://www.raidbots.com/static/data/live/*.json` is
+CORS-open and needs no auth; `metadata.json` was fetched successfully and
+returned build 12.1.0.69299.
+
+### F7 has a cheaper shape nobody had considered
+
+The web version is real work: new tables, the first write path this schema has
+ever had, roster in the export, uploader changes, UI. Six to eight sessions,
+against something Aimee called "not urgent, just a bonus for guildies".
+
+**The addon already broadcasts to the whole guild and already knows guild
+rank.** `Core/AbsenceSync.lua` sends on the GUILD channel, shipped, and
+`guildRankIndex` is on every roll record in `Core/DataExport.lua`. A roster
+guildies can see could ride the channel that already works, in game, with no
+web app, no Discord login, no claim step and no hosting. **Decide web or
+in-game before writing either**, because they share almost no code.
+
+On the impersonation worry that shaped the earlier design: it was overstated.
+The link is unlisted, the data is loot history the whole raid already watched,
+and Aimee had already set the bar at "if you have a guild rank you can access
+the link". What survives is narrower. Any write must be scoped to the caller's
+own `auth.uid()`, and **the roster upload is the access list** — derive access
+from the newest upload and somebody who leaves the guild loses it on the next
+one, with no revocation flow to remember.
+
+### Addon-side, cheap, and not blocked by the hold
+
+**`tools/syl_upload.py` throws away `itemLevel`.** `Core/DataExport.lua:60`
+emits it and `syl_drops` has no column for it. Sims are per item level, so
+without it any future join can only match on item id. Worth fixing whenever the
+uploader is next touched.
 
 ---
 
