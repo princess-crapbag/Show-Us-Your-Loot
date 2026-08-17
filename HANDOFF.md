@@ -27,8 +27,11 @@ upgrade, who turned up, and what each boss has given.
 - **CurseForge:** project 1642383, live at **v0.3.2**, shipped 2026-08-15 as
   `12.1.0 release`. **Real people can download this now.** v0.3.0 was the first
   non-alpha; v0.3.1 was the 12.1.0 compatibility bump.
-- **`main` carries one commit past that tag** — the Absences split, which no
-  user can see. Check `git log v0.3.2..main` rather than trusting this line.
+- **`main` carries one *code* commit past that tag** — the Absences split, which
+  no user can see. Everything else since is documentation. Count code commits,
+  not commits: `git log --name-only v0.3.2..main`. This line first said "one
+  commit" and was wrong by the end of the same day, made stale by the next edit
+  to this file — so a plain count here is worth nothing.
 - 124 Lua files in the `.toc`, 30 test suites in `tools/`.
 
 **Aimee runs the addon from a symlink**, `Interface/AddOns/ShowUsYourLoot ->
@@ -232,9 +235,11 @@ first call. `TradeTracker` was the most recent.
 ### Ten files are over the size limit
 
 None is exempt and none should be without a real reason. Run `syl_check` for
-the current list rather than trusting this one — it has been stale twice. As of
-2026-08-15 the worst are `Core/SlashCommands.lua`, `UI/MainWindow.lua`,
-`Core/Utilities.lua` and `Core/Database.lua`, all past 470.
+the current list rather than trusting this one — it has been stale three times.
+As of 2026-08-16 the worst are `Core/SlashCommands.lua`, `UI/MainWindow.lua`,
+`Core/Utilities.lua`, `UI/KeysPanel.lua` and `Core/Database.lua`, all past 470.
+`KeysPanel` is the one this list kept missing: it sits above `Database` and was
+named nowhere.
 
 `Utilities` has the obvious seam: the item helpers (`GetItemLevel`,
 `GetItemIDFromLink`, `NormalizeItemLink`, `GetItemNameFromLink`,
