@@ -215,10 +215,28 @@ check("WITH SHARING OFF, ANNOUNCE SENDS NOTHING",
 
 SYL.Features.SetEnabled("rosterSharing", True)
 G.ClearSent()
+SYL.SendQueue.Reset()
 
-check("with it on, one message per raider goes out",
-      SYL.RosterSync.Announce() is True and G.SentCount() == 2,
+announced = SYL.RosterSync.Announce()
+
+# Nothing leaves in the frame that asked for it. Thirteen raiders queued and
+# sent at once is what tripped the client's rate limit and silently lost a
+# message, which leaves the receiving set half-assembled forever —
+# tools/test_sendqueue.py is where that is argued and guarded.
+check("ANNOUNCING QUEUES RATHER THAN SENDING", G.SentCount() == 0,
       G.SentCount())
+
+
+def flush():
+    """Pump the send queue dry. C_Timer is a no-op under the stub."""
+    while SYL.SendQueue.Drain():
+        pass
+
+
+flush()
+
+check("and one message per raider goes out once it drains",
+      announced is True and G.SentCount() == 2, G.SentCount())
 check("on the guild channel", G.SentChannel(1) == "GUILD", G.SentChannel(1))
 check("under its own prefix", G.SentPrefix(1) == "SYLROST", G.SentPrefix(1))
 

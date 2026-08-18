@@ -66,14 +66,16 @@ local function CanSend()
         or false
 end
 
+-- Queued, not sent, for the same reason as the roster: one message per absence
+-- and a set that only commits whole. Eight absences and thirteen raiders left
+-- the same login inside one frame and the client discarded the overflow. See
+-- Core/SendQueue.lua.
 local function Send(payload)
     if not CanSend() then
         return false
     end
 
-    pcall(C_ChatInfo.SendAddonMessage, PREFIX, payload, "GUILD")
-
-    return true
+    return SYL.SendQueue.Queue(PREFIX, payload, "GUILD", nil, CanSend)
 end
 
 --------------------------------------------------------------------------

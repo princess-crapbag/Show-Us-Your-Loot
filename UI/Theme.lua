@@ -64,6 +64,28 @@ local painted = {
     windows = {},
 }
 
+-- Which window is currently the front one. Every palette gives `window` an
+-- alpha just under 1 — 0.97 on the dark schemes — which reads as depth on a
+-- single window and as a mess on two: overlap them and the back one's text
+-- shows through the front one's body. So the window on top is painted solid
+-- and the rest keep the palette's alpha.
+--
+-- Kept here rather than on the frame because Apply repaints every tracked
+-- window on a palette change, and a focus written onto the frame would be
+-- silently flattened by that loop — which is how the class colors were lost
+-- once already, a few lines below.
+local focusedWindow = nil
+
+local function WindowAlpha(frame)
+    local alpha = Theme.colors.window[4] or 1
+
+    if frame == focusedWindow then
+        return 1
+    end
+
+    return alpha
+end
+
 Theme.sizes = {
     title = 15,
     subtitle = 11,
@@ -94,11 +116,42 @@ function Theme.GetFontPath()
 end
 
 function Theme.StyleWindow(frame)
+    local color = Theme.colors.window
+
     frame:SetBackdrop(WINDOW_BACKDROP)
-    frame:SetBackdropColor(unpack(Theme.colors.window))
+    frame:SetBackdropColor(color[1], color[2], color[3], WindowAlpha(frame))
     frame:SetBackdropBorderColor(unpack(Theme.colors.border))
 
     painted.windows[frame] = true
+end
+
+-- The front window, painted solid; everything else back to the palette's
+-- alpha. Passing nil means nothing is in front, which is the right answer once
+-- the last window closes.
+--
+-- WindowStack decides who this is, from the frame levels it has already
+-- raised — so there is no second idea of "selected" here that could disagree
+-- with what is actually drawn on top.
+function Theme.SetFocusedWindow(frame)
+    if focusedWindow == frame then
+        return false
+    end
+
+    focusedWindow = frame
+
+    local color = Theme.colors.window
+
+    for window in pairs(painted.windows) do
+        window:SetBackdropColor(
+            color[1], color[2], color[3], WindowAlpha(window)
+        )
+    end
+
+    return true
+end
+
+function Theme.FocusedWindow()
+    return focusedWindow
 end
 
 function Theme.SetTextColor(fontString, colorKey)
@@ -210,8 +263,14 @@ function Theme.Apply(key, skipRefresh)
         fontString:SetTextColor(color[1], color[2], color[3], color[4] or 1)
     end
 
+    -- Through WindowAlpha, or changing palette would flatten the front window
+    -- back to translucent and quietly undo the whole point of focusing it.
     for frame in pairs(painted.windows) do
-        frame:SetBackdropColor(unpack(Theme.colors.window))
+        local window = Theme.colors.window
+
+        frame:SetBackdropColor(
+            window[1], window[2], window[3], WindowAlpha(frame)
+        )
         frame:SetBackdropBorderColor(unpack(Theme.colors.border))
     end
 

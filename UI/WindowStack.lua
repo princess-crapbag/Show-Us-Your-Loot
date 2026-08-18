@@ -46,6 +46,11 @@ function WindowStack.TrackWindow(frame)
     windows[frame] = true
 
     table.insert(order, frame)
+
+    -- Every window this file knows about gets click-to-raise, here rather than
+    -- in whatever created it. Tracking runs once per frame, and a window that
+    -- is not tracked is one this file has no opinion about anyway.
+    WindowStack.RaiseOnClick(frame)
 end
 
 -- Once a window has been dragged, its position is the user's answer and the
@@ -96,6 +101,67 @@ local function IsTopmost(frame)
             return false
         end
     end
+
+    return true
+end
+
+-- Whichever open window sits highest, or nil when none is open.
+--
+-- Read from the frame levels rather than remembered. A window can be raised by
+-- a footer button, by a row opening a detail pane, or by being clicked, and a
+-- separate note of "the selected one" would be another thing to keep in step
+-- with what is actually drawn on top. This cannot disagree with the screen.
+local function Frontmost()
+    local best, bestLevel = nil, nil
+
+    for _, frame in ipairs(order) do
+        if windows[frame] and frame:IsShown() then
+            local level = frame:GetFrameLevel()
+
+            if not bestLevel or level > bestLevel then
+                best, bestLevel = frame, level
+            end
+        end
+    end
+
+    return best
+end
+
+-- Called after anything that changes which window is on top: a raise, a show,
+-- a hide. The front one is painted solid and the rest keep the palette's
+-- alpha, because at 0.97 two overlapping windows show each other's text
+-- through the body and neither is readable.
+function WindowStack.RefreshFocus()
+    if not SYL.Theme or not SYL.Theme.SetFocusedWindow then
+        return false
+    end
+
+    return SYL.Theme.SetFocusedWindow(Frontmost())
+end
+
+-- CLICKING A WINDOW BRINGS IT TO THE FRONT, which is what makes "the selected
+-- window" mean anything at all. Until now a window only ever rose when
+-- something opened it, so two overlapping windows could not be swapped by
+-- hand: the one underneath stayed underneath until you closed the other.
+--
+-- Alongside OnDragStart rather than instead of it. This fires on the press;
+-- the drag script fires only once the cursor passes the threshold, so a window
+-- can still be moved and now also rises when you take hold of it.
+function WindowStack.RaiseOnClick(frame)
+    frame:SetScript("OnMouseDown", function(self)
+        WindowStack.Raise(self)
+    end)
+end
+
+-- Raise and refocus in one step, so no caller can do one without the other.
+function WindowStack.Raise(frame)
+    if not frame or not frame:IsShown() then
+        return false
+    end
+
+    frame:Raise()
+
+    WindowStack.RefreshFocus()
 
     return true
 end
@@ -156,19 +222,24 @@ function WindowStack.ToggleWindow(frame)
 
         PlaceOnce(frame)
 
-        frame:Raise()
+        WindowStack.Raise(frame)
 
         return true
     end
 
     -- Open, but underneath something. The click meant "show me this".
     if not IsTopmost(frame) then
-        frame:Raise()
+        WindowStack.Raise(frame)
 
         return true
     end
 
     frame:Hide()
+
+    -- Whatever was underneath is the front one now, and has to stop being
+    -- translucent. Closing the top window and leaving the next one see-through
+    -- would look exactly like the bug this fixes.
+    WindowStack.RefreshFocus()
 
     return false
 end
@@ -182,5 +253,5 @@ function WindowStack.ShowWindow(frame)
 
     PlaceOnce(frame)
 
-    frame:Raise()
+    WindowStack.Raise(frame)
 end

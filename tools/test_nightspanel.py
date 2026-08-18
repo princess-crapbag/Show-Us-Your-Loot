@@ -323,6 +323,33 @@ check("and the list is capped",
       len(SYL.AbsenceControls.Match("", 1)) == 0
       and len(SYL.AbsenceControls.Match("s", 1)) == 1)
 
+# --- who is out has somewhere to be written --------------------------------
+#
+# The names were assembled correctly and then appended to the subheading, which
+# has word wrap off. A FontString that draws one line was handed several and
+# drew the first, so a day with somebody marked out read "1 person out" and the
+# names it had just built went nowhere. Nothing errored and nothing looked
+# broken — the render test above passed straight through it, because throwing
+# is the only thing it can see.
+#
+# Checked in the source for that reason: the stub cannot report what a
+# FontString was told to display, and comparing values would have passed then
+# too.
+stats = (Path(__file__).resolve().parent.parent
+         / "UI" / "NightStats.lua").read_text(encoding="utf-8")
+
+render = stats.split("function NightStats.Render")[1]
+
+check("WHO IS OUT IS WRITTEN TO ITS OWN REGION",
+      "panel.absences:SetText" in render,
+      "the names have nowhere to go but the subheading again")
+check("and that region wraps, so more than one name shows",
+      "panel.absences:SetWordWrap(true)" in stats,
+      "the names region cannot draw a second line")
+check("AND THE NAMES ARE NOT CONCATENATED INTO THE SUBHEADING",
+      '.. "\\nOut: "' not in render and '.. "\\n" .. absences' not in render,
+      "names are being appended to a FontString that will not show them")
+
 print()
 print("FAILURES:", failures or "none")
 sys.exit(1 if failures else 0)

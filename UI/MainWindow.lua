@@ -121,8 +121,10 @@ local function UpdateTabs()
     -- it is actually about.
     if view.mode == "archives" then
         buttons.archiveSeason:Show()
+        buttons.renameSeason:Show()
     else
         buttons.archiveSeason:Hide()
+        buttons.renameSeason:Hide()
     end
 end
 
@@ -314,6 +316,15 @@ local function CreateNavigationBar(parent)
         onArchive = function()
             SYL.ArchivePopup.Show(function()
                 SetMode("feed", nil)
+            end)
+        end,
+
+        -- Stays on the Archives tab afterwards. Renaming is a correction, and
+        -- being thrown to another screen for making one reads as something
+        -- larger having happened.
+        onRenameSeason = function()
+            SYL.SeasonRenameDialog.Show(function()
+                SetMode("archives", nil)
             end)
         end,
 

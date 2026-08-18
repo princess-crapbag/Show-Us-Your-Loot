@@ -60,16 +60,20 @@ local function CanSend()
         or false
 end
 
+-- Queued rather than sent directly. One keystone is a single message and was
+-- never the problem on its own, but it leaves at login alongside the absences
+-- and the roster, and the client's limit counts all of them together. See
+-- Core/SendQueue.lua, which also keeps the pcall: a throttled or malformed
+-- send raises rather than returning, and a keystone is never worth taking the
+-- addon down for.
 local function Send(payload)
     if not enabled or not CanSend() then
         return false
     end
 
-    -- pcall because a throttled or malformed send raises rather than
-    -- returning, and a keystone is never worth taking the addon down for.
-    pcall(C_ChatInfo.SendAddonMessage, PREFIX, payload, "GUILD")
-
-    return true
+    return SYL.SendQueue.Queue(PREFIX, payload, "GUILD", nil, function()
+        return enabled and CanSend()
+    end)
 end
 
 --------------------------------------------------------------------------

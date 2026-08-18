@@ -2,7 +2,7 @@
 ## Title: Show Us Your Loot
 ## Notes: Loot history, attendance and fairness analytics for group loot.
 ## Author: Aimee
-## Version: 0.3.3
+## Version: 0.3.4
 ## SavedVariables: ShowUsYourLootDB
 ## OptionalDeps: RaiderIO
 ## X-Website: https://github.com/princess-crapbag/Show-Us-Your-Loot
@@ -31,6 +31,7 @@ Core\LootHistoryAPI.lua
 Core\LootHistorySnapshot.lua
 Core\LootHistoryStore.lua
 Core\LootHistory.lua
+Core\SendQueue.lua
 Core\SyncTransport.lua
 Core\Sync.lua
 Core\SyncRolls.lua
@@ -91,6 +92,7 @@ UI\ListSources.lua
 UI\Selection.lua
 UI\ScrollArea.lua
 UI\ArchivePopup.lua
+UI\SeasonRenameDialog.lua
 UI\FilterDropdown.lua
 UI\FilterBar.lua
 UI\SelectionBar.lua

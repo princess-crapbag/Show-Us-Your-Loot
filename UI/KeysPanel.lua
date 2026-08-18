@@ -31,11 +31,20 @@ local HEADER_TOP = 34
 local LIST_TOP = 58
 local VISIBLE_ROWS = 15
 
+-- THE ANSWER IS A COLUMN, NOT A SUFFIX. A reply used to be appended to the
+-- level cell — "? Maybe" inside forty pixels — so every answer but "No" was
+-- drawn cut off as "Ma...". It is its own column now, and the Ask button sits
+-- in the same one: a row either offers to ask or reports what came back, never
+-- both, so they share the space rather than each reserving some.
+--
+-- Narrower overall than the version that truncated, because the fix is space
+-- where the text is rather than more of it everywhere.
 local COLUMNS = {
     { key = "name", label = "PLAYER", x = 4, width = 150 },
-    { key = "dungeon", label = "DUNGEON", x = 158, width = 210 },
-    { key = "level", label = "LVL", x = 372, width = 40 },
-    { key = "ask", label = "", x = 420, width = 120, sortable = false },
+    { key = "dungeon", label = "DUNGEON", x = 158, width = 200 },
+    { key = "level", label = "LVL", x = 362, width = 40 },
+    { key = "response", label = "RESPONSE", x = 410, width = 110,
+      sortable = false },
 }
 
 local frame
@@ -128,17 +137,19 @@ local function CreateRow(index)
 
     row.cells = {}
 
+    -- Every column gets a cell now, response included. It used to skip the
+    -- fourth because that one held only the Ask button and had no text of its
+    -- own — which is exactly why the answer had nowhere to go and ended up
+    -- squeezed into the level.
     for _, column in ipairs(COLUMNS) do
-        if column.key ~= "ask" then
-            local text = Theme.CreateText(row, Theme.sizes.rowSmall, "textPrimary")
+        local text = Theme.CreateText(row, Theme.sizes.rowSmall, "textPrimary")
 
-            text:SetPoint("LEFT", column.x, 0)
-            text:SetWidth(column.width)
-            text:SetJustifyH(column.key == "level" and "RIGHT" or "LEFT")
-            text:SetWordWrap(false)
+        text:SetPoint("LEFT", column.x, 0)
+        text:SetWidth(column.width)
+        text:SetJustifyH(column.key == "level" and "RIGHT" or "LEFT")
+        text:SetWordWrap(false)
 
-            row.cells[column.key] = text
-        end
+        row.cells[column.key] = text
     end
 
     row.ask = Theme.CreateButton(row, 110, 17, "Ask", function()
@@ -167,6 +178,11 @@ end
 -- no explanation is the thing this is avoiding: "offline" and "you already
 -- asked" are different problems and only one of them is worth waiting on.
 local function DrawAsk(row, entry)
+    -- Cleared on every draw before anything decides to fill it. Rows are
+    -- pooled, so a reply left behind would be read as this player's answer —
+    -- the same trap the dashboard tiles have.
+    row.cells.response:SetText("")
+
     if entry.isOwn then
         row.ask:Hide()
 
@@ -178,9 +194,17 @@ local function DrawAsk(row, entry)
     if existing and existing.status ~= SYL.KeystoneRequests.STATUS.DENIED then
         row.ask:Hide()
 
-        row.cells.level:SetText(
-            (entry.level or "?") .. "  "
-            .. (SYL.KeystoneRequests.STATUS_LABELS[existing.status] or "")
+        -- In the response column at full width, not appended to the level.
+        row.cells.response:SetText(
+            SYL.KeystoneRequests.STATUS_LABELS[existing.status] or ""
+        )
+
+        -- Waiting is a state, not an answer, so it reads quieter than one.
+        Theme.SetTextColor(
+            row.cells.response,
+            existing.status == SYL.KeystoneRequests.STATUS.PENDING
+                and "textMuted"
+                or "textPrimary"
         )
 
         return
@@ -430,9 +454,26 @@ function KeysPanel.Create(parent)
     -- would put a nil in the table and hide nothing.
     frame.keysWidgets = { frame.roleButton, frame.badge }
 
-    -- Column headers, clickable to sort.
+    -- Column headers. Sortable ones are buttons; the rest are plain labels.
+    --
+    -- They used to be drawn only when sortable, so a column nobody can sort by
+    -- had no heading at all — which would have left the new RESPONSE column as
+    -- an unexplained strip of words beside the key level.
     for _, column in ipairs(COLUMNS) do
-        if column.sortable ~= false then
+        if column.sortable == false then
+            if column.label ~= "" then
+                local label = Theme.CreateText(
+                    frame, Theme.sizes.columnHeader, "textMuted"
+                )
+
+                table.insert(frame.keysWidgets, label)
+
+                label:SetPoint("TOPLEFT", column.x, -HEADER_TOP)
+                label:SetWidth(column.width)
+                label:SetJustifyH("LEFT")
+                label:SetText(column.label)
+            end
+        else
             local button = CreateFrame("Button", nil, frame)
 
             table.insert(frame.keysWidgets, button)

@@ -87,6 +87,12 @@ lua.execute(
         SENT, PREFIXES = {}, {}
         ONLINE = { ['Dravok'] = true, ['Selunne'] = true }
 
+        -- The queue too, not just what it has already sent. Requests are
+        -- paced now, so anything a previous block queued and did not drain is
+        -- still waiting and would arrive in the middle of the next one — which
+        -- is how three whispers to Dravok turned up in the answering test.
+        ShowUsYourLoot.SendQueue.Reset()
+
         ShowUsYourLootDB.keyRequests = nil
         ShowUsYourLoot.KeystoneRequests.Store()
     end
@@ -155,6 +161,15 @@ check(
 g.Reset()
 
 check("asking an online guildie works", R.Ask("Dravok", "TANK") is True)
+
+# Queued rather than sent, like everything else that talks. A whisper shares
+# the client's rate limit with the guild broadcasts, and a request thrown away
+# is a guildie who never answers. See Core/SendQueue.lua.
+check("asking queues rather than sending", len(list(g.SENT.values())) == 0)
+
+while SYL.SendQueue.Drain():
+    pass
+
 check("one message went out", len(list(g.SENT.values())) == 1)
 
 # The assertion that protects the whole privacy model.
@@ -227,6 +242,10 @@ g.Reset()
 g.Deliver("R", "DPS", "Selunne")
 
 check("answering works", R.Answer("Selunne", "approved") is True)
+
+while SYL.SendQueue.Drain():
+    pass
+
 check(
     "and the answer is whispered back to them alone",
     g.Channels() == "WHISPER->Selunne",
@@ -279,6 +298,39 @@ try:
     check("the role picker cycles", True)
 except Exception as err:  # noqa: BLE001
     check("the role picker cycles", False, err)
+
+# --- the answer has somewhere to go ---------------------------------------
+#
+# The first working two-client test produced a reply that arrived correctly and
+# was drawn as "? Ma..." — the status had been appended to the level cell,
+# which is forty pixels wide. Everything about the request was right and the
+# only broken part was where the answer was put.
+#
+# Checked in the source because the Keys panel has no render harness: the
+# failure was a layout decision, not a value, and comparing values would have
+# passed then too.
+panel = (Path(__file__).resolve().parent.parent
+         / "UI" / "KeysPanel.lua").read_text(encoding="utf-8")
+
+check("THE REPLY HAS ITS OWN COLUMN",
+      'key = "response"' in panel,
+      "UI/KeysPanel.lua has no response column for a reply to land in")
+check("and the column is labelled",
+      'label = "RESPONSE"' in panel, "the response column has no heading")
+# Scoped to the function that draws the reply. Searching the whole file for
+# "cells.level:SetText" finds the legitimate one further down that writes the
+# level and nothing else — so a check reading the last match passed with the
+# fault planted, which is what planting it was for.
+draw_ask = panel.split("local function DrawAsk")[1].split("\nlocal function ")[0]
+
+check("THE REPLY IS NOT WRITTEN INTO THE LEVEL CELL",
+      "cells.level" not in draw_ask and "cells.response:SetText" in draw_ask,
+      "a status is being put in the level cell again, where it truncates")
+
+# Pooled rows: a reply left behind reads as the next player's answer.
+check("and it is cleared before each row is drawn",
+      'row.cells.response:SetText("")' in panel,
+      "a stale reply would carry into the next player's row")
 
 print()
 print("FAILURES:", failures or "none")

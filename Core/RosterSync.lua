@@ -81,14 +81,16 @@ local function CanSend()
         or false
 end
 
+-- Queued, not sent. A roster is one message per raider and the set commits
+-- only when every piece has arrived, so a single message thrown away by the
+-- client's rate limit leaves it half-assembled forever — and looks exactly
+-- like nobody having shared one. Core/SendQueue.lua has the whole argument.
 local function Send(payload)
     if not CanSend() then
         return false
     end
 
-    pcall(C_ChatInfo.SendAddonMessage, PREFIX, payload, "GUILD")
-
-    return true
+    return SYL.SendQueue.Queue(PREFIX, payload, "GUILD", nil, CanSend)
 end
 
 --------------------------------------------------------------------------

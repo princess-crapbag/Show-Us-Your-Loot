@@ -55,6 +55,27 @@ function MainNav.Create(parent, config)
     buttons.archiveSeason:SetPoint("TOPRIGHT", -16, -66)
     Theme.SetTextColor(buttons.archiveSeason.label, "textMuted")
 
+    -- Beside it, and shown on the same tab, because the two are one subject:
+    -- that button ends a season and this one fixes what it was called. The
+    -- name is typed once, into the archive dialog, at the moment a tier ends —
+    -- getting it wrong there is ordinary, and until now the only way back was
+    -- /syl rename, which is a command nobody has been told about.
+    buttons.renameSeason =
+        Theme.CreateButton(parent, 120, 24, "Rename Season", function()
+            config.onRenameSeason()
+        end)
+
+    buttons.renameSeason:SetPoint("RIGHT", buttons.archiveSeason, "LEFT", -6, 0)
+    Theme.SetTextColor(buttons.renameSeason.label, "textMuted")
+
+    SYL.Tooltips.Attach(
+        buttons.renameSeason,
+        "Rename this season",
+        "Changes what the season running now is called. Nothing recorded in "
+        .. "it changes. An archived season is renamed from the list below "
+        .. "instead: tick it, type a name, press Rename."
+    )
+
     -- Shares its anchor with Archive Season. The two are never shown at the
     -- same time, since one belongs to the active season and the other to an
     -- archived one.

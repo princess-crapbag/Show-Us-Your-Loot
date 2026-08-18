@@ -59,8 +59,13 @@ UIParent = {{
 -- Created at dead center, because that is what every window in this addon
 -- does in its constructor. Modelling it matters: the failure being guarded
 -- against is placement quietly doing nothing and leaving the frame here.
-function MakeFrame(width, height)
-    local f = {{ w = width, h = height, shown = false, level = 1 }}
+ALL_FRAMES = {{}}
+
+function MakeFrame(width, height, tag)
+    local f = {{ w = width, h = height, shown = false, level = 1,
+                tag = tag }}
+
+    table.insert(ALL_FRAMES, f)
 
     f.left = ({SCREEN_W} - width) / 2
     f.bottom = ({SCREEN_H} - height) / 2
@@ -72,9 +77,36 @@ function MakeFrame(width, height)
     function f:IsShown() return self.shown end
     function f:Show() self.shown = true end
     function f:Hide() self.shown = false end
-    function f:Raise() self.level = self.level + 1 end
+    -- Raise puts a frame above every other one, which is what the real
+    -- API does. Incrementing its own level instead left two windows tied
+    -- after both had been raised, and 'the front one' then came down to
+    -- whichever the loop happened to reach first.
+    function f:Raise()
+        local top = 0
+
+        for _, other in ipairs(ALL_FRAMES) do
+            if other.level > top then top = other.level end
+        end
+
+        self.level = top + 1
+    end
     function f:GetFrameLevel() return self.level end
     function f:ClearAllPoints() end
+
+    -- Scripts are kept rather than swallowed, so a click can actually be
+    -- delivered below. Click-to-raise is only reachable through the handler
+    -- WindowStack attaches, and a stub that discarded it would leave the whole
+    -- behaviour untestable while looking fine.
+    function f:SetScript(event, handler)
+        self.scripts = self.scripts or {{}}
+        self.scripts[event] = handler
+    end
+
+    function f:Click()
+        if self.scripts and self.scripts.OnMouseDown then
+            self.scripts.OnMouseDown(self)
+        end
+    end
 
     function f:SetPoint(point, a, b, c, d)
         if point == 'TOPLEFT' then
@@ -89,6 +121,23 @@ function MakeFrame(width, height)
 
     return f
 end
+""")
+
+# A Theme that records who was told to be the front window rather than
+# painting one. What is being asserted here is which frame WindowStack picks;
+# that the pick is drawn as full alpha is Theme's own business.
+lua.execute("""
+FOCUSED = 'unset'
+
+ShowUsYourLoot.Theme = {
+    -- Recorded by tag rather than by frame: a Lua table does not keep its
+    -- identity across the Python boundary, so comparing the frames
+    -- themselves would fail on two windows that are genuinely different.
+    SetFocusedWindow = function(frame)
+        FOCUSED = frame and frame.tag or nil
+        return true
+    end,
+}
 """)
 
 for name in ("WindowLayout.lua", "WindowStack.lua"):
@@ -212,6 +261,61 @@ stack.ToggleWindow(main)
 
 check("reopening a window leaves it where it was", box(main) == placed,
       f"{placed} -> {box(main)}")
+
+# --- which window is the front one ----------------------------------------
+#
+# Every palette paints a window at 0.97 alpha, which reads as depth on one
+# window and as a mess on two: overlap them and the back one's text shows
+# through the front one's body. The front window is drawn solid instead, and
+# the question this layer answers is *which* one that is.
+#
+# Derived from frame levels rather than remembered, so it cannot disagree with
+# what is actually drawn on top — which is the failure a separate "selected"
+# note would eventually produce.
+stack = fresh_stack()
+G = lua.globals()
+
+main = MakeFrame(MAIN_W, MAIN_H, "main")
+settings = MakeFrame(SETTINGS_W, SETTINGS_H, "settings")
+
+stack.ToggleWindow(main)
+
+check("the only open window is the front one", G.FOCUSED == "main", G.FOCUSED)
+
+stack.ToggleWindow(settings)
+
+check("OPENING A SECOND WINDOW MOVES THE FRONT TO IT",
+      G.FOCUSED == "settings", G.FOCUSED)
+
+# --- clicking a buried window brings it forward ---------------------------
+#
+# The behaviour that makes "selected" mean anything. Before this, a window only
+# rose when something opened it, so the one underneath stayed underneath until
+# you closed the other.
+main.Click(main)
+
+check("CLICKING A BURIED WINDOW RAISES IT", main.level > settings.level,
+      (main.level, settings.level))
+check("and it becomes the front one", G.FOCUSED == "main", G.FOCUSED)
+
+settings.Click(settings)
+
+check("and clicking back swaps them again", G.FOCUSED == "settings",
+      G.FOCUSED)
+
+# --- closing hands the front to whatever is underneath --------------------
+#
+# Closing the top window and leaving the next one translucent would look
+# exactly like the bug this fixes.
+stack.ToggleWindow(settings)
+
+check("CLOSING THE FRONT WINDOW PROMOTES THE ONE BELOW",
+      G.FOCUSED == "main", G.FOCUSED)
+
+stack.ToggleWindow(main)
+
+check("and closing the last one leaves nothing in front",
+      G.FOCUSED is None, G.FOCUSED)
 
 print()
 print("FAILURES:", failures or "none")

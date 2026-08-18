@@ -3,6 +3,45 @@
 What changed, for the person installing it. The commit history explains why;
 this says what you will notice.
 
+## 0.3.4 — 2026-08-17
+
+### Fixed
+
+- **The Archive Season button did nothing.** The dialog opened, took a name,
+  and ended nothing — on every client, which made it impossible to close a
+  season from the interface at the one moment a tier ends. The dialog is
+  rebuilt and works. It now also names the season being closed and says, in
+  those words, that the box is naming the **new** one — which is the thing
+  `/syl archive` has always got backwards.
+- **Sharing sent too many messages at once and the client threw some away.**
+  Logging in fired more than twenty addon messages in a single frame — your
+  absences, your roster, your keystone — and the game rate-limits them, prints
+  "The number of messages that can be sent is limited", and discards the rest.
+  A shared roster arrives as one message per raider and only appears once all
+  of them land, so a single dropped message meant it never appeared at all and
+  nothing said why. Everything is now sent at a steady pace instead.
+- **Who is out was invisible on the calendar.** A day with somebody marked out
+  said "1 person out" and stopped. The names, reasons and who set each one were
+  being worked out correctly and written somewhere that could only draw one
+  line. Click a day and they are listed underneath.
+- **A reply to a key request was cut off**, drawn as "? Ma…" because the answer
+  was being squeezed into the key level column. Replies have their own column
+  now: **player, dungeon, key level, response**.
+- **The front window is no longer see-through.** Windows are drawn slightly
+  transparent, which reads as depth on one window and as a mess on two — the
+  back one's text showing through the front one's body. Whichever window is on
+  top is now solid.
+- **Clicking a window brings it to the front.** Windows only ever rose when
+  something opened them, so two overlapping windows could not be swapped by
+  hand at all: the one underneath stayed underneath until you closed the other.
+
+### Added
+
+- **Rename Season**, beside Archive Season on the Archives tab. The name of the
+  season running now could only be changed with a command; an archived one has
+  been renameable since 0.3.2. The name is typed once, in a hurry, at the
+  moment a tier ends — getting it wrong is ordinary and there is a way back now.
+
 ## 0.3.3 — 2026-08-17
 
 ### Added

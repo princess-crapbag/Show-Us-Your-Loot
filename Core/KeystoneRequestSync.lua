@@ -66,19 +66,21 @@ local function Send(target, payload)
         return false
     end
 
-    if not C_ChatInfo or not C_ChatInfo.SendAddonMessage then
-        return false
-    end
-
+    -- The C_ChatInfo capability check that used to sit here is gone: the queue
+    -- makes it, at send time, which is the only moment it means anything.
     if type(target) ~= "string" or target == "" then
         return false
     end
 
-    local ok = pcall(
-        C_ChatInfo.SendAddonMessage, PREFIX, payload, "WHISPER", target
+    -- Queued like the guild senders. This one whispers a named person rather
+    -- than a channel, but it shares the client's limit with everything else
+    -- and a request that is silently discarded is a guildie who never answers.
+    return SYL.SendQueue.Queue(
+        PREFIX, payload, "WHISPER", target,
+        function()
+            return SYL.KeystoneRequests.IsEnabled()
+        end
     )
-
-    return ok and true or false
 end
 
 KeystoneRequestSync.Send = Send

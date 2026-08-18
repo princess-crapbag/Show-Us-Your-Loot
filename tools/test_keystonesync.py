@@ -57,6 +57,14 @@ lua.execute(
     """
 )
 
+# KeystoneSync queues rather than sending directly now, because a keystone
+# leaves at login alongside the absences and the roster and the client counts
+# all of them against one limit. Loaded for real rather than stubbed, so this
+# suite exercises the pacing instead of pretending it is not there.
+lua.execute("ShowUsYourLoot.DebugPrint = function() end")
+lua.execute("C_Timer = { After = function() end }")
+lua.execute((CORE / "SendQueue.lua").read_text(encoding="utf-8"))
+
 lua.execute((CORE / "KeystoneSync.lua").read_text(encoding="utf-8"))
 
 sync = lua.globals().ShowUsYourLoot.KeystoneSync
@@ -116,6 +124,21 @@ check("nothing is sent while the feature is off", len(sent()) == 0)
 check("the addon message prefix is not even registered", len(registered()) == 0)
 
 sync.Enable()
+
+# Nothing leaves in the frame that asked for it. A keystone is one message and
+# was never the burst on its own, but it goes out at login beside the absences
+# and the roster and the client counts them all against one limit — so it is
+# paced with everything else. See Core/SendQueue.lua.
+check("enabling queues rather than sending", len(sent()) == 0)
+
+
+def flush():
+    """Pump the send queue dry. C_Timer is a no-op under the stub."""
+    while lua.globals().ShowUsYourLoot.SendQueue.Drain():
+        pass
+
+
+flush()
 
 check("turning it on announces and asks, and nothing more", len(sent()) == 2)
 check(
