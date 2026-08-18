@@ -103,6 +103,16 @@ Features.LIST = {
             .. "unless you turn it on.",
     },
     {
+        key = "rosterSharing",
+        short = "Share roster",
+        label = "Share your raid team with the guild",
+        cost = "Sends who you have marked onto the raid team, and the roles "
+            .. "you gave them, to your whole guild. Off unless you turn it "
+            .. "on. A roster somebody else shares arrives whether this is on "
+            .. "or off — the switch is about sending — and anything you "
+            .. "receive can be cleared from the roster screen.",
+    },
+    {
         key = "lockouts",
         short = "Dungeon lockouts",
         label = "Mythic 0 dungeon lockouts",
@@ -152,6 +162,13 @@ local DEFAULTS = {
     -- rather than about you, which is why it is its own switch rather than
     -- part of keystone sharing.
     absenceSharing = false,
+
+    -- Off, like everything that talks. Unlike every other switch here it
+    -- governs sending only — a roster somebody else shares is received either
+    -- way — because the guildies this exists for are precisely the people who
+    -- will never open this panel to find it. Core/RosterSync.lua argues it at
+    -- length.
+    rosterSharing = false,
 
     -- On. It reads one server response at login and sends nothing, and the
     -- grid is empty until a character has actually been played — so off would

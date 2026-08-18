@@ -158,6 +158,11 @@ local function CreateActions(frame, handlers)
     local function Finish(message)
         SYL:Print(message)
 
+        -- Once per press rather than once per raider. Both buttons above walk
+        -- a selection, and announcing inside the loop would send the whole
+        -- roster again for every name in it.
+        SYL.RosterSync.OnOwnRosterChanged()
+
         handlers.onClearSelection()
         handlers.onChanged()
     end

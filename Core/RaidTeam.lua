@@ -61,10 +61,25 @@ local function Record(key)
     return SYL.Players.Get(key) or SYL.IncomingRoster.Get(key)
 end
 
+-- A received roster answers only where the local one is silent, and never the
+-- other way round. An unmarked registry record is what every guild member has
+-- before anybody touches anything, so it cannot be read as somebody having
+-- decided this person is off the team — which is why the fallback is on the
+-- nil and not on the record.
+local function Shared(key)
+    return SYL.SharedRoster and SYL.SharedRoster.Member(key) or nil
+end
+
 function RaidTeam.IsMember(key)
     local player = Record(key)
 
-    return (player and player.inRaidTeam) and true or false
+    if player and player.inRaidTeam then
+        return true
+    end
+
+    local shared = Shared(key)
+
+    return (shared and shared.inRaidTeam) and true or false
 end
 
 function RaidTeam.SetMember(key, isMember)
@@ -94,12 +109,29 @@ end
 function RaidTeam.GetRole(key)
     local player = Record(key)
 
-    if not player then
-        return nil, false
+    if player and player.raidRole then
+        return player.raidRole, false
     end
 
-    if player.raidRole then
-        return player.raidRole, false
+    -- Consulted before the missing-record case below, not after it. A raider
+    -- on somebody else's roster may be a character this client has never seen
+    -- — a recruit who has not transferred yet is the whole reason
+    -- IncomingRoster exists — and returning early on the nil would answer nil
+    -- for exactly the people the shared roster was sent to describe.
+    --
+    -- A shared role also beats a detected one. What an officer typed is a
+    -- plan; what the client detected is whatever this person last queued as,
+    -- and the header above already says a chosen role wins over a detected
+    -- one. That the choice arrived from somebody else does not change which of
+    -- the two is a decision.
+    local shared = Shared(key)
+
+    if shared and shared.raidRole then
+        return shared.raidRole, false
+    end
+
+    if not player then
+        return nil, false
     end
 
     return player.detectedRole, true
@@ -191,21 +223,41 @@ function RaidTeam.Filter(roster)
 end
 
 function RaidTeam.Count()
+    local counted = {}
     local total = 0
 
-    for _, player in pairs(SYL.Players.GetRegistry()) do
-        if player.inRaidTeam then
-            total = total + 1
+    -- Keyed rather than tallied, because the three sources overlap: a shared
+    -- roster names people this client already has marked, and counting a
+    -- person twice would be invisible here and wrong on every screen that
+    -- prints a team size.
+    local function Add(key, isMember)
+        if not isMember or not key or counted[key] then
+            return
         end
+
+        counted[key] = true
+        total = total + 1
+    end
+
+    for key, player in pairs(SYL.Players.GetRegistry()) do
+        Add(key, player.inRaidTeam)
     end
 
     -- Counted here too, or a roster made entirely of recruits reads as no
     -- team at all — and Audience.Default would fall back to the whole guild
     -- on the strength of it.
     for _, entry in ipairs(SYL.IncomingRoster.List()) do
-        if entry.inRaidTeam then
-            total = total + 1
-        end
+        Add(entry.key, entry.inRaidTeam)
+    end
+
+    -- And a received roster, for the same reason again: a guildie who has
+    -- marked nobody has a team of zero by every local measure, so the audience
+    -- default would step past the team scope to the whole guild — on the one
+    -- client the shared roster exists to serve.
+    for key, member in pairs(
+        SYL.SharedRoster and SYL.SharedRoster.Members() or {}
+    ) do
+        Add(key, member.inRaidTeam)
     end
 
     return total

@@ -97,6 +97,7 @@ function RaidersRoster.CreateRow(parent, index, listTop, onChanged)
     row.tick:SetScript("OnClick", function()
         if row.entryKey then
             SYL.RaidTeam.Toggle(row.entryKey)
+            SYL.RosterSync.OnOwnRosterChanged()
             onChanged()
         end
     end)
@@ -112,6 +113,7 @@ function RaidersRoster.CreateRow(parent, index, listTop, onChanged)
     row.role = Theme.CreateButton(row, 62, 17, "", function()
         if row.entryKey then
             SYL.RaidTeam.CycleRole(row.entryKey)
+            SYL.RosterSync.OnOwnRosterChanged()
             onChanged()
         end
     end)
@@ -192,6 +194,71 @@ function RaidersRoster.DrawRow(row, entry, isSelected)
 end
 
 --------------------------------------------------------------------------
+-- A roster somebody else sent
+--------------------------------------------------------------------------
+
+-- The undo, on the screen that shows the thing. Aimee's rule is that anything
+-- which can be created has to be removable from the same place, and a shared
+-- roster is the sharpest case of it: the person looking at these ticks never
+-- made a single one, so without this there is no route at all from "why is
+-- this list not mine" to it not being there.
+--
+-- Built lazily, so a client that has never received a roster never creates the
+-- frame.
+--
+-- HELD HERE AND NOT ON THE FRAME. A stub frame in the test suite answers every
+-- field with a function, so `frame.sharedClear` is truthy before it has ever
+-- been created and the nil check that looks like a nil check is not one — it
+-- returns the stub and the next call indexes a function. UI/KeysPanel.lua
+-- keeps its view state in locals for exactly this reason, and this file cost
+-- four assertions in test_raiderspanel learning it again.
+local sharedClear
+
+local function SharedControl(frame, onChanged)
+    if sharedClear then
+        return sharedClear
+    end
+
+    sharedClear =
+        Theme.CreateButton(frame, 104, 18, "Clear shared", function()
+            SYL.SharedRoster.Clear()
+
+            -- Says what it did *not* touch. Clearing a list of ticks that
+            -- includes your own would be the obvious fear, and the answer is
+            -- in the message rather than in the documentation.
+            SYL:Print(
+                "Shared roster cleared. Anyone you marked yourself is untouched."
+            )
+
+            onChanged()
+        end)
+
+    sharedClear:SetPoint("BOTTOMRIGHT", -2, 1)
+
+    return sharedClear
+end
+
+-- Two states, and the caption carries the difference: a roster of your own
+-- says how to add to it, a shared one says who it came from. Somebody who does
+-- not know the feature exists has to be able to work out why a list they never
+-- filled in is full.
+local function DrawSharedState(frame, onChanged)
+    local source = SYL.SharedRoster.Source()
+
+    if not SYL.SharedRoster.HasShared() or not source then
+        if sharedClear then
+            sharedClear:Hide()
+        end
+
+        return nil
+    end
+
+    SharedControl(frame, onChanged):Show()
+
+    return source
+end
+
+--------------------------------------------------------------------------
 -- Drawing the view
 --------------------------------------------------------------------------
 
@@ -202,6 +269,7 @@ end
 function RaidersRoster.Refresh(ctx)
     local frame = ctx.frame
     local roster = RaidersRoster.Build()
+    local sharedBy = DrawSharedState(frame, ctx.onChanged)
 
     local offset = math.min(
         ctx.offset or 0, math.max(0, #roster - ctx.visibleRows)
@@ -225,7 +293,16 @@ function RaidersRoster.Refresh(ctx)
         frame.empty:Show()
 
         SYL.RaidersDetail.Render(frame.detail, nil)
-        frame.caption:SetText("")
+
+        -- Still says where a shared roster came from, even with nothing drawn.
+        -- The two ways to arrive here are a guild list that has not loaded yet
+        -- and a scope that hides everybody, and in both cases a "Clear shared"
+        -- button sitting on an empty screen with no caption beside it is the
+        -- one reading that makes no sense.
+        frame.caption:SetText(
+            sharedBy and ("shared by " .. sharedBy .. " · nothing to show yet")
+            or ""
+        )
 
         return
     end
@@ -250,6 +327,8 @@ function RaidersRoster.Refresh(ctx)
 
     frame.caption:SetText(
         #roster .. " on the roster · " .. SYL.RaidTeam.Count()
-        .. " marked as raiding · tick TEAM to add somebody"
+        .. " marked as raiding · "
+        .. (sharedBy and ("shared by " .. sharedBy)
+            or "tick TEAM to add somebody")
     )
 end

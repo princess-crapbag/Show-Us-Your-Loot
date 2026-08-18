@@ -84,6 +84,12 @@ function RosterRows.Create(parent, index, config)
         button:SetScript("OnClick", function()
             if row.entry then
                 onClick(row.entry)
+
+                -- Both hits below change the roster: one the role, one
+                -- membership. Announced here rather than in each so neither
+                -- can be added later without it.
+                SYL.RosterSync.OnOwnRosterChanged()
+
                 config.onChanged()
             end
         end)

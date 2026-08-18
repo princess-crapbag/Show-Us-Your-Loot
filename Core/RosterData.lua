@@ -113,6 +113,46 @@ function RosterData.Build()
         })
     end
 
+    -- And anybody named on a shared roster that this client cannot see for
+    -- itself. The sender's recruits are the case that matters: a character who
+    -- has not transferred yet is on their IncomingRoster and is in neither the
+    -- receiver's guild list nor their own, so without this the roster arrives
+    -- with some of the people it was sent to describe simply missing — and
+    -- missing is the one failure that looks like a correct empty answer.
+    --
+    -- Appended, never merged over: an entry already built above is this
+    -- client's own view of a character it can actually see, which is better
+    -- than a copy of somebody else's.
+    local known = {}
+
+    for _, entry in ipairs(roster) do
+        known[entry.key] = true
+    end
+
+    for key, member in pairs(
+        SYL.SharedRoster and SYL.SharedRoster.Members() or {}
+    ) do
+        if not known[key] then
+            table.insert(roster, {
+                key = key,
+                guid = nil,
+                mainKey = key,
+                isAlt = false,
+                mainName = nil,
+
+                isShared = true,
+
+                name = member.name,
+                class = member.class,
+                -- Same reasoning as the recruits above: this is the guild rank
+                -- column, and this client has no idea what rank they hold.
+                rank = "N/A",
+                rankIndex = 98,
+                nights = 0,
+            })
+        end
+    end
+
     if SYL.Features.IsEnabled("raiderIO") then
         SYL.RaiderIO.AttachScores(roster)
     end

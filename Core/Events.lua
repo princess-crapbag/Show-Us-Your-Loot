@@ -125,6 +125,21 @@ local function OnPlayerLogin()
         SYL.AbsenceSync.Request()
         SYL.AbsenceSync.Announce()
     end
+
+    -- Outside the switch on purpose, and the only sharing feature here that
+    -- is. Listening registers a prefix and says nothing; the switch below
+    -- decides whether this client answers. A guildie who never opens the
+    -- settings panel is exactly who a shared roster is for, so gating the ear
+    -- on a switch they will not find would leave it invisible to all of them.
+    SYL.RosterSync.Listen()
+
+    -- Asked whether or not we share. A client with nothing is the one that
+    -- needs an answer, and whoever shares will send theirs.
+    SYL.RosterSync.Request()
+
+    if SYL.Features.IsEnabled("rosterSharing") then
+        SYL.RosterSync.Announce()
+    end
 end
 
 -- The three ways a key changes: a run finishes and awards the next one, the

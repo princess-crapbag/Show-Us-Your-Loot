@@ -3,6 +3,27 @@
 What changed, for the person installing it. The commit history explains why;
 this says what you will notice.
 
+## 0.3.3 — 2026-08-17
+
+### Added
+
+- **Share your raid team with the guild.** Off by default, its own switch in
+  Settings. Turn it on and everyone in your guild running the addon sees who
+  is on the team and what each person plays — **and they do not have to turn
+  anything on to see it.** Every other sharing switch here works both ways; a
+  roster only travels one way, so the people it is for are not asked to find a
+  setting first.
+
+  The Raiders tab says who a shared roster came from, and **Clear shared**
+  removes it. Anyone you marked yourself is untouched by that, and your own
+  ticks always win over a shared one. Raiders you have added who have not
+  joined the guild yet travel with the roster, so a team that is half recruits
+  still arrives whole.
+
+  Alt mapping is deliberately not shared. Team and role only change what a
+  screen shows; alt mapping changes the numbers, so it stays something you
+  decide on your own client.
+
 ## 0.3.2 — 2026-08-15
 
 ### Added
@@ -35,15 +56,17 @@ this says what you will notice.
 
 ### Changed
 
-- **Warbound gear no longer counts toward score or drought.** It goes to the
-  account rather than to the raider who was standing there, which is the same
-  reason a bind-on-equip drop has never counted. This changes existing numbers
-  for anyone who has won one.
 - **Bonus rolls are labelled.** They already counted for nothing — a bonus
   roll is not loot the raid awarded — but nothing on screen said so.
 
 ### Fixed
 
+- **Warbound gear no longer counts toward score or drought.** It goes to the
+  account rather than to the raider who was standing there, which is the same
+  reason a bind-on-equip drop has never counted. This changes existing numbers
+  for anyone who has won one. Filed under Changed when 0.3.2 shipped; the rule
+  was always bind-on-pickup and warbound gear was slipping through it, which
+  makes this a fix.
 - **An alt mapping can be undone.** The roster screen could make one and had
   no way to remove it, so a character stuck as somebody's alt dragged that
   person onto every list, and the only way out was a command nobody had been
