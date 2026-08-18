@@ -1,7 +1,8 @@
 # Handoff — Show Us Your Loot
 
 Rewritten 2026-08-09, after the session that built the dashboard; revised
-2026-08-15, after v0.3.2. The version before that had grown to 638 lines
+2026-08-15 after v0.3.2, and 2026-08-17 after v0.3.3. The version before the
+rewrite had grown to 638 lines
 carrying design notes for things since built — the same fault it was rewritten
 for that morning, and the one to watch for here.
 
@@ -24,14 +25,14 @@ Blizzard's Loot History API plus chat-captured loot, and answers who is due an
 upgrade, who turned up, and what each boss has given.
 
 - **Repo:** https://github.com/princess-crapbag/Show-Us-Your-Loot (public)
-- **CurseForge:** project 1642383, live at **v0.3.2**, shipped 2026-08-15 as
+- **CurseForge:** project 1642383, live at **v0.3.3**, shipped 2026-08-17 as
   `12.1.0 release`. **Real people can download this now.** v0.3.0 was the first
   non-alpha; v0.3.1 was the 12.1.0 compatibility bump.
-- **`main` carries one *code* commit past that tag** — the Absences split, which
-  no user can see. Everything else since is documentation. Count code commits,
-  not commits: `git log --name-only v0.3.2..main`. This line first said "one
-  commit" and was wrong by the end of the same day, made stale by the next edit
-  to this file — so a plain count here is worth nothing.
+- **`main` and the tag are level as of v0.3.3.** Do not trust that sentence —
+  count code commits rather than commits, because five of the six sitting past
+  v0.3.2 were edits to this file: `git log --name-only v0.3.3..main`. The line
+  here used to carry a number, said "one commit", and was wrong by the end of
+  the day it was written.
 - 124 Lua files in the `.toc`, 30 test suites in `tools/`.
 
 **Aimee runs the addon from a symlink**, `Interface/AddOns/ShowUsYourLoot ->
@@ -55,14 +56,22 @@ control:
 | `Enum.ItemBind` | `/syl api` prints two lines; the numbers on the second appear on the first | The warbound fallback numbering was used and may be wrong, so warbound gear is silently counting as upgrades again. **Nothing on screen would look wrong** |
 | The tier tile | Fills with real Season 2 bosses as they are pulled | It is reading a season boundary that is in the wrong place — check the active season's contents before the code |
 
-**2. Three features have never run between two clients**, and Aimee has a
+**2. Four features have never run between two clients**, and Aimee has a
 second account. In rough order of how badly each fails:
 
 | What | Needs |
 |---|---|
+| **Roster sharing** | **Shipped in v0.3.3 and never once run over a real guild channel.** Aimee tested with a guildie on 2026-08-17, which is what turned up that it did not exist at all. Turn the switch on, have them `/reload`, and the Raiders tab should fill and say "shared by". **Fails silently the same way absences do** — an empty roster looks exactly like a roster nobody has set up |
 | **Absence sharing** | A second client. **Fails quietly**: a bad merge says somebody is available when they are not, which is worse than an error. Mark somebody out on one client, check the "set by" on the other, remove it, check it disappears |
 | Key requests | A second client. Every rule is covered locally; nothing has watched a message arrive |
 | Sync roll lists | A second client. `/syl sync backfill` on one and the roll lists should appear on the other |
+
+**Every sharing switch except roster sharing gates receiving as well as
+sending, and they are all off by default.** That is almost certainly why the
+guildie on 2026-08-17 saw nothing at all: a fresh install is deaf to absences
+and keystones until its owner finds a setting nobody told them about. Worth
+deciding whether that is right for the other three — roster sharing departed
+from it deliberately and `Core/RosterSync.lua` argues why.
 
 **3. The fairness maths has run on real raid nights, but never on a full team.**
 The LFR run on 2026-08-10 proved attendance and loot capture on live data — and
@@ -91,7 +100,7 @@ identically in a terminal.
 Releasing: write the CHANGELOG entry, bump `## Version:` in the `.toc` **by
 hand**, commit, tag, push the tag. See CURSEFORGE.md.
 
-**Three releases have now gone out this way and all three worked**, so the
+**Four releases have now gone out this way and all four worked**, so the
 process is not the risk it was. Watch the run finish anyway: `gh run watch`,
 then grep the log for `Uploading` — a red workflow does not mean nothing
 shipped, which §5 explains.
@@ -281,28 +290,38 @@ pushes need no prompt. Never put a token in a URL.
 
 ---
 
-## 3a. What is actually open, 2026-08-15
+## 3a. What is actually open, 2026-08-17
 
 Everything below in §3 predates v0.3.2 and is nearly all DONE. This is the live
 list.
 
 1. **Tuesday's three verifications.** The table on page one. The
    `Enum.ItemBind` one is the only one where being wrong is invisible.
-2. **Second-client testing**, absence sharing first. Also on page one.
+2. **Second-client testing**, roster sharing first now that it has shipped
+   untested, absences second. Also on page one.
 3. **The remaining screenshots**, and then `SCREENSHOTS.md` rewritten or
    retired. Aimee's, parked until the newer screens have data. Item 19.
 4. **`/syl archive <name>` names the wrong thing** — see §5. It has caught the
    only person using it twice.
 5. **Ten files over the size limit.** `Absences.lua` is the worked example of
    fixing one.
-6. **The changelog filed warbound under Changed**, and by Aimee's reading it is
-   a fix. Move it next release.
+6. **DONE in v0.3.3.** The changelog's warbound entry moved from Changed to
+   Fixed, which was Aimee's reading and the right one.
 7. **E6 repositioning is effectively done.** The store description was
    rewritten for 0.3.2 and opens on the pass data, in a scene rather than a
    slogan. The tagline itself is gone. See CURSEFORGE.md, which now holds
    Aimee's live text rather than the draft.
 8. Still genuinely open from Tiers 3–5: **E7 the licence** and the
    **personal-loot asymmetry** in §4. Both are decisions, not work.
+
+Shipped in v0.3.3, so do not read these as open: **guild roster sharing, in
+game.** F7's cheap shape, built rather than the web one — one broadcaster,
+everybody else receives, riding the guild channel AbsenceSync already uses.
+`Core/SharedRoster.lua` holds what arrives and `Core/RosterSync.lua` moves it.
+The web version of F7 stays parked; the two share almost no code, and this was
+the decision §3b said to take before writing either. Alt mapping is
+deliberately not shared and is still open as its own decision — it is the one
+piece of roster data that moves the fairness numbers rather than the display.
 
 Shipped in v0.3.2, so do not read these as open: the Mythic 0 lockout grid,
 absences on the calendar with buttons and guild sharing, archive rename and
@@ -443,9 +462,11 @@ Still open from those tiers:
    *"Group Loot remembers who won. This remembers who passed."*
 10. **E7 — reconsider All Rights Reserved.** Tells an officer they are stranded
     if the author stops. Aimee's call, no code.
-11. **F7 — roster as a link.** Both decisions made; `Core/DataExport.lua` still
-    sends seasons only, so there is nothing on the server to point a link at,
-    and the Discord claim step does not exist. Not urgent, her words.
+11. **F7 — roster as a link. The in-game half shipped in v0.3.3**, which is
+    the cheaper shape §3b argued for and answers the actual ask: guildies can
+    see the roster. The *web* version is untouched and parked —
+    `Core/DataExport.lua` still sends seasons only, so there is nothing on the
+    server to point a link at, and the Discord claim step does not exist.
 12. **F9 — Droptimizer.** Web-side only; the addon makes no HTTP requests.
 15. **The personal-loot asymmetry.** Dormant, not wrong — see §4.
 16. **NOTES Phases 2, 3, 5, 6.** Phase 6 is item 7, which is built.
@@ -457,7 +478,7 @@ anything.
 
 17. **DONE. The LFR run.** See page one for what it proved and what it did not.
 18. **DONE. Released as v0.3.0**, the first non-alpha file, then v0.3.1 for
-    patch 12.1.0 and v0.3.2 for the work in §3a.
+    patch 12.1.0, v0.3.2 for the work in §3a, and v0.3.3 for roster sharing.
 19. **F10 — screenshots. PARTLY DONE, and parked at Aimee's request.** Five new
     ones are on CurseForge and in `screenshots/`: Dashboard, Loot, Raiders
     (Roster), Bosses, Settings. The numbering has gaps at 4, 6, 7 and 8 because
@@ -795,7 +816,11 @@ Each of these cost real time.
   check.** `frame.headers or {}` took a function under the test stub and blew
   up on `#`; `frame:GetFrameLevel() + 10` did arithmetic on a table. Keep view
   state in module-level locals the way `UI/KeysPanel.lua` does, rather than
-  hanging it off the frame.
+  hanging it off the frame. **This has now bitten twice.** The second was
+  v0.3.3's shared-roster button, cached as `frame.sharedClear` behind
+  `if frame.sharedClear then return it end` — which returned a function on the
+  first call and failed four assertions in `test_raiderspanel` on the next.
+  Lazily-created widgets are the shape that keeps walking into it.
 - **`lupa` turns multiple Lua returns into a tuple.** `Update()` returning
   `entry, changed` arrives as one object, so `entry.count` silently reads the
   tuple's method and the failure looks like a code bug. Unpack every call to a
@@ -849,7 +874,8 @@ which is why `.pkgmeta` keeps them out of the user-facing changelog.
 session, and every one of them went stale the moment the next session started.
 `git log --oneline v0.3.0..` reads better and cannot be wrong.
 
-Three tags so far: **v0.3.0** the first non-alpha, **v0.3.1** for patch 12.1.0,
-**v0.3.2** for lockouts, absences, archives and warbound. The commit messages
+Four tags so far: **v0.3.0** the first non-alpha, **v0.3.1** for patch 12.1.0,
+**v0.3.2** for lockouts, absences, archives and warbound, **v0.3.3** for guild
+roster sharing. The commit messages
 carry the reasoning and what was rejected on the way, which is why `.pkgmeta`
 keeps them out of the user-facing changelog.
