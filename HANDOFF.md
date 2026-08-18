@@ -1,9 +1,9 @@
 # Handoff — Show Us Your Loot
 
 Rewritten 2026-08-09, after the session that built the dashboard; revised
-2026-08-15 after v0.3.2, and 2026-08-17 after v0.3.3. The version before the
-rewrite had grown to 638 lines
-carrying design notes for things since built — the same fault it was rewritten
+2026-08-15 after v0.3.2, and again on 2026-08-17 after v0.3.3 and v0.3.4.
+The version before the rewrite had grown to 638 lines carrying design notes
+for things since built — the same fault it was rewritten
 for that morning, and the one to watch for here.
 
 **§3 is a record of an argued order of work, not a to-do list.** Most of it is
@@ -25,15 +25,15 @@ Blizzard's Loot History API plus chat-captured loot, and answers who is due an
 upgrade, who turned up, and what each boss has given.
 
 - **Repo:** https://github.com/princess-crapbag/Show-Us-Your-Loot (public)
-- **CurseForge:** project 1642383, live at **v0.3.3**, shipped 2026-08-17 as
+- **CurseForge:** project 1642383, live at **v0.3.4**, shipped 2026-08-17 as
   `12.1.0 release`. **Real people can download this now.** v0.3.0 was the first
   non-alpha; v0.3.1 was the 12.1.0 compatibility bump.
-- **`main` and the tag are level as of v0.3.3.** Do not trust that sentence —
-  count code commits rather than commits, because five of the six sitting past
-  v0.3.2 were edits to this file: `git log --name-only v0.3.3..main`. The line
-  here used to carry a number, said "one commit", and was wrong by the end of
-  the day it was written.
-- 124 Lua files in the `.toc`, 30 test suites in `tools/`.
+- **`main` and the tag are level as of v0.3.4.** Do not trust that sentence —
+  count code commits rather than commits, because most of what has ever sat
+  past a tag here were edits to this file: `git log --name-only v0.3.4..main`.
+  The line used to carry a number, said "one commit", and was wrong by the
+  end of the day it was written.
+- 128 Lua files in the `.toc`, 33 test suites in `tools/`.
 
 **Aimee runs the addon from a symlink**, `Interface/AddOns/ShowUsYourLoot ->
 Desktop/ShowUsYourLoot`. Edits are live in game immediately; only a `/reload`
@@ -56,22 +56,23 @@ control:
 | `Enum.ItemBind` | `/syl api` prints two lines; the numbers on the second appear on the first | The warbound fallback numbering was used and may be wrong, so warbound gear is silently counting as upgrades again. **Nothing on screen would look wrong** |
 | The tier tile | Fills with real Season 2 bosses as they are pulled | It is reading a season boundary that is in the wrong place — check the active season's contents before the code |
 
-**2. Four features have never run between two clients**, and Aimee has a
-second account. In rough order of how badly each fails:
+**2. Three features have never run between two clients** — down from four.
+**Key requests worked, over a real guild, on 2026-08-17.** Ask, reply, and the
+answer arriving on the other client all work; the only fault was that the reply
+was drawn cut off, fixed in v0.3.4. That is the first of these ever proven.
 
 | What | Needs |
 |---|---|
-| **Roster sharing** | **Shipped in v0.3.3 and never once run over a real guild channel.** Aimee tested with a guildie on 2026-08-17, which is what turned up that it did not exist at all. Turn the switch on, have them `/reload`, and the Raiders tab should fill and say "shared by". **Fails silently the same way absences do** — an empty roster looks exactly like a roster nobody has set up |
+| **Roster sharing** | **Shipped in v0.3.3, and the first attempt failed** — the send burst below meant the messages never all arrived. v0.3.4 paces them. Still unproven. Turn the switch on, have them `/reload`, and the Raiders tab should fill and say "shared by". **Fails silently** — an empty roster looks exactly like a roster nobody has set up |
 | **Absence sharing** | A second client. **Fails quietly**: a bad merge says somebody is available when they are not, which is worse than an error. Mark somebody out on one client, check the "set by" on the other, remove it, check it disappears |
-| Key requests | A second client. Every rule is covered locally; nothing has watched a message arrive |
 | Sync roll lists | A second client. `/syl sync backfill` on one and the roll lists should appear on the other |
 
 **Every sharing switch except roster sharing gates receiving as well as
-sending, and they are all off by default.** That is almost certainly why the
-guildie on 2026-08-17 saw nothing at all: a fresh install is deaf to absences
-and keystones until its owner finds a setting nobody told them about. Worth
-deciding whether that is right for the other three — roster sharing departed
-from it deliberately and `Core/RosterSync.lua` argues why.
+sending, and they are all off by default.** A fresh install is deaf to absences
+and keystones until its owner finds a setting nobody told them about — which is
+most of why the guildie on 2026-08-17 saw nothing. Worth deciding whether that
+is right for the other three; roster sharing departed from it deliberately and
+`Core/RosterSync.lua` argues why.
 
 **3. The fairness maths has run on real raid nights, but never on a full team.**
 The LFR run on 2026-08-10 proved attendance and loot capture on live data — and
@@ -100,7 +101,7 @@ identically in a terminal.
 Releasing: write the CHANGELOG entry, bump `## Version:` in the `.toc` **by
 hand**, commit, tag, push the tag. See CURSEFORGE.md.
 
-**Four releases have now gone out this way and all four worked**, so the
+**Five releases have now gone out this way and all five worked**, so the
 process is not the risk it was. Watch the run finish anyway: `gh run watch`,
 then grep the log for `Uploading` — a red workflow does not mean nothing
 shipped, which §5 explains.
@@ -798,8 +799,28 @@ Each of these cost real time.
   command reads the other way. Worth a rename, or at least a message that says
   which season got the name.
 
+- **The client rate-limits addon messages and throws away the overflow.**
+  Login sent twenty-four in one frame — eight absences, thirteen raiders, two
+  requests, a keystone — and printed "The number of messages that can be sent
+  is limited". A set that commits only when every piece arrives is then broken
+  forever by one discarded message, which is what made roster sharing look like
+  it was not working. `Core/SendQueue.lua` paces everything through one shared
+  queue; the limit is per client, so per-module pacing would still add up.
+  `Core/SyncTransport.lua` reached the same conclusion for RAID chunks first
+  and keeps its own queue.
+
 ### Testing this addon
 
+- **A Blizzard StaticPopup cannot be driven from this harness at all, and the
+  Archive Season button shipped doing nothing because of it.** The dialog
+  opened, took a name, and ended no season, on two clients, on the last night
+  of a pre-season. `ArchiveCurrentSeason` was never at fault — driven directly
+  it works — so the break was inside frame code this addon does not own, with
+  no way to reach it from a test. It is an ordinary window built from Theme and
+  Widgets now, and the logic is a function with no frame in it that the button
+  and the suite both call. **Anything that can only be exercised by a human
+  clicking it will eventually ship broken**; the fix is to make the part that
+  matters callable, not to test harder.
 - **A two-item fixture cannot catch an off-by-one in a removal loop.** Merging
   two archives removes exactly one, and removing one index is the same job from
   either end. It takes **three** before the renumbering bites. The first
@@ -874,8 +895,9 @@ which is why `.pkgmeta` keeps them out of the user-facing changelog.
 session, and every one of them went stale the moment the next session started.
 `git log --oneline v0.3.0..` reads better and cannot be wrong.
 
-Four tags so far: **v0.3.0** the first non-alpha, **v0.3.1** for patch 12.1.0,
-**v0.3.2** for lockouts, absences, archives and warbound, **v0.3.3** for guild
-roster sharing. The commit messages
+Five tags so far: **v0.3.0** the first non-alpha, **v0.3.1** for patch
+12.1.0, **v0.3.2** for lockouts, absences, archives and warbound, **v0.3.3**
+for guild roster sharing, **v0.3.4** for the archive button, message pacing
+and four things two-client testing turned up. The commit messages
 carry the reasoning and what was rejected on the way, which is why `.pkgmeta`
 keeps them out of the user-facing changelog.
