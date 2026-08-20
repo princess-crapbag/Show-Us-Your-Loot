@@ -39,10 +39,10 @@ local IsUpgrade = SYL.LootHistoryAPI.IsUpgradeState
 -- Whether a win from this drop is allowed to reset somebody's clock.
 --
 -- THE SUM HAD THE EXCLUSION ON ONE SIDE ONLY, and it silently wiped
--- droughts. Nights come from RaidSession.RaidsOnly, which drops Timewalking
+-- droughts. Nights come from RaidSession.NightsOnly, which drops Timewalking
 -- raids, Story mode, Timewalking LFR, Event and Follower difficulties — see
--- NOT_A_RAID_NIGHT in Core/Utilities.lua. Upgrades came from every drop ever
--- recorded, with no such test.
+-- NOT_A_RAID_NIGHT in Core/Utilities.lua — and now also anything under 80%
+-- guilded. Upgrades came from every drop ever recorded, with no such test.
 --
 -- So a Timewalking raid — group loot, real Need rolls, epic gear, and
 -- explicitly not a raid night — set lastUpgradeAt to that evening for
@@ -208,7 +208,7 @@ function DueList.Build(drops, sessions)
     -- both. See RaidSession.NightKey.
     local countedOn = {}
 
-    for _, session in ipairs(SYL.RaidSession.RaidsOnly(sessions)) do
+    for _, session in ipairs(SYL.RaidSession.NightsOnly(sessions)) do
         local startedAt = session.startedAt or 0
         local nightKey = SYL.RaidSession.NightKey(session)
 
@@ -296,7 +296,7 @@ function DueList.FilterRecent(entries, sessions, withinNights)
     -- a half, and everybody who missed this week vanishes off the list.
     local earliest = {}
 
-    for _, session in ipairs(SYL.RaidSession.RaidsOnly(sessions)) do
+    for _, session in ipairs(SYL.RaidSession.NightsOnly(sessions)) do
         local key = SYL.RaidSession.NightKey(session)
         local startedAt = session.startedAt or 0
 

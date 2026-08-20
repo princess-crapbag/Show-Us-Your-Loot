@@ -317,21 +317,25 @@ end
 
 -- The raid nights out of a list that also holds dungeon ones.
 --
--- STILL USED, AND ONLY BY THE FAIRNESS MATH — Core/DueList.lua, for attendance
--- and droughts. Everything a person looks at goes through NightsOnly below,
--- which is stricter. That split is deliberate and it is temporary.
+-- NO LONGER USED BY THE FAIRNESS MATH, and the split this note used to
+-- describe is closed. Aimee, 2026-08-20, on finding an LFR run in her season
+-- board: "why is LFR being counted? its not 80% + guild members so it doesnt
+-- matter in the fairness log."
 --
--- The reason for it: narrowing the display to guild nights hides rows.
--- Narrowing the fairness math to guild nights *rewrites recorded attendance* —
--- an LFR night somebody turned up to stops counting, every share is divided by
--- a smaller number, and the drop side has to adopt the same test in the same
--- change or an LFR win resets a drought on a night the addon says never
--- happened. Aimee asked for the calendar and the dashboard. She did not ask
--- for her raiders' numbers to move, and that is not a side effect to deliver
--- as one.
+-- What that note asked for first was whether it applies to history or only
+-- from that day on. It applies to history: her season holds exactly two
+-- sessions, one LFR and one guild raid, so "from today on" would have left the
+-- contamination in place until she archived — and a fairness measure that
+-- knowingly carries wrong numbers forward is not one.
 --
--- Whoever closes this: the two must move together, and the answer wanted first
--- is whether it applies to history or only from that day on.
+-- The two sides moved together, as that note required. Core/DueList.lua counts
+-- nights through NightsOnly now, and Core/DropRules.lua drops any win from a
+-- session that is not a guild night — so a night nobody is credited for cannot
+-- also be a night somebody's drought was reset on.
+--
+-- Kept because it is still the honest answer to "which of these were raids
+-- rather than dungeons", which is a different question from "which of these
+-- were ours".
 function RaidSession.RaidsOnly(sessions)
     local kept = {}
 
@@ -463,6 +467,61 @@ function RaidSession.NightsOnly(sessions)
     end
 
     return kept
+end
+
+--------------------------------------------------------------------------
+-- Which session a drop belongs to
+--------------------------------------------------------------------------
+
+-- THE LAST SESSION THAT HAD STARTED, not the one whose window contains it.
+--
+-- A session's endedAt is written when the client notices the raid finish, and
+-- it does not always get the chance. In Aimee's own data the LFR session is
+-- recorded as ending at 17:32 and six of that run's drops are stamped after
+-- it — so a startedAt..endedAt test left eleven LFR wins belonging to no
+-- session at all, which is the answer that would have let them go on counting.
+--
+-- Matching on the difficulty the drop recorded would be simpler and wrong: the
+-- rule is who was standing there, not what the instance was. A guild that runs
+-- LFR together is a guild night; a Normal pug is not.
+local SESSION_WINDOW = 12 * 60 * 60
+
+function RaidSession.SessionAt(sessions, timestamp)
+    if not timestamp then
+        return nil
+    end
+
+    local best
+
+    for _, session in ipairs(sessions or {}) do
+        local startedAt = session.startedAt or 0
+
+        if startedAt <= timestamp
+            and timestamp - startedAt <= SESSION_WINDOW
+            and (not best or startedAt > (best.startedAt or 0))
+        then
+            best = session
+        end
+    end
+
+    return best
+end
+
+-- Was this moment part of a night the guild raided?
+--
+-- UNKNOWN COUNTS, the same as everywhere else here. A drop that matches no
+-- session was captured before sessions were recorded, or synced from somebody
+-- whose session this client never saw — neither is evidence of a pug, and the
+-- rule in CountsAsNight above is that absent information never removes a night
+-- somebody actually turned up to.
+function RaidSession.IsGuildNightAt(timestamp)
+    local session = RaidSession.SessionAt(SYL.GetActiveRaids(), timestamp)
+
+    if not session then
+        return true
+    end
+
+    return RaidSession.CountsAsNight(session)
 end
 
 function RaidSession.GetCurrent()

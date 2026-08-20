@@ -85,6 +85,13 @@ lua.execute(
     -- roster would overwrite the ones counted from drop dates.
     ShowUsYourLoot.RaidSession = {
         BuildAttendance = function() return {}, {} end,
+
+        -- Added when the fairness math adopted the guild-share rule. There are
+        -- no sessions in this fixture, so the real one would find none and
+        -- answer true — unknown counts, the rule stated in
+        -- RaidSession.CountsAsNight. tools/test_guildnights.py owns that
+        -- behavior; these assertions are about credit and upgrade counting.
+        IsGuildNightAt = function() return true end,
     }
 
     ShowUsYourLoot.GetActiveRaids = function() return {} end

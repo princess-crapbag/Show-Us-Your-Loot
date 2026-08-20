@@ -24,28 +24,17 @@ SYL.CreditCandidates = CreditCandidates
 -- A drop belongs to the last session that had started when it dropped.
 -- Matching on the date instead would split a raid that runs past midnight,
 -- which is the trap Core/NightIndex.lua already names.
-local SESSION_WINDOW = 12 * 60 * 60
-
+--
+-- The rule lives in Core/RaidSession.lua now, because the fairness math needs
+-- the same answer: a drop from a session that was not a guild night does not
+-- count. Two copies of "which session was this" would be two chances for the
+-- picker and the board to disagree about the same drop.
 function CreditCandidates.SessionFor(record)
     if not record then
         return nil
     end
 
-    local at = record.timestamp or 0
-    local best
-
-    for _, session in ipairs(SYL.GetActiveRaids() or {}) do
-        local startedAt = session.startedAt or 0
-
-        if startedAt <= at
-            and at - startedAt <= SESSION_WINDOW
-            and (not best or startedAt > (best.startedAt or 0))
-        then
-            best = session
-        end
-    end
-
-    return best
+    return SYL.RaidSession.SessionAt(SYL.GetActiveRaids(), record.timestamp)
 end
 
 local function ByName(left, right)

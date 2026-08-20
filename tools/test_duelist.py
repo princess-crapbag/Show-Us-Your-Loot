@@ -111,6 +111,17 @@ lua.execute(
 
             return kept
         end,
+
+        -- Added when the fairness math adopted the guild-share rule. These
+        -- fixtures carry no roster, so the real GuildShare would answer nil —
+        -- unknown — and CountsAsNight would count them. Mirroring that keeps
+        -- every assertion below about the content filter it was written for.
+        -- tools/test_guildnights.py owns the guild-share behavior itself.
+        NightsOnly = function(sessions)
+            return SYL.RaidSession.RaidsOnly(sessions)
+        end,
+
+        IsGuildNightAt = function() return true end,
     }
     """
 )

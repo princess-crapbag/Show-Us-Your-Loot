@@ -61,6 +61,28 @@ end
 -- is account gear that can be posted to any character — so neither says the
 -- raider standing there was looked after. Resetting a clock for either pushes
 -- a genuinely starved raider down the list.
+-- WAS THIS ONE OF OURS? Aimee, 2026-08-20, on finding an LFR run in her season
+-- board: "why is LFR being counted? its not 80% + guild members so it doesnt
+-- matter in the fairness log."
+--
+-- The calendar and the dashboard had applied the guild-share rule since it was
+-- written; the fairness math had not, so a 49-person LFR run with one guildie
+-- in it fed the same board her twelve raiders are ranked on.
+--
+-- THIS IS HALF OF A CHANGE. Core/RaidSession.lua's note on RaidsOnly spelled
+-- out why it could not ship alone: dropping an LFR win while still counting
+-- the LFR night divides every share by a number that includes a night nobody
+-- can now earn anything on. Core/DueList.lua counts nights through NightsOnly
+-- in the same commit as this line. If one of them is ever reverted, revert
+-- both.
+local function IsGuildNightDrop(drop)
+    if not SYL.RaidSession then
+        return true
+    end
+
+    return SYL.RaidSession.IsGuildNightAt(drop.timestamp)
+end
+
 function DropRules.CountsAsUpgrade(drop)
     if not drop or drop.excludedFromAnalytics then
         return false
@@ -70,7 +92,11 @@ function DropRules.CountsAsUpgrade(drop)
         return false
     end
 
-    return IsRaidDrop(drop)
+    if not IsRaidDrop(drop) then
+        return false
+    end
+
+    return IsGuildNightDrop(drop)
 end
 
 -- Who a win belongs to, once trading and any hand-made correction are taken

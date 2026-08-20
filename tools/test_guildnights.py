@@ -161,6 +161,76 @@ check("NightsOnly keeps one of the two", len(list(kept.values())) == 1)
 check("and nothing at all survives an empty list",
       len(list(RaidSession.NightsOnly(lua.table_from([])).values())) == 0)
 
+# --- which session a drop belongs to --------------------------------------
+#
+# Aimee, 2026-08-20: "why is LFR being counted? its not 80% + guild members so
+# it doesnt matter in the fairness log." The drop side of that answer needs to
+# know which session a drop came from, and the obvious test — does its
+# timestamp fall between startedAt and endedAt — is the one her own data
+# breaks. Her LFR session is recorded as ending at 17:32 and six of that run's
+# drops are stamped after it, because endedAt is written when the client
+# notices the raid finish and it does not always get the chance.
+#
+# So it is the last session that had STARTED, which is right for both.
+
+lfr.startedAt = 1000
+lfr.endedAt = 1600            # closed early, as hers did
+guild.startedAt = 7000
+guild.endedAt = 17000
+
+sessions = lua.table_from([lfr, guild])
+
+
+def session_at(at):
+    found = RaidSession.SessionAt(sessions, at)
+    return found and found.startedAt or None
+
+
+checks = [
+    ("a drop inside the LFR window belongs to it", session_at(1200) == 1000),
+    # The case a startedAt..endedAt test gets wrong, and the reason for this
+    # rule rather than that one.
+    ("A DROP AFTER THE LFR SESSION CLOSED STILL BELONGS TO IT",
+     session_at(2500) == 1000),
+    ("a drop after the guild raid started belongs to that",
+     session_at(9000) == 7000),
+    ("a drop before any session belongs to none", session_at(10) is None),
+    # lootListID and boss ids repeat, and so does everything else about a
+    # raid. Twelve hours is the fence.
+    ("a drop a day later belongs to none",
+     session_at(7000 + 25 * 3600) is None),
+]
+
+for label, ok in checks:
+    check(label, ok)
+
+# --- and therefore which drops the fairness math counts -------------------
+#
+# The whole point. Everything above is machinery; this is the number she
+# reported. IsGuildNightAt reads the active season, so the season is stubbed
+# around the two sessions above.
+
+lua.execute("ShowUsYourLoot.GetActiveRaids = function() return SESSIONS end")
+lua.globals().SESSIONS = sessions
+
+drop_checks = [
+    ("a win on the LFR run is not on a guild night",
+     RaidSession.IsGuildNightAt(1200) is False),
+    ("nor is one stamped after that session closed",
+     RaidSession.IsGuildNightAt(2500) is False),
+    ("a win on the guild raid is", RaidSession.IsGuildNightAt(9000) is True),
+    # Unknown counts, the same rule as everywhere else here: a drop older than
+    # any recorded session is not evidence of a pug, and removing it would
+    # erase history that was captured before sessions existed.
+    ("a win older than every session counts",
+     RaidSession.IsGuildNightAt(10) is True),
+    ("and so does one with no timestamp at all",
+     RaidSession.IsGuildNightAt(None) is True),
+]
+
+for label, ok in drop_checks:
+    check(label, ok)
+
 print()
 print("FAILURES:", failures or "none")
 sys.exit(1 if failures else 0)
