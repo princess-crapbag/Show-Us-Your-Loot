@@ -68,7 +68,7 @@ lua.execute(
     """
 )
 
-for module in ("Utilities.lua", "LootHistoryAPI.lua"):
+for module in ("Utilities.lua", "LootHistoryAPI.lua", "DropRules.lua"):
     lua.execute((CORE / module).read_text(encoding="utf-8"))
 
 # Stubs. ResolveToMain is identity because alt folding is tested by its own

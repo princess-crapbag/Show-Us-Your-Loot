@@ -127,7 +127,7 @@ them, and they are the ones to watch for if this is ever rewritten again:
 - **The Bosses tab** cannot say what never dropped until Loot tables has been
   pressed. Promising it on install night sends people to an empty screen.
 - **"used in live raids every week"** was invented. One real raid night has
-  been through the fairness maths.
+  been through the fairness math.
 
 ```
 Six people rolled Need on the same weapon. One of them won it. Ask a month later who the other five were and nobody can tell you, because the game does not keep that list.

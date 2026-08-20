@@ -103,6 +103,50 @@ for name, setting, boundary in MIGRATIONS:
     print()
 
 # ---------------------------------------------------------------------------
+# MigrateAudienceScope — a string setting, so it cannot ride the table above,
+# which reads every value through bool(). Checked by behavior instead: only
+# "everyone" moves, only once, and a scope inside the rotation is left alone.
+# ---------------------------------------------------------------------------
+
+scope_migrate = lua.globals().ShowUsYourLoot.Migrations.MigrateAudienceScope
+
+if scope_migrate is None:
+    print("FAIL MigrateAudienceScope — not found in Core/Migrations.lua")
+    failures.append("MigrateAudienceScope")
+else:
+    print("MigrateAudienceScope — audienceScope")
+
+    # label, stored version, saved scope, expect migrated?, expect scope after
+    scope_cases = [
+        ("fresh install", None, None, False, None),
+        ("upgrade from v6 parked on everyone", 6, "everyone", True, "team"),
+        ("upgrade from v6 on guild is left alone", 6, "guild", False, "guild"),
+        ("upgrade from v6 on team is left alone", 6, "team", False, "team"),
+        ("upgrade from v6 with nothing saved", 6, None, False, None),
+        ("already migrated", 7, "everyone", False, "everyone"),
+        ("a later bump does not re-fire it", 8, "everyone", False, "everyone"),
+    ]
+
+    for label, stored, saved, want_migrated, want_after in scope_cases:
+        lua.execute("ShowUsYourLootDB = { settings = {} }")
+
+        if saved is not None:
+            lua.globals().ShowUsYourLootDB.settings.audienceScope = saved
+
+        got_migrated = bool(scope_migrate(stored))
+        got_after = lua.globals().ShowUsYourLootDB.settings.audienceScope
+
+        ok = (got_migrated == want_migrated) and (got_after == want_after)
+        print(("  ok   " if ok else "  FAIL ") + label)
+
+        if not ok:
+            print(f"         migrated: got {got_migrated}, wanted {want_migrated}")
+            print(f"         scope:    got {got_after!r}, wanted {want_after!r}")
+            failures.append(f"MigrateAudienceScope: {label}")
+
+    print()
+
+# ---------------------------------------------------------------------------
 # BackfillRecordIDs — not version guarded, so it is checked by behavior
 # rather than by boundary: a record with no id cannot be ticked by anything.
 # ---------------------------------------------------------------------------

@@ -46,7 +46,7 @@ lua.execute(
     """
 )
 
-for module in ("Utilities.lua", "LootHistoryAPI.lua"):
+for module in ("Utilities.lua", "LootHistoryAPI.lua", "DropRules.lua"):
     lua.execute((CORE / module).read_text(encoding="utf-8"))
 
 lua.execute(
@@ -289,6 +289,48 @@ print(("ok   " if ok else "FAIL ") + "Rank puts the least-taken first and the un
 if not ok:
     print("       got: " + str(order))
     failures.append("Rank ordering")
+
+# --- the configurable floor -----------------------------------------------
+#
+# Aimee's first raid night had every raider under three nights, so the board
+# had no order and the trade advisor weighed "under 3 nights" against "under 3
+# nights". The floor is a setting now: Off, 2, or 3. These assertions are the
+# reason it can be moved without moving DueList's recency window with it.
+
+settings = lua.globals().ShowUsYourLootDB.settings
+
+check("the floor defaults to three when unset", score.MinNights() == 3)
+
+settings.minRankNights = 2
+check("the setting moves the floor", score.MinNights() == 2)
+
+entries = lua.globals().Entries()
+score.Attach(entries, table)
+rows = {e.key: e for e in entries.values()}
+check("a one-night trial is still under a floor of two", rows["Trial"].ranked is False)
+check("and the reason quotes the live floor", "under 2 nights" in rows["Trial"].notRankedReason)
+
+settings.minRankNights = 0
+check("zero reads back as off", score.MinNights() == 0)
+
+entries = lua.globals().Entries()
+score.Attach(entries, table)
+rows = {e.key: e for e in entries.values()}
+check("with the floor off a one-night raider is ranked", rows["Trial"].ranked is True)
+check("and gets a real share", rows["Trial"].share is not None)
+
+# The guard that stops 0/0. Nothing live has zero nights, but Attach is public.
+check("somebody who never raided is still not ranked", rows["Fresh"].ranked is False)
+check("and still says so rather than dividing by zero", rows["Fresh"].share is None)
+check(
+    "with the right reason",
+    "has not raided yet" in rows["Fresh"].notRankedReason,
+)
+
+settings.minRankNights = -1
+check("a nonsense floor falls back to the default", score.MinNights() == 3)
+
+settings.minRankNights = 3
 
 print()
 print("FAILURES:", failures or "none")

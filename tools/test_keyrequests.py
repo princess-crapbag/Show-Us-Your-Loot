@@ -309,19 +309,24 @@ except Exception as err:  # noqa: BLE001
 # Checked in the source because the Keys panel has no render harness: the
 # failure was a layout decision, not a value, and comparing values would have
 # passed then too.
-panel = (Path(__file__).resolve().parent.parent
-         / "UI" / "KeysPanel.lua").read_text(encoding="utf-8")
+# The columns and the row drawing moved to UI/KeyRows.lua when KeysPanel was
+# split at 635 lines. Same assertions, same reasoning — they follow the code
+# rather than the filename, which is the point of reading the source at all.
+rows_source = (Path(__file__).resolve().parent.parent
+               / "UI" / "KeyRows.lua").read_text(encoding="utf-8")
+
+panel = rows_source
 
 check("THE REPLY HAS ITS OWN COLUMN",
-      'key = "response"' in panel,
-      "UI/KeysPanel.lua has no response column for a reply to land in")
+      'key = "response"' in rows_source,
+      "UI/KeyRows.lua has no response column for a reply to land in")
 check("and the column is labelled",
-      'label = "RESPONSE"' in panel, "the response column has no heading")
+      'label = "RESPONSE"' in rows_source, "the response column has no heading")
 # Scoped to the function that draws the reply. Searching the whole file for
 # "cells.level:SetText" finds the legitimate one further down that writes the
 # level and nothing else — so a check reading the last match passed with the
 # fault planted, which is what planting it was for.
-draw_ask = panel.split("local function DrawAsk")[1].split("\nlocal function ")[0]
+draw_ask = rows_source.split("function KeyRows.DrawAsk")[1]
 
 check("THE REPLY IS NOT WRITTEN INTO THE LEVEL CELL",
       "cells.level" not in draw_ask and "cells.response:SetText" in draw_ask,
