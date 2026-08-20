@@ -37,6 +37,15 @@ this says what you will notice.
 
 ### Fixed
 
+- **LFR and pug runs counted towards the fairness board.** The calendar and
+  the dashboard have applied the "80% of the group in your guild" rule since it
+  was written; the Raiders board never did. So a 49-person LFR run with one
+  guildie in it fed the same board your raid team is ranked on, and people you
+  have never raided with sat on it holding points. Both the nights and the
+  wins from a session that is not your guild's now stay out of it, back through
+  your whole season — a boss tile still shows every drop it gave, because that
+  is a record rather than a ranking.
+
 - **Sharing stored a second copy of every drop.** If somebody else in your
   raid also runs this addon with sharing on, every drop they broadcast was
   saved again alongside your own. The copies were nearly invisible — they
