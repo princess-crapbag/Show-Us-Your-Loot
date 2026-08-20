@@ -140,6 +140,25 @@ def _split(node):
                 for inner in ast.walk(child.body):
                     skip.add(id(inner))
 
+            elif isinstance(child, astnodes.Invoke):
+                # `frame:Hide()` names a method on frame. luaparser stores that
+                # method as a Name node, identical in shape to a variable read,
+                # so without this the checker reports every `x:Foo()` as a use
+                # of any local called Foo — and reports it at the call site,
+                # which is the one place the reader will not find the mistake.
+                #
+                # Found by UI/NameSuggest.lua, whose `local function Hide` sits
+                # below a `popup:Hide()`. Nothing was wrong with that code. The
+                # docstring above is right that one accepted false positive is
+                # the end of anybody reading this output, so it is fixed here
+                # rather than worked around by renaming the local.
+                #
+                # Only the method name is skipped. `source` and `args` are real
+                # expressions and are still checked, so `Hide():Foo(Hide)` is
+                # still caught twice.
+                for inner in ast.walk(child.func):
+                    skip.add(id(inner))
+
             elif isinstance(child, astnodes.Index):
                 if getattr(child, "notation", None) == astnodes.IndexNotation.DOT:
                     for inner in ast.walk(child.idx):
