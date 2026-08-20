@@ -414,9 +414,18 @@ Her RCLC data is readable from this machine and was read — do not re-derive it
    was showing through the window in front. Confirmed in game by Aimee.
 5. Loot views, calendar out-list layout, the Tue/Thu schedule UI (the data
    layer is DONE and has zero UI; her `schedule.weekdays` is already `{3,5}`).
-6. Guild-only for the fairness math — **deliberately not done.** Narrowing
-   display hides rows; narrowing the math rewrites recorded attendance and the
-   drop side must change in the same commit. Her call, and she has not made it.
+6. Guild-only for the fairness math — **DONE, she made the call on 08-20.**
+   Her words: "why is LFR being counted? its not 80% + guild members so it
+   doesnt matter in the fairness log." Both sides moved in one commit, as
+   `RaidSession.RaidsOnly`'s note required: nights through `NightsOnly`, and
+   `DropRules.CountsAsUpgrade` refusing any win from a session that is not a
+   guild night. **It applies to history**, which was the other question that
+   note asked — her season is two sessions, so "from today on" would have left
+   the contamination until she archived.
+   The trap: a drop is attributed to the last session that had **started**,
+   not the one whose `startedAt..endedAt` contains it. Her LFR session is
+   recorded as ending at 17:32 with six of its drops stamped after, because
+   `endedAt` is only written when the client notices the raid end.
 
 ### Traps this session paid for
 
@@ -478,16 +487,19 @@ memory — and, on 08-20, the credit line, the picker opening in front and
 listing all eleven raiders, row hover, `credited now` following a correction,
 Undo, persistence across a reload, and the window layering in both directions.
 
-**Never run in game:** the guild-night filter's effect on her numbers,
-Recovery, the keystone staleness filter, the duplicate-drop repair, the
+**Never run in game:** Recovery, the keystone staleness filter, the
+duplicate-drop repair, the guild-night filter's effect on her numbers, the
 need-and-greed count on the Raiders detail pane, and the Reset window sizes
 row in Settings.
 
-The duplicate repair is the one worth reading the caveat on: it was verified
-against her live saved variables through the shipped Lua rather than in the
-client — 33 drops to 22, Arcangila 560 to 200, every other raider unchanged —
-which is the strongest evidence available short of logging in, and is not the
-same thing.
+The duplicate repair and the guild-night filter are the two worth reading the
+caveat on. Both were verified against her live saved variables through the
+shipped Lua rather than in the client, which is the strongest evidence
+available short of logging in and is not the same thing. Together they take
+the season board from Arcangila 560 and ten LFR strangers to exactly her
+eleven raiders, with the six who took loot reading Arcangila 1, Rakahasa 1,
+Jtkurayami 2, Phreestyle 2, Razørtongue 2, Pringlesbop 2 — the list she gave,
+to the item.
 
 **The board's 820 was reproduced exactly from her saved variables** before any
 of it was written — 23 wins, 7 Need, 6 Greed, 10 Transmog, of which the guild
