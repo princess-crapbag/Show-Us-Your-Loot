@@ -344,7 +344,19 @@ Her RCLC data is readable from this machine and was read — do not re-derive it
 
 ### Open, in her priority order
 
-1. **RCLootCouncil credit** — above.
+1. **RCLootCouncil credit** — above. **The manual half is built and the
+   automatic half is not.** `Core/LootCredit.lua` stores an override carrying
+   both a person and a response; `DropRules.CreditedKey` and the new
+   `CreditedState` beside it are the one door, and LootScore, DueList and
+   Analytics all go through them. The control is the credit line on the drop
+   detail window — Change… opens a picker, Undo clears it. 34 assertions in
+   `tools/test_lootcredit.py`. **Never run in game.**
+   What is left is the import: read the award history, match on `itemLink`,
+   and write the same override the picker writes. On the 08-18 night all
+   **11 of 11** items matched their council award on the link with nothing
+   left over, so the matcher is the easy part. Score on the response TEXT —
+   `Off-Spec/Sidegrade` is responseID 3, the same id as `Mog`, which is a
+   second proof of the rule in §3z above and not a restatement of it.
 2. **Make the calendar figures inspectable.** She does not trust "11 raiders,
    0 went home with nothing, 3.0 drops per raider" because nothing shows the
    people behind them. The 11 is CORRECT — 12 characters fold to 11 people
@@ -391,7 +403,14 @@ Confirmed by Aimee after reloading: tabs, close button, cogwheel, dates, US
 formatting, Keys layout, roster spacing, right-click copy, alt suggestions,
 roster scrolling and selection, the rank-floor setting, window drag, position
 memory. **Never run in game:** the Analytics credit rewrite, the guild-night
-filter's effect on her numbers, Recovery, and the keystone staleness filter.
+filter's effect on her numbers, Recovery, the keystone staleness filter, and
+the whole credit-reassign feature — the credit line, the picker and Undo.
+
+**The board's 820 was reproduced exactly from her saved variables** before any
+of it was written — 23 wins, 7 Need, 6 Greed, 10 Transmog, of which the guild
+night is 360. Worth repeating rather than trusting if the math ever looks
+wrong again: matching her reported number to the point is the cheapest proof
+that a change is reading the same rules the addon does.
 
 ---
 
