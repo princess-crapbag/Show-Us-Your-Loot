@@ -19,6 +19,7 @@
 
 local SYL = _G.ShowUsYourLoot
 local Theme = SYL.Theme
+local Count = SYL.Utilities.Count
 
 local NightsPanel = {}
 SYL.NightsPanel = NightsPanel
@@ -197,7 +198,8 @@ local function DrawDay(cell, dayNumber, dayKey, night, isSelected)
     Theme.SetTextColor(cell.kills, night.kills > 0 and "accent" or "textMuted")
 
     cell.detail:SetText(
-        night.rosterCount .. " raiders · " .. night.drops .. " drops"
+        Count(night.rosterCount, "raider")
+        .. " · " .. Count(night.drops, "drop")
     )
 
     if isSelected then
@@ -276,7 +278,8 @@ Refresh = function()
     )
 
     frame.caption:SetText(
-        raidedThisMonth .. " nights this month · " .. #days
+        Count(raidedThisMonth, "night") .. " this month · "
+        .. Count(#days, "night")
         .. " recorded in total · the next raid night needs the guild calendar, "
         .. "which nothing here reads yet"
     )

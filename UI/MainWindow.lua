@@ -467,7 +467,8 @@ local function CreateMainWindow()
     frame:SetFrameStrata("DIALOG")
     frame:SetClampedToScreen(true)
 
-    Widgets.MakeMovable(frame)
+    -- Title bar only. The tab strip sits at -66 and this used to cover it.
+    Widgets.MakeMovable(frame, true)
     Theme.StyleWindow(frame)
     Widgets.CloseOnEscape(frame)
 

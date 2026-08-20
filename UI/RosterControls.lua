@@ -17,6 +17,23 @@ local Theme = SYL.Theme
 local RosterControls = {}
 SYL.RosterControls = RosterControls
 
+-- WHERE THE FILTER STRIP ENDS, EXPORTED, because RosterWindow puts the list
+-- directly beneath it and had no way to ask.
+--
+-- These were two independent absolutes in two files — the strip placed at -170
+-- from the top of the window here, the list placed at LIST_TOP = 210 there —
+-- and the header SortHeader draws backs off LIST_TOP by 24. So the strip ran
+-- to -190 and the header started at -186: a 4px overlap, with the header
+-- drawn second and winning. Aimee spotted it on a screenshot and said "once
+-- again", which is fair; it is the third collision of this exact shape.
+--
+-- One number is now stated here and read there. The gap between them cannot be
+-- closed by moving either one, because neither one is chosen any more.
+RosterControls.STRIP_TOP = 170
+RosterControls.STRIP_HEIGHT = 20
+RosterControls.STRIP_BOTTOM =
+    RosterControls.STRIP_TOP + RosterControls.STRIP_HEIGHT
+
 -- The button says which list you are on rather than what pressing it does,
 -- because the two states are both destinations here.
 function RosterControls.UpdateFilters(frame, teamOnly, activeOnly)
@@ -40,13 +57,7 @@ end
 function RosterControls.UpdateRoles(frame, roster)
     local counts = SYL.RaidTeam.CountRoles(roster)
 
-    frame.rolesText:SetText(
-        counts.TANK .. " tanks  ·  "
-        .. counts.HEALER .. " healers  ·  "
-        .. counts.DPS .. " dps"
-        .. (counts.unset > 0
-            and ("  ·  " .. counts.unset .. " unset") or "")
-    )
+    frame.rolesText:SetText(SYL.RaidTeam.DescribeRoles(counts))
 end
 
 function RosterControls.UpdateCoverage(frame, roster)
@@ -113,19 +124,23 @@ local function CreateSummary(frame, handlers)
     -- somebody means widening to the guild deliberately, which is the rarer
     -- action and the one worth a click.
     frame.teamButton =
-        Theme.CreateButton(frame, 130, 20, "Raid team", function()
-            handlers.onTeamOnly()
-        end)
+        Theme.CreateButton(
+            frame, 130, RosterControls.STRIP_HEIGHT, "Raid team", function()
+                handlers.onTeamOnly()
+            end
+        )
 
-    frame.teamButton:SetPoint("TOPLEFT", 18, -170)
+    frame.teamButton:SetPoint("TOPLEFT", 18, -RosterControls.STRIP_TOP)
 
     -- Somebody who has not signed in for a month is not somebody you can
     -- bring, and in a guild with years of alts in it they are most of the
     -- list. Recruits who have not joined yet are never hidden by this.
     frame.activeButton =
-        Theme.CreateButton(frame, 90, 20, "Active", function()
-            handlers.onActiveOnly()
-        end)
+        Theme.CreateButton(
+            frame, 90, RosterControls.STRIP_HEIGHT, "Active", function()
+                handlers.onActiveOnly()
+            end
+        )
 
     frame.activeButton:SetPoint("LEFT", frame.teamButton, "RIGHT", 8, 0)
 
@@ -198,6 +213,26 @@ local function CreateActions(frame, handlers)
     )
 
     frame.mainInput:SetPoint("LEFT", frame.removeButton, "RIGHT", 12, 0)
+
+    -- Suggested from the roster this window already holds, unfiltered — the
+    -- main you are pointing at may not be one of the rows currently on screen,
+    -- which is exactly the case where spelling it from memory goes wrong.
+    SYL.NameSuggest.Attach(frame.mainInput, {
+        getCandidates = handlers.getAllEntries,
+
+        -- PICKING AN ALT POINTS AT THEIR MAIN INSTEAD. An alt of an alt is a
+        -- chain, and resolving one is the mapping that used to need a slash
+        -- command to undo. Nobody choosing "Rakyah" here means "make these
+        -- characters alts of an alt"; they mean Rakahasa, and the suggestion
+        -- row already says so underneath the name.
+        nameFor = function(entry)
+            if entry.isAlt and entry.mainName then
+                return entry.mainName
+            end
+
+            return entry.name
+        end,
+    })
 
     frame.altButton =
         Theme.CreateButton(frame, 92, 22, "Alt of", function()

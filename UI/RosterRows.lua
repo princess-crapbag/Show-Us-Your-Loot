@@ -18,18 +18,6 @@ local Theme = SYL.Theme
 local RosterRows = {}
 SYL.RosterRows = RosterRows
 
--- The roster stores the locale-independent class name because it keys colors
--- and buff lookups. This turns it back into the one the player reads.
-local function ClassLabel(classFile)
-    if not classFile then
-        return ""
-    end
-
-    local localised = _G.LOCALIZED_CLASS_NAMES_MALE
-
-    return (localised and localised[classFile]) or classFile
-end
-
 -- config carries the geometry and one callback:
 --   columns, offsets, widths, rowHeight, listTop
 --   onChanged()  something was edited and the list needs redrawing
@@ -105,6 +93,16 @@ function RosterRows.Create(parent, index, config)
         SYL.RaidTeam.Toggle(entry.key)
     end)
 
+    -- Right-click anywhere on the row to copy the name. `row.entry` is read on
+    -- the click rather than captured, because rows are pooled and reused as
+    -- the list scrolls.
+    --
+    -- The short name, not Name-Realm: it is what the row is showing, what the
+    -- "Alt of" box below expects, and what you type in a whisper.
+    SYL.Widgets.AttachNameCopy(row, function()
+        return row.entry and row.entry.name or nil
+    end)
+
     return row
 end
 
@@ -134,7 +132,7 @@ function RosterRows.Fill(row, entry, isSelected)
         Theme.SetTextColor(cells.name, "textPrimary")
     end
 
-    cells.class:SetText(ClassLabel(entry.class))
+    cells.class:SetText(Theme.ClassLabel(entry.class))
     Theme.SetTextColor(cells.class, "textSecondary")
 
     local role, detected = SYL.RaidTeam.GetRole(entry.key)

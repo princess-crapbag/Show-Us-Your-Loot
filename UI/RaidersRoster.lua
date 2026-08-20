@@ -61,7 +61,7 @@ function RaidersRoster.Build()
     return roster
 end
 
-function RaidersRoster.CreateRow(parent, index, listTop, onChanged)
+function RaidersRoster.CreateRow(parent, index, listTop, onChanged, onSelect)
     local row = CreateFrame("Button", nil, parent)
 
     row:SetHeight(ROW_HEIGHT)
@@ -102,6 +102,18 @@ function RaidersRoster.CreateRow(parent, index, listTop, onChanged)
         end
     end)
 
+    -- CLICKING A NAME SELECTS IT, which it never did here. The tick box had
+    -- the only handler on the row, so the whole roster view was unclickable
+    -- and the detail pane beside it could not be filled from this view at all
+    -- — while RaidersRoster.Refresh took a selectedKey and compared every row
+    -- against it, so the highlight was drawn for a selection nothing could
+    -- make. The board view has had this since it was written.
+    row:SetScript("OnClick", function()
+        if row.entryKey and onSelect then
+            onSelect(row.entryKey)
+        end
+    end)
+
     row.name = Theme.CreateText(row, Theme.sizes.rowSmall, "textPrimary")
     row.name:SetPoint("LEFT", COLUMNS.name, 0)
     row.name:SetWidth(COLUMNS.role - COLUMNS.name - 6)
@@ -131,11 +143,20 @@ function RaidersRoster.CreateRow(parent, index, listTop, onChanged)
     row.note:SetJustifyH("LEFT")
     row.note:SetWordWrap(false)
 
+    -- Right-click to copy the name. Read on the click, not captured: rows are
+    -- pooled and reused as the list scrolls.
+    SYL.Widgets.AttachNameCopy(row, function()
+        return row.entryName
+    end)
+
     return row
 end
 
 function RaidersRoster.DrawRow(row, entry, isSelected)
     row.entryKey = entry.key
+    -- Kept beside the key because the copy handler wants what is on screen,
+    -- and the key is a GUID.
+    row.entryName = entry.name
 
     row.name:SetText(tostring(entry.name or "Unknown"))
 
@@ -304,7 +325,9 @@ function RaidersRoster.Refresh(ctx)
             or ""
         )
 
-        return
+        -- Explicit, because the caller uses this as its scroll ceiling and a
+        -- bare return would hand it nil.
+        return 0
     end
 
     frame.empty:Hide()
@@ -312,7 +335,9 @@ function RaidersRoster.Refresh(ctx)
     for index = 1, ctx.visibleRows do
         local entry = roster[index + offset]
         local row = ctx.rosterRows[index]
-            or RaidersRoster.CreateRow(frame, index, ctx.listTop, ctx.onChanged)
+            or RaidersRoster.CreateRow(
+                frame, index, ctx.listTop, ctx.onChanged, ctx.onSelect
+            )
 
         ctx.rosterRows[index] = row
 
@@ -326,9 +351,17 @@ function RaidersRoster.Refresh(ctx)
     SYL.RaidersDetail.Render(frame.detail, ctx.selected)
 
     frame.caption:SetText(
-        #roster .. " on the roster · " .. SYL.RaidTeam.Count()
-        .. " marked as raiding · "
+        SYL.Utilities.Count(#roster, "person", "people") .. " on the roster · "
+        .. SYL.RaidTeam.Count() .. " marked as raiding · "
         .. (sharedBy and ("shared by " .. sharedBy)
-            or "tick TEAM to add somebody")
+            -- Says where the control is. "tick TEAM" named a column heading
+            -- that this view does not draw — the tick box here is the one at
+            -- the start of the row, and the screen that HAS a TEAM heading is
+            -- the roster window, where the heading is not a tick box.
+            or "click a name, or tick the box beside it to add somebody")
     )
+
+    -- Returned so the panel's mouse wheel has a ceiling without building this
+    -- list a second time to count it.
+    return #roster
 end

@@ -91,6 +91,12 @@ function DueRows.Create(parent, index, listTop, rowHeight)
         row.cells[column.key] = text
     end
 
+
+    -- Right-click to copy the name. Read on the click, not captured: rows are
+    -- pooled and reused as the list scrolls.
+    SYL.Widgets.AttachNameCopy(row, function()
+        return row.entry and row.entry.name or nil
+    end)
     return row
 end
 

@@ -18,34 +18,36 @@
 
 local SYL = _G.ShowUsYourLoot
 local Theme = SYL.Theme
+local Count = SYL.Utilities.Count
 
 local KeysPanel = {}
 SYL.KeysPanel = KeysPanel
 
-local PANE_WIDTH = 300
+-- Measuring the columns freed about 130px, and dead space between the table
+-- and the pane would only have moved the problem rather than fixed it. It goes
+-- to the requests, which is the half of this screen that is short of room: a
+-- request has to name the key and which of your characters holds it, and four
+-- answer buttons already take 220 of the 280 a row had.
+local PANE_WIDTH = 420
 local GUTTER = 12
 local LIST_WIDTH = 868 - PANE_WIDTH - GUTTER
 
 local ROW_HEIGHT = 20
 local HEADER_TOP = 34
+-- The box every column heading is drawn in. It has to be one number: the
+-- headings sit on a shared baseline only because they share a height.
+local HEADER_HEIGHT = 18
 local LIST_TOP = 58
 local VISIBLE_ROWS = 15
 
--- THE ANSWER IS A COLUMN, NOT A SUFFIX. A reply used to be appended to the
--- level cell — "? Maybe" inside forty pixels — so every answer but "No" was
--- drawn cut off as "Ma...". It is its own column now, and the Ask button sits
--- in the same one: a row either offers to ask or reports what came back, never
--- both, so they share the space rather than each reserving some.
---
--- Narrower overall than the version that truncated, because the fix is space
--- where the text is rather than more of it everywhere.
-local COLUMNS = {
-    { key = "name", label = "PLAYER", x = 4, width = 150 },
-    { key = "dungeon", label = "DUNGEON", x = 158, width = 200 },
-    { key = "level", label = "LVL", x = 362, width = 40 },
-    { key = "response", label = "RESPONSE", x = 410, width = 110,
-      sortable = false },
-}
+-- Columns and rows live in UI/KeyRows.lua. This file decides who is on the
+-- list; that one draws them. See its header for why they parted.
+local COLUMNS = SYL.KeyRows.COLUMNS
+
+-- Everything a row has to ask this file for. The two callbacks are read when
+-- the button is pressed rather than captured now, so the role the request
+-- carries is whichever one the header is showing at that moment.
+local rowConfig
 
 local frame
 local rows = {}
@@ -66,10 +68,16 @@ local function Build()
     local entries = {}
 
     for _, own in ipairs(SYL.Keystone.List()) do
+        -- A key from before this week's reset is gone. Carried through as an
+        -- entry with no key rather than dropped, so the character still
+        -- appears — an alt you have not logged into is exactly who you are
+        -- checking on — and the row reads "no key" like anybody else's.
+        local expired = own.isStale
+
         table.insert(entries, {
             name = own.characterKey or own.name,
-            mapID = own.mapID,
-            level = own.level,
+            mapID = not expired and own.mapID or nil,
+            level = not expired and own.level or nil,
             class = own.class,
             isOwn = true,
         })
@@ -117,117 +125,6 @@ local function Build()
     end)
 
     return entries
-end
-
---------------------------------------------------------------------------
--- Rows
---------------------------------------------------------------------------
-
-local function CreateRow(index)
-    local row = CreateFrame("Frame", nil, frame)
-
-    row:SetHeight(ROW_HEIGHT)
-    row:SetPoint("TOPLEFT", 0, -(LIST_TOP + (index - 1) * ROW_HEIGHT))
-    row:SetWidth(LIST_WIDTH)
-
-    if index % 2 == 0 then
-        local stripe = Theme.CreateSolidTexture(row, "rowAlt", "BACKGROUND")
-        stripe:SetAllPoints()
-    end
-
-    row.cells = {}
-
-    -- Every column gets a cell now, response included. It used to skip the
-    -- fourth because that one held only the Ask button and had no text of its
-    -- own — which is exactly why the answer had nowhere to go and ended up
-    -- squeezed into the level.
-    for _, column in ipairs(COLUMNS) do
-        local text = Theme.CreateText(row, Theme.sizes.rowSmall, "textPrimary")
-
-        text:SetPoint("LEFT", column.x, 0)
-        text:SetWidth(column.width)
-        text:SetJustifyH(column.key == "level" and "RIGHT" or "LEFT")
-        text:SetWordWrap(false)
-
-        row.cells[column.key] = text
-    end
-
-    row.ask = Theme.CreateButton(row, 110, 17, "Ask", function()
-        if not row.playerName then
-            return
-        end
-
-        local ok, reason = SYL.KeystoneRequests.Ask(row.playerName, askRole)
-
-        SYL:Write(ok
-            and ("Asked " .. row.playerName .. " to run their key as "
-                .. (SYL.KeystoneRequests.ROLE_LABELS[askRole] or askRole) .. ".")
-            or (reason or "Could not ask."))
-
-        Refresh()
-    end)
-
-    row.ask:SetPoint("LEFT", COLUMNS[4].x, 0)
-
-    rows[index] = row
-
-    return row
-end
-
--- The button says what will happen, or why it will not. A grayed button with
--- no explanation is the thing this is avoiding: "offline" and "you already
--- asked" are different problems and only one of them is worth waiting on.
-local function DrawAsk(row, entry)
-    -- Cleared on every draw before anything decides to fill it. Rows are
-    -- pooled, so a reply left behind would be read as this player's answer —
-    -- the same trap the dashboard tiles have.
-    row.cells.response:SetText("")
-
-    if entry.isOwn then
-        row.ask:Hide()
-
-        return
-    end
-
-    local existing = SYL.KeystoneRequests.GetOutgoing(entry.name)
-
-    if existing and existing.status ~= SYL.KeystoneRequests.STATUS.DENIED then
-        row.ask:Hide()
-
-        -- In the response column at full width, not appended to the level.
-        row.cells.response:SetText(
-            SYL.KeystoneRequests.STATUS_LABELS[existing.status] or ""
-        )
-
-        -- Waiting is a state, not an answer, so it reads quieter than one.
-        Theme.SetTextColor(
-            row.cells.response,
-            existing.status == SYL.KeystoneRequests.STATUS.PENDING
-                and "textMuted"
-                or "textPrimary"
-        )
-
-        return
-    end
-
-    local allowed, reason = SYL.KeystoneRequests.CanAsk(entry.name)
-
-    row.ask.label:SetText(existing and "Ask again" or "Ask")
-    row.ask:Show()
-
-    -- Left clickable either way so the tooltip can be read; the click prints
-    -- the reason rather than doing nothing.
-    Theme.SetTextColor(row.ask.label, allowed and "textPrimary" or "textMuted")
-
-    SYL.Tooltips.Attach(
-        row.ask,
-        allowed and "Ask for this key" or "Cannot ask",
-        allowed
-            and ("Sends a request to " .. entry.name .. " as "
-                .. (SYL.KeystoneRequests.ROLE_LABELS[askRole] or askRole)
-                .. ". Only they see it.")
-            or (reason or "")
-    )
 end
 
 --------------------------------------------------------------------------
@@ -326,7 +223,12 @@ Refresh = function()
 
         for index = 1, VISIBLE_ROWS do
             local entry = entries[index + offset]
-            local row = rows[index] or CreateRow(index)
+            local row = rows[index]
+
+            if not row then
+                row = SYL.KeyRows.Create(index, rowConfig)
+                rows[index] = row
+            end
 
             if entry then
                 row.playerName = entry.name
@@ -349,7 +251,7 @@ Refresh = function()
 
                 row.cells.level:SetText(tostring(entry.level or "?"))
 
-                DrawAsk(row, entry)
+                SYL.KeyRows.DrawAsk(row, entry, rowConfig)
 
                 row:Show()
             else
@@ -360,8 +262,19 @@ Refresh = function()
 
     SYL.KeyRequestList.Refresh(frame.pane)
 
+    -- Counts keys, not rows. Characters holding none are listed and are not
+    -- keys, and neither is an alt's expired one — a caption that counted them
+    -- would disagree with the list it sits under.
+    local held = 0
+
+    for _, entry in ipairs(entries) do
+        if entry.mapID then
+            held = held + 1
+        end
+    end
+
     frame.caption:SetText(
-        #entries .. " keys · resets weekly with your realm"
+        Count(held, "key") .. " · resets weekly with your realm"
         .. (SYL.Features.IsEnabled("keystoneSharing")
             and "" or " · sharing off, so this is only your characters")
     )
@@ -396,7 +309,22 @@ end
 --------------------------------------------------------------------------
 
 function KeysPanel.Create(parent)
+    -- Before anything is anchored: rows and headings both read column.x and
+    -- column.width, and neither exists until this has run.
+    SYL.KeyRows.Measure()
+
     frame = CreateFrame("Frame", nil, parent)
+
+    -- After the frame exists, because the rows hang off it. Rows are built
+    -- lazily on the first draw, so this only has to be ready before Refresh.
+    rowConfig = {
+        parent = frame,
+        rowHeight = ROW_HEIGHT,
+        listTop = LIST_TOP,
+        width = LIST_WIDTH,
+        getRole = function() return askRole end,
+        onChanged = function() Refresh() end,
+    }
 
     frame:SetPoint("TOPLEFT", 16, -100)
     frame:SetPoint("BOTTOMRIGHT", -16, 52)
@@ -454,47 +382,46 @@ function KeysPanel.Create(parent)
     -- would put a nil in the table and hide nothing.
     frame.keysWidgets = { frame.roleButton, frame.badge }
 
-    -- Column headers. Sortable ones are buttons; the rest are plain labels.
+    -- ONE PATH FOR EVERY COLUMN, sortable or not.
     --
-    -- They used to be drawn only when sortable, so a column nobody can sort by
-    -- had no heading at all — which would have left the new RESPONSE column as
-    -- an unexplained strip of words beside the key level.
+    -- There were two, and they placed their text differently. A sortable
+    -- header is a button whose label fills it, so the glyphs sit centered
+    -- inside 18px; RESPONSE took the other branch and was a bare font string
+    -- anchored TOPLEFT with no height at all. Same anchor, different box, and
+    -- the one heading nobody can sort by rode a few pixels above the other
+    -- three for as long as the column has existed.
+    --
+    -- A column that cannot be sorted is the same header with its mouse
+    -- switched off. UI/SortHeader.lua has always known that (see its own note
+    -- on why a non-sortable header must still be drawn); this file was written
+    -- before it and never caught up.
     for _, column in ipairs(COLUMNS) do
-        if column.sortable == false then
-            if column.label ~= "" then
-                local label = Theme.CreateText(
-                    frame, Theme.sizes.columnHeader, "textMuted"
-                )
-
-                table.insert(frame.keysWidgets, label)
-
-                label:SetPoint("TOPLEFT", column.x, -HEADER_TOP)
-                label:SetWidth(column.width)
-                label:SetJustifyH("LEFT")
-                label:SetText(column.label)
-            end
-        else
+        if column.label ~= "" then
             local button = CreateFrame("Button", nil, frame)
 
             table.insert(frame.keysWidgets, button)
 
             button:SetPoint("TOPLEFT", column.x, -HEADER_TOP)
-            button:SetSize(column.width, 18)
+            button:SetSize(column.width, HEADER_HEIGHT)
 
             local label =
                 Theme.CreateText(button, Theme.sizes.columnHeader, "textMuted")
 
             label:SetAllPoints()
-            label:SetJustifyH(column.key == "level" and "RIGHT" or "LEFT")
+            label:SetJustifyH(column.justify)
             label:SetText(column.label)
 
-            button:SetScript("OnClick", function()
-                if sortKey == column.key then
-                    KeysPanel.SetSort(column.key, not sortReversed)
-                else
-                    KeysPanel.SetSort(column.key, false)
-                end
-            end)
+            if column.sortable == false then
+                button:EnableMouse(false)
+            else
+                button:SetScript("OnClick", function()
+                    if sortKey == column.key then
+                        KeysPanel.SetSort(column.key, not sortReversed)
+                    else
+                        KeysPanel.SetSort(column.key, false)
+                    end
+                end)
+            end
         end
     end
 

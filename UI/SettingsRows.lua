@@ -5,7 +5,7 @@
 --
 -- Split from UI/SettingsWindow.lua, which crossed the size limit the same way
 -- RosterWindow did before it — by holding the chrome, the content and the
--- layout maths at once. That file now opens a window; this one decides what is
+-- layout math at once. That file now opens a window; this one decides what is
 -- in it.
 --
 -- ROWS ARE OF TWO KINDS AND HAVE TO LOOK IT. Most are checkboxes bound to a
@@ -17,7 +17,7 @@
 -- row factory, the section helper, the row registry and the layout constants
 -- that decide where each section starts. Splitting the last one out to save
 -- ten lines would mean exporting five internals: more surface than it
--- removes, and the layout maths would then live apart from the thing it
+-- removes, and the layout math would then live apart from the thing it
 -- measures.
 
 local SYL = _G.ShowUsYourLoot
@@ -319,6 +319,46 @@ local TOGGLES = {
         end,
     },
     {
+        -- Cycles for the same reason the color scheme does: three positions,
+        -- and the answer is visible on the board the moment you close this.
+        --
+        -- Off / 2 / 3, not Off / 1 / 2 / 3. One night and no floor rank exactly
+        -- the same people — Core/LootScore.lua:MinNights has the argument — so
+        -- the fourth position would have been a control that does nothing.
+        label = "Rank raiders after",
+        action = function()
+            local ORDER = { 3, 2, 0 }
+            local current = SYL.LootScore.MinNights()
+            local nextFloor = ORDER[1]
+
+            for index, value in ipairs(ORDER) do
+                if value == current then
+                    nextFloor = ORDER[(index % #ORDER) + 1]
+                    break
+                end
+            end
+
+            ShowUsYourLootDB.settings.minRankNights = nextFloor
+
+            SYL:Print(nextFloor == 0
+                and "Ranking everybody from their first raid night."
+                or ("Ranking raiders once they have "
+                    .. SYL.Utilities.Count(nextFloor, "raid night") .. "."))
+
+            if SYL.RefreshMainWindow then
+                SYL:RefreshMainWindow()
+            end
+        end,
+        describe = function()
+            local floor = SYL.LootScore.MinNights()
+
+            return floor == 0
+                and "Rank raiders after: their first night"
+                or ("Rank raiders after: "
+                    .. SYL.Utilities.Count(floor, "night"))
+        end,
+    },
+    {
         label = "Record group loot from Loot History",
         key = "lootHistoryCapture",
 
@@ -342,7 +382,17 @@ local TOGGLES = {
         -- Says gear, because that is now all it announces. Every quality is
         -- still recorded; announcing every quality was what doubled the
         -- user's loot chat with grays after a Mythic+ run.
-        label = "Announce gear in chat when it is recorded",
+        -- SHORTENED BECAUSE IT DID NOT FIT. It rendered as "Announce gear in
+        -- chat when it is recor..." on the settings screenshot in the
+        -- CurseForge gallery. Measured in the real font at 232px against a
+        -- cell that takes about 202 — "Record group loot from Loot History"
+        -- is the longest label that fits, and it measures exactly that.
+        -- Anything added here should be checked against it.
+        --
+        -- "when it is recorded" was the part carrying no information: this
+        -- section is about what gets recorded, and the note underneath says
+        -- the rest.
+        label = "Announce gear in chat",
         key = "announceCaptures",
     },
     {

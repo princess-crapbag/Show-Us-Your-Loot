@@ -24,7 +24,23 @@ local ROW_HEIGHT = 22
 local DEFAULT_ROWS = 14
 local MAX_ROWS = 40
 local FOOTER_HEIGHT = 56
-local LIST_TOP = 210
+
+-- Clear space between the bottom of the filter strip and the top of the column
+-- header. This is the only number here anybody chose.
+local HEADER_GAP = 12
+
+-- DERIVED, NOT CHOSEN — see the note in UI/RosterControls.lua for what the
+-- chosen version cost. The list begins below the strip, below the gap, and
+-- below the header SortHeader draws for us; asking each of them how much room
+-- they take is the only version of this that cannot silently overlap.
+--
+-- Widgets.CreateListWindow sizes the window as listTop + rows*rowHeight +
+-- footer, so moving this down makes the window taller rather than costing a
+-- row. Fourteen rows still fit.
+local LIST_TOP = SYL.RosterControls.STRIP_BOTTOM
+    + HEADER_GAP
+    + SYL.SortHeader.HEIGHT
+    + SYL.SortHeader.LIST_GAP
 
 local visibleRows = DEFAULT_ROWS
 
@@ -307,6 +323,12 @@ local function CreateWindow()
             searchText = text
             offset = 0
             Refresh()
+        end,
+
+        -- The whole roster before the team filter and the search, so the
+        -- "Alt of" box can suggest a main who is not currently on screen.
+        getAllEntries = function()
+            return lastFullRoster or {}
         end,
 
         getSelected = SelectedEntries,

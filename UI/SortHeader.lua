@@ -19,6 +19,17 @@ SYL.SortHeader = SortHeader
 
 local HEIGHT = 22
 
+-- Exported, because a caller placing something ABOVE this header has to know
+-- how much room it takes, and until now nobody could: `top` is where the rows
+-- begin and the header was silently backed off it by a magic 24. The roster's
+-- filter strip was positioned in a different file, from the top of the window,
+-- and the two numbers overlapped by 4px with nothing to catch it.
+--
+-- LIST_GAP is the clear space between the header's bottom edge and row one.
+-- HEIGHT + LIST_GAP is the 24 that used to be written out longhand below.
+SortHeader.HEIGHT = HEIGHT
+SortHeader.LIST_GAP = 2
+
 -- config:
 --   columns, offsets  the same tables the rows are laid out from
 --   top               distance from the top of the window to the list
@@ -27,9 +38,11 @@ local HEIGHT = 22
 function SortHeader.Create(parent, config)
     local header = CreateFrame("Frame", nil, parent)
 
+    local headerTop = config.top - HEIGHT - SortHeader.LIST_GAP
+
     header:SetHeight(HEIGHT)
-    header:SetPoint("TOPLEFT", 16, -(config.top - 24))
-    header:SetPoint("TOPRIGHT", -34, -(config.top - 24))
+    header:SetPoint("TOPLEFT", 16, -headerTop)
+    header:SetPoint("TOPRIGHT", -34, -headerTop)
 
     header.background =
         Theme.CreateSolidTexture(header, "headerBar", "BACKGROUND")

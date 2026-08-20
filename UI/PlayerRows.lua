@@ -22,7 +22,7 @@ PlayerRows.COLUMNS = {
     { key = "name", label = "PLAYER", width = 130, gap = 10 },
     { key = "rank", label = "GUILD RANK", width = 110, gap = 8 },
     -- Blank without Raider.IO, and blank for anyone its bundle has not seen.
-    -- Nothing in the fairness maths reads it: it is context, not an input.
+    -- Nothing in the fairness math reads it: it is context, not an input.
     { key = "score", label = "M+", width = 46, gap = 8 },
     { key = "nights", label = "NIGHTS", width = 50, gap = 8 },
     -- ELIGIBLE, not ROLLED ON. The number is how many drops this player could
@@ -72,6 +72,12 @@ function PlayerRows.Create(parent, index, listTop, rowHeight)
         row.cells[column.key] = text
     end
 
+
+    -- Right-click to copy the name. Read on the click, not captured: rows are
+    -- pooled and reused as the list scrolls.
+    SYL.Widgets.AttachNameCopy(row, function()
+        return row.entry and row.entry.name or nil
+    end)
     return row
 end
 

@@ -128,9 +128,13 @@ function RaidersDetail.Render(detail, entry)
             entry.lootScore or 0, entry.nights or 0, SYL.LootScore.Describe(entry)
         ), "textMuted")
     else
+        -- The live floor, not the default constant. The setting can move it
+        -- and this sentence states it as fact, so a stale number here would be
+        -- the addon explaining a rule it is no longer applying.
         Line(detail,
-            "Not ranked yet. Under " .. SYL.LootScore.MIN_NIGHTS
-            .. " raid nights there is not enough to divide by, so they are "
+            "Not ranked yet. Under "
+            .. SYL.Utilities.Count(SYL.LootScore.MinNights(), "raid night")
+            .. " there is not enough to divide by, so they are "
             .. "listed with the reason rather than given a number that would "
             .. "sort them straight to the top.", "textMuted")
     end

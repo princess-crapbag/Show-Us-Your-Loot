@@ -13,7 +13,7 @@
 -- opening the Adventure Guide and comparing by eye.
 --
 -- THE CAVEAT IS ON SCREEN, not in a comment. The journal lists what a boss can
--- drop for *any* specialisation, so "never dropped" includes items nobody in
+-- drop for *any* specialization, so "never dropped" includes items nobody in
 -- the raid can use. Left unsaid, that turns into "this addon says we are owed
 -- fourteen items" in an officer's mouth, and the number is wrong in a way that
 -- is not their fault.
@@ -25,6 +25,7 @@
 
 local SYL = _G.ShowUsYourLoot
 local Theme = SYL.Theme
+local Count = SYL.Utilities.Count
 
 local BossLoot = {}
 SYL.BossLoot = BossLoot
@@ -150,10 +151,12 @@ function BossLoot.Render(pane, boss, mode, journalRead)
     pane.heading:SetText(tostring(boss.name))
 
     pane.subheading:SetText(string.format(
-        "%s · %s · %d pulls, %d kills, %d drops",
+        "%s · %s · %s, %s, %s",
         tostring(boss.instanceName or "Unknown"),
         tostring(boss.difficultyName or "?"),
-        boss.pulls or 0, boss.kills or 0, boss.drops or 0
+        Count(boss.pulls or 0, "pull"),
+        Count(boss.kills or 0, "kill"),
+        Count(boss.drops or 0, "drop")
     ))
 
     if mode == "dropped" then
@@ -209,7 +212,7 @@ function BossLoot.Render(pane, boss, mode, journalRead)
 
     pane.footnote:SetText(
         "The Adventure Guide lists what this boss can drop for any "
-        .. "specialisation, so this includes items nobody in your raid can "
+        .. "specialization, so this includes items nobody in your raid can "
         .. "use. It is what the boss has never given you, not what you are owed."
     )
 

@@ -86,7 +86,7 @@ end
 
 -- Chat capture records everything: reagents, gold, quest items, and three
 -- hundred of them bury the dozen that are gear somebody actually received.
--- The same test the due list uses, so the list and the maths agree.
+-- The same test the due list uses, so the list and the math agree.
 local function GearOnly(entries, view)
     if not view.gearOnly then
         return entries
@@ -117,19 +117,31 @@ end
 --
 -- The flag lives on the underlying record rather than on the joined entry,
 -- which is rebuilt on every draw.
+-- Returns the kept entries and, as a second value, how many were set aside.
+--
+-- The count used to be got by rebuilding the entire feed with showHidden
+-- flipped — a different cache signature, so a full second pass over every drop
+-- and chat record on every redraw of the Loot tab, to print one number. This
+-- runs last in the pipeline now (see Build) precisely so it can answer both
+-- questions at once: the entries it discards have already been through the
+-- gear and scope filters, so counting them here is counting the same set the
+-- rebuild used to.
 local function VisibleEntries(entries, view)
     local wantHidden = view.showHidden and true or false
     local kept = {}
+    local setAside = 0
 
     for _, entry in ipairs(entries) do
         local isHidden = entry.record.hidden and true or false
 
         if isHidden == wantHidden then
             table.insert(kept, entry)
+        else
+            setAside = setAside + 1
         end
     end
 
-    return kept
+    return kept, setAside
 end
 
 --------------------------------------------------------------------------
@@ -205,7 +217,18 @@ local function Build(view)
 
     local entries = SYL.LootFeed.Build(drops, loot)
 
-    return InScope(GearOnly(VisibleEntries(entries, view), view), view)
+    -- VisibleEntries LAST. These three are independent tests — hidden-ness,
+    -- gear-ness and content scope — so the order cannot change the set they
+    -- agree on, and putting the hidden filter at the end lets it report how
+    -- many it removed from a list the other two have already narrowed.
+    local kept, hidden =
+        VisibleEntries(InScope(GearOnly(entries, view), view), view)
+
+    -- Carried on the list rather than returned separately, because this goes
+    -- through a cache that stores one value per signature.
+    kept.hiddenInScope = hidden
+
+    return kept
 end
 
 -- Everything in scope before filtering. Dropdown options are derived from
@@ -286,15 +309,8 @@ function ListSources.CountHiddenInScope(view)
         return 0
     end
 
-    -- Asked of the same scope with the switch flipped, so the number always
-    -- describes the list it is printed above.
-    view.showHidden = true
-
-    local hidden = #ListSources.GetUnfiltered(view)
-
-    view.showHidden = false
-
-    return hidden
+    -- Counted while the list was built, off the same pass. See VisibleEntries.
+    return ListSources.GetUnfiltered(view).hiddenInScope or 0
 end
 
 -- Cached alongside the unfiltered list. The filter state can only change

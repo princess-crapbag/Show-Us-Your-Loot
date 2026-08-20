@@ -436,6 +436,22 @@ end
 
 -- Drop records store the winner's class file name, so their names can be
 -- class-colored. Chat-derived loot records cannot: they hold only a name.
+-- "DEATHKNIGHT" is what the roster stores, because it keys the colors above
+-- and the buff lookups. "Death Knight" is what a person reads.
+--
+-- Beside GetClassColor rather than in the one file that happened to need it
+-- first: two screens now turn a class into text, and a second copy of this
+-- would be a second place for a locale to be handled differently.
+function Theme.ClassLabel(classFile)
+    if not classFile or classFile == "" then
+        return ""
+    end
+
+    local localized = _G.LOCALIZED_CLASS_NAMES_MALE
+
+    return (localized and localized[classFile]) or classFile
+end
+
 function Theme.GetClassColor(classFile)
     if not classFile or classFile == "" then
         return nil

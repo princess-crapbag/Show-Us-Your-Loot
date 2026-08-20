@@ -7,7 +7,7 @@
 -- knowing the command existed. Bosses, raid nights and the guild roster all
 -- had a footer button. The question the addon is *for* did not.
 --
--- The maths is entirely Core/DueList.lua and none of it is repeated here. See
+-- The math is entirely Core/DueList.lua and none of it is repeated here. See
 -- that file for what "due" is taken to mean — the judgement calls behind it
 -- are opinions rather than facts, and they are stated there.
 --

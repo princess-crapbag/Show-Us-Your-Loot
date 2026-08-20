@@ -30,6 +30,15 @@ local ROW_HEIGHT = 18
 local MAX_CANDIDATES = 5
 local TICK_SECONDS = 10
 
+-- The footnote wraps to two lines and the chrome has to be told. It shipped on
+-- one line with wrap off — Theme.CreateText turns wrap off for everything —
+-- inside 276 pixels it does not fit, so it rendered as "This only tells y..."
+-- and the sentence lost the half that matters. It is the only string in the
+-- addon long enough to hit this, and it is on the window a stranger meets
+-- first.
+local FOOTNOTE_HEIGHT = 26
+local CHROME_HEIGHT = 62 + (FOOTNOTE_HEIGHT - 12)
+
 local frame
 local Refresh
 
@@ -214,7 +223,7 @@ Refresh = function()
         #active == 1 and "YOU WON THIS" or ("YOU WON " .. #active .. " ITEMS")
     )
 
-    frame:SetHeight(math.min(400, top + 62))
+    frame:SetHeight(math.min(400, top + CHROME_HEIGHT))
     frame:Show()
 end
 
@@ -247,6 +256,21 @@ local function Build()
     frame:SetScript("OnDragStart", frame.StartMoving)
     frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
 
+    -- THE THREE THINGS EVERY OTHER WINDOW HERE ALREADY DOES. This one opens by
+    -- itself, mid-pull, over whatever the player was looking at — so it is the
+    -- worst window in the addon to have been the only one that swallowed
+    -- Escape, the only one that could be dragged off the edge of the screen
+    -- and left there, and the only one WindowStack had never been told about.
+    --
+    -- The last of those is why it was permanently see-through: focus is what
+    -- lifts a window to full opacity, an untracked window can never be
+    -- focused, so it sat at the unfocused alpha forever and read as a bug in
+    -- the theme rather than a gap in the registry.
+    frame:SetClampedToScreen(true)
+
+    SYL.Widgets.CloseOnEscape(frame)
+    SYL.WindowStack.TrackWindow(frame)
+
     frame.title = Theme.CreateText(frame, Theme.sizes.rowSmall, "textMuted")
     frame.title:SetPoint("TOPLEFT", 12, -10)
     frame.title:SetText("YOU WON THIS")
@@ -266,15 +290,20 @@ local function Build()
 
     frame.body = CreateFrame("Frame", nil, frame)
     frame.body:SetPoint("TOPLEFT", 12, -30)
-    frame.body:SetPoint("BOTTOMRIGHT", -12, 26)
+    frame.body:SetPoint("BOTTOMRIGHT", -12, 14 + FOOTNOTE_HEIGHT)
 
     frame.blocks = {}
 
     frame.footnote = Theme.CreateText(frame, Theme.sizes.rowSmall, "textMuted")
     frame.footnote:SetPoint("BOTTOMLEFT", 12, 8)
     frame.footnote:SetPoint("BOTTOMRIGHT", -12, 8)
+    frame.footnote:SetHeight(FOOTNOTE_HEIGHT)
     frame.footnote:SetJustifyH("LEFT")
-    frame.footnote:SetText("An addon cannot trade for you. This only tells you who asked.")
+    frame.footnote:SetJustifyV("BOTTOM")
+    frame.footnote:SetWordWrap(true)
+    frame.footnote:SetText(
+        "An addon cannot trade for you. This only tells you who asked."
+    )
 
     frame:Hide()
 

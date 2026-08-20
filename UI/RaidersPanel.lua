@@ -47,6 +47,11 @@ local rows = {}
 local rosterRows = {}
 local offset = 0
 local selectedKey
+-- How many rows the last redraw had to show, per view. The mouse wheel needs a
+-- ceiling and used to get one by calling Build() — the whole fairness
+-- computation over every drop and session — once per notch, on top of the one
+-- Refresh does immediately afterwards. Recorded while drawing instead.
+local lastShown = { board = 0, roster = 0 }
 local view = "board"
 local Refresh
 
@@ -80,6 +85,38 @@ local function FindByKey(entries, key)
 
     return nil
 end
+
+-- The entry the detail pane should draw for a key picked in the roster view.
+--
+-- The board first, because a raider who has raided has a score attached and
+-- that is the pane this detail was written to show. Most of a 399-member guild
+-- is not on the board, though, and those people used to resolve to nil and
+-- draw a blank — so a roster entry is the fallback, marked unranked outright
+-- rather than left with nil fields, which would have LootScore.Describe say
+-- "not ranked" where it can truthfully say why.
+local function RosterSelection(key)
+    if not key then
+        return nil
+    end
+
+    local onBoard = FindByKey(Build(), key)
+
+    if onBoard then
+        return onBoard
+    end
+
+    local entry = FindByKey(SYL.RaidersRoster.Build(), key)
+
+    if entry then
+        entry.ranked = false
+        entry.notRankedReason = (entry.nights or 0) > 0
+            and "not on the raid team"
+            or "has not raided yet"
+    end
+
+    return entry
+end
+
 
 --------------------------------------------------------------------------
 -- The board
@@ -193,7 +230,7 @@ Refresh = function()
     )
 
     if view == "roster" then
-        SYL.RaidersRoster.Refresh({
+        lastShown.roster = SYL.RaidersRoster.Refresh({
             frame = frame,
             boardRows = rows,
             rosterRows = rosterRows,
@@ -202,7 +239,19 @@ Refresh = function()
             offset = offset,
             selectedKey = selectedKey,
             onChanged = Refresh,
-            selected = selectedKey and FindByKey(Build(), selectedKey) or nil,
+
+            onSelect = function(key)
+                selectedKey = key
+
+                Refresh()
+            end,
+
+            -- FROM THE ROSTER, NOT THE BOARD. This looked the selection up in
+            -- Build(), which is the ranked board — so anybody the roster shows
+            -- and the board does not (most of a 399-member guild) resolved to
+            -- nil and drew an empty detail pane. The same wrong-list mistake
+            -- as the mouse wheel below, one screen along.
+            selected = RosterSelection(selectedKey),
         })
 
         return
@@ -211,6 +260,9 @@ Refresh = function()
     HideRows(rosterRows)
 
     local entries, beforeScope = Build()
+
+    lastShown.board = #entries
+
     local maxOffset = math.max(0, #entries - VISIBLE_ROWS)
 
     if offset > maxOffset then
@@ -395,7 +447,14 @@ function RaidersPanel.Create(parent)
 
     frame:EnableMouseWheel(true)
     frame:SetScript("OnMouseWheel", function(_, delta)
-        local total = #(Build())
+        -- ASK WHICHEVER VIEW IS SHOWING. This counted the board's entries
+        -- whatever was on screen, so in roster view the ceiling came from a
+        -- raid team of thirteen while the list underneath held all 399 guild
+        -- members. Sixteen rows are visible, so that ceiling is zero and the
+        -- wheel did nothing at all — the roster could not be scrolled past its
+        -- first screen. RaidersRoster clamps its own draw, which is why the
+        -- rows looked right and only the scrolling was dead.
+        local total = lastShown[view] or 0
         local maxOffset = math.max(0, total - VISIBLE_ROWS)
 
         offset = math.max(0, math.min(maxOffset, offset - delta))

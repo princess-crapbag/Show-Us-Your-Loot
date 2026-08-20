@@ -64,7 +64,7 @@ function SelectionBar.Create(parent, view, config)
 
     -- Chat capture takes everything, so the tab is mostly reagents and gold
     -- with the gear somebody actually received buried in it. This is the
-    -- same filter the due list uses, so the list and the maths agree.
+    -- same filter the due list uses, so the list and the math agree.
     bar.gearOnly =
         Theme.CreateButton(parent, 100, 20, "Gear only", function()
             view.gearOnly = not view.gearOnly

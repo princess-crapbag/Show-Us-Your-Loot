@@ -154,7 +154,7 @@ end
 -- Ignored rows stay in the list and stop counting, and have to look like it.
 --
 -- A flag that changes every number the addon reports and leaves no mark on
--- screen is the worst of both: the list and the maths disagree and nothing
+-- screen is the worst of both: the list and the math disagree and nothing
 -- says why. Dimming alone would not do — that is what hidden looks like, and
 -- the two are different states. The type cell carries it, because that is the
 -- column that already answers "what is this row".

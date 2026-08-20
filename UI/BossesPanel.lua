@@ -21,6 +21,7 @@
 
 local SYL = _G.ShowUsYourLoot
 local Theme = SYL.Theme
+local Count = SYL.Utilities.Count
 
 local BossesPanel = {}
 SYL.BossesPanel = BossesPanel
@@ -199,7 +200,8 @@ Refresh = function()
     SYL.BossLoot.Render(frame.pane, FindByKey(bosses, selectedKey), mode, journalRead)
 
     frame.caption:SetText(
-        #bosses .. " bosses recorded · kept apart by difficulty"
+        Count(#bosses, "boss", "bosses")
+        .. " recorded · kept apart by difficulty"
     )
 end
 

@@ -21,7 +21,7 @@
 --
 -- IT NAMES BOTH SEASONS ON SCREEN. `/syl archive <name>` names the season
 -- being *started*, not the one being archived, and has caught Aimee twice —
--- once leaving the active season called "Season 1 tail". The behaviour is
+-- once leaving the active season called "Season 1 tail". The behavior is
 -- defensible and the wording was not, so the dialog now says which season is
 -- being closed and which one the box is naming, in those words.
 

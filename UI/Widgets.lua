@@ -12,22 +12,220 @@ SYL.Widgets = Widgets
 Widgets.ROW_HEIGHT = Theme.metrics.rowHeight
 Widgets.ARCHIVE_ROW_HEIGHT = Theme.metrics.archiveRowHeight
 
-function Widgets.MakeMovable(frame)
-    frame:SetMovable(true)
-    frame:EnableMouse(true)
-    frame:RegisterForDrag("LeftButton")
+-- Where a window was left, so it opens there next time.
+--
+-- Sizes have been remembered since resizing shipped and positions never were,
+-- so every window went back to the middle of the screen on every login. Aimee:
+-- "i do want the addon to open wherever the user puts it on their screen and
+-- remember the place."
+--
+-- The key comes off the frame rather than through the drag handler, because
+-- MakeMovable is called before the window knows what it is called. RestoreSize
+-- stamps it, and every window that persists anything already goes through it.
+local function RememberPosition(frame)
+    local key = frame.sylWindowKey
 
-    frame:SetScript("OnDragStart", function(self)
-        self:StartMoving()
+    if not key or not ShowUsYourLootDB then
+        return
+    end
+
+    local point, _, relativePoint, x, y = frame:GetPoint(1)
+
+    if not point then
+        return
+    end
+
+    ShowUsYourLootDB.settings = ShowUsYourLootDB.settings or {}
+    ShowUsYourLootDB.settings.windowPositions =
+        ShowUsYourLootDB.settings.windowPositions or {}
+
+    ShowUsYourLootDB.settings.windowPositions[key] = {
+        point = point,
+        relativePoint = relativePoint or point,
+        x = math.floor((x or 0) + 0.5),
+        y = math.floor((y or 0) + 0.5),
+    }
+end
+
+function Widgets.RestorePosition(frame, key)
+    frame.sylWindowKey = key
+
+    local positions = ShowUsYourLootDB
+        and ShowUsYourLootDB.settings
+        and ShowUsYourLootDB.settings.windowPositions
+
+    local saved = positions and positions[key]
+
+    if not saved or not saved.point then
+        return false
+    end
+
+    -- Always relative to UIParent. Anything else would have to still exist,
+    -- and a saved anchor to a window that has since been rebuilt is a window
+    -- that opens nowhere.
+    frame:ClearAllPoints()
+    frame:SetPoint(
+        saved.point, UIParent, saved.relativePoint or saved.point,
+        saved.x or 0, saved.y or 0
+    )
+
+    -- A restored position is still the user's answer, so the auto-layout has
+    -- to keep its hands off it — otherwise the first second window to open
+    -- would slide it somewhere else and undo the whole point of saving it.
+    --
+    -- BOTH FLAGS, AND THE SECOND IS THE ONE THAT MATTERS. NoteUserMoved alone
+    -- only tells WindowLayout to leave this window out of its arrangement; it
+    -- does not stop WindowStack.PlaceOnce, which runs on the first Show of
+    -- every session and re-centers anything without symlPlaced. So the whole
+    -- feature did nothing: the position was read back correctly and then
+    -- thrown away one frame later, and every window still opened dead center.
+    if SYL.WindowStack then
+        SYL.WindowStack.NoteUserMoved(frame)
+    end
+
+    -- Set directly rather than through a helper, because it means exactly
+    -- "this window has already been put somewhere" and it has.
+    frame.symlPlaced = true
+
+    return true
+end
+
+local function StopDragging(frame)
+    frame:StopMovingOrSizing()
+
+    -- Moved by hand is the user's answer; the layout stops rearranging it.
+    if SYL.WindowStack then
+        SYL.WindowStack.NoteUserMoved(frame)
+    end
+
+    RememberPosition(frame)
+end
+
+-- One band of the window that drags it. Created before anything else in the
+-- window, so every button and row made afterwards sits above it and takes its
+-- own clicks first — a handle underneath is only reached where there is
+-- nothing else to reach.
+local function DragHandle(frame)
+    local handle = CreateFrame("Frame", nil, frame)
+
+    -- THE DEFAULT LEVEL IS THE RIGHT ONE, AND SETTING IT WAS A MISTAKE.
+    --
+    -- A child defaults to its parent's level plus one, which is exactly what
+    -- this wants: ABOVE the window, so a press on the title bar reaches the
+    -- handle instead of the window underneath it, and level with every other
+    -- child — where the tiebreak is creation order, and this is built before
+    -- any of them, so every control made afterwards wins its own clicks.
+    --
+    -- Forcing it down to the parent's own level looked safer and broke
+    -- dragging outright: the window is mouse-enabled too, and no longer
+    -- registers the drag itself when a handle exists, so the press landed on
+    -- the window and nothing happened at all.
+    handle:EnableMouse(true)
+    handle:RegisterForDrag("LeftButton")
+
+    -- RAISES THE WINDOW, BECAUSE IT IS STANDING IN FRONT OF THE THING THAT DID.
+    -- WindowStack.RaiseOnClick puts OnMouseDown on the WINDOW, and a
+    -- mouse-enabled child consumes the press before the parent ever sees it —
+    -- so with this handle over the title bar, clicking a buried window's title
+    -- to bring it forward did nothing, and it stayed behind and stayed
+    -- translucent, since the focus paint follows frame level. Forwarded rather
+    -- than removed: the handle has to take the mouse to be a drag handle.
+    handle:SetScript("OnMouseDown", function()
+        if SYL.WindowStack then
+            SYL.WindowStack.Raise(frame)
+        end
     end)
 
-    frame:SetScript("OnDragStop", function(self)
-        self:StopMovingOrSizing()
+    handle:SetScript("OnDragStart", function()
+        frame:StartMoving()
+    end)
 
-        -- Moved by hand is the user's answer; the layout stops rearranging it.
-        if SYL.WindowStack then
-            SYL.WindowStack.NoteUserMoved(self)
+    handle:SetScript("OnDragStop", function()
+        StopDragging(frame)
+    end)
+
+    return handle
+end
+
+-- THE TITLE BAR, AND NOTHING ELSE.
+--
+-- Every window here puts its name and subtitle in the top ~56 pixels and
+-- nothing you can press except the close button, which is a child and sits
+-- above this. Below that line is all controls: the tab strip at -66, the
+-- filter bars, the column headers, the rows, and a footer full of buttons.
+--
+-- The first version of this took `zones` and covered everything above the
+-- list — 156 pixels on the main window, straight across the tab strip — and
+-- the tabs stopped responding. Whether the handle actually won those clicks
+-- or something else did, a band that large over a screen that dense is not
+-- worth the doubt for a feature whose whole job is "let me click the table".
+--
+-- So: one band, the height of the title bar, at a frame level below every
+-- sibling. Aimee's ask was to be able to right-click a name without the window
+-- sliding out from under the cursor, and a title bar is where every other
+-- window in the game is dragged from anyway.
+Widgets.TITLE_BAR_HEIGHT = 56
+
+-- `movable` is optional. Passing nothing keeps the whole window draggable,
+-- which is right for a dialog or popup that is nothing but chrome.
+function Widgets.MakeMovable(frame, titleBarOnly)
+    frame:SetMovable(true)
+    frame:EnableMouse(true)
+
+    if not titleBarOnly then
+        frame:RegisterForDrag("LeftButton")
+
+        frame:SetScript("OnDragStart", function(self)
+            self:StartMoving()
+        end)
+
+        frame:SetScript("OnDragStop", StopDragging)
+
+        return
+    end
+
+    frame.dragTop = DragHandle(frame)
+    frame.dragTop:SetPoint("TOPLEFT", 0, 0)
+    frame.dragTop:SetPoint("TOPRIGHT", 0, 0)
+    frame.dragTop:SetHeight(Widgets.TITLE_BAR_HEIGHT)
+end
+
+-- Right-click a row to copy the name it is showing.
+--
+-- `getName` is called on the click rather than closed over, because rows are
+-- pooled and reused as a list scrolls — capturing the name at creation would
+-- copy whoever happened to be in that slot when the window opened.
+--
+-- Attached to the ROW, not to the name's font string: a font string cannot
+-- take mouse input at all, and the row is already the thing under the cursor.
+-- Left-click behavior is untouched, so wherever a row already opens a detail
+-- pane it still does.
+--
+-- Each caller decides the name form, because they differ and both are right:
+-- the roster hands over the bare name its rows show and its "Alt of" box
+-- expects, while the keys list hands over Name-Realm, which is how a keystone
+-- is stored. The box is an EditBox either way, so trimming one to the other is
+-- a drag inside a field that already has focus.
+--
+-- OnMouseUp rather than OnClick, so this attaches to a plain Frame as well as
+-- to a Button. Most rows in this addon are Frames, and OnClick never fires on
+-- one; the rows that ARE buttons register only for LeftButtonUp, so hooking
+-- OnClick would have silently done nothing on every list.
+function Widgets.AttachNameCopy(row, getName)
+    row:EnableMouse(true)
+
+    row:HookScript("OnMouseUp", function(_, button)
+        if button ~= "RightButton" then
+            return
         end
+
+        local name = getName()
+
+        if type(name) ~= "string" or name == "" then
+            return
+        end
+
+        SYL.Links.ShowCopyText(name, name)
     end)
 end
 
@@ -130,6 +328,12 @@ local function ScreenSize()
 end
 
 function Widgets.RestoreSize(frame, key)
+    -- Position rides along with size. Both are per-window preferences, both
+    -- are keyed the same way, and every window that saves one wants the other
+    -- — separating them only creates a window that remembers half of where it
+    -- was. This also stamps the key the drag handler reads.
+    Widgets.RestorePosition(frame, key)
+
     -- Called while the frame is still the size its window declared, so this
     -- is the one moment "default" is knowable. Both CreateListWindow and the
     -- main window come through here, so recording it here covers both.
@@ -170,6 +374,12 @@ end
 function Widgets.ResetSizes()
     if ShowUsYourLootDB and ShowUsYourLootDB.settings then
         ShowUsYourLootDB.settings.windowSizes = {}
+
+        -- Positions as well, now that they are remembered. This command exists
+        -- for a window dragged past the edge of the screen, and clearing only
+        -- the size would center it for one session and put it back off the
+        -- monitor at the next login — which is the failure it is meant to fix.
+        ShowUsYourLootDB.settings.windowPositions = {}
     end
 
     local reset = 0
@@ -358,7 +568,9 @@ function Widgets.CreateListWindow(config)
     frame:SetFrameStrata("DIALOG")
     frame:SetClampedToScreen(true)
 
-    Widgets.MakeMovable(frame)
+    -- Title bar only. See MakeMovable.
+    Widgets.MakeMovable(frame, true)
+
     Theme.StyleWindow(frame)
 
     Widgets.MakeResizableList(frame, {

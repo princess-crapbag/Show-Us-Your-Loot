@@ -26,7 +26,10 @@ DashboardWidgets.RENDERERS = {}
 
 -- Last raid night ---------------------------------------------------------
 DashboardWidgets.RENDERERS.lastNight = function(tile)
-    local sessions = SYL.RaidSession.RaidsOnly(SYL.GetActiveRaids())
+    -- The guild's nights, not every raid this character walked into. A
+    -- 49-person LFR run and a 12-person guild raid landed on the same evening
+    -- and were added together into "60 raiders".
+    local sessions = SYL.RaidSession.NightsOnly(SYL.GetActiveRaids())
 
     if #sessions == 0 then
         DashboardParts.Empty(tile,
@@ -177,18 +180,14 @@ DashboardWidgets.RENDERERS.readiness = function(tile)
         end
 
         DashboardParts.Caption(tile,
-            counts.TANK .. " tanks · " .. counts.HEALER .. " healers · "
-            .. counts.DPS .. " dps"
-            .. (counts.unset > 0 and ("  ·  " .. counts.unset .. " unset") or "")
+            SYL.RaidTeam.DescribeRoles(counts)
             .. "  ·  " .. covered .. " of " .. total .. " buffs")
 
         return
     end
 
     DashboardParts.Caption(tile,
-        counts.TANK .. " tanks · " .. counts.HEALER .. " healers · "
-        .. counts.DPS .. " dps"
-        .. (counts.unset > 0 and ("  ·  " .. counts.unset .. " unset") or ""))
+        SYL.RaidTeam.DescribeRoles(counts))
 end
 
 -- Tier progress -----------------------------------------------------------
@@ -237,7 +236,7 @@ DashboardWidgets.RENDERERS.recording = function(tile)
     local settings = ShowUsYourLootDB and ShowUsYourLootDB.settings or {}
 
     local drops = SYL.GetActiveDrops()
-    local nights = SYL.RaidSession.RaidsOnly(SYL.GetActiveRaids())
+    local nights = SYL.RaidSession.NightsOnly(SYL.GetActiveRaids())
 
     local latest = 0
 
