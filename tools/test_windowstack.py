@@ -98,6 +98,20 @@ function MakeFrame(width, height, tag)
     function f:GetFrameLevel() return self.level end
     function f:ClearAllPoints() end
 
+    -- Children are real, because the close button of the window behind
+    -- showing through the window in front is a question about them.
+    f.children = {{}}
+
+    function f:AddChild(child)
+        table.insert(self.children, child)
+        child.parent = self
+    end
+
+    -- table.unpack here, plain unpack in the client: this runtime is
+    -- Lua 5.5 and WoW is 5.1.
+    local Unpack = table.unpack or unpack
+    function f:GetChildren() return Unpack(self.children) end
+
     -- Scripts are kept rather than swallowed, so a click can actually be
     -- delivered below. Click-to-raise is only reachable through the handler
     -- WindowStack attaches, and a stub that discarded it would leave the whole
@@ -356,6 +370,49 @@ stack.ToggleWindow(main)
 
 check("and closing the last one leaves nothing in front",
       G.FOCUSED is None, G.FOCUSED)
+
+# --- nothing inside a window draws at the next window's level -------------
+#
+# Aimee, on the banded build: the close button of the window behind still
+# showed through the window in front. Some children carry a level of their own
+# rather than inheriting one — the corner close button is a Blizzard template,
+# and §3z already recorded that it has one, which is why it survived a
+# click-stealing bug that killed the settings cog beside it.
+#
+# A child at or above the band ceiling is above the whole of the window above
+# it, and the band stops meaning anything.
+stack = fresh_stack()
+
+main = MakeFrame(MAIN_W, MAIN_H, "main")
+settings = MakeFrame(SETTINGS_W, SETTINGS_H, "settings")
+
+# A close button that has opinions, which is the whole point.
+close_button = MakeFrame(24, 24, "close")
+close_button.level = 500
+main.AddChild(main, close_button)
+
+stack.ToggleWindow(main)
+stack.ToggleWindow(settings)
+
+check("the front window is above the back one",
+      settings.level > main.level, (main.level, settings.level))
+
+check("AND THE BACK WINDOW'S CLOSE BUTTON IS PULLED UNDER IT",
+      close_button.level < settings.level,
+      f"close={close_button.level} front={settings.level}")
+
+# Still inside its own window, not flattened to the bottom: it has to stay
+# above the window body it belongs to or it becomes unclickable.
+check("while staying above its own window",
+      close_button.level > main.level,
+      f"close={close_button.level} own window={main.level}")
+
+# And raising the window it belongs to takes it back over the other one.
+main.Click(main)
+
+check("raising its window carries it back to the front",
+      close_button.level > settings.level and main.level > settings.level,
+      f"close={close_button.level} main={main.level} settings={settings.level}")
 
 print()
 print("FAILURES:", failures or "none")

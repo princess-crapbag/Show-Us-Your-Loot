@@ -67,9 +67,34 @@ local BAND = 40
 
 local stack = {}
 
+-- NOTHING INSIDE A WINDOW MAY DRAW AT THE NEXT WINDOW'S LEVEL.
+--
+-- Aimee, on the banded build: the close button of the window behind still
+-- showed through the window in front. Some children carry a level of their own
+-- rather than inheriting one — the corner close button is a Blizzard template
+-- and §3z already recorded that it has its own, which is why it survived a
+-- click-stealing bug that killed the settings cog beside it. A child sitting
+-- at or above the band ceiling is above the whole of the window above it, and
+-- the band stops meaning anything.
+--
+-- So the ceiling is enforced rather than assumed. Direct children only: the
+-- offenders are chrome anchored to the window itself, and walking every row in
+-- every list on every raise would cost more than it is worth.
+local function ClampChildren(frame, ceiling)
+    for _, child in ipairs({ frame:GetChildren() }) do
+        if child.GetFrameLevel and child:GetFrameLevel() >= ceiling then
+            child:SetFrameLevel(ceiling - 1)
+        end
+    end
+end
+
 local function Restack()
     for index, frame in ipairs(stack) do
-        frame:SetFrameLevel(BASE_LEVEL + index * BAND)
+        local level = BASE_LEVEL + index * BAND
+
+        frame:SetFrameLevel(level)
+
+        ClampChildren(frame, level + BAND)
     end
 end
 
