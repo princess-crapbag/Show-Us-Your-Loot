@@ -101,93 +101,65 @@ local function StopDragging(frame)
     RememberPosition(frame)
 end
 
--- One band of the window that drags it. Created before anything else in the
--- window, so every button and row made afterwards sits above it and takes its
--- own clicks first — a handle underneath is only reached where there is
--- nothing else to reach.
-local function DragHandle(frame)
-    local handle = CreateFrame("Frame", nil, frame)
-
-    -- THE DEFAULT LEVEL IS THE RIGHT ONE, AND SETTING IT WAS A MISTAKE.
-    --
-    -- A child defaults to its parent's level plus one, which is exactly what
-    -- this wants: ABOVE the window, so a press on the title bar reaches the
-    -- handle instead of the window underneath it, and level with every other
-    -- child — where the tiebreak is creation order, and this is built before
-    -- any of them, so every control made afterwards wins its own clicks.
-    --
-    -- Forcing it down to the parent's own level looked safer and broke
-    -- dragging outright: the window is mouse-enabled too, and no longer
-    -- registers the drag itself when a handle exists, so the press landed on
-    -- the window and nothing happened at all.
-    handle:EnableMouse(true)
-    handle:RegisterForDrag("LeftButton")
-
-    -- RAISES THE WINDOW, BECAUSE IT IS STANDING IN FRONT OF THE THING THAT DID.
-    -- WindowStack.RaiseOnClick puts OnMouseDown on the WINDOW, and a
-    -- mouse-enabled child consumes the press before the parent ever sees it —
-    -- so with this handle over the title bar, clicking a buried window's title
-    -- to bring it forward did nothing, and it stayed behind and stayed
-    -- translucent, since the focus paint follows frame level. Forwarded rather
-    -- than removed: the handle has to take the mouse to be a drag handle.
-    handle:SetScript("OnMouseDown", function()
-        if SYL.WindowStack then
-            SYL.WindowStack.Raise(frame)
-        end
-    end)
-
-    handle:SetScript("OnDragStart", function()
-        frame:StartMoving()
-    end)
-
-    handle:SetScript("OnDragStop", function()
-        StopDragging(frame)
-    end)
-
-    return handle
-end
-
--- THE TITLE BAR, AND NOTHING ELSE.
+-- THE TITLE BAR, AND NOTHING ELSE, IS A DRAG HANDLE.
 --
--- Every window here puts its name and subtitle in the top ~56 pixels and
--- nothing you can press except the close button, which is a child and sits
--- above this. Below that line is all controls: the tab strip at -66, the
--- filter bars, the column headers, the rows, and a footer full of buttons.
---
--- The first version of this took `zones` and covered everything above the
--- list — 156 pixels on the main window, straight across the tab strip — and
--- the tabs stopped responding. Whether the handle actually won those clicks
--- or something else did, a band that large over a screen that dense is not
--- worth the doubt for a feature whose whole job is "let me click the table".
---
--- So: one band, the height of the title bar, at a frame level below every
--- sibling. Aimee's ask was to be able to right-click a name without the window
--- sliding out from under the cursor, and a title bar is where every other
--- window in the game is dragged from anyway.
+-- Aimee, on the roster: you cannot get a name out of a table you cannot click
+-- without moving the window, because the drag was registered on the whole
+-- window and every pixel was a handle. Below this line is all controls — the
+-- tab strip at -66, the filter bars, the column headers, the rows, and a
+-- footer full of buttons.
 Widgets.TITLE_BAR_HEIGHT = 56
 
--- `movable` is optional. Passing nothing keeps the whole window draggable,
--- which is right for a dialog or popup that is nothing but chrome.
+-- Is the cursor inside the window's title bar right now?
+--
+-- NO EXTRA FRAME. The first two attempts put an invisible mouse-enabled child
+-- over the title bar, and it took clicks from the controls underneath it: the
+-- settings cog went dead, while the close button beside it kept working
+-- because that one is a Blizzard template that sets its own frame level. Same
+-- level as its siblings was not enough — this handle is created before all of
+-- them, and the engine handed it the mouse anyway.
+--
+-- So nothing is drawn over anything. The drag stays registered on the window,
+-- and OnDragStart simply refuses unless the press began in the title bar.
+-- Every control keeps its own clicks because there is no longer anything
+-- between them and the cursor.
+--
+-- GetCursorPosition returns screen coordinates in an unscaled space, so it has
+-- to be divided by the frame's effective scale before it can be compared with
+-- GetTop.
+local function CursorInTitleBar(frame)
+    local top = frame:GetTop()
+
+    if not top or not GetCursorPosition then
+        -- Cannot tell. Dragging is the friendlier failure: a window that
+        -- refuses to move is worse than one that moves when it should not.
+        return true
+    end
+
+    local scale = frame:GetEffectiveScale() or 1
+    local _, cursorY = GetCursorPosition()
+
+    if not cursorY or scale == 0 then
+        return true
+    end
+
+    return (top - (cursorY / scale)) <= Widgets.TITLE_BAR_HEIGHT
+end
+
 function Widgets.MakeMovable(frame, titleBarOnly)
     frame:SetMovable(true)
     frame:EnableMouse(true)
+    frame:RegisterForDrag("LeftButton")
 
-    if not titleBarOnly then
-        frame:RegisterForDrag("LeftButton")
+    frame:SetScript("OnDragStart", function(self)
+        if titleBarOnly and not CursorInTitleBar(self) then
+            return
+        end
 
-        frame:SetScript("OnDragStart", function(self)
-            self:StartMoving()
-        end)
+        self:StartMoving()
+    end)
 
-        frame:SetScript("OnDragStop", StopDragging)
-
-        return
-    end
-
-    frame.dragTop = DragHandle(frame)
-    frame.dragTop:SetPoint("TOPLEFT", 0, 0)
-    frame.dragTop:SetPoint("TOPRIGHT", 0, 0)
-    frame.dragTop:SetHeight(Widgets.TITLE_BAR_HEIGHT)
+    frame:SetScript("OnDragStop", StopDragging)
 end
 
 -- Right-click a row to copy the name it is showing.

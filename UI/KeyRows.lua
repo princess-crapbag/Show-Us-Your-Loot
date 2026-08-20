@@ -66,7 +66,13 @@ KeyRows.COLUMNS = {
 
     -- Two digits covers every key level anybody has ever pushed, and the
     -- heading is wider than the number anyway.
-    { key = "level", label = "LVL", justify = "RIGHT", widest = "30" },
+    --
+    -- LEFT like its neighbors. Right-aligning a number is the usual rule and
+    -- it is the wrong one here: three of the four columns read from the left,
+    -- so this one sat against the wrong edge and read as a mistake rather than
+    -- as tidy arithmetic. Aimee: "randomly the info in lvl is right
+    -- justified." A column of two-digit numbers lines up either way.
+    { key = "level", label = "LVL", justify = "LEFT", widest = "30" },
 
     -- Every string this column can hold: Waiting, Yes, Maybe, No, Ask, and
     -- "Ask again". The last is the widest.
