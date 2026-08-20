@@ -28,10 +28,10 @@ upgrade, who turned up, and what each boss has given.
 - **CurseForge:** project 1642383, live at **v0.3.4**, shipped 2026-08-17 as
   `12.1.0 release`. **Real people can download this now.** v0.3.0 was the first
   non-alpha; v0.3.1 was the 12.1.0 compatibility bump.
-- **`main` is FIVE code commits past v0.3.4 and none of it is pushed or
-  tagged.** Nothing has reached a user. Verify rather than trust this line:
-  `git log --name-only v0.3.4..main`.
-- 132 Lua files in the `.toc`, 36 test suites in `tools/`.
+- **`main` is pushed and reads 0.3.5 in the `.toc`. There is no v0.3.5 tag,
+  so nothing has reached a user.** Verify rather than trust this line:
+  `git log --oneline v0.3.4..main` and `git tag --sort=-v:refname`.
+- 138 Lua files in the `.toc`, 37 test suites in `tools/`.
 
 **Aimee runs the addon from a symlink**, `Interface/AddOns/ShowUsYourLoot ->
 Desktop/ShowUsYourLoot`. Edits are live in game immediately; only a `/reload`
@@ -63,7 +63,7 @@ was drawn cut off, fixed in v0.3.4. That is the first of these ever proven.
 |---|---|
 | **Roster sharing** | **Shipped in v0.3.3, and the first attempt failed** — the send burst below meant the messages never all arrived. v0.3.4 paces them. Still unproven. Turn the switch on, have them `/reload`, and the Raiders tab should fill and say "shared by". **Fails silently** — an empty roster looks exactly like a roster nobody has set up |
 | **Absence sharing** | A second client. **Fails quietly**: a bad merge says somebody is available when they are not, which is worse than an error. Mark somebody out on one client, check the "set by" on the other, remove it, check it disappears |
-| Sync roll lists | A second client. `/syl sync backfill` on one and the roll lists should appear on the other |
+| Sync roll lists | A second client. `/syl sync backfill` on one and the roll lists should appear on the other. **Command-only, which breaks the rule in §2** — it needs a home |
 
 **Every sharing switch except roster sharing gates receiving as well as
 sending, and they are all off by default.** A fresh install is deaf to absences
@@ -291,9 +291,49 @@ pushes need no prompt. Never put a token in a URL.
 
 ## 3z. The 2026-08-20 session — READ THIS FIRST
 
-Five commits past v0.3.4, **nothing pushed, nothing tagged, no user affected**.
-36 suites green, `syl_check` exit 0. Written after Aimee's first real raid
-night produced eleven improvement requests.
+**`main` is pushed and carries a dated 0.3.5 changelog and a bumped `.toc`.
+No tag, so nothing has reached a CurseForge user.** Tagging is the only
+remaining step and it was deliberately left for Aimee — see "The release that
+is one step away" below. 37 suites green, `syl_check` exit 0.
+
+Written after her first real raid night produced eleven improvement requests,
+then extended through the afternoon as she tested each fix in the client.
+
+### The release that is one step away
+
+`v0.3.5` needs one action: push the tag. The changelog is written and dated,
+the `.toc` reads 0.3.5, and `tools/syl_package.py` builds
+`dist/ShowUsYourLoot-0.3.5.zip` clean.
+
+**It was not tagged because she was away and most of it had not run in the
+client at the time.** Since then she confirmed in game: the credit line, the
+picker, Undo, persistence across a reload, the window layering and the close
+button. What is in the release and has still never run in game is the
+duplicate-drop repair — verified instead against her live saved variables
+through the shipped Lua, which is the strongest evidence available short of
+the client.
+
+### What she confirmed in the client, this session
+
+The credit block appears only on real drops, the picker opens in front and
+lists all eleven raiders, hovering a name lights the row, `credited now`
+follows the correction, the front window is solid and the back one
+translucent, and clicking either swaps them. Her words on the last one: "the
+two windows show correctly now."
+
+### The eleven corrections are already in her database
+
+All eleven 08-18 awards are applied. Eight were written into her
+SavedVariables directly while the client was closed; one she had already made
+by hand; **two needed no override at all** — Boots of the Reckless Wayfarer
+and Shellbound Bracers were already recorded as hers on the same response the
+council gave them, and writing one would have made them read "set by hand"
+for a correction that corrected nothing. A backup sits beside the file as
+`ShowUsYourLoot.lua.before-credit-import`.
+
+**Editing SavedVariables is only safe with the client closed.** WoW holds the
+file in memory and rewrites it on `/reload` and logout, so an edit made while
+it is running is thrown away without a word. Check for `Wow.exe` first.
 
 ### The one thing that matters more than the rest
 
@@ -344,13 +384,14 @@ Her RCLC data is readable from this machine and was read — do not re-derive it
 
 ### Open, in her priority order
 
-1. **RCLootCouncil credit** — above. **The manual half is built and the
-   automatic half is not.** `Core/LootCredit.lua` stores an override carrying
+1. **RCLootCouncil credit** — above. **The manual half is built, confirmed in
+   game, and the automatic half is not.** `Core/LootCredit.lua` stores an override carrying
    both a person and a response; `DropRules.CreditedKey` and the new
    `CreditedState` beside it are the one door, and LootScore, DueList and
    Analytics all go through them. The control is the credit line on the drop
-   detail window — Change… opens a picker, Undo clears it. 34 assertions in
-   `tools/test_lootcredit.py`. **Never run in game.**
+   detail window — Change… opens a picker, Undo clears it. 53 assertions in
+   `tools/test_lootcredit.py`. **Confirmed in game on 2026-08-20**: the line,
+   the picker, Undo, and that a correction survives a reload.
    What is left is the import: read the award history, match on `itemLink`,
    and write the same override the picker writes. On the 08-18 night all
    **11 of 11** items matched their council award on the link with nothing
@@ -363,9 +404,14 @@ Her RCLC data is readable from this machine and was read — do not re-derive it
    because `Razørshift` has `mainGUID` = `Razørtongue` — but the card never
    says so. Click a figure, see the data.
 3. **Settings in five tabs**, as approved.
-4. **Window frame levels.** Raising a window still changes nothing visible and
-   both stay translucent. Every window is DIALOG strata and **no window sets
-   its own frame level**, so `Raise()` has nothing to move. Needs banding.
+4. **Window frame levels — DONE, and it was one cause under three symptoms.**
+   `UI/WindowStack.lua` keeps an explicit stack and paints the levels from it,
+   40 apart because a window's own popups take its level plus 10 or 20. That
+   fixed the picker opening behind, the front window never being painted
+   solid, and `IsTopmost` answering true for everything at once. A second pass
+   pulls any direct child sitting at or above the next band back under it —
+   the corner close button is a Blizzard template with a level of its own and
+   was showing through the window in front. Confirmed in game by Aimee.
 5. Loot views, calendar out-list layout, the Tue/Thu schedule UI (the data
    layer is DONE and has zero UI; her `schedule.weekdays` is already `{3,5}`).
 6. Guild-only for the fairness math — **deliberately not done.** Narrowing
@@ -397,14 +443,51 @@ Her RCLC data is readable from this machine and was read — do not re-derive it
   fallback table had every key mapped to the wrong number and it never mattered
   because only the value SET is used; corrected anyway.
 
+### Traps the 08-20 afternoon paid for
+
+- **A SLASH-COMMAND-SHAPED BUG: two clients, two record ids, one drop.** A
+  record id starts with the *local* session's start timestamp, so the same
+  drop is `1787100146-3470-1` here and `1787100144-3470-1` on the client that
+  broadcast it. `Core/Sync.lua` deduped on the id alone and stored a second
+  copy of everything a guildmate sent. Eleven of them from one night, all
+  crediting the master looter, and **invisible in the loot list because a
+  synced record carries no item name**. Her board read 560 where it should
+  have read 200. `Core/DropIdentity.lua` is the answer and
+  `Migrations.DedupeSyncedDrops` clears out what shipped.
+- **Test suites that stub frames prove loading, not working.** An adversarial
+  pass over code that had never run in the client found four real faults the
+  37 suites could not: the credit block drawn on chat-captured loot where it
+  could never work, `credited now` marking the wrong person, `PlayerHistory`
+  still reading the roll instead of the credit, and a hover highlight built
+  and never wired. Budget a review of that kind for any UI written between
+  raids.
+- **Two of the eleven council awards needed no override.** The addon already
+  had them right, and writing one would have made them read "set by hand" for
+  a correction that corrected nothing — which is the case the picker turns
+  into a Clear. Check before writing in bulk.
+- **Her SavedVariables can only be edited with the client closed.** WoW holds
+  the file in memory and rewrites it on `/reload` and logout. Check for
+  `Wow.exe` in `tasklist` first, and take a backup beside the file.
+
 ### Verified in game vs only tested
 
 Confirmed by Aimee after reloading: tabs, close button, cogwheel, dates, US
 formatting, Keys layout, roster spacing, right-click copy, alt suggestions,
 roster scrolling and selection, the rank-floor setting, window drag, position
-memory. **Never run in game:** the Analytics credit rewrite, the guild-night
-filter's effect on her numbers, Recovery, the keystone staleness filter, and
-the whole credit-reassign feature — the credit line, the picker and Undo.
+memory — and, on 08-20, the credit line, the picker opening in front and
+listing all eleven raiders, row hover, `credited now` following a correction,
+Undo, persistence across a reload, and the window layering in both directions.
+
+**Never run in game:** the guild-night filter's effect on her numbers,
+Recovery, the keystone staleness filter, the duplicate-drop repair, the
+need-and-greed count on the Raiders detail pane, and the Reset window sizes
+row in Settings.
+
+The duplicate repair is the one worth reading the caveat on: it was verified
+against her live saved variables through the shipped Lua rather than in the
+client — 33 drops to 22, Arcangila 560 to 200, every other raider unchanged —
+which is the strongest evidence available short of logging in, and is not the
+same thing.
 
 **The board's 820 was reproduced exactly from her saved variables** before any
 of it was written — 23 wins, 7 Need, 6 Greed, 10 Transmog, of which the guild
