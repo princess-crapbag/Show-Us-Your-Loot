@@ -16,6 +16,7 @@ Core\Output.lua
 Core\Utilities.lua
 Core\Filters.lua
 Core\DropRules.lua
+Core\DropIdentity.lua
 Core\Serializer.lua
 Core\Guild.lua
 Core\ItemQuality.lua

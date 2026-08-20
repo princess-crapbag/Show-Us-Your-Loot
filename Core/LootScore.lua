@@ -143,12 +143,38 @@ local function Add(totals, key, state, at)
     local entry = totals[key]
 
     if not entry then
-        entry = { key = key, score = 0, wins = 0, lastAt = nil, byState = {} }
+        entry = {
+            key = key,
+            score = 0,
+            wins = 0,
+            scoringWins = 0,
+            lastAt = nil,
+            byState = {},
+        }
+
         totals[key] = entry
     end
 
-    entry.score = entry.score + LootScore.WeightOf(state)
+    local weight = LootScore.WeightOf(state)
+
+    entry.score = entry.score + weight
     entry.wins = entry.wins + 1
+
+    -- HOW MANY ITEMS SOMEBODY ACTUALLY TOOK, which is not the same question as
+    -- what they are worth and not the same as `wins` either.
+    --
+    -- Aimee's, after her first corrected raid night: "count the quantity of
+    -- need and greed items each player received... we should not include mogs
+    -- in this number." A transmog win costs the raid nothing — that is the
+    -- whole reason it weighs zero — so counting it here would say somebody had
+    -- been looked after when they had not.
+    --
+    -- Derived from the weight rather than from a list of states, so it can
+    -- never fall out of step with the weights above. Anything worth points is
+    -- something they received.
+    if weight > 0 then
+        entry.scoringWins = entry.scoringWins + 1
+    end
 
     -- Transmog weighs nothing and still counts here. A raider with six
     -- transmog wins and a zero contribution from them is exactly the person
@@ -233,6 +259,12 @@ function LootScore.Attach(entries, drops)
 
         entry.lootScore = totalsFor and totalsFor.score or 0
         entry.lootWins = totalsFor and totalsFor.wins or 0
+
+        -- Need and greed only. `lootWins` counts transmog as well, so the two
+        -- differ for exactly the people whose totals look larger than their
+        -- score explains.
+        entry.scoringWins = totalsFor and totalsFor.scoringWins or 0
+
         entry.byState = totalsFor and totalsFor.byState or {}
 
         local nights = entry.nights or 0

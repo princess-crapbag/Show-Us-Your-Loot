@@ -93,6 +93,88 @@ function Migrations.BackfillRecordIDs(database)
     return assigned
 end
 
+--------------------------------------------------------------------------
+-- The same drop, stored twice
+--------------------------------------------------------------------------
+
+-- ELEVEN DUPLICATES FROM ONE RAID NIGHT, found in Aimee's live data.
+--
+-- A record id begins with the local session's start timestamp, and two people
+-- in the same raid start their sessions a second or two apart. Core/Sync.lua
+-- deduped incoming drops on the id alone, so every drop a guildmate broadcast
+-- was stored again under the sender's own id. Her board read 560 where it
+-- should have read 200 — and the duplicates were hard to see, because they
+-- carry no item name and nothing in the loot list showed them.
+--
+-- Worse than the number: a credit correction lands on one record, so the
+-- duplicate went on crediting the master looter no matter what she fixed.
+--
+-- CONSERVATIVE ON PURPOSE. Only a SYNC record is ever removed, and only when a
+-- locally captured record says the same thing. The local one is always the
+-- richer of the two — it has the roll list, the item and the difficulty — so
+-- there is no case where the copy is worth keeping over it. Two SYNC records
+-- that duplicate each other with no local original are left alone: something
+-- was received that this client never saw for itself, and quietly deleting
+-- half of it is not a repair.
+--
+-- Unconditional rather than version-guarded, like BackfillRecordIDs above and
+-- for the same reason: it is idempotent, and the guard is the duplication
+-- itself. It also has to keep running. The fix in Core/Sync.lua is on the
+-- receiving side, and a guildmate on an older build goes on sending.
+function Migrations.DedupeSyncedDrops(database)
+    local removed = 0
+
+    local function Season(season)
+        if type(season) ~= "table" or type(season.drops) ~= "table" then
+            return
+        end
+
+        local kept = {}
+
+        for _, record in ipairs(season.drops) do
+            local duplicate = false
+
+            if record.source == "SYNC" then
+                for _, other in ipairs(season.drops) do
+                    if other ~= record
+                        and other.source ~= "SYNC"
+                        and SYL.DropIdentity.SameDrop(other, record)
+                    then
+                        duplicate = true
+
+                        break
+                    end
+                end
+            end
+
+            if duplicate then
+                removed = removed + 1
+            else
+                table.insert(kept, record)
+            end
+        end
+
+        -- Rewritten in place. season.drops is handed out by reference all over
+        -- the addon — SYL.GetActiveDrops returns the stored table itself — so
+        -- assigning a fresh one would leave every existing holder on the old.
+        for index = #season.drops, 1, -1 do
+            season.drops[index] = nil
+        end
+
+        for index, record in ipairs(kept) do
+            season.drops[index] = record
+        end
+    end
+
+    Season(database.activeSeason)
+
+    for _, season in ipairs(database.archives or {}) do
+        Season(season)
+    end
+
+    return removed
+end
+
 -- Announcing every capture defaulted on, so an install with it on has it on
 -- because of the old default rather than because anybody chose it.
 --

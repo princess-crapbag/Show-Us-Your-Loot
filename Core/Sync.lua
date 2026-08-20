@@ -136,8 +136,25 @@ end
 local function Merge(decoded, sender)
     local drops = SYL.GetActiveDrops()
 
+    -- Settled before the comparison below rather than at the point it is
+    -- stored, because SameDrop asks how far apart the two are and a nil there
+    -- reads as 1970 — which is outside every window and would let the
+    -- duplicate through.
+    decoded.timestamp = decoded.timestamp or time()
+
+    -- THE ID ALONE WAS NOT ENOUGH, and this is the bug that doubled a board.
+    --
+    -- A record id starts with the *sender's* session start timestamp, so the
+    -- same drop is "1787100146-3470-1" here and "1787100144-3470-1" on the
+    -- client that broadcast it. Comparing ids let every drop a guildmate sent
+    -- in be stored a second time: eleven duplicates from one raid night, every
+    -- one crediting the master looter, and none of them touched by a
+    -- correction made on the original. See Core/DropIdentity.lua for what
+    -- the two clients do agree on.
     for _, existing in ipairs(drops) do
-        if existing.id == decoded.id then
+        if existing.id == decoded.id
+            or SYL.DropIdentity.SameDrop(existing, decoded)
+        then
             return false
         end
     end

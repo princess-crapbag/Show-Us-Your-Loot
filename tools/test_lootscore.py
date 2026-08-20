@@ -117,6 +117,38 @@ combined = totals_for(
 check("a transmog alongside a Need leaves the score alone", combined["P1"].score == 100)
 check("but it still counts as a win", combined["P1"].wins == 2)
 
+# --- how many items somebody actually received ----------------------------
+#
+# Aimee's, after her first corrected raid night: "count the quantity of need
+# and greed items each player received... we should not include mogs in this
+# number." A transmog costs the raid nothing, which is the whole reason it
+# weighs zero, so counting it would say somebody had been looked after when
+# they had not.
+check("the transmog is not one of the items they received",
+      combined["P1"].scoringWins == 1)
+
+every_kind = totals_for([
+    drop("P1", STATE.NeedMainSpec),
+    drop("P1", STATE.NeedOffSpec),
+    drop("P1", STATE.Greed),
+    drop("P1", STATE.Transmog),
+    drop("P1", STATE.Transmog),
+])
+
+check("need, offspec and greed all count as received",
+      every_kind["P1"].scoringWins == 3)
+check("and every win is still counted separately",
+      every_kind["P1"].wins == 5)
+check("the score is unaffected by either count",
+      every_kind["P1"].score == 140)
+
+# Nobody with only transmog wins has received anything, and the pane says so
+# rather than showing a count that disagrees with a score of zero.
+only_mog = totals_for([drop("P1", STATE.Transmog), drop("P1", STATE.Transmog)])
+
+check("somebody with only transmog wins has received nothing",
+      only_mog["P1"].scoringWins == 0 and only_mog["P1"].score == 0)
+
 # --- what does not count --------------------------------------------------
 check("a BoE scores nothing", totals_for([drop("P1", STATE.NeedMainSpec, link="boe")])["P1"] is None)
 check("and neither does warbound gear",

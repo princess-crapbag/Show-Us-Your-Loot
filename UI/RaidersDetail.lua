@@ -96,9 +96,22 @@ function RaidersDetail.Render(detail, entry)
 
     Line(detail, SYL.LootScore.Describe(entry), entry.ranked and "accent" or "textMuted")
 
+    -- "WINS THAT COUNTED" COUNTED TRANSMOG, which is the one thing on this
+    -- pane that did not count. entry.lootWins is every win; scoringWins is the
+    -- need and greed ones, and only those are worth anything. Saying the
+    -- transmog wins out loud beside them is the same argument the breakdown
+    -- below makes: the number somebody is arguing with is the one that does
+    -- not mention them.
+    local scoring = entry.scoringWins or 0
+    local transmog = (entry.lootWins or 0) - scoring
+
     Line(detail, string.format(
-        "%d raid nights · %d wins that counted",
-        entry.nights or 0, entry.lootWins or 0
+        "%s · %s that scored%s",
+        SYL.Utilities.Count(entry.nights or 0, "raid night"),
+        SYL.Utilities.Count(scoring, "item"),
+        transmog > 0
+            and (" · " .. transmog .. " transmog, worth nothing")
+            or ""
     ), "textSecondary")
 
     local breakdown = SYL.LootScore.Breakdown(entry)

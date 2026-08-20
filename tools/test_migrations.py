@@ -44,6 +44,11 @@ lua = LuaRuntime(unpack_returned_tuples=True)
 lua.execute("ShowUsYourLoot = {}")
 lua.execute((CORE / "Migrations.lua").read_text(encoding="utf-8"))
 
+# DedupeSyncedDrops asks whether two records are the same drop, and
+# Core/DropIdentity.lua answers. It has no dependencies of its own —
+# that is why it is a separate file rather than part of the store.
+lua.execute((CORE / "DropIdentity.lua").read_text(encoding="utf-8"))
+
 # name, setting it flips, the version at which it was introduced.
 #
 # `boundary` is the number the migration guards against, NOT DATABASE_VERSION.
@@ -196,6 +201,130 @@ for label, ok in checks:
     print(("  ok   " if ok else "  FAIL ") + label)
     if not ok:
         failures.append(f"BackfillRecordIDs: {label}")
+
+print()
+
+# ---------------------------------------------------------------------------
+# DedupeSyncedDrops — also unguarded, and the only repair here that DELETES.
+#
+# THE BUG IT EXISTS FOR, from Aimee's live data. A record id begins with the
+# local session's start timestamp, and two people in the same raid start
+# theirs a second or two apart. Core/Sync.lua deduped on the id alone, so
+# every drop a guildmate broadcast was stored again under the sender's own id
+# — eleven duplicates from one night, every one crediting the master looter,
+# and none of them reachable by a correction made on the original. Her board
+# read 560 where it should have read 200.
+# ---------------------------------------------------------------------------
+
+dedupe = lua.globals().ShowUsYourLoot.Migrations.DedupeSyncedDrops
+
+lua.execute(
+    """
+    -- The real shape: same encounter, same loot index, same winner, same
+    -- roll, two seconds apart, one captured here and one received.
+    DupeFixture = {
+        activeSeason = {
+            id = 'season-1',
+            drops = {
+                {
+                    id = '1787100146-3470-1', source = 'LOOT_HISTORY',
+                    encounterID = 3470, lootListID = 1,
+                    winnerGUID = 'P1', winnerRoll = 51, winnerState = 2,
+                    timestamp = 1787100619, itemName = 'Hexing Spiritrender',
+                },
+                {
+                    id = '1787100144-3470-1', source = 'SYNC',
+                    encounterID = 3470,
+                    winnerGUID = 'P1', winnerRoll = 51, winnerState = 2,
+                    timestamp = 1787100617,
+                },
+                -- Same boss and loot index, different winner: a real second
+                -- drop, not a copy.
+                {
+                    id = '1787100146-3470-2', source = 'LOOT_HISTORY',
+                    encounterID = 3470, lootListID = 2,
+                    winnerGUID = 'P2', winnerRoll = 53,
+                    timestamp = 1787100619,
+                },
+                -- Same everything but a week later: the same boss pulled
+                -- again reuses lootListID, so only the window tells them
+                -- apart.
+                {
+                    id = '1787700146-3470-1', source = 'SYNC',
+                    encounterID = 3470,
+                    winnerGUID = 'P1', winnerRoll = 51,
+                    timestamp = 1787100619 + 604800,
+                },
+                -- Received from two guildmates and never seen locally.
+                -- Nothing here is richer than anything else, so both stay.
+                {
+                    id = '1000-99-1', source = 'SYNC', encounterID = 99,
+                    winnerGUID = 'P3', winnerRoll = 7, timestamp = 500,
+                },
+                {
+                    id = '1002-99-1', source = 'SYNC', encounterID = 99,
+                    winnerGUID = 'P3', winnerRoll = 7, timestamp = 502,
+                },
+            },
+        },
+        archives = {
+            {
+                id = 'season-0',
+                drops = {
+                    {
+                        id = '900-1-1', source = 'LOOT_HISTORY',
+                        encounterID = 1, lootListID = 1,
+                        winnerGUID = 'P9', winnerRoll = 4, timestamp = 900,
+                    },
+                    {
+                        id = '898-1-1', source = 'SYNC', encounterID = 1,
+                        winnerGUID = 'P9', winnerRoll = 4, timestamp = 898,
+                    },
+                },
+            },
+        },
+    }
+
+    -- Held before the run, to prove the stored table is rewritten in place
+    -- rather than replaced. SYL.GetActiveDrops hands this table out by
+    -- reference all over the addon.
+    HeldDrops = DupeFixture.activeSeason.drops
+    """
+)
+
+dupes = lua.globals().DupeFixture
+held = lua.globals().HeldDrops
+
+removed = dedupe(dupes)
+
+season_drops = dupes.activeSeason.drops
+ids = [season_drops[i].id for i in range(1, len(season_drops) + 1)]
+
+checks = [
+    ("removes the synced copy of a locally captured drop", removed == 2),
+    ("the local record is the one kept", "1787100146-3470-1" in ids),
+    ("the synced copy is gone", "1787100144-3470-1" not in ids),
+    ("a different winner on the same boss is not a duplicate",
+     "1787100146-3470-2" in ids),
+    ("the same loot index a week later is not a duplicate",
+     "1787700146-3470-1" in ids),
+    # Deleting half of something this client never saw for itself is not a
+    # repair, so both survive.
+    ("two synced copies with no local original are both left alone",
+     "1000-99-1" in ids and "1002-99-1" in ids),
+    ("archived seasons are covered too",
+     len(dupes.archives[1].drops) == 1),
+    ("the stored table is rewritten in place, not replaced",
+     len(held) == len(season_drops) and held[1].id == season_drops[1].id),
+    ("a second run removes nothing", dedupe(dupes) == 0),
+]
+
+print("DedupeSyncedDrops")
+
+for label, ok in checks:
+    print(("  ok   " if ok else "  FAIL ") + label)
+    if not ok:
+        failures.append(f"DedupeSyncedDrops: {label}")
 
 print()
 # A migration guarding against a boundary above the current version would

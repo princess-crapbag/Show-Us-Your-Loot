@@ -263,6 +263,27 @@ function SYL.DatabaseInitialize()
 
     local backfilled = SYL.Migrations.BackfillRecordIDs(ShowUsYourLootDB)
 
+    -- SAID OUT LOUD, because it is the one repair here that deletes a record
+    -- rather than filling one in. Every other migration changes a setting and
+    -- can be changed back by hand; this one takes rows out of the database,
+    -- and an officer who watches a number drop deserves to know why it did.
+    -- Core/Migrations.lua argues for why the rows are safe to lose.
+    local deduped = SYL.Migrations.DedupeSyncedDrops(ShowUsYourLootDB)
+
+    if deduped > 0 then
+        SYL:Write(
+            SYL.colors.highlight .. "[SYL]" .. SYL.colors.reset
+            .. " removed " .. deduped
+            .. (deduped == 1 and " duplicate drop" or " duplicate drops")
+            .. " received from another player's copy of this addon."
+            .. " Scores that counted them are now correct."
+        )
+    end
+
+    if backfilled > 0 then
+        SYL:DebugPrint("Assigned ids to " .. backfilled .. " record(s)")
+    end
+
     -- A HIGH-WATER MARK, NOT THE CURRENT VERSION.
     --
     -- Installing an older file over a newer one is an ordinary thing to do on
