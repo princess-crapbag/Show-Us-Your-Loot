@@ -61,6 +61,19 @@ local function MatchesOriginal()
     return SamePerson(chosen, original) and chosen.state == original.state
 end
 
+-- The detail window has moved on to a different drop, so this picker is asking
+-- about something nobody is looking at any more. Closed rather than left open:
+-- pressing Credit on it would silently correct a drop that is no longer on
+-- screen, and there is nothing in the picker that names which drop it means
+-- besides the item at the top.
+function CreditPicker.NoteDropChanged(record)
+    if frame and frame:IsShown() and currentRecord ~= record then
+        frame:Hide()
+
+        SYL.WindowStack.RefreshFocus()
+    end
+end
+
 local function Apply()
     local record = currentRecord
 
@@ -162,7 +175,8 @@ local function CreateWindow()
     frame:SetSize(WINDOW_WIDTH, LIST_TOP + VISIBLE_ROWS * ROW_HEIGHT + FOOTER)
     frame:SetPoint("CENTER", 420, 0)
 
-    -- Opened beside the drop it is about, so the cascade must not move it.
+    -- Placed against the drop detail window on every open. The cascade must
+    -- not have an opinion about it as well.
     SYL.WindowStack.KeepPlacement(frame)
     frame:SetFrameStrata("DIALOG")
     frame:SetClampedToScreen(true)
@@ -287,12 +301,39 @@ local function ReadOriginal(record)
     }
 end
 
+-- BESIDE THE DROP, NOT ACROSS IT. Both windows are anchored off center and
+-- their spans overlapped by 250 of the picker's 320 — so even once the frame
+-- levels were fixed it would have covered the roll list it is asking about.
+-- Anchored to the window rather than to a screen position, so dragging the one
+-- carries the other with it.
+--
+-- Skipped once the person has moved the picker by hand: their position is the
+-- answer, and re-placing it on the next open would undo the drag. See
+-- WindowStack.NoteUserMoved, which Widgets sets on every drag stop.
+local function PlaceBeside(window)
+    if window.symlUserMoved then
+        return
+    end
+
+    local anchor = SYL.DropDetailWindow and SYL.DropDetailWindow.Frame()
+
+    window:ClearAllPoints()
+
+    if anchor and anchor:IsShown() then
+        window:SetPoint("TOPLEFT", anchor, "TOPRIGHT", 8, 0)
+    else
+        window:SetPoint("CENTER", 420, 0)
+    end
+end
+
 function CreditPicker.Open(record)
     if not record then
         return
     end
 
     local window = CreateWindow()
+
+    PlaceBeside(window)
 
     currentRecord = record
     candidates = SYL.CreditCandidates.Build(record)

@@ -81,6 +81,10 @@ function MakeFrame(width, height, tag)
     -- API does. Incrementing its own level instead left two windows tied
     -- after both had been raised, and 'the front one' then came down to
     -- whichever the loop happened to reach first.
+    --
+    -- WindowStack no longer calls this — see SetFrameLevel below and the
+    -- banding comment in UI/WindowStack.lua. Kept because the stub is meant
+    -- to be the shape of a real frame, not the shape of one caller.
     function f:Raise()
         local top = 0
 
@@ -90,6 +94,7 @@ function MakeFrame(width, height, tag)
 
         self.level = top + 1
     end
+    function f:SetFrameLevel(level) self.level = level end
     function f:GetFrameLevel() return self.level end
     function f:ClearAllPoints() end
 
@@ -302,6 +307,41 @@ settings.Click(settings)
 
 check("and clicking back swaps them again", G.FOCUSED == "settings",
       G.FOCUSED)
+
+# --- the levels are banded, not merely different --------------------------
+#
+# THE BUG THIS HALF EXISTS FOR, reported from the client: the credit picker
+# opened from a button on the drop detail window and appeared *behind* it.
+# Every window is DIALOG strata and none of them ever set a frame level, so
+# they all sat on the same one — Raise() had nothing to reorder, IsTopmost
+# answered true for all of them at once because it asks whether anything is
+# higher, and the front window was not painted solid either. One cause, three
+# symptoms.
+#
+# A GAP OF ONE IS NOT ENOUGH. A window's own popups take its level plus an
+# offset: UI/NameSuggest.lua uses +20, and the resize grip, the command menu,
+# the filter dropdown and the absence suggestions all use +10. So two windows
+# one level apart would let the lower one's dropdown draw over the upper
+# window. The gap has to clear the largest of those offsets.
+check("two open windows are never on the same frame level",
+      main.level != settings.level, (main.level, settings.level))
+
+check("AND THE GAP CLEARS THE +20 A POPUP TAKES",
+      abs(main.level - settings.level) > 20,
+      (main.level, settings.level))
+
+check("the front window is the higher one",
+      settings.level > main.level, (main.level, settings.level))
+
+# Bounded, not climbing. Re-numbering from the stack means a hundred raises
+# cost nothing; incrementing a counter would have walked toward the ceiling.
+for _ in range(50):
+    main.Click(main)
+    settings.Click(settings)
+
+check("raising repeatedly does not walk the levels upward",
+      max(main.level, settings.level) < 1000,
+      (main.level, settings.level))
 
 # --- closing hands the front to whatever is underneath --------------------
 #

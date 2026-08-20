@@ -36,6 +36,57 @@ local windows = {}
 -- opened.
 local order = {}
 
+--------------------------------------------------------------------------
+-- Frame levels
+--------------------------------------------------------------------------
+
+-- WINDOWS ARE BANDED, AND Raise() ALONE WAS NOT ENOUGH.
+--
+-- Every window in this addon is created at DIALOG strata and none of them
+-- ever set a frame level, so they all sat at the same one. Raise() had
+-- nothing to order: a window opened from a button on another window landed
+-- underneath it, IsTopmost answered true for everything at once because it
+-- asks whether anything is at a *higher* level, and Frontmost picked whichever
+-- happened to be first in `order` rather than whichever was actually on top —
+-- so the front window was not painted solid either. One cause, three symptoms,
+-- and the last of them is why two overlapping windows were both translucent.
+--
+-- So the stack is the authority and the levels are derived from it, rather
+-- than the other way around. `stack` is every tracked window, bottom first;
+-- raising moves one to the end and re-numbers them all.
+--
+-- THE BAND IS 40 BECAUSE POPUPS LIVE INSIDE IT. A window's own children take
+-- its level plus an offset — UI/NameSuggest.lua uses +20, UI/CommandMenu.lua,
+-- UI/FilterDropdown.lua, UI/AbsenceControls.lua and the resize grip use +10 —
+-- so anything less than 40 would let one window's dropdown draw over the
+-- window above it. Re-numbering every time also keeps the levels bounded:
+-- a dozen windows never climb past a few hundred, which repeated Raise() calls
+-- would not have promised.
+local BASE_LEVEL = 40
+local BAND = 40
+
+local stack = {}
+
+local function Restack()
+    for index, frame in ipairs(stack) do
+        frame:SetFrameLevel(BASE_LEVEL + index * BAND)
+    end
+end
+
+local function MoveToTop(frame)
+    for index, other in ipairs(stack) do
+        if other == frame then
+            table.remove(stack, index)
+
+            break
+        end
+    end
+
+    table.insert(stack, frame)
+
+    Restack()
+end
+
 -- Registered so "is anything of ours on top of this" is answerable. Frames
 -- are created once and kept, so this never needs cleaning up.
 function WindowStack.TrackWindow(frame)
@@ -46,6 +97,15 @@ function WindowStack.TrackWindow(frame)
     windows[frame] = true
 
     table.insert(order, frame)
+
+    -- Enters the stack at the bottom rather than the top. Tracking happens on
+    -- the first show, and ShowWindow raises immediately afterwards — so a
+    -- window that should be in front gets there by being raised, and one that
+    -- is merely being registered does not steal the front from whatever the
+    -- person was already looking at.
+    table.insert(stack, 1, frame)
+
+    Restack()
 
     -- Every window this file knows about gets click-to-raise, here rather than
     -- in whatever created it. Tracking runs once per frame, and a window that
@@ -90,15 +150,18 @@ local function OpenWindows(exclude)
     return open, userMoved
 end
 
+-- Is anything of ours drawn over this one?
+--
+-- Asked of the stack rather than of GetFrameLevel. The levels are derived from
+-- the stack now, so the two cannot disagree — but the stack is the one that
+-- stays right if a frame's level is ever changed by something outside this
+-- file, which is exactly what a Blizzard template or a popup does.
 local function IsTopmost(frame)
-    local level = frame:GetFrameLevel()
+    for index = #stack, 1, -1 do
+        local other = stack[index]
 
-    for other in pairs(windows) do
-        if other ~= frame
-            and other:IsShown()
-            and other:GetFrameLevel() > level
-        then
-            return false
+        if other:IsShown() then
+            return other == frame
         end
     end
 
@@ -107,24 +170,20 @@ end
 
 -- Whichever open window sits highest, or nil when none is open.
 --
--- Read from the frame levels rather than remembered. A window can be raised by
--- a footer button, by a row opening a detail pane, or by being clicked, and a
--- separate note of "the selected one" would be another thing to keep in step
--- with what is actually drawn on top. This cannot disagree with the screen.
+-- A window can be raised by a footer button, by a row opening a detail pane,
+-- or by being clicked, and a separate note of "the selected one" would be
+-- another thing to keep in step with what is actually drawn on top. The stack
+-- is that one thing, and the frame levels are painted from it.
 local function Frontmost()
-    local best, bestLevel = nil, nil
+    for index = #stack, 1, -1 do
+        local frame = stack[index]
 
-    for _, frame in ipairs(order) do
-        if windows[frame] and frame:IsShown() then
-            local level = frame:GetFrameLevel()
-
-            if not bestLevel or level > bestLevel then
-                best, bestLevel = frame, level
-            end
+        if frame:IsShown() then
+            return frame
         end
     end
 
-    return best
+    return nil
 end
 
 -- Called after anything that changes which window is on top: a raise, a show,
@@ -154,12 +213,18 @@ function WindowStack.RaiseOnClick(frame)
 end
 
 -- Raise and refocus in one step, so no caller can do one without the other.
+--
+-- MoveToTop rather than frame:Raise(). Raise() orders a frame against the rest
+-- of its strata, which includes Blizzard's own frames and says nothing about
+-- where this addon's windows sit relative to each other — and with every
+-- window on the same level there was nothing for it to reorder anyway. The
+-- band assignment above is the whole of it now.
 function WindowStack.Raise(frame)
     if not frame or not frame:IsShown() then
         return false
     end
 
-    frame:Raise()
+    MoveToTop(frame)
 
     WindowStack.RefreshFocus()
 

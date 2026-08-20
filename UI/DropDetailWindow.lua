@@ -348,9 +348,21 @@ local function CreateWindow()
 end
 
 -- For the credit picker, which changes what this window is showing while it
--- is still open behind it.
+-- is still open beside it.
 function DropDetailWindow.Refresh()
     Refresh()
+end
+
+-- So the picker can sit against this window's edge rather than across it.
+-- nil until the window has been opened once.
+function DropDetailWindow.Frame()
+    return frame
+end
+
+-- Which drop the window is showing, so the picker can tell whether the answer
+-- it collected is still about the drop on screen.
+function DropDetailWindow.CurrentRecord()
+    return currentRecord
 end
 
 function SYL:OpenDropDetail(record)
@@ -359,6 +371,13 @@ function SYL:OpenDropDetail(record)
     end
 
     local window = CreateWindow()
+
+    -- Before the swap below, because it compares against what is on screen
+    -- now. A picker left open across a change of drop would apply its answer
+    -- to the one nobody is looking at.
+    if SYL.CreditPicker then
+        SYL.CreditPicker.NoteDropChanged(record)
+    end
 
     -- Clicking a different row swaps the contents rather than toggling the
     -- window shut, which is what happens if you compare two drops in a row.
