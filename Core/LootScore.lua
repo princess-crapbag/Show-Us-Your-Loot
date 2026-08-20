@@ -176,18 +176,23 @@ function LootScore.BuildTotals(drops)
             -- records carry no roll list, so the header is the fallback.
             for _, roll in ipairs(drop.rolls or {}) do
                 if roll.isWinner then
-                    -- Traded away means credited away. Routed through the same
-                    -- choke point DueList uses, because two lists that
-                    -- disagree about who won an item is how an officer stops
-                    -- trusting both.
+                    -- Traded away means credited away, and so does corrected
+                    -- by hand. Routed through the same choke point DueList
+                    -- uses, because two lists that disagree about who won an
+                    -- item is how an officer stops trusting both.
+                    --
+                    -- The state goes through it too: under a loot council the
+                    -- recorded response is the master looter's roll rather
+                    -- than the recipient's, so the person and the weight are
+                    -- two separate corrections.
                     Add(
                         totals,
                         SYL.Players.ResolveToMain(
-                            SYL.TradeTracker.CreditedIdentity(
+                            SYL.DropRules.CreditedKey(
                                 drop, roll.guid or roll.name
                             )
                         ),
-                        roll.state,
+                        SYL.DropRules.CreditedState(drop, roll.state),
                         drop.timestamp
                     )
 
@@ -199,11 +204,11 @@ function LootScore.BuildTotals(drops)
                 Add(
                     totals,
                     SYL.Players.ResolveToMain(
-                        SYL.TradeTracker.CreditedIdentity(
+                        SYL.DropRules.CreditedKey(
                             drop, drop.winnerGUID or drop.winnerName
                         )
                     ),
-                    drop.winnerState,
+                    SYL.DropRules.CreditedState(drop, drop.winnerState),
                     drop.timestamp
                 )
             end

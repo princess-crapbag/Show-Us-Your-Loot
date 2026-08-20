@@ -50,16 +50,21 @@ local function IsUpgradeState(state)
     return state == STATE.NeedMainSpec or state == STATE.NeedOffSpec
 end
 
-local function CountWin(entry, roll)
+-- Takes the state rather than reading roll.state, because the response a win
+-- is counted under can be corrected and the roll list is not rewritten when it
+-- is. Passing the roll here would put a corrected win in the mog column while
+-- the board scored it as a greed — the same raider with two numbers depending
+-- on which screen you asked, which is the fault this file's header is about.
+local function CountWin(entry, state)
     entry.wins = entry.wins + 1
 
-    if roll.state == STATE.NeedMainSpec then
+    if state == STATE.NeedMainSpec then
         entry.needWins = entry.needWins + 1
-    elseif roll.state == STATE.NeedOffSpec then
+    elseif state == STATE.NeedOffSpec then
         entry.offspecWins = entry.offspecWins + 1
-    elseif roll.state == STATE.Transmog then
+    elseif state == STATE.Transmog then
         entry.mogWins = entry.mogWins + 1
-    elseif roll.state == STATE.Greed then
+    elseif state == STATE.Greed then
         entry.greedWins = entry.greedWins + 1
     end
 end
@@ -181,12 +186,19 @@ function Analytics.BuildPlayerStats(drops)
                             and entry
                             or Ensure(creditKey, nil)
 
+                        -- The corrected response, for the same reason the key
+                        -- is the corrected one: under a loot council the
+                        -- recorded state is the master looter's roll and not
+                        -- the recipient's answer.
+                        local creditState =
+                            SYL.DropRules.CreditedState(drop, roll.state)
+
                         -- Every win is recorded, because what somebody took is
                         -- a fact and the greed and transmog columns report it.
-                        CountWin(credited, roll)
+                        CountWin(credited, creditState)
 
                         -- Only gear reaches UPGRADES and the drought.
-                        if isUpgrade and IsUpgradeState(roll.state) then
+                        if isUpgrade and IsUpgradeState(creditState) then
                             credited.upgradeWins = credited.upgradeWins + 1
 
                             credited.lastWinAt =

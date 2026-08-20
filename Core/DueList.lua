@@ -79,12 +79,20 @@ local function LastUpgradeByPlayer(drops)
             local counted = false
 
             for _, roll in ipairs(drop.rolls or {}) do
-                if roll.isWinner and IsUpgrade(roll.state) then
+                -- The corrected response, not the recorded one. A win the
+                -- addon logged as the master looter's Transmog and an officer
+                -- corrected to the recipient's Need is gear, and gear resets
+                -- a clock. See Core/DropRules.lua.
+                local state = roll.isWinner
+                    and SYL.DropRules.CreditedState(drop, roll.state)
+                    or roll.state
+
+                if roll.isWinner and IsUpgrade(state) then
                     -- An item won and then traded away belongs to whoever is
                     -- wearing it. See Core/TradeTracker.lua: crediting the
                     -- winner made a traded item two wrong numbers at once.
                     local key = SYL.Players.ResolveToMain(
-                        SYL.TradeTracker.CreditedIdentity(
+                        SYL.DropRules.CreditedKey(
                             drop, roll.guid or roll.name
                         )
                     )
@@ -101,9 +109,13 @@ local function LastUpgradeByPlayer(drops)
                 end
             end
 
-            if not counted and IsUpgrade(drop.winnerState) then
+            if not counted
+                and IsUpgrade(
+                    SYL.DropRules.CreditedState(drop, drop.winnerState)
+                )
+            then
                 local key = SYL.Players.ResolveToMain(
-                    SYL.TradeTracker.CreditedIdentity(
+                    SYL.DropRules.CreditedKey(
                         drop, drop.winnerGUID or drop.winnerName
                     )
                 )

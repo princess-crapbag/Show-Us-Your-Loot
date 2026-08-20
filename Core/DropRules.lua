@@ -73,17 +73,47 @@ function DropRules.CountsAsUpgrade(drop)
     return IsRaidDrop(drop)
 end
 
--- Who a win belongs to, once trading is taken into account.
+-- Who a win belongs to, once trading and any hand-made correction are taken
+-- into account.
 --
 -- Master looters receive everything and hand it out, so without this every
 -- drop in the raid lands on one person. Delegates rather than reimplements:
 -- Core/TradeTracker.lua owns the "was this traded, and to whom" question and
 -- resolves a GUID before a name for reasons its own comment explains at
--- length.
+-- length; Core/LootCredit.lua owns the "somebody said otherwise" question.
+--
+-- A CORRECTION BEATS AN OBSERVATION. If the addon watched a trade and was
+-- told afterwards that the item went somewhere else, the person doing the
+-- telling was in the raid and the addon was not. LootCredit answers first for
+-- that reason, and answers with the raw identity when nothing was corrected,
+-- so the trade rule still runs underneath it.
 function DropRules.CreditedKey(drop, rawIdentity)
+    if SYL.LootCredit and SYL.LootCredit.IsSet(drop) then
+        return SYL.LootCredit.IdentityFor(drop, rawIdentity)
+    end
+
     if not SYL.TradeTracker then
         return rawIdentity
     end
 
     return SYL.TradeTracker.CreditedIdentity(drop, rawIdentity)
+end
+
+-- The response a win is scored on, once a correction is taken into account.
+--
+-- THE WEIGHT IS WRONG AS OFTEN AS THE NAME IS, which is why this exists
+-- beside CreditedKey rather than being folded into it. Under a loot council
+-- the recorded state is the master looter's roll and not the recipient's
+-- answer — on Aimee's 2026-08-18 raid six of eleven drops carried the wrong
+-- weight and four of those were Transmog, which weighs nothing. A reassign
+-- that moved only the name would have moved nothing at all on those four.
+--
+-- Feeds the drought as well as the score: Transmog corrected to Need has to
+-- reset a clock, because it turned out to be gear.
+function DropRules.CreditedState(drop, rawState)
+    if not SYL.LootCredit then
+        return rawState
+    end
+
+    return SYL.LootCredit.StateFor(drop, rawState)
 end

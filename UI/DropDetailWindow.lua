@@ -5,17 +5,34 @@
 --
 -- This is the transparency the addon exists for — not who won, which the list
 -- already shows, but what everyone else rolled.
+--
+-- IT IS ALSO WHERE CREDIT IS CORRECTED, and that is on purpose rather than in
+-- a Settings tab of buttons: the control belongs where the data lives. Under a
+-- loot council the addon credits every drop to the master looter, because a
+-- trade it never witnessed is a trade that never happened as far as it knows.
+-- See Core/LootCredit.lua for why that is two wrong numbers per drop and not
+-- one.
+--
+-- WHAT IT DOES NOT DO IS REWRITE HISTORY. "Won by Arcangila with 51" still
+-- says so afterwards, because that is what the client reported. Only the
+-- credit line moves.
 
 local SYL = _G.ShowUsYourLoot
 local Theme = SYL.Theme
 local Widgets = SYL.Widgets
 local Utilities = SYL.Utilities
 
+local DropDetailWindow = {}
+SYL.DropDetailWindow = DropDetailWindow
+
 -- Wide enough for name, state, roll, guild rank and the winner marker.
 local WINDOW_WIDTH = 500
 local ROW_HEIGHT = 20
 local VISIBLE_ROLLS = 14
-local LIST_TOP = 150
+
+-- The credit block sits between the outcome line and the roll list.
+-- UI/DropCredit.lua owns its internals and states what it costs.
+local LIST_TOP = 150 + SYL.DropCredit.HEIGHT
 
 local frame
 local rollRows = {}
@@ -192,6 +209,7 @@ local function Refresh()
     end
 
     UpdateHeaderText()
+    SYL.DropCredit.Update(frame, currentRecord)
 
     local rolls = SortRolls(currentRecord.rolls)
     local total = #rolls
@@ -282,6 +300,28 @@ local function CreateWindow()
     separator:SetPoint("TOPLEFT", 16, -140)
     separator:SetPoint("TOPRIGHT", -16, -140)
 
+    SYL.DropCredit.Build(frame, {
+        onChange = function()
+            if currentRecord then
+                SYL.CreditPicker.Open(currentRecord)
+            end
+        end,
+
+        onUndo = function()
+            if not currentRecord then
+                return
+            end
+
+            SYL.LootCredit.Clear(currentRecord.id)
+
+            Refresh()
+
+            if SYL.RefreshMainWindow then
+                SYL:RefreshMainWindow()
+            end
+        end,
+    })
+
     frame.countText =
         Theme.CreateText(frame, Theme.sizes.columnHeader, "textMuted")
 
@@ -305,6 +345,12 @@ local function CreateWindow()
     frame:Hide()
 
     return frame
+end
+
+-- For the credit picker, which changes what this window is showing while it
+-- is still open behind it.
+function DropDetailWindow.Refresh()
+    Refresh()
 end
 
 function SYL:OpenDropDetail(record)
