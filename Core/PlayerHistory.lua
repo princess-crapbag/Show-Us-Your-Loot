@@ -34,16 +34,53 @@ function PlayerHistory.Build(key, drops)
     for _, drop in ipairs(drops or {}) do
         local matched = false
 
+        -- WHO THIS DROP COUNTS FOR, through the same door the board uses.
+        --
+        -- This file read roll.state and roll.isWinner raw, so it was the last
+        -- screen still answering from the roll alone — and it is one click
+        -- from the Players row that answers from the credit. A drop traded
+        -- away, or corrected by hand, showed on the winner's detail pane as a
+        -- win and on the recipient's as a pass, while the row above said the
+        -- opposite. See Core/DropRules.lua; Analytics had the same fault and
+        -- for the same reason.
+        local creditedKey, creditedState, creditedName
+
+        for _, roll in ipairs(drop.rolls or {}) do
+            if roll.isWinner then
+                creditedKey = SYL.Players.ResolveToMain(
+                    SYL.DropRules.CreditedKey(drop, roll.guid or roll.name)
+                )
+
+                creditedState = SYL.DropRules.CreditedState(drop, roll.state)
+            end
+        end
+
+        if creditedKey == nil and drop.winnerState ~= nil then
+            creditedKey = SYL.Players.ResolveToMain(
+                SYL.DropRules.CreditedKey(
+                    drop, drop.winnerGUID or drop.winnerName
+                )
+            )
+
+            creditedState = SYL.DropRules.CreditedState(drop, drop.winnerState)
+        end
+
         for _, roll in ipairs(drop.rolls or {}) do
             local rollKey =
                 SYL.Players.ResolveToMain(roll.guid or roll.name)
 
             if rollKey == key then
+                local credited = creditedKey ~= nil and creditedKey == key
+
                 table.insert(entries, {
                     drop = drop,
-                    state = roll.state,
+
+                    -- The corrected response only for whoever the drop is
+                    -- credited to. Everybody else's own answer is a fact
+                    -- about them and is left alone.
+                    state = credited and creditedState or roll.state,
                     roll = roll.roll,
-                    won = roll.isWinner and true or false,
+                    won = credited,
                     characterName = roll.name,
                 })
 
@@ -53,18 +90,41 @@ function PlayerHistory.Build(key, drops)
             end
         end
 
+        -- CREDITED TO SOMEBODY WHO NEVER ROLLED, which is the ordinary case
+        -- under a loot council and after any trade: the recipient was not
+        -- eligible, or passed. Without this their own history is the one
+        -- screen that never learns they were given it.
+        if not matched and creditedKey ~= nil and creditedKey == key then
+            local credit = SYL.LootCredit and SYL.LootCredit.Describe(drop)
+
+            table.insert(entries, {
+                drop = drop,
+                state = creditedState,
+                roll = nil,
+                won = true,
+                characterName = (credit and credit.name) or drop.winnerName,
+                credited = true,
+            })
+
+            matched = true
+        end
+
         -- Synced records carry a winner but no roll list. Their wins still
         -- belong in a history; they are marked so the absence of everyone
         -- else does not read as "nobody else wanted it".
         if not matched and drop.partial then
             local winnerKey = SYL.Players.ResolveToMain(
-                drop.winnerGUID or drop.winnerName
+                SYL.DropRules.CreditedKey(
+                    drop, drop.winnerGUID or drop.winnerName
+                )
             )
 
             if winnerKey == key then
                 table.insert(entries, {
                     drop = drop,
-                    state = drop.winnerState,
+                    state = SYL.DropRules.CreditedState(
+                        drop, drop.winnerState
+                    ),
                     roll = drop.winnerRoll,
                     won = true,
                     characterName = drop.winnerName,

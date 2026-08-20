@@ -81,6 +81,28 @@ end
 
 LootCredit.FindRecord = FindRecord
 
+-- Can this record's credit be moved at all?
+--
+-- CHAT-CAPTURED LOOT CANNOT, AND THE SCREEN HAS TO KNOW BEFORE THE BUTTON IS
+-- PRESSED. Personal loot, vault items, crafted gear and world drops are
+-- captured from chat into season.loot, not into season.drops — a different
+-- store with a differently shaped id (Core/LootCapture.lua builds one from the
+-- recipient and the item; Core/LootHistoryStore.lua builds one from the run
+-- and the encounter). FindRecord searches the drops, so it can never resolve
+-- one of those, and Set would answer "that drop is no longer in the database"
+-- about a row the person is looking at.
+--
+-- That is right as a rule and not just as a limitation: personal loot is
+-- outside the fairness math by design, so there is no credit on it to move.
+-- The answer is to not offer the control, rather than to offer it and fail.
+--
+-- Asked of the store rather than of a flag on the record, because the record
+-- the UI holds may be a copy — see the note on FindRecord — and the only
+-- honest test is whether the thing a write would land on actually exists.
+function LootCredit.CanCorrect(drop)
+    return drop ~= nil and drop.id ~= nil and FindRecord(drop.id) ~= nil
+end
+
 --------------------------------------------------------------------------
 -- Reading an override
 --------------------------------------------------------------------------

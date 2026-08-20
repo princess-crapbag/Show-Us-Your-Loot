@@ -40,21 +40,38 @@ DropCredit.HEIGHT = 78
 -- override. Both are passed in rather than reached for, so this file never
 -- has to know which window it is sitting in.
 function DropCredit.Build(frame, handlers)
-    local label = Theme.CreateText(frame, Theme.sizes.columnHeader, "textMuted")
+    -- Collected so the whole block can be hidden at once. A record whose
+    -- credit cannot be moved must not show a credit line at all — see
+    -- LootCredit.CanCorrect, and Update below.
+    frame.creditParts = {}
+
+    local function Part(region)
+        table.insert(frame.creditParts, region)
+
+        return region
+    end
+
+    local label = Part(
+        Theme.CreateText(frame, Theme.sizes.columnHeader, "textMuted")
+    )
 
     label:SetPoint("TOPLEFT", 18, -DropCredit.LABEL_TOP)
     label:SetText("CREDITED TO")
 
-    frame.creditName = Theme.CreateText(frame, Theme.sizes.row, "textPrimary")
+    frame.creditName = Part(
+        Theme.CreateText(frame, Theme.sizes.row, "textPrimary")
+    )
     frame.creditName:SetPoint("TOPLEFT", 18, -DropCredit.NAME_TOP)
 
-    frame.creditWeight =
+    frame.creditWeight = Part(
         Theme.CreateText(frame, Theme.sizes.rowSmall, "textSecondary")
+    )
 
     frame.creditWeight:SetPoint("LEFT", frame.creditName, "RIGHT", 10, 1)
 
-    frame.creditNote =
+    frame.creditNote = Part(
         Theme.CreateText(frame, Theme.sizes.columnHeader, "textMuted")
+    )
 
     frame.creditNote:SetPoint("TOPLEFT", 18, -DropCredit.NOTE_TOP)
 
@@ -65,23 +82,23 @@ function DropCredit.Build(frame, handlers)
     local changeWidth =
         Theme.MeasureText(Theme.sizes.rowSmall, changeLabel) + 26
 
-    local change = Theme.CreateButton(
+    local change = Part(Theme.CreateButton(
         frame, changeWidth, 22, changeLabel, handlers.onChange
-    )
+    ))
 
     change:SetPoint("TOPRIGHT", -16, -(DropCredit.NAME_TOP - 5))
 
     local undoLabel = "Undo"
     local undoWidth = Theme.MeasureText(Theme.sizes.rowSmall, undoLabel) + 26
 
-    frame.undoButton = Theme.CreateButton(
+    frame.undoButton = Part(Theme.CreateButton(
         frame, undoWidth, 22, undoLabel, handlers.onUndo
-    )
+    ))
 
     frame.undoButton:SetPoint("RIGHT", change, "LEFT", -8, 0)
     frame.undoButton:Hide()
 
-    local separator = Theme.CreateSeparator(frame)
+    local separator = Part(Theme.CreateSeparator(frame))
 
     separator:SetPoint("TOPLEFT", 16, -DropCredit.SEPARATOR_TOP)
     separator:SetPoint("TOPRIGHT", -16, -DropCredit.SEPARATOR_TOP)
@@ -126,11 +143,33 @@ local function NoteFor(credit)
     return "won the roll, never traded"
 end
 
+local function HideBlock(frame)
+    for _, part in ipairs(frame.creditParts or {}) do
+        part:Hide()
+    end
+end
+
 function DropCredit.Update(frame, record)
     local credit = SYL.LootCredit.Describe(record)
 
-    if not credit then
+    -- NOT EVERY ROW IN THE LOOT LIST IS A DROP. Personal loot, vault items,
+    -- crafted gear and world drops are captured from chat into a different
+    -- store, and Core/LootFeed.lua hands this window a built-to-fit copy of
+    -- one — with an empty roll list and no winner state. Drawn anyway, the
+    -- block read "CREDITED TO <name> · unknown · 0" and "won the roll, never
+    -- traded" about an item nobody rolled on, and Change… could only ever
+    -- answer "that drop is no longer in the database" about a row on screen.
+    --
+    -- Hidden rather than disabled, because there is no credit on personal
+    -- loot to show: it is outside the fairness math by design.
+    if not credit or not SYL.LootCredit.CanCorrect(record) then
+        HideBlock(frame)
+
         return
+    end
+
+    for _, part in ipairs(frame.creditParts or {}) do
+        part:Show()
     end
 
     frame.creditName:SetText(tostring(credit.name or "Nobody"))

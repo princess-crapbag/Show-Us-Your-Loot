@@ -37,9 +37,20 @@ local filtered = {}
 local offset = 0
 local search = ""
 
--- What is being chosen, and what the record said before anything was chosen.
+-- Three separate answers, and conflating any two of them is a bug.
+--
+--   chosen   — what the person is picking right now; mutates as they click.
+--   original — the record with any override ignored: the roll winner and the
+--              response the client reported. What Clear returns to.
+--   holder   — where the credit sits at this moment, override included.
+--
+-- "credited now" marks HOLDER, not original. Those coincide until the first
+-- correction and diverge immediately afterwards, so marking original looked
+-- right on a first open and then told an officer the credit was still on the
+-- master looter while the window behind said otherwise.
 local chosen = {}
 local original = {}
+local holder = {}
 
 local Refresh
 
@@ -139,7 +150,7 @@ Refresh = function()
         if candidate then
             SYL.CreditPickerRows.FillRow(row, candidate, {
                 chosen = SamePerson(candidate, chosen),
-                current = SamePerson(candidate, original),
+                current = SamePerson(candidate, holder),
             })
 
             row:Show()
@@ -350,9 +361,18 @@ function CreditPicker.Open(record)
     -- current state before it changes it.
     local override = SYL.LootCredit.Get(record)
 
-    chosen = {
+    holder = {
         guid = override and override.guid or original.guid,
         name = override and override.name or original.name,
+    }
+
+    -- Opens on the current holder, so the first thing the list says is where
+    -- the credit is rather than where it started. Copied rather than aliased:
+    -- the row handler mutates `chosen`, and sharing the table would drag the
+    -- "credited now" marker along with the selection.
+    chosen = {
+        guid = holder.guid,
+        name = holder.name,
         state = (override and override.state ~= nil)
             and override.state
             or original.state,

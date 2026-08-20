@@ -217,6 +217,20 @@ lua.execute(
         return nil
     end
 
+    -- One player's detail pane. A different sweep again from both the board
+    -- and the Players list, and it is one click from the row it must agree
+    -- with.
+    function HistoryFor(key)
+        local entries = ShowUsYourLoot.PlayerHistory.Build(
+            key, ShowUsYourLoot.GetActiveDrops()
+        )
+
+        local totals = ShowUsYourLoot.PlayerHistory.Summarize(entries)
+
+        return #entries, totals.won, totals.upgrades, totals.mogWins,
+            totals.greedWins, totals.needWins
+    end
+
     function CandidateNames()
         local names = {}
 
@@ -483,6 +497,101 @@ check(
     g.CandidateNames() == "Arcangila,Phreestyle,Rakahasa",
     g.CandidateNames(),
 )
+
+# --- the detail pane agrees with the row above it -------------------------
+# PlayerHistory was the last screen still reading the roll rather than the
+# credit, and it is ONE CLICK from the Players row that reads the credit. A
+# corrected drop showed as a win on the master looter's pane and as a pass on
+# the recipient's, while the row said the opposite.
+g.Setup()
+
+count, won, upgrades, mog, greed, need = g.HistoryFor(ML)
+check(
+    "as recorded, the drop is a win on the master looter's pane",
+    (count, won, mog) == (1, 1, 1),
+    (count, won, upgrades, mog, greed, need),
+)
+
+count, won, upgrades, mog, greed, need = g.HistoryFor(RECIPIENT)
+check(
+    "and a pass on the recipient's",
+    (count, won) == (1, 0),
+    (count, won, upgrades, mog, greed, need),
+)
+
+g.Credit(RECIPIENT, "Phreestyle", GREED)
+
+count, won, upgrades, mog, greed, need = g.HistoryFor(ML)
+check(
+    "corrected, the master looter's pane stops calling it a win",
+    (count, won, mog) == (1, 0, 0),
+    (count, won, upgrades, mog, greed, need),
+)
+
+count, won, upgrades, mog, greed, need = g.HistoryFor(RECIPIENT)
+check(
+    "and the recipient's pane counts it, under the corrected response",
+    (count, won, greed, mog) == (1, 1, 1, 0),
+    (count, won, upgrades, mog, greed, need),
+)
+
+g.Credit(RECIPIENT, "Phreestyle", NEED)
+count, won, upgrades, mog, greed, need = g.HistoryFor(RECIPIENT)
+check(
+    "a Need correction reaches the pane's upgrade count",
+    (won, need, upgrades) == (1, 1, 1),
+    (count, won, upgrades, mog, greed, need),
+)
+
+# CREDITED TO SOMEBODY WHO NEVER ROLLED. The ordinary case under a loot
+# council and after any trade — the recipient was not eligible, or passed and
+# was handed it anyway. Without an entry for them their own history is the one
+# screen that never learns they were given it.
+OUTSIDER = "Player-1-0000OUT"
+
+g.Setup()
+g.Credit(OUTSIDER, "Vaskarn", NEED)
+
+count, won, upgrades, mog, greed, need = g.HistoryFor(OUTSIDER)
+check(
+    "somebody credited who never rolled still gets the drop in their history",
+    (count, won, upgrades) == (1, 1, 1),
+    (count, won, upgrades, mog, greed, need),
+)
+
+count, won, upgrades, mog, greed, need = g.HistoryFor(ML)
+check(
+    "and it leaves the roll winner's history",
+    (count, won) == (1, 0),
+    (count, won, upgrades, mog, greed, need),
+)
+
+g.ClearCredit()
+check("undo empties their history again", g.HistoryFor(OUTSIDER)[0] == 0,
+      g.HistoryFor(OUTSIDER))
+
+# --- what can be corrected at all ----------------------------------------
+# NOT EVERY ROW IN THE LOOT LIST IS A DROP. Personal loot, vault items,
+# crafted gear and world drops live in a different store with a differently
+# shaped id, and Core/LootFeed.lua hands the detail window a built-to-fit copy
+# of one. Drawn anyway, the credit block claimed "won the roll, never traded"
+# about an item nobody rolled on and offered a Change button whose only
+# possible answer was "that drop is no longer in the database".
+g.Setup()
+
+check("a real drop can be corrected",
+      SYL.LootCredit.CanCorrect(g.Record()) is True)
+
+chat_shaped = lua.eval(
+    "{ id = 'Phreestyle|1234|1700000000|loot', itemName = 'Vault Helm',"
+    " winnerName = 'Phreestyle', rolls = {}, awarded = true }"
+)
+
+check("a chat-captured record cannot",
+      SYL.LootCredit.CanCorrect(chat_shaped) is False)
+check("and neither can a record with no id at all",
+      SYL.LootCredit.CanCorrect(lua.eval("{ itemName = 'x' }")) is False)
+check("nor nil", SYL.LootCredit.CanCorrect(None) is False)
 
 # --- a drop that is not in the database ----------------------------------
 ok, reason = SYL.LootCredit.Set("no-such-drop", lua.eval("{ name = 'Nobody' }"))

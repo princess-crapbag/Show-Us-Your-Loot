@@ -50,6 +50,19 @@ function CreditPickerRows.CreateRow(parent, index, layout, onClick)
     row.noteText = Theme.CreateText(row, Theme.sizes.columnHeader, "textMuted")
     row.noteText:SetPoint("RIGHT", -10, 0)
 
+    -- Widgets.AddRowBackgrounds builds row.highlight and hides it, leaving the
+    -- caller to wire it — which every other list in the addon does and this
+    -- one did not. A column of ten near-identical names with no reaction to
+    -- the pointer reads as a static display rather than as the control that
+    -- picks who gets the credit.
+    row:SetScript("OnEnter", function(self)
+        self.highlight:Show()
+    end)
+
+    row:SetScript("OnLeave", function(self)
+        self.highlight:Hide()
+    end)
+
     row:SetScript("OnClick", function(self)
         if self.candidate then
             onClick(self.candidate)
