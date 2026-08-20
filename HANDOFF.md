@@ -28,12 +28,10 @@ upgrade, who turned up, and what each boss has given.
 - **CurseForge:** project 1642383, live at **v0.3.4**, shipped 2026-08-17 as
   `12.1.0 release`. **Real people can download this now.** v0.3.0 was the first
   non-alpha; v0.3.1 was the 12.1.0 compatibility bump.
-- **`main` and the tag are level as of v0.3.4.** Do not trust that sentence —
-  count code commits rather than commits, because most of what has ever sat
-  past a tag here were edits to this file: `git log --name-only v0.3.4..main`.
-  The line used to carry a number, said "one commit", and was wrong by the
-  end of the day it was written.
-- 128 Lua files in the `.toc`, 33 test suites in `tools/`.
+- **`main` is FIVE code commits past v0.3.4 and none of it is pushed or
+  tagged.** Nothing has reached a user. Verify rather than trust this line:
+  `git log --name-only v0.3.4..main`.
+- 132 Lua files in the `.toc`, 36 test suites in `tools/`.
 
 **Aimee runs the addon from a symlink**, `Interface/AddOns/ShowUsYourLoot ->
 Desktop/ShowUsYourLoot`. Edits are live in game immediately; only a `/reload`
@@ -288,6 +286,112 @@ otherwise. Check the diff before describing it.
 
 Commit identity is repo-local. `gh` is authenticated as `princess-crapbag`;
 pushes need no prompt. Never put a token in a URL.
+
+---
+
+## 3z. The 2026-08-20 session — READ THIS FIRST
+
+Five commits past v0.3.4, **nothing pushed, nothing tagged, no user affected**.
+36 suites green, `syl_check` exit 0. Written after Aimee's first real raid
+night produced eleven improvement requests.
+
+### The one thing that matters more than the rest
+
+**THE RAIDERS BOARD IS WRONG FOR HER GUILD AND EVERYTHING ELSE DEPENDS ON IT.**
+She reports every raider at 0 and Arcangila at 820. That is faithful to what
+the addon knows and false about what happened: she is master looter, she wins
+every roll, and she hands items out through **RCLootCouncil**, which SYL cannot
+see. Credit only moves when SYL witnesses a real trade window.
+
+Her RCLC data is readable from this machine and was read — do not re-derive it:
+
+- `WTF/Account/ARCANGELA/SavedVariables/RCLootCouncil.lua`, globals
+  `RCLootCouncilDB` and `RCLootCouncilLootDB`.
+- `RCLootCouncilLootDB.factionrealm["Alliance - Area 52"]` holds ~380 award
+  records keyed by player, each with `lootWon`, `response`, `responseID`,
+  `isAwardReason`, `boss`, `date`, `time`, `instance`, `iClass`, `iSubClass`.
+- **`responseID` IS NOT A STABLE KEY.** Real counts: `Need`=1, but so are
+  `Disenchant` (13), `Major Upgrade` (11) and `BiS` (2). `Greed`=2 and so are
+  `Minor Upgrade` and `Banking`. `Major Upgrade` appears under BOTH 1 and 2.
+  Scoring by id gives Disenchant 100 points. **Score on the response TEXT and
+  filter on `isAwardReason`.**
+- Non-numeric ids exist: `PL` (Personal Loot, 56), `BONUSROLL` (51), `PASS`,
+  `TIMEOUT`. Personal loot is already outside the fairness math; keep it out.
+- Aimee's rule: Need 100, and offspec/sidegrade/minor upgrade all Greed at 20.
+  Mog 0. **The award counts, and changing an award must move the credit.**
+- Build the **manual reassign screen FIRST**. Nothing on any screen today shows
+  or reverses a credit, so without it a wrong one cannot be undone.
+
+### What she decided this session, so nobody re-asks
+
+- Guild raid = **80% of the group guilded**, per SESSION not per night. Her two
+  recorded sessions on 08/18 are 1-of-49 (LFR) and 12-of-12 (Normal).
+- Rank floor: **Off / 2 / 3**. "1" was dropped — nothing ever has zero nights,
+  so it and Off are the same rule.
+- Loot tab: default hides her solo loot; **"My loot" gets its own tab**.
+  Warbound is recorded, hidden from the main view, shown there.
+- **Warbound is never scored.** It is personal loot and personal loot is not in
+  the fairness math. That is a rule, not a setting.
+- Keys: **the asker picks which character**, which means alt keys broadcast.
+- **NOTHING MAY REQUIRE A SLASH COMMAND.** Hardened from a preference to an
+  absolute. Only `/reload` and bare `/syl` are fair to type. A Settings tab of
+  buttons is an acceptable home; putting the control where the data lives is
+  still better. Six features are command-only today.
+- **Show her a visual before changing any layout**, built from her real saved
+  data. She approved a five-tab Settings mockup with three changes: decor row
+  greyed out and unclickable, 80% made changeable, and the weights line reading
+  "Need 100 · Greed/Offspec 20 · Transmog 0" with its spacing fixed.
+
+### Open, in her priority order
+
+1. **RCLootCouncil credit** — above.
+2. **Make the calendar figures inspectable.** She does not trust "11 raiders,
+   0 went home with nothing, 3.0 drops per raider" because nothing shows the
+   people behind them. The 11 is CORRECT — 12 characters fold to 11 people
+   because `Razørshift` has `mainGUID` = `Razørtongue` — but the card never
+   says so. Click a figure, see the data.
+3. **Settings in five tabs**, as approved.
+4. **Window frame levels.** Raising a window still changes nothing visible and
+   both stay translucent. Every window is DIALOG strata and **no window sets
+   its own frame level**, so `Raise()` has nothing to move. Needs banding.
+5. Loot views, calendar out-list layout, the Tue/Thu schedule UI (the data
+   layer is DONE and has zero UI; her `schedule.weekdays` is already `{3,5}`).
+6. Guild-only for the fairness math — **deliberately not done.** Narrowing
+   display hides rows; narrowing the math rewrites recorded attendance and the
+   drop side must change in the same commit. Her call, and she has not made it.
+
+### Traps this session paid for
+
+- **She runs from a symlink, so every save is live.** A `/reload` during a
+  multi-file edit loads a half-written addon. Tabs "broke" this way once.
+- **An invisible mouse-enabled child STEALS clicks from same-level siblings**,
+  even when created first. A drag handle over the title bar killed the settings
+  cog while the close button beside it survived — because that one is a
+  Blizzard template with its own frame level. Proof: her observation, not
+  reasoning. A subagent proved the opposite from frame ordering and was wrong.
+  Dragging is a cursor-position test in `OnDragStart` now, with no extra frame.
+- **Column widths are MEASURED, never estimated.** `Theme.MeasureText` exists
+  for it and was used in 4 places out of 128 files. Each Keys column declares
+  the widest string it can hold. Offline, the real font is at
+  `_retail_/Interface/AddOns/DialogueUI/Fonts/frizqt__.ttf` and PIL can measure
+  it. **Too wide is a defect too** — her words: "it doesn't look professional."
+- **Name forms differ between stores.** `recordedBy` carries a realm
+  (`Arcangila-Area52`); roster members do not (`Arcangila`). A direct compare
+  matched nobody and silently disabled the whole guild filter while appearing
+  to work. Suspected to be the same bug in `KeystoneRequests.IsOnline`.
+- The player registry field is **`mainGUID`**, not `mainKey`.
+- `Enum.ItemBind` **is present on 12.1.0 build 69382** and warbound is
+  correctly excluded — one of the three Tuesday verifications, now closed. The
+  fallback table had every key mapped to the wrong number and it never mattered
+  because only the value SET is used; corrected anyway.
+
+### Verified in game vs only tested
+
+Confirmed by Aimee after reloading: tabs, close button, cogwheel, dates, US
+formatting, Keys layout, roster spacing, right-click copy, alt suggestions,
+roster scrolling and selection, the rank-floor setting, window drag, position
+memory. **Never run in game:** the Analytics credit rewrite, the guild-night
+filter's effect on her numbers, Recovery, and the keystone staleness filter.
 
 ---
 
