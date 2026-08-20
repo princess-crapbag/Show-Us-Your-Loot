@@ -3,6 +3,103 @@
 What changed, for the person installing it. The commit history explains why;
 this says what you will notice.
 
+## 0.3.5 — 2026-08-20
+
+### Added
+
+- **You can correct who a drop counted for.** Open any group-loot drop from
+  the Loot tab and there is a new **CREDITED TO** line under the winner: who
+  it counts for, what response it is scored on, and where that came from —
+  won the roll, traded to them, or set by hand. **Change…** picks a different
+  raider, **Undo** puts it back.
+
+  This is for anyone running a loot council. The addon can only see what the
+  client tells it, and the client says the master looter won every single
+  item — so a guild that hands loot out through RCLootCouncil or by trading
+  after the fact had one person holding the whole raid's score and everybody
+  else on nothing.
+
+  Two things needed correcting per drop, not one. The **response** is wrong as
+  often as the person is, because the roll it records is the master looter's
+  and not the recipient's — so the picker chooses the response too. On one
+  real raid night, six of eleven drops carried the wrong weight and four of
+  those were transmog, which is worth nothing: moving only the name would have
+  moved no points at all on more than a third of them.
+
+  Nothing is rewritten. "Won by ... with 51" still says exactly that
+  afterwards, because that is what happened. Only the credit moves, and Undo
+  is available for as long as the record exists.
+
+- **How many items somebody actually received**, on the Raiders detail pane,
+  counting need and greed and not transmog. A transmog win costs the raid
+  nothing, so counting it there would say somebody had been looked after when
+  they had not.
+
+### Fixed
+
+- **Sharing stored a second copy of every drop.** If somebody else in your
+  raid also runs this addon with sharing on, every drop they broadcast was
+  saved again alongside your own. The copies were nearly invisible — they
+  carry no item name, so nothing appeared in the loot list — but they counted
+  in the fairness math, and they credited whoever won the roll. On a
+  master-looted night that is one person's score inflated by the whole raid.
+  One officer's board read 560 where it should have read 200.
+
+  The cause was that a record's id starts with the timestamp of when *your*
+  session began, and two people in the same raid start theirs a second or two
+  apart, so the same drop never matched itself. Copies already saved are
+  removed when you log in, and the addon says in chat how many it removed.
+
+- **The front window really is in front now.** 0.3.4 said this was fixed and
+  it was not: every window sat on the same layer, so nothing could be ordered
+  against anything else. A window opened from a button on another window could
+  appear *behind* it, clicking a buried window did not raise it, and two
+  overlapping windows stayed see-through. One cause under all three.
+
+- **A window's close button no longer shows through the window in front of
+  it.**
+
+- **The Raiders detail pane said "wins that counted" and counted transmog**,
+  which is the one kind that does not count.
+
+- **The settings cog could not be clicked.** The whole top of the window was
+  an invisible drag handle, and it took the clicks meant for the controls
+  under it. There is no handle now — dragging still works from the title bar,
+  and nothing is drawn over it.
+
+- **You could not select text or click a row without dragging the window.**
+
+- **`/syl clear` could empty your season from the minimap menu**, with no
+  confirmation and no way back. It now names what it would destroy and refuses
+  unless you type the word.
+
+- **Anybody in your party or instance group could replace your shared
+  roster**, and a longer incoming roll list could overwrite one this client had
+  watched for itself. Both now check who sent them.
+
+- **The Players window and the Discord export disagreed with the Raiders
+  board.** A bind-on-equip, warbound, Timewalking or Mythic+ win counted as an
+  upgrade in one place and as nothing in the other, and the export credited
+  whoever won the roll rather than whoever the item went to. All four screens
+  read one rule now.
+
+- **The Keys table was far too wide.** Every column is measured against the
+  widest text it can hold instead of guessed at; the table went from 508
+  pixels to 387. The RESPONSE heading also sat a few pixels high and changed
+  alignment depending on what a row was showing.
+
+- **A 399-person roster could not be scrolled**, and clicking a name in it did
+  nothing.
+
+- **Window positions are remembered** between sessions.
+
+### Changed
+
+- Right-click any name in the roster to copy it, and the "Alt of" box suggests
+  from the roster as you type.
+- American spellings throughout, including two that were visible in the
+  interface.
+
 ## 0.3.4 — 2026-08-17
 
 ### Fixed
@@ -271,7 +368,7 @@ why searching for this addon turned up six other things and not this one.
 
 - **Windows no longer open on top of each other.** They were being positioned
   before they were shown, and a window that has never been drawn cannot be
-  measured — so the layout gave up and dropped them a few pixels from centre,
+  measured — so the layout gave up and dropped them a few pixels from center,
   which is to say onto whatever was already there.
 - **The settings window was empty.** It drew its first heading and then nothing
   at all: no qualities, no toggles, no features. It read as an empty screen

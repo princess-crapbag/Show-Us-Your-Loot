@@ -2,7 +2,7 @@
 ## Title: Show Us Your Loot
 ## Notes: Loot history, attendance and fairness analytics for group loot.
 ## Author: Aimee
-## Version: 0.3.4
+## Version: 0.3.5
 ## SavedVariables: ShowUsYourLootDB
 ## SavedVariablesPerCharacter: ShowUsYourLootCharDB
 ## OptionalDeps: RaiderIO
