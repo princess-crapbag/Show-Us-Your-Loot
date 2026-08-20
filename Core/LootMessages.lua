@@ -205,7 +205,7 @@ end
 -- passed for it, so it belongs in the feed and nowhere near the due score.
 -- That part already worked, and by accident rather than by design: a bonus
 -- roll arrives through chat capture and lands in `loot`, while the fairness
--- maths reads `drops`, which is group loot only. What did not work was seeing
+-- math reads `drops`, which is group loot only. What did not work was seeing
 -- it — the line was indistinguishable from any other pickup, so it could not
 -- be pointed at or filtered out.
 --

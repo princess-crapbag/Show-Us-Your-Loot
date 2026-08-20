@@ -17,7 +17,7 @@
 -- cadence, not live. A score read here can be days old and a character who
 -- transferred or renamed may be missing entirely. Fine for "who is this
 -- raider", wrong for anything that has to be current, so nothing in the
--- fairness maths is allowed to depend on it.
+-- fairness math is allowed to depend on it.
 
 local SYL = _G.ShowUsYourLoot
 

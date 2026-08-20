@@ -34,7 +34,7 @@
 -- tested themselves.
 --
 -- DRAIN IS PUBLIC because C_Timer cannot be driven from a test. The
--- interesting behaviour is what happens *between* two sends, and an internal
+-- interesting behavior is what happens *between* two sends, and an internal
 -- timer callback is unreachable — the same reason AbsenceSync.Receive is
 -- exported.
 

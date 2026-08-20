@@ -267,7 +267,7 @@ local function Accumulate(sender, serialID, index, count, absence)
     return AbsenceSync.Commit(sender, ordered)
 end
 
--- One message from one sender. Exported because the interesting behaviour is
+-- One message from one sender. Exported because the interesting behavior is
 -- what happens *between* the messages of a set — a fragment must never reach
 -- the store — and that is unreachable through an event handler.
 --

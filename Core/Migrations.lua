@@ -124,6 +124,33 @@ end
 -- turned sync on chose that and should not find it off after an update;
 -- somebody who never touched it should not find it on. The old setting is
 -- left in place rather than deleted, so a downgrade still reads it.
+-- "everyone" left the scope rotation, so anybody parked on it is parked.
+--
+-- Core/Audience.lua:CYCLE has the argument for the removal. The consequence is
+-- here: the scope is saved account-wide, so a client that had it selected on
+-- the day of the update opens the Raiders board on all 399 people it has ever
+-- seen and no button offers to leave. Next() sends any unknown scope back to
+-- the raid team, so pressing once is a way out — but only for somebody who
+-- guesses that the button they are already unhappy with is the answer.
+--
+-- Only touches "everyone", and only once. A saved "guild" is a choice inside
+-- the rotation and is left exactly as it is.
+function Migrations.MigrateAudienceScope(storedVersion)
+    if type(storedVersion) ~= "number" or storedVersion >= 7 then
+        return false
+    end
+
+    local settings = ShowUsYourLootDB and ShowUsYourLootDB.settings
+
+    if not settings or settings.audienceScope ~= "everyone" then
+        return false
+    end
+
+    settings.audienceScope = "team"
+
+    return true
+end
+
 function Migrations.MigrateSyncFeature(storedVersion)
     if type(storedVersion) ~= "number" or storedVersion >= 5 then
         return

@@ -18,7 +18,7 @@
 -- classes as they were at the time on each roll.
 --
 -- THE CHOKE POINT: ResolveToMain is the only place alt identity is applied.
--- Callers pass a roster key or a roll key and get back the key the maths
+-- Callers pass a roster key or a roll key and get back the key the math
 -- should count against. Scattering that decision is how half the numbers end
 -- up folding alts and the other half do not.
 

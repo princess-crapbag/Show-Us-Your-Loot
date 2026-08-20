@@ -68,13 +68,13 @@ local function DropType(drop)
 
     -- NoRoll, Pass and nil are not Need wins. Defaulting them to need
     -- overstated Need in the type column while DueList correctly refused to
-    -- count them, so the list and the maths disagreed about one record.
+    -- count them, so the list and the math disagreed about one record.
     return ROLL_STATE_TYPES[drop.winnerState] or "personal"
 end
 
 -- Chat records carry no roll, so the type is inferred from where and how the
 -- item arrived. That inference lives in PersonalLoot, because the fairness
--- maths has to make the same call and previously did not make it at all.
+-- math has to make the same call and previously did not make it at all.
 local LootTypeOf = SYL.PersonalLoot.LootTypeOf
 
 -- One spelling per person.
@@ -170,7 +170,7 @@ local function FromLoot(record)
 
         -- Only chat-captured records can be one. A bonus roll has no Need or
         -- Greed on it and never reaches the Loot History API at all, which is
-        -- why it has always been outside the fairness maths.
+        -- why it has always been outside the fairness math.
         bonusRoll = record.bonusRoll,
 
         where = WhereOf(record),
@@ -191,7 +191,7 @@ function LootFeed.Build(drops, lootRecords)
     end
 
     -- The overlap is subtracted using the same matcher the due list uses, so
-    -- the list and the maths cannot disagree about what counts as a repeat.
+    -- the list and the math cannot disagree about what counts as a repeat.
     local dropIndex = SYL.PersonalLoot.IndexDrops(drops)
 
     for _, record in ipairs(lootRecords or {}) do

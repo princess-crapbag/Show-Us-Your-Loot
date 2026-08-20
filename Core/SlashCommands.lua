@@ -245,17 +245,17 @@ COMMANDS.resetwindows = function()
     -- failure, and saying so stops it reading as one.
     if reset == 0 then
         SYL:Print(
-            "Saved window sizes cleared. Every window will open at its "
-            .. "default size."
+            "Saved window sizes and positions cleared. Every window will open "
+            .. "at its default size, in the middle of the screen."
         )
 
         return
     end
 
     SYL:Print(
-        reset
-        .. (reset == 1 and " open window" or " open windows")
-        .. " put back to the default size and centered. Saved sizes cleared."
+        SYL.Utilities.Count(reset, "open window")
+        .. " put back to the default size and centered. Saved sizes and "
+        .. "positions cleared."
     )
 end
 
@@ -577,19 +577,45 @@ COMMANDS.link = function(remainder)
     SYL:Write("  /syl link add <name> <url>  ·  /syl link remove <name>")
 end
 
-COMMANDS.clear = function()
+-- Refuses without the word. This is the only command in the addon that
+-- destroys a season's worth of recording, it cannot be undone, and it was
+-- reachable in one click from the minimap menu — see the entry in
+-- Core/CommandList.lua for how that happened. Saying what would go before it
+-- goes is the other half: a count is the only thing that tells somebody
+-- whether they are about to lose a night or a tier.
+COMMANDS.clear = function(argument)
     local activeSeason = SYL.GetActiveSeason()
 
     local clearedDrops = #(activeSeason.drops or {})
     local clearedLoot = #(activeSeason.loot or {})
 
+    if string.lower(argument or "") ~= "confirm" then
+        SYL:Print(
+            "This would remove "
+            .. clearedDrops
+            .. " drops and "
+            .. clearedLoot
+            .. " chat items from the active season, and cannot be undone. "
+            .. "Type /syl clear confirm if that is what you want. "
+            .. "To keep the records and start a new tier instead, archive the "
+            .. "season from the Archives tab."
+        )
+
+        return
+    end
+
     activeSeason.loot = {}
     activeSeason.drops = {}
 
-    ShowUsYourLootDB.loot = activeSeason.loot
     ShowUsYourLootDB.recentRecordIDs = {}
 
     SYL.LootHistoryStore.RebuildIndex()
+
+    -- Emptying a season on purpose is the one legitimate way for the totals
+    -- to fall. Recorded account-wide, not just re-stamped here: the stamp is
+    -- per character, so stamping alone would leave every OTHER character
+    -- reporting data loss on its next login.
+    SYL.Recovery.NoteDeliberateClear()
 
     SYL:Print(
         "Active season cleared: "

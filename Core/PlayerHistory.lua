@@ -89,6 +89,8 @@ function PlayerHistory.Summarize(entries)
         eligible = #entries,
 
         won = 0,
+        -- Accumulated in the loop, not derived at the end. See the note there.
+        upgrades = 0,
         needWins = 0,
         offspecWins = 0,
         mogWins = 0,
@@ -104,6 +106,18 @@ function PlayerHistory.Summarize(entries)
     for _, entry in ipairs(entries) do
         if entry.won then
             totals.won = totals.won + 1
+
+            -- The same test the board applies. This file used to add needWins
+            -- and offspecWins together at the end and call that upgrades,
+            -- which counted bind-on-equip, warbound and non-raid wins — so
+            -- opening somebody's detail from the Players list showed a bigger
+            -- number than the row that was clicked. See Core/DropRules.lua.
+            local isGear = entry.state == STATE.NeedMainSpec
+                or entry.state == STATE.NeedOffSpec
+
+            if isGear and SYL.DropRules.CountsAsUpgrade(entry.drop) then
+                totals.upgrades = totals.upgrades + 1
+            end
 
             if entry.state == STATE.NeedMainSpec then
                 totals.needWins = totals.needWins + 1
@@ -131,8 +145,6 @@ function PlayerHistory.Summarize(entries)
             table.insert(totals.characterOrder, name)
         end
     end
-
-    totals.upgrades = totals.needWins + totals.offspecWins
 
     table.sort(totals.characterOrder)
 

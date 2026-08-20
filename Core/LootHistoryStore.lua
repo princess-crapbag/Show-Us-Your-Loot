@@ -119,7 +119,7 @@ local function BuildRecord(recordID, snapshot, drop, season, location)
         winnerClass = drop.winnerClass,
         winnerRoll = drop.winnerRoll,
 
-        -- A transmog win is not an upgrade. Fairness maths has to be able to
+        -- A transmog win is not an upgrade. Fairness math has to be able to
         -- tell them apart, so the state is stored, not just the winner.
         winnerState = drop.winnerState,
 
@@ -143,7 +143,7 @@ local function BuildRecord(recordID, snapshot, drop, season, location)
         source = "LOOT_HISTORY",
 
         -- Display state only, always reversible. Separate from
-        -- excludedFromAnalytics, which affects fairness maths.
+        -- excludedFromAnalytics, which affects fairness math.
         hidden = false,
         excludedFromAnalytics = false,
     }

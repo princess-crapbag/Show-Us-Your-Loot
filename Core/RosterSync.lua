@@ -147,6 +147,15 @@ function RosterSync.Decode(payload)
         return serial, index, count, nil
     end
 
+    -- A fragment claiming to be the ninth of three cannot be placed, and used
+    -- to be counted anyway: `seen` went up, the member landed under an index
+    -- the ordering loop never reads, and the set completed holding fewer people
+    -- than it said. A roster arriving quietly short, which is the failure this
+    -- file is least able to notice.
+    if index < 1 or index > count then
+        return nil
+    end
+
     local key, name, class, team, role =
         body:match("^(.-)\t(.-)\t(.-)\t(.-)\t(.*)$")
 
@@ -302,7 +311,7 @@ local function Accumulate(sender, serialID, index, count, member)
     return RosterSync.Commit(sender, ordered)
 end
 
--- One message from one sender. Exported because the interesting behaviour is
+-- One message from one sender. Exported because the interesting behavior is
 -- what happens *between* the messages of a set — a fragment must never reach
 -- the store — and that is unreachable through an event handler.
 --
@@ -325,8 +334,31 @@ function RosterSync.Receive(sender, payload)
     return Accumulate(sender, serialID, index, count, member)
 end
 
+-- Guild members only, the same test SyncTransport makes and for the same
+-- reason. The header above argues that listening costs nothing — it does, but
+-- only from the guild. This is the one listener registered unconditionally at
+-- login, so it was reachable by anybody in a party, raid or instance group,
+-- which on a raid night is a room full of strangers. And SharedRoster.Replace
+-- is a single slot rather than one per sender, so a set from outside does not
+-- sit beside the real one, it becomes it and takes the "shared by" line too.
+-- The empty set is a legitimate message, so the guard belongs on the sender.
+local function FromGuildMember(sender)
+    if not sender then
+        return false
+    end
+
+    local shortName = sender:match("^([^-]+)")
+
+    return SYL.Guild.IsMember(nil, shortName)
+        or SYL.Guild.IsMember(nil, sender)
+end
+
 local function OnMessage(prefix, payload, _, sender)
     if prefix ~= PREFIX then
+        return
+    end
+
+    if not FromGuildMember(sender) then
         return
     end
 

@@ -265,6 +265,26 @@ end
 
 -- Tanks, healers and damage, for a roster that is being checked for shape as
 -- well as for buffs.
+-- "0 tanks · 1 healer · 3 dps · 9 unset".
+--
+-- Written out twice, once here and once on the dashboard tile, and both said
+-- "1 healers" — which is what Aimee's own roster reads with the team she has.
+-- One composer so they cannot word it differently either. "dps" is left alone:
+-- it is the same word for one as for five.
+function RaidTeam.DescribeRoles(counts)
+    local Count = SYL.Utilities.Count
+
+    local text = Count(counts.TANK or 0, "tank")
+        .. "  ·  " .. Count(counts.HEALER or 0, "healer")
+        .. "  ·  " .. (counts.DPS or 0) .. " dps"
+
+    if (counts.unset or 0) > 0 then
+        text = text .. "  ·  " .. counts.unset .. " unset"
+    end
+
+    return text
+end
+
 function RaidTeam.CountRoles(roster)
     local counts = { TANK = 0, HEALER = 0, DPS = 0, unset = 0 }
 

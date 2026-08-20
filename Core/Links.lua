@@ -331,6 +331,37 @@ local function BuildCopyFrame()
     return frame
 end
 
+-- Any text at all, in the same box. Names go through this.
+--
+-- THERE IS NO WAY TO SELECT A FONT STRING. Aimee asked to drag over a guild
+-- member's name and copy it; the game exposes no text selection for the font
+-- strings every list in this addon is drawn from, and the only widget that can
+-- be selected is an EditBox. A table of four hundred edit boxes would swallow
+-- every click meant for the row underneath it, so the answer is to hand the
+-- text to the one box that already exists rather than to make the table into
+-- boxes. Right-click a name, Ctrl-C, escape.
+function Links.ShowCopyText(title, text)
+    if type(text) ~= "string" or text == "" then
+        return
+    end
+
+    copyFrame = copyFrame or BuildCopyFrame()
+
+    copyFrame.url = text
+    copyFrame.title:SetText(title or "Copy")
+    copyFrame.hint:SetText("Press Ctrl-C to copy. Escape closes this.")
+
+    copyFrame.box:SetText(text)
+    copyFrame.box:HighlightText()
+    copyFrame.box:SetFocus()
+
+    if SYL.WindowStack then
+        SYL.WindowStack.ShowWindow(copyFrame)
+    else
+        copyFrame:Show()
+    end
+end
+
 function Links.ShowCopyBox(link)
     if not link then
         return

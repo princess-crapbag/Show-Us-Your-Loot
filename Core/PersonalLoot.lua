@@ -14,7 +14,7 @@
 -- also prints "You receive loot", so season.loot overlaps season.drops
 -- almost entirely inside a raid. Folding one into the other without
 -- subtracting the overlap would count every raid drop twice and make the
--- fairness maths worse than leaving it alone.
+-- fairness math worse than leaving it alone.
 --
 -- So a chat record only counts here when it is
 --   * equippable gear of a quality worth tracking, and
@@ -175,16 +175,16 @@ end
 -- How the item arrived, inferred from where and how it was captured.
 --
 -- This lived in LootFeed, which is where it is displayed, and the consequence
--- was that the maths never asked. Crafting prints through the loot channel, so
+-- was that the math never asked. Crafting prints through the loot channel, so
 -- a guild's enchanter making other people's gear read as the enchanter
 -- receiving a piece every time — and since only the *last* acquisition
 -- matters, they could never appear in the due list at all. The one person in
 -- a guild most likely to be handing gear away was the one person guaranteed
 -- to look showered in it.
 --
--- It moved here because the fairness maths is the caller that must not skip
+-- It moved here because the fairness math is the caller that must not skip
 -- it. LootFeed loads after this file and reads it from here for the type
--- column, so the list and the maths cannot disagree about what a record is.
+-- column, so the list and the math cannot disagree about what a record is.
 --
 -- Honest guesswork, and the categories are deliberately coarse: better a right
 -- answer at "personal" than a confident wrong one at "vault".

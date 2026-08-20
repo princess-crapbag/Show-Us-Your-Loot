@@ -102,7 +102,10 @@ end
 function NightIndex.Build(sessions, drops)
     local byDay, order = {}, {}
 
-    for _, session in ipairs(SYL.RaidSession.RaidsOnly(sessions)) do
+    -- The calendar shows the guild's raid nights. Aimee: "i dont need any
+    -- data from lfr or pugs." One predicate, shared with the dashboard, so
+    -- the two cannot report different numbers for the same evening.
+    for _, session in ipairs(SYL.RaidSession.NightsOnly(sessions)) do
         local key = DayKey(session)
 
         if key then

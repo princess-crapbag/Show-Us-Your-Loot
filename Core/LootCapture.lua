@@ -103,7 +103,7 @@ end
 --
 -- It is used as a backstop rather than as a second writer. Recording from
 -- both would mean two records for every boss drop unless the two were
--- reconciled, and a duplicate in the fairness maths is a worse failure than
+-- reconciled, and a duplicate in the fairness math is a worse failure than
 -- the one being fixed. So chat stays the only thing that writes, and this
 -- supplies the name when the sentence could not be read, plus the encounter
 -- id, which chat never carries at all.
@@ -341,9 +341,6 @@ function LootCapture.HandleChatMessage(message)
         BuildRecord(recordID, season, recipient, item, timestamp, hint)
 
     table.insert(season.loot, record)
-
-    -- Keep the compatibility alias pointed at the live table.
-    ShowUsYourLootDB.loot = season.loot
 
     if SYL.RefreshMainWindow then
         SYL:RefreshMainWindow()

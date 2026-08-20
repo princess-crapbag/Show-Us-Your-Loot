@@ -316,11 +316,148 @@ function RaidSession.CountNights(sessions)
 end
 
 -- The raid nights out of a list that also holds dungeon ones.
+--
+-- STILL USED, AND ONLY BY THE FAIRNESS MATH — Core/DueList.lua, for attendance
+-- and droughts. Everything a person looks at goes through NightsOnly below,
+-- which is stricter. That split is deliberate and it is temporary.
+--
+-- The reason for it: narrowing the display to guild nights hides rows.
+-- Narrowing the fairness math to guild nights *rewrites recorded attendance* —
+-- an LFR night somebody turned up to stops counting, every share is divided by
+-- a smaller number, and the drop side has to adopt the same test in the same
+-- change or an LFR win resets a drought on a night the addon says never
+-- happened. Aimee asked for the calendar and the dashboard. She did not ask
+-- for her raiders' numbers to move, and that is not a side effect to deliver
+-- as one.
+--
+-- Whoever closes this: the two must move together, and the answer wanted first
+-- is whether it applies to history or only from that day on.
 function RaidSession.RaidsOnly(sessions)
     local kept = {}
 
     for _, session in ipairs(sessions or {}) do
         if RaidSession.IsRaidSession(session) then
+            table.insert(kept, session)
+        end
+    end
+
+    return kept
+end
+
+--------------------------------------------------------------------------
+-- Whose night was it
+--------------------------------------------------------------------------
+
+-- Aimee's number, chosen after her first raid night rather than by me: a night
+-- belongs to the guild when at least this share of the people there were in
+-- it. She raised it from the 60% I suggested.
+--
+-- A threshold rather than unanimity, because a real Tuesday has a pug tank and
+-- a trial in it, and a rule that eighty percent clears is one those nights
+-- still pass.
+RaidSession.GUILD_SHARE = 0.80
+
+-- Whether the guild roster had actually loaded when this session was recorded.
+--
+-- THIS IS THE WHOLE DIFFICULTY. A member with no guildRank is either not in
+-- the guild or was recorded before the client answered — and the second reads
+-- exactly like a pug raid, so without a way to tell them apart the safe rule
+-- would have to be "count everything" and the filter would do nothing.
+--
+-- The person who recorded the session settles it. They are running this addon,
+-- they were standing there, and their own rank is the one the client answers
+-- first. If theirs is missing the roster had not arrived and no count from
+-- that session means anything; if theirs is present, so is everyone else's who
+-- had one. Checked against Aimee's two recorded nights: the LFR run reports
+-- 1 of 49 and the guild Normal 12 of 12, and the recorder carries a rank in
+-- both — so the 2% is real information rather than an empty roster.
+-- MIND THE NAME FORM. `recordedBy` carries the realm — "Arcangila-Area52",
+-- from Utilities.GetPlayerFullName — and a roster member's `name` and
+-- `fullName` are both the bare "Arcangila" for somebody on your own realm. The
+-- first version of this compared them directly, found nobody, and reported the
+-- guild share of every night as unknown, which quietly turned the whole filter
+-- off. Caught against Aimee's real data rather than in review, and it is the
+-- same class of mismatch the keystone code is suspected of.
+local function SameCharacter(member, recordedBy)
+    local short = recordedBy:match("^([^-]+)") or recordedBy
+
+    return member.fullName == recordedBy
+        or member.name == recordedBy
+        or member.fullName == short
+        or member.name == short
+end
+
+local function GuildDataIsTrustworthy(session)
+    local recordedBy = session and session.recordedBy
+
+    if type(recordedBy) ~= "string" or recordedBy == "" then
+        return false
+    end
+
+    for _, member in pairs(session.roster or {}) do
+        if SameCharacter(member, recordedBy) then
+            return member.guildRank ~= nil
+        end
+    end
+
+    return false
+end
+
+-- What share of the people there were in the guild, or nil when the client
+-- never said. nil means "unknown", which is not the same as zero and must not
+-- be read as one.
+function RaidSession.GuildShare(session)
+    if not GuildDataIsTrustworthy(session) then
+        return nil
+    end
+
+    local total, guilded = 0, 0
+
+    for _, member in pairs(session.roster or {}) do
+        total = total + 1
+
+        if member.guildRank then
+            guilded = guilded + 1
+        end
+    end
+
+    if total == 0 then
+        return nil
+    end
+
+    return guilded / total
+end
+
+-- ONE PREDICATE, ASKED BY EVERY SURFACE THAT COUNTS NIGHTS.
+--
+-- Raid content, and the guild's own. The two used to be one test and the
+-- calendar, the dashboard and the boss tiles each decided separately whether
+-- to apply it — which is why a 49-person LFR run and a 12-person guild raid
+-- on the same evening were added together into "60 raiders".
+--
+-- Unknown counts. A session recorded before the guild roster loaded is not
+-- evidence of a pug, and the addon already treats missing bind and location
+-- data the same way: the rule is that absent information never removes a
+-- night somebody actually turned up to.
+function RaidSession.CountsAsNight(session)
+    if not RaidSession.IsRaidSession(session) then
+        return false
+    end
+
+    local share = RaidSession.GuildShare(session)
+
+    if share == nil then
+        return true
+    end
+
+    return share >= RaidSession.GUILD_SHARE
+end
+
+function RaidSession.NightsOnly(sessions)
+    local kept = {}
+
+    for _, session in ipairs(sessions or {}) do
+        if RaidSession.CountsAsNight(session) then
             table.insert(kept, session)
         end
     end

@@ -14,7 +14,8 @@ local SYL = _G.ShowUsYourLoot
 --    reads it and the migration that managed it was removed with it.
 -- 5: syncEnabled became the "sync" feature.
 -- 6: announceCaptures' default flipped to off. See MigrateAnnounceDefault.
-local DATABASE_VERSION = 6
+-- 7: "everyone" left the Raiders scope rotation. See MigrateAudienceScope.
+local DATABASE_VERSION = 7
 
 -- A SERIAL, BECAUSE THE CLOCK IS NOT ENOUGH. This was the timestamp alone, to
 -- the second, which is unique right up until two seasons are created in the
@@ -180,6 +181,14 @@ local function InitializeSettings()
     if ShowUsYourLootDB.settings.palette == nil then
         ShowUsYourLootDB.settings.palette = SYL.Palettes.DEFAULT
     end
+
+    -- How many nights before the board ranks somebody. Taken from LootScore
+    -- for the same reason the palette is taken from Palettes: the module that
+    -- owns the rule owns its default, and a second copy here is one that
+    -- drifts. Zero is a real value, so the test is against nil.
+    if ShowUsYourLootDB.settings.minRankNights == nil then
+        ShowUsYourLootDB.settings.minRankNights = SYL.LootScore.MIN_NIGHTS
+    end
 end
 
 local function MigrateOldLootDatabase()
@@ -213,6 +222,7 @@ function SYL.DatabaseInitialize()
         SYL.Migrations.MigrateAnnounceDefault(storedVersion)
 
     SYL.Migrations.MigrateSyncFeature(storedVersion)
+    SYL.Migrations.MigrateAudienceScope(storedVersion)
 
     ShowUsYourLootDB.archives = ShowUsYourLootDB.archives or {}
     ShowUsYourLootDB.recentRecordIDs =
@@ -253,16 +263,46 @@ function SYL.DatabaseInitialize()
 
     local backfilled = SYL.Migrations.BackfillRecordIDs(ShowUsYourLootDB)
 
-    ShowUsYourLootDB.databaseVersion = DATABASE_VERSION
+    -- A HIGH-WATER MARK, NOT THE CURRENT VERSION.
+    --
+    -- Installing an older file over a newer one is an ordinary thing to do on
+    -- CurseForge — roll back a release that broke something, or run whatever
+    -- version the guild agreed on. Written as a plain assignment, the older
+    -- build stamps its own lower number, and every migration between the two
+    -- re-arms and fires again on the way back up. Migrations here exist
+    -- specifically to overrule a saved choice once, so firing twice takes away
+    -- a setting somebody deliberately turned back on.
+    --
+    -- Never going backwards costs nothing: a migration that has already run
+    -- has already run, whichever build is reading the file now.
+    ShowUsYourLootDB.databaseVersion = math.max(
+        ShowUsYourLootDB.databaseVersion or 0, DATABASE_VERSION
+    )
 
     -- The name to GUID index is derived, so it is rebuilt at login rather
     -- than saved. Every alt lookup by name depends on it.
     SYL.Players.RebuildIndex()
 
-    -- Compatibility alias for the current UI.
-    -- Existing code that reads ShowUsYourLootDB.loot will continue working.
-    ShowUsYourLootDB.loot =
-        ShowUsYourLootDB.activeSeason.loot
+    -- Before the stamp is overwritten, or the comparison is against itself.
+    -- See Core/Recovery.lua for why a corrupt file is otherwise silent.
+    SYL.Recovery.Report()
+    SYL.Recovery.Stamp()
+
+    -- THE COMPATIBILITY ALIAS IS GONE, AND SO IS THE COPY OF IT ON DISK.
+    --
+    -- `ShowUsYourLootDB.loot` pointed at the same table as
+    -- `activeSeason.loot`, kept in step by four separate assignments. Nothing
+    -- read it. WoW's SavedVariables writer does not dedupe a shared reference,
+    -- so it serialized the whole loot table a second time — measured on
+    -- Aimee's live file at 100,740 bytes, 5.1% of everything saved, for no
+    -- reader at all.
+    --
+    -- MigrateOldLootDatabase above still reads it, and must: it is how a
+    -- database written before seasons existed is found. That runs earlier and
+    -- only when there is no active season, so by here it has had its chance
+    -- and the key can go. Clearing it is what removes the copy from an install
+    -- that already has one; leaving it nil would only stop it growing.
+    ShowUsYourLootDB.loot = nil
 
     if migrated then
         SYL:Print(
@@ -288,10 +328,6 @@ function SYL.StartNewSeason(name)
     end
 
     ShowUsYourLootDB.activeSeason = CreateSeason(name)
-
-    -- Keep old UI and code pointed at the new active-season loot table.
-    ShowUsYourLootDB.loot =
-        ShowUsYourLootDB.activeSeason.loot
 
     ShowUsYourLootDB.recentRecordIDs = {}
 

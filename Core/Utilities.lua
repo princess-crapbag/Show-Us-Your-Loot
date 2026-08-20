@@ -129,7 +129,7 @@ end
 -- Champion piece out of a +7 and a Myth piece out of the vault both counted
 -- as "they got something", and the due list ranked a raider who took one of
 -- each below a raider who took two Veteran rings. This stores the number.
--- What the fairness maths does with it is a separate decision and has
+-- What the fairness math does with it is a separate decision and has
 -- deliberately not been made here — changing how the ranking is weighted is
 -- not a bug fix, and it should not arrive as a side effect of one.
 --
@@ -161,7 +161,7 @@ end
 -- THREE ANSWERS, NOT TWO. nil means the client has not cached the item yet and
 -- genuinely does not know. Callers must not read that as "yes": treating an
 -- uncached item as a BoE would silently stop counting real upgrades, and the
--- failure would look exactly like the drought maths being broken. Not-BoE is
+-- failure would look exactly like the drought math being broken. Not-BoE is
 -- the safe default because it is the answer that keeps counting.
 --
 -- bindType is field 14 of GetItemInfo, and 2 is Bind on Equip. Read from the
@@ -199,10 +199,25 @@ end
 -- constants and a renamed key here would silently start counting warbound
 -- gear again — /syl api prints what the client actually exposes so the fallback
 -- can be checked rather than trusted.
+--
+-- CHECKED, ON 12.1.0 BUILD 69382, 2026-08-19. This is the verification HANDOFF
+-- had open, and the answer is in two halves.
+--
+-- The good half: Enum.ItemBind is present, so the live values are what get
+-- used, and they are 7, 8, 9 — warbound gear is correctly excluded.
+--
+-- The other half: every key below was mapped to the wrong number. The client
+-- reports ToWoWAccount=7, ToBnetAccount=8, ToBnetAccountUntilEquipped=9, and
+-- this table had 9, 7, 8. It never mattered, because the three values are only
+-- ever used as a set to test membership against, and {9,7,8} is the same set
+-- as {7,8,9} — so the fallback would have behaved correctly even if it had
+-- been reached. Corrected anyway: it is documented as "the observed
+-- numbering", it was not, and the next person to read a single key out of it
+-- would be reading a wrong answer that this file vouches for.
 local WARBOUND_KEYS = {
-    ToWoWAccount = 9,
-    ToBnetAccount = 7,
-    ToBnetAccountUntilEquipped = 8,
+    ToWoWAccount = 7,
+    ToBnetAccount = 8,
+    ToBnetAccountUntilEquipped = 9,
 }
 
 local warboundValues
@@ -274,7 +289,7 @@ function Utilities.FormatDateTime(timestamp)
         return "Unknown"
     end
 
-    return date("%m-%d-%Y %I:%M %p", timestamp)
+    return date("%m/%d/%Y %I:%M %p", timestamp)
 end
 
 -- The list columns' version. "08/05/26 12:32 PM" is seventeen characters
@@ -292,7 +307,7 @@ function Utilities.FormatDateCompact(timestamp)
         return "Unknown"
     end
 
-    return date("%m-%d-%y %H:%M", timestamp)
+    return date("%m/%d/%y %H:%M", timestamp)
 end
 
 -- Difficulty names are long enough to break any column they land in:
@@ -380,7 +395,7 @@ local DUNGEON_DIFFICULTIES = {
 -- "scenario", which nothing here handled, so every delve drop was filed as
 -- world loot alongside a quest reward picked up in Dornogal. A delve is
 -- instanced content that awards gear on a track, and calling it "world" put
--- it in the one bucket the fairness maths ignores hardest.
+-- it in the one bucket the fairness math ignores hardest.
 --
 -- Torghast and the Visions are in here for the same reason: instanced, not a
 -- raid, not a dungeon, and previously answering "other".
@@ -442,7 +457,7 @@ function Utilities.GetContentType(instanceType, difficultyID)
     return "other"
 end
 
--- Convenience for the places that only care whether something counts towards
+-- Convenience for the places that only care whether something counts toward
 -- raid attendance, which is the question the due list is really asking.
 --
 -- Deliberately narrower than GetContentType: see NOT_A_RAID_NIGHT above.
@@ -467,7 +482,26 @@ function Utilities.FormatDateOnly(timestamp)
         return "Unknown"
     end
 
-    return date("%m-%d-%Y", timestamp)
+    return date("%m/%d/%Y", timestamp)
+end
+
+-- "1 night", "2 nights". The count and its noun, agreeing.
+--
+-- Thirteen strings concatenated a count with a hard-coded "s", so a guild's
+-- first raid night read "1 nights this month" — on a screenshot that was
+-- selling the addon on CurseForge. Four other places did guard it, each by
+-- hand and each slightly differently, and that is exactly why it survived:
+-- the problem looks solved wherever you happen to be reading.
+--
+-- `plural` is only needed for the words English does not finish with an s.
+function Utilities.Count(count, singular, plural)
+    count = tonumber(count) or 0
+
+    if count == 1 then
+        return count .. " " .. singular
+    end
+
+    return count .. " " .. (plural or (singular .. "s"))
 end
 
 function Utilities.CountKeys(value)

@@ -60,7 +60,7 @@ end
 -- applied.
 --
 -- GUID FIRST, AND THIS COST AN HOUR. The trade frame only ever names a player,
--- but the maths is keyed by GUID — so crediting the bare name moved the points
+-- but the math is keyed by GUID — so crediting the bare name moved the points
 -- to a key nothing else in the addon uses. They left the winner and arrived
 -- nowhere, which is worse than not moving them. tradedToGUID is resolved at
 -- commit time off the roll list, where the recipient nearly always already is.
@@ -121,7 +121,7 @@ end
 TradeTracker.MatchEntry = MatchEntry
 
 --------------------------------------------------------------------------
--- Turning a name into somebody the maths knows
+-- Turning a name into somebody the math knows
 --------------------------------------------------------------------------
 
 -- Realm-insensitive, because the trade frame gives a bare name and roll lists

@@ -152,7 +152,17 @@ CommandList.ENTRIES = {
         command = "scope",
         description = "Show the raid team, the guild, or everyone",
     },
-    { command = "clear", description = "Clear active-season drops and loot" },
+    -- THE ARGUMENT IS THE GUARD. CommandList.Run prefills the chat box for an
+    -- entry that takes one and executes everything else on the press, and this
+    -- is a plain row in the minimap menu the tooltip invites people to browse.
+    -- So it emptied the season on one click, with no confirm and no undo, from
+    -- a list somebody was reading. COMMANDS.clear refuses without the word too,
+    -- because the menu is only one of the two ways in.
+    {
+        command = "clear",
+        argument = "confirm",
+        description = "Clear active-season drops and loot",
+    },
 }
 
 -- What the minimap menu lists: everything except the developer commands.

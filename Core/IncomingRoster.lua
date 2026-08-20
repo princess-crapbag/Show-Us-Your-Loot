@@ -137,7 +137,7 @@ function IncomingRoster.Add(fullName, class)
         (existing and "Updated " or "Added ")
         .. name .. "-" .. realm
         .. " as a " .. class:lower()
-        .. ". They count towards raid buff coverage from now on, and will "
+        .. ". They count toward raid buff coverage from now on, and will "
         .. "move onto the guild roster by themselves once they join."
 end
 

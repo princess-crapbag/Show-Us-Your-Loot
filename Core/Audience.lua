@@ -109,16 +109,35 @@ function Audience.Set(scope)
     settings.audienceScope = scope
 end
 
+-- WHAT THE BUTTON CYCLES THROUGH, which is no longer everything SCOPES holds.
+--
+-- Aimee, after her first raid night: "it should default to raid, but give me
+-- the option to swap to guild. I don't need everyone." It already defaulted to
+-- the raid team — Default() returns "team" the moment anybody is marked. What
+-- she was looking at was a *saved* value, because one stray press of a
+-- three-state cycle wrote "everyone" account-wide, silently, and getting back
+-- took two more presses on a button whose label had changed underneath.
+--
+-- SCOPES itself is untouched on purpose. "everyone" is still a real scope:
+-- Default() falls back to it for somebody who is in no guild and has marked
+-- nobody, Filter() still honors it, and a pug who won loot is only reachable
+-- through it. Dropping it from the list would have taken the cold-start path
+-- out with it. This removes it from the *rotation*, not from the addon.
+Audience.CYCLE = { "team", "guild" }
+
 function Audience.Next(scope)
     scope = scope or Audience.Get()
 
-    for index, candidate in ipairs(Audience.SCOPES) do
+    for index, candidate in ipairs(Audience.CYCLE) do
         if candidate == scope then
-            return Audience.SCOPES[(index % #Audience.SCOPES) + 1]
+            return Audience.CYCLE[(index % #Audience.CYCLE) + 1]
         end
     end
 
-    return Audience.SCOPES[1]
+    -- Anything outside the rotation — "everyone" saved by an older build, or a
+    -- value from a future one — lands back on the raid team. That is the way
+    -- out for anybody already stuck where this change was made to prevent.
+    return Audience.CYCLE[1]
 end
 
 -- Advances and saves, returning where it landed so the caller can relabel

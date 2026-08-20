@@ -189,6 +189,33 @@ function Keystone.GetOwn()
     return Keystone.Get(Keystone.CharacterKey())
 end
 
+-- A KEY FROM BEFORE THE LAST RESET IS GONE, WHATEVER IT SAYS.
+--
+-- `checkedAt` has been written on every entry since keystones were recorded
+-- and was read by nothing, so a character logged into three weeks ago still
+-- advertised whatever key it was holding then. Guild keys have always been
+-- filtered for exactly this — see Core/KeystoneSync.lua, whose comment
+-- explains why the reset moment is asked for rather than assumed — and your
+-- own alts were the half that never was.
+--
+-- Marked rather than dropped. The list deliberately includes characters with
+-- no key, because "that alt has none" is an answer; "that alt had one last
+-- week" is a better one than silence, and it says the row is not askable.
+function Keystone.IsStale(entry)
+    if not entry or not entry.mapID then
+        return false
+    end
+
+    if not entry.checkedAt then
+        -- Recorded before the field existed. Unknown is not stale, the same
+        -- way an uncached item is not a BoE: the failure of guessing wrong
+        -- here is hiding a key somebody actually has.
+        return false
+    end
+
+    return entry.checkedAt < SYL.KeystoneSync.LastResetAt()
+end
+
 -- Everything this account knows, newest check first. Characters with no key
 -- are included: "Aimee has none" is the answer to "who has a key" as much as
 -- the ones who do.
@@ -196,12 +223,16 @@ function Keystone.List()
     local entries = {}
 
     for _, entry in pairs(Store() or {}) do
+        entry.isStale = Keystone.IsStale(entry)
+
         table.insert(entries, entry)
     end
 
     table.sort(entries, function(left, right)
-        local leftLevel = left.level or 0
-        local rightLevel = right.level or 0
+        -- A key that has expired sorts with the characters holding none, not
+        -- above a live one just because last week's was higher.
+        local leftLevel = (not left.isStale) and (left.level or 0) or 0
+        local rightLevel = (not right.isStale) and (right.level or 0) or 0
 
         if leftLevel ~= rightLevel then
             return leftLevel > rightLevel
@@ -220,6 +251,12 @@ function Keystone.Describe(entry)
 
     if not entry.mapID or not entry.level then
         return "no key"
+    end
+
+    -- Says when rather than what. The dungeon name is still in the record and
+    -- naming it would read as a key somebody could be asked to run.
+    if entry.isStale or Keystone.IsStale(entry) then
+        return "no key this week"
     end
 
     return "+" .. entry.level .. " " .. Keystone.GetMapName(entry.mapID)

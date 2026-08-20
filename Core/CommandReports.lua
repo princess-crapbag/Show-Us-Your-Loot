@@ -281,8 +281,9 @@ function Reports.Due(limit)
     SYL:Write(
         "  Need 100, offspec 20, greed 20, transmog 0, divided by raid nights "
         .. "attended. Group loot on bind-on-pickup items only, from nights "
-        .. "that counted. Under " .. SYL.LootScore.MIN_NIGHTS
-        .. " nights nobody is ranked."
+        .. "that counted. Under "
+        .. SYL.Utilities.Count(SYL.LootScore.MinNights(), "night")
+        .. " nobody is ranked."
     )
 end
 

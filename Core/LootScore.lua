@@ -53,9 +53,40 @@ LootScore.LABELS = {
     [API.ROLL_STATE.Transmog] = "Transmog",
 }
 
--- Three nights, matching the "recent raiders" window the due list already
--- uses. One threshold in the addon rather than two that drift.
+-- The default floor: how many nights somebody has to have raided before this
+-- board is willing to rank them.
+--
+-- THE SENTENCE THAT USED TO BE HERE WAS WRONG, and it is worth saying so
+-- because it invited a tidy-up that would have broken two screens. It claimed
+-- three matched "the recent raiders window the due list already uses" and that
+-- this was one threshold rather than two that drift. There are three separate
+-- literals, and they do not measure the same thing: this one counts nights
+-- THIS PERSON attended, while Core/DueList.lua's `withinNights` and
+-- UI/DueWindow.lua's RECENT_NIGHTS count the last N nights THE GUILD ran. A
+-- raider who turned up once, last night, clears the second and fails the
+-- first. They agree at three by coincidence. Do not wire them together.
 LootScore.MIN_NIGHTS = 3
+
+-- WHY THE FLOOR IS A SETTING. For the first fortnight of a tier nobody has
+-- three nights, so every raider is unranked, the board has no order at all,
+-- and the trade advisor weighs "under 3 nights" against "under 3 nights" —
+-- which is the screen at the exact moment it is most wanted. Aimee's call,
+-- after her first raid night: Off, 2, or 3.
+--
+-- OFF IS ZERO, AND ONE IS NOT OFFERED, because they would be the same switch.
+-- An entry is created and counted in the same pass over the drops, so nothing
+-- the board ever sees has zero nights, and a floor of one would rank precisely
+-- the people no floor at all would.
+function LootScore.MinNights()
+    local settings = ShowUsYourLootDB and ShowUsYourLootDB.settings
+    local floor = settings and settings.minRankNights
+
+    if type(floor) ~= "number" or floor < 0 then
+        return LootScore.MIN_NIGHTS
+    end
+
+    return floor
+end
 
 function LootScore.WeightOf(state)
     return LootScore.WEIGHTS[state] or 0
@@ -65,31 +96,11 @@ end
 -- Which drops count
 --------------------------------------------------------------------------
 
--- The same test the drought uses. Kept as one call so the two can never take
--- different views of the same drop.
-local function Counts(drop)
-    if drop.excludedFromAnalytics then
-        return false
-    end
-
-    if SYL.Utilities.IsBindOnEquip(drop.itemLink) == true then
-        return false
-    end
-
-    -- Warbound gear is account gear, not this character's upgrade. Same rule
-    -- as the BoE above and the same one the drought applies, kept beside it so
-    -- the score and the drought can never disagree about a drop.
-    if SYL.Utilities.IsWarbound(drop.itemLink) == true then
-        return false
-    end
-
-    -- Records with no location predate the field and are almost certainly
-    -- raid drops; treating unknown as "not a raid" would erase real history.
-    if not drop.instanceType and not drop.difficultyID then
-        return true
-    end
-
-    return SYL.Utilities.IsRaidContent(drop.instanceType, drop.difficultyID)
+-- The same test the drought uses — now genuinely the same one. The comment
+-- here used to say exactly that above a second copy of it. See
+-- Core/DropRules.lua for what the copies cost.
+local Counts = function(drop)
+    return SYL.DropRules.CountsAsUpgrade(drop)
 end
 
 --------------------------------------------------------------------------
@@ -220,8 +231,13 @@ function LootScore.Attach(entries, drops)
         entry.byState = totalsFor and totalsFor.byState or {}
 
         local nights = entry.nights or 0
+        local floor = LootScore.MinNights()
 
-        if nights >= LootScore.MIN_NIGHTS then
+        -- `nights > 0` as well as the floor, and it is load-bearing rather than
+        -- defensive: with the floor off, a zero-night entry would divide by it.
+        -- Nothing in the live data has zero nights, but Attach is public and
+        -- the test fixtures pass one directly.
+        if nights > 0 and nights >= floor then
             entry.share = entry.lootScore / nights
             entry.ranked = true
         else
@@ -229,7 +245,7 @@ function LootScore.Attach(entries, drops)
             entry.ranked = false
             entry.notRankedReason = nights == 0
                 and "has not raided yet"
-                or ("under " .. LootScore.MIN_NIGHTS .. " nights")
+                or ("under " .. floor .. " nights")
         end
     end
 

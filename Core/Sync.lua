@@ -22,7 +22,7 @@
 -- free text a player typed.
 --
 -- Records arriving this way are marked partial and never overwrite a full
--- local record, because they carry no roll list and the fairness maths must
+-- local record, because they carry no roll list and the fairness math must
 -- not read an absent list as "nobody rolled".
 --
 -- Getting the bytes there is Core/SyncTransport.lua, which now chunks, so the
@@ -226,7 +226,7 @@ function Sync.IsEnabled()
 end
 
 -- Counts where the season's drops came from. Synced records are deliberately
--- second class — they carry no roll list, so the fairness maths skips them —
+-- second class — they carry no roll list, so the fairness math skips them —
 -- and there was previously no way to see how much of the history that
 -- affected. A history that looks complete but is half partial gives answers
 -- nobody should trust.

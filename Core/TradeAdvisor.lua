@@ -288,7 +288,7 @@ end
 -- The candidates with their standing attached, in the order the winner should
 -- read them: most due first, within Need before offspec.
 --
--- `due` is nil for anybody the fairness maths has never seen, which on install
+-- `due` is nil for anybody the fairness math has never seen, which on install
 -- night is everybody. That is the cold-start case and it is not an error — the
 -- list is still correct and still worth reading, it just cannot rank yet.
 function TradeAdvisor.RankCandidates(record)

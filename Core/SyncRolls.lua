@@ -144,8 +144,19 @@ function SyncRolls.Apply(decoded)
         return false
     end
 
-    -- Never trade a fuller roll list for an emptier one, which is the same
-    -- test UpdateRecord makes when a drop resolves in stages locally.
+    -- A RECORD THIS CLIENT WITNESSED IS NEVER OVERWRITTEN. The header says so,
+    -- the request side already tests it (`:181`) and so does the answering side
+    -- (`:240`) — this was the one place in the round trip that did not, and it
+    -- tested length instead. A longer list is not a better one: a client that
+    -- saw a roll this one did not is exactly as likely to have missed the
+    -- winner, and rolls are what decide who won. So the only records that may
+    -- be filled in are the ones that arrived hollow to begin with.
+    if not record.partial then
+        return false
+    end
+
+    -- Among partial records, still never trade a fuller list for an emptier
+    -- one — the same test UpdateRecord makes when a drop resolves in stages.
     if #(record.rolls or {}) >= #(decoded.rolls or {}) then
         return false
     end

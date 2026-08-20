@@ -174,13 +174,12 @@ function Filters.ParseDate(text, endOfDay)
     })
 end
 
-function Filters.FormatDate(timestamp)
-    if not timestamp then
-        return ""
-    end
-
-    return date("%m-%d-%Y", timestamp)
-end
+-- Filters.FormatDate lived here and had no callers. It was a second date
+-- formatter sitting one file away from Utilities.FormatDateOnly, agreeing with
+-- it exactly — which is the state a formatter is in right before somebody
+-- changes one of them. Deleted rather than kept in step: the separator moved
+-- from "-" to "/" on the day this comment was written, and a dead copy would
+-- have been the version that stayed behind.
 
 --------------------------------------------------------------------------
 -- Matching

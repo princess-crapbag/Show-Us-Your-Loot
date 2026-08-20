@@ -111,7 +111,7 @@ LootHistoryAPI.ROLL_STATE = {
     Pass = EnumState("Pass", 5),
 }
 
--- Whether a win counts as gear for the fairness maths.
+-- Whether a win counts as gear for the fairness math.
 --
 -- This is DueList's judgement call — only Need and offspec reset a drought —
 -- and it is exported rather than repeated so that the type column, the boss

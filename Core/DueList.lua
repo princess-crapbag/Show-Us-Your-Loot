@@ -60,39 +60,11 @@ local IsUpgrade = SYL.LootHistoryAPI.IsUpgradeState
 -- drought". Winning a BoE is winning something sellable, and resetting a
 -- clock for it pushes a genuinely starved raider down the list.
 --
--- Unknown counts as not-BoE — see Utilities.IsBindOnEquip. An uncached item
--- answers nil, and reading that as "yes" would silently stop counting real
--- upgrades in a way indistinguishable from the maths being broken.
-local function IsBindOnEquipWin(drop)
-    return SYL.Utilities.IsBindOnEquip(drop.itemLink) == true
-end
-
--- Same reasoning one step further out. A warbound item can be posted to any
--- character on the account, so it is account gear rather than this raider's
--- upgrade, and resetting their clock for it says they were looked after when
--- the person standing in the raid may not have been. Unknown counts, exactly
--- as it does for a BoE.
-local function IsWarboundWin(drop)
-    return SYL.Utilities.IsWarbound(drop.itemLink) == true
-end
-
+-- The bind-on-equip, warbound and raid-content rules all live in
+-- Core/DropRules.lua now, together with the score's copy of them and the one
+-- Analytics never had. The reasoning that was written out here is in that file.
 local function CountsTowardsDrought(drop)
-    if IsBindOnEquipWin(drop) or IsWarboundWin(drop) then
-        return false
-    end
-
-    -- Records written before the location was stored carry neither field.
-    -- Treating unknown as "not a raid" would erase the upgrade history of
-    -- everything captured before that, so unknown counts. The drops list is
-    -- group loot only and retail dungeons award personal loot, so nothing
-    -- much else can be in there anyway.
-    if not drop.instanceType and not drop.difficultyID then
-        return true
-    end
-
-    return SYL.Utilities.IsRaidContent(
-        drop.instanceType, drop.difficultyID
-    )
+    return SYL.DropRules.CountsAsUpgrade(drop)
 end
 
 -- When each player last won something that counts as gear.
@@ -276,7 +248,7 @@ function DueList.Build(drops, sessions)
     return order
 end
 
--- Longest drought first. Ties break towards the player who has raided more,
+-- Longest drought first. Ties break toward the player who has raided more,
 -- because two people with three dry nights are not equal if one of them has
 -- been there all tier.
 function DueList.Sort(entries)

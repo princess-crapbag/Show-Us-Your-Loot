@@ -31,6 +31,7 @@ local function NewEntry(roll)
         nights = 0,
 
         wins = 0,
+        upgradeWins = 0,
         needWins = 0,
         offspecWins = 0,
         mogWins = 0,
@@ -41,6 +42,12 @@ local function NewEntry(roll)
 
         nightsSeen = {},
     }
+end
+
+-- Need and offspec are the two states that mean somebody took gear. Greed and
+-- transmog are still counted, in their own columns, and are not upgrades.
+local function IsUpgradeState(state)
+    return state == STATE.NeedMainSpec or state == STATE.NeedOffSpec
 end
 
 local function CountWin(entry, roll)
@@ -73,37 +80,79 @@ function Analytics.BuildPlayerStats(drops)
     local byKey = {}
     local order = {}
 
+    -- Lifted out of the loop because a win can now land on somebody who is not
+    -- in the roll list at all: a trade credits the recipient, and a master
+    -- looter hands items to people who never rolled on them.
+    -- `roll` seeds the identity and MUST belong to the person being keyed.
+    --
+    -- The credited half of a trade is the case this gets wrong if you let it:
+    -- the winner's roll is what is in hand at that point, and seeding from it
+    -- gave the recipient the winner's name, class and GUID. The Players.Get
+    -- correction below cannot save it either — a credited key that needed
+    -- correcting is precisely the one nothing could resolve, which is why it
+    -- is a bare name rather than a GUID in the first place.
+    --
+    -- So callers pass nil for somebody they cannot identify, and the entry
+    -- carries the key as its name until the registry learns better. A row
+    -- reading "Somebody-Realm" with no class is honest; a row wearing the
+    -- master looter's name and class is a different person's history.
+    local function Ensure(key, roll)
+        local entry = byKey[key]
+
+        if entry then
+            return entry
+        end
+
+        entry = NewEntry(roll or {})
+        entry.key = key
+
+        local player = SYL.Players.Get(key)
+
+        if player then
+            entry.guid = player.guid or entry.guid
+            entry.name = player.name or entry.name
+            entry.class = player.class or entry.class
+        end
+
+        -- Never inherited. NewEntry copies whatever roll it was handed, so
+        -- without this a nil roll leaves them blank and a borrowed one leaves
+        -- them wrong.
+        if entry.name == nil or entry.key ~= (roll and (roll.guid or roll.name)) then
+            entry.name = (player and player.name) or key
+            entry.guid = (player and player.guid) or nil
+            entry.class = player and player.class or nil
+        end
+
+        byKey[key] = entry
+
+        table.insert(order, entry)
+
+        return entry
+    end
+
     for _, drop in ipairs(drops or {}) do
         -- hidden is a display state and still counts. excludedFromAnalytics
-        -- is the flag that actually removes a drop from the maths.
+        -- is the flag that actually removes a drop from the math.
         -- Synced records carry no roll list. Counting them would report
         -- zero eligible players rather than "we do not know".
         if not drop.excludedFromAnalytics and not drop.partial then
+            -- Asked once per drop. This is the test the Raiders board and the
+            -- due list both apply and this file never did — see
+            -- Core/DropRules.lua for what that cost.
+            local isUpgrade = SYL.DropRules.CountsAsUpgrade(drop)
+
             for _, roll in ipairs(drop.rolls or {}) do
                 -- Folded to the main, so a raider's alt runs do not read as
                 -- a second person who never wins anything.
                 local key = SYL.Players.ResolveToMain(roll.guid or roll.name)
 
                 if key then
-                    local entry = byKey[key]
+                    local entry = Ensure(key, roll)
 
-                    if not entry then
-                        entry = NewEntry(roll)
-                        entry.key = key
-
-                        local player = SYL.Players.Get(key)
-
-                        if player then
-                            entry.guid = player.guid or entry.guid
-                            entry.name = player.name or entry.name
-                            entry.class = player.class or entry.class
-                        end
-
-                        byKey[key] = entry
-
-                        table.insert(order, entry)
-                    end
-
+                    -- ELIGIBILITY IS NOT CREDIT. Everybody in the roll list
+                    -- was standing there and rolled, whoever ended up with the
+                    -- item — so this half stays on the raw key even when the
+                    -- win below is credited to somebody else.
                     entry.eligible = entry.eligible + 1
                     entry.lastSeenAt = Later(entry.lastSeenAt, drop.timestamp)
 
@@ -116,9 +165,33 @@ function Analytics.BuildPlayerStats(drops)
                     end
 
                     if roll.isWinner then
-                        CountWin(entry, roll)
+                        -- Traded away means credited away, through the same
+                        -- choke point the score and the due list use. This
+                        -- file credited whoever won the roll, which for a
+                        -- master looter is every drop in the raid.
+                        local creditKey = SYL.Players.ResolveToMain(
+                            SYL.DropRules.CreditedKey(
+                                drop, roll.guid or roll.name
+                            )
+                        ) or key
 
-                        entry.lastWinAt = Later(entry.lastWinAt, drop.timestamp)
+                        -- The winner's roll is NOT this person's identity.
+                        -- Passed only when the credit stayed with the roller.
+                        local credited = creditKey == key
+                            and entry
+                            or Ensure(creditKey, nil)
+
+                        -- Every win is recorded, because what somebody took is
+                        -- a fact and the greed and transmog columns report it.
+                        CountWin(credited, roll)
+
+                        -- Only gear reaches UPGRADES and the drought.
+                        if isUpgrade and IsUpgradeState(roll.state) then
+                            credited.upgradeWins = credited.upgradeWins + 1
+
+                            credited.lastWinAt =
+                                Later(credited.lastWinAt, drop.timestamp)
+                        end
                     end
                 end
             end
@@ -142,7 +215,10 @@ function Analytics.BuildPlayerStats(drops)
             entry.pulls = attendance.encounters
         end
 
-        entry.upgradeWins = entry.needWins + entry.offspecWins
+        -- Accumulated in the loop above rather than derived from
+        -- needWins + offspecWins, which counted bind-on-equip, warbound and
+        -- non-raid wins as upgrades and so disagreed with every other screen.
+        -- The categorized counts still report everything that was taken.
 
         -- Through the person rather than the character, so a raider who
         -- brought an alt is not reported at the alt's rank.
