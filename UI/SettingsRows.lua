@@ -413,6 +413,45 @@ local TOGGLES = {
         label = "Show debug messages",
         key = "debug",
     },
+    {
+        -- THE RECOVERY THAT ONLY A COMMAND COULD REACH. This is the way back
+        -- from a window dragged past the edge of the screen — where the grip
+        -- that would move it is off the monitor with it — and it lived behind
+        -- `/syl resetwindows` and nowhere else. Somebody who has lost a window
+        -- cannot be expected to know a command nobody told them about, and
+        -- this is the one case where they cannot see the interface that would
+        -- have told them.
+        --
+        -- Measured in the real font, like every other label here. "Put windows
+        -- back where they started" says more and comes to 203px against a cell
+        -- that takes about 202 — one pixel over, which is the whole reason the
+        -- note on "Announce gear in chat" above exists. This one is 107 and
+        -- has room to spare.
+        label = "Reset window sizes",
+        action = function()
+            local reset = SYL.Widgets.ResetSizes()
+
+            -- Saved sizes go either way; only windows opened this session can
+            -- be moved on the spot. Zero is an ordinary answer rather than a
+            -- failure, and saying so stops it reading as one. Same wording as
+            -- the command, because they are the same act.
+            if reset == 0 then
+                SYL:Print(
+                    "Saved window sizes and positions cleared. Every window "
+                    .. "will open at its default size, in the middle of the "
+                    .. "screen."
+                )
+
+                return
+            end
+
+            SYL:Print(
+                SYL.Utilities.Count(reset, "open window")
+                .. " put back to the default size and centered. Saved sizes "
+                .. "and positions cleared."
+            )
+        end,
+    },
 }
 
 local function FeatureSectionTop()
