@@ -63,6 +63,7 @@ Core\RaidSummary.lua
 Core\NightIndex.lua
 Core\TradeAdvisor.lua
 Core\CreditCandidates.lua
+Core\CouncilLoot.lua
 Core\LootCredit.lua
 Core\TradeTracker.lua
 Core\RaidSchedule.lua
@@ -126,6 +127,7 @@ UI\NightsPanel.lua
 UI\TradeAdvisorPanel.lua
 UI\TabPanels.lua
 UI\MainWindow.lua
+UI\DropRolls.lua
 UI\DropCredit.lua
 UI\DropDetailWindow.lua
 UI\CreditPickerRows.lua

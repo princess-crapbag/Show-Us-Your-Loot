@@ -25,10 +25,9 @@ local Utilities = SYL.Utilities
 local DropDetailWindow = {}
 SYL.DropDetailWindow = DropDetailWindow
 
--- Wide enough for name, state, roll, guild rank and the winner marker.
+-- Wide enough for name, response, roll and the columns beside them.
 local WINDOW_WIDTH = 500
-local ROW_HEIGHT = 20
-local VISIBLE_ROLLS = 14
+local FOOTER = 56
 
 -- The credit block sits between the outcome line and the roll list.
 -- UI/DropCredit.lua owns its internals and states what it costs.
@@ -39,114 +38,11 @@ local rollRows = {}
 local currentRecord
 local offset = 0
 
--- Need first, then the softer claims, then everyone who stood aside. Within a
--- group the highest roll leads.
-local STATE_ORDER = {
-    [0] = 1, -- NeedMainSpec
-    [1] = 2, -- NeedOffSpec
-    [2] = 3, -- Transmog
-    [3] = 4, -- Greed
-    [4] = 5, -- NoRoll
-    [5] = 6, -- Pass
-}
-
-local function SortRolls(rolls)
-    local sorted = {}
-
-    for _, roll in ipairs(rolls or {}) do
-        table.insert(sorted, roll)
-    end
-
-    table.sort(sorted, function(left, right)
-        if left.isWinner ~= right.isWinner then
-            return left.isWinner == true
-        end
-
-        local leftOrder = STATE_ORDER[left.state] or 99
-        local rightOrder = STATE_ORDER[right.state] or 99
-
-        if leftOrder ~= rightOrder then
-            return leftOrder < rightOrder
-        end
-
-        if (left.roll or -1) ~= (right.roll or -1) then
-            return (left.roll or -1) > (right.roll or -1)
-        end
-
-        return tostring(left.name) < tostring(right.name)
-    end)
-
-    return sorted
-end
-
-local function CreateRollRow(parent, index)
-    local row = CreateFrame("Frame", nil, parent)
-
-    row:SetHeight(ROW_HEIGHT)
-    row:SetPoint("TOPLEFT", 16, -(LIST_TOP + (index - 1) * ROW_HEIGHT))
-    row:SetPoint("TOPRIGHT", -16, -(LIST_TOP + (index - 1) * ROW_HEIGHT))
-
-    if index % 2 == 0 then
-        row.stripe = Theme.CreateSolidTexture(row, "rowAlt", "BACKGROUND")
-        row.stripe:SetAllPoints()
-    end
-
-    row.nameText = Theme.CreateText(row, Theme.sizes.rowSmall, "textPrimary")
-    row.nameText:SetPoint("LEFT", 6, 0)
-    row.nameText:SetWidth(150)
-
-    row.stateText = Theme.CreateText(row, Theme.sizes.rowSmall, "textSecondary")
-    row.stateText:SetPoint("LEFT", row.nameText, "RIGHT", 6, 0)
-    row.stateText:SetWidth(90)
-
-    row.rollText = Theme.CreateText(row, Theme.sizes.rowSmall, "textMuted")
-    row.rollText:SetPoint("LEFT", row.stateText, "RIGHT", 6, 0)
-    row.rollText:SetWidth(44)
-
-    row.rankText = Theme.CreateText(row, Theme.sizes.rowSmall, "textMuted")
-    row.rankText:SetPoint("LEFT", row.rollText, "RIGHT", 6, 0)
-    row.rankText:SetWidth(96)
-
-    row.markerText = Theme.CreateText(row, Theme.sizes.rowSmall, "accent")
-    row.markerText:SetPoint("LEFT", row.rankText, "RIGHT", 4, 0)
-    row.markerText:SetWidth(38)
-
-    return row
-end
-
-local function FillRollRow(row, roll)
-    row.nameText:SetText(tostring(roll.name or "Unknown"))
-
-    local classColor = Theme.GetClassColor(roll.class)
-
-    if classColor then
-        Theme.SetCustomTextColor(
-            row.nameText, classColor[1], classColor[2], classColor[3]
-        )
-    else
-        Theme.SetTextColor(row.nameText, "textPrimary")
-    end
-
-    row.stateText:SetText(
-        SYL.LootHistoryAPI.ShortRollState(roll.state)
-        or roll.stateText
-        or "unknown"
-    )
-
-    -- Players who passed or took transmog never rolled, so a number here
-    -- would be invented.
-    row.rollText:SetText(roll.roll and tostring(roll.roll) or "—")
-
-    -- Rank is only shown for our own guild. Someone else's guild rank is
-    -- not information this addon is for.
-    local rank =
-        SYL.Guild.GetRank(roll.guid, roll.name)
-        or roll.guildRank
-
-    row.rankText:SetText(rank or "")
-
-    row.markerText:SetText(roll.isWinner and "WON" or "")
-end
+-- What UI/DropRolls.lua decided the list should be for the record on screen:
+-- which source, which columns, and whether there is a notice above it. Held
+-- because the mouse wheel needs the row count and rebuilding it per notch
+-- would ask RCLootCouncil for its history on every scroll.
+local view
 
 local function UpdateHeaderText()
     local record = currentRecord
@@ -203,6 +99,58 @@ local function UpdateHeaderText()
     end
 end
 
+-- Everything below the credit block: the notice when there is one, the column
+-- headings, the rows, and the window's own height. Sized to the list, so a
+-- guild night with eleven raiders no longer draws three empty rows.
+local function LayoutList()
+    local Rolls = SYL.DropRolls
+    local top = LIST_TOP
+
+    if view.notice then
+        frame.noticeText:SetText(view.notice.text)
+        frame.noticeText:Show()
+
+        frame.noticeButton.label:SetText(view.notice.button)
+        frame.noticeButton:SetWidth(
+            Theme.MeasureText(Theme.sizes.rowSmall, view.notice.button) + 26
+        )
+        frame.noticeButton:Show()
+
+        top = top + Rolls.NOTICE_HEIGHT
+    else
+        frame.noticeText:Hide()
+        frame.noticeButton:Hide()
+    end
+
+    frame.header:ClearAllPoints()
+    frame.header:SetPoint("TOPLEFT", 16, -top)
+    frame.header:SetPoint("TOPRIGHT", -16, -top)
+
+    Rolls.FillHeader(frame.header, view.columns)
+
+    top = top + Rolls.HEADER_HEIGHT
+
+    local shown = math.min(#view.rows, Rolls.MAX_ROWS)
+
+    for index = 1, Rolls.MAX_ROWS do
+        local row = rollRows[index]
+        local entry = view.rows[index + offset]
+
+        if index <= shown and entry then
+            row:ClearAllPoints()
+            row:SetPoint("TOPLEFT", 16, -(top + (index - 1) * Rolls.ROW_HEIGHT))
+            row:SetPoint("TOPRIGHT", -16, -(top + (index - 1) * Rolls.ROW_HEIGHT))
+
+            Rolls.FillRow(row, entry, view.columns)
+            row:Show()
+        else
+            row:Hide()
+        end
+    end
+
+    frame:SetHeight(LIST_TOP + Rolls.HeightFor(view) + FOOTER)
+end
+
 local function Refresh()
     if not frame or not currentRecord then
         return
@@ -211,30 +159,20 @@ local function Refresh()
     UpdateHeaderText()
     SYL.DropCredit.Update(frame, currentRecord)
 
-    local rolls = SortRolls(currentRecord.rolls)
-    local total = #rolls
+    view = SYL.DropRolls.Build(currentRecord)
 
-    local maxOffset = math.max(0, total - VISIBLE_ROLLS)
+    local total = #view.rows
+    local maxOffset = math.max(0, total - SYL.DropRolls.MAX_ROWS)
 
     if offset > maxOffset then
         offset = maxOffset
     end
 
     frame.countText:SetText(
-        total .. (total == 1 and " eligible player" or " eligible players")
+        SYL.Utilities.Count(total, "player") .. " " .. view.countLabel
     )
 
-    for index = 1, VISIBLE_ROLLS do
-        local roll = rolls[index + offset]
-        local row = rollRows[index]
-
-        if roll then
-            FillRollRow(row, roll)
-            row:Show()
-        else
-            row:Hide()
-        end
-    end
+    LayoutList()
 end
 
 local function CreateWindow()
@@ -249,7 +187,12 @@ local function CreateWindow()
         "BackdropTemplate"
     )
 
-    frame:SetSize(WINDOW_WIDTH, LIST_TOP + VISIBLE_ROLLS * ROW_HEIGHT + 56)
+    -- A starting height only. Refresh sets the real one from what the list
+    -- turns out to hold.
+    frame:SetSize(
+        WINDOW_WIDTH,
+        LIST_TOP + SYL.DropRolls.MAX_ROWS * SYL.DropRolls.ROW_HEIGHT + FOOTER
+    )
     frame:SetPoint("CENTER", 260, 0)
 
     -- Anchored beside the list that opens it, so the cascade must
@@ -327,15 +270,47 @@ local function CreateWindow()
 
     frame.countText:SetPoint("BOTTOMLEFT", 18, 18)
 
-    for index = 1, VISIBLE_ROLLS do
-        rollRows[index] = CreateRollRow(frame, index)
+    -- The notice, when RCLootCouncil is installed and not recording who else
+    -- responded. Built once and hidden, because most drops will not need it.
+    frame.noticeText =
+        Theme.CreateText(frame, Theme.sizes.columnHeader, "textMuted")
+
+    frame.noticeText:SetPoint("TOPLEFT", 18, -(LIST_TOP + 2))
+    frame.noticeText:SetPoint("TOPRIGHT", -140, -(LIST_TOP + 2))
+    frame.noticeText:SetJustifyH("LEFT")
+    frame.noticeText:SetWordWrap(true)
+    frame.noticeText:Hide()
+
+    frame.noticeButton = Theme.CreateButton(frame, 120, 22, "", function()
+        if SYL.CouncilLoot.StartRecordingResponses() then
+            SYL:Print(
+                "RCLootCouncil will record everyone's response from the next "
+                .. "session on. It cannot fill in nights already raided."
+            )
+        else
+            SYL:Print(
+                "Could not change that setting — it is in RCLootCouncil's own "
+                .. "options, under \"" .. SYL.CouncilLoot.SETTING_LABEL .. "\"."
+            )
+        end
+
+        Refresh()
+    end)
+
+    frame.noticeButton:SetPoint("TOPRIGHT", -16, -(LIST_TOP + 4))
+    frame.noticeButton:Hide()
+
+    frame.header = SYL.DropRolls.CreateHeader(frame)
+
+    for index = 1, SYL.DropRolls.MAX_ROWS do
+        rollRows[index] = SYL.DropRolls.CreateRow(frame, index)
     end
 
     frame:EnableMouseWheel(true)
 
     frame:SetScript("OnMouseWheel", function(_, delta)
-        local total = #(currentRecord and currentRecord.rolls or {})
-        local maxOffset = math.max(0, total - VISIBLE_ROLLS)
+        local total = view and #view.rows or 0
+        local maxOffset = math.max(0, total - SYL.DropRolls.MAX_ROWS)
 
         offset = math.max(0, math.min(maxOffset, offset - delta))
 
