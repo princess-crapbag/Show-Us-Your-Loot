@@ -35,8 +35,23 @@ local NAME_WIDTH = 120
 local VALUE_WIDTH = 64
 local PAD = 8
 
--- 868 usable, less the detail pane and the gutter, less the two text columns.
-local TRACK_WIDTH = 868 - DETAIL_WIDTH - GUTTER - NAME_WIDTH - VALUE_WIDTH - (PAD * 2)
+-- HOW MANY ITEMS THEY HAVE ACTUALLY TAKEN, need and greed, no transmog.
+--
+-- Aimee asked for it on the board and not only in the detail pane, and she is
+-- right that it belongs here: the bar answers "how much" and this answers "how
+-- often", and comparing the two across a raid is the thing you cannot do one
+-- click at a time.
+--
+-- STILL NOT A TABLE. The file header is emphatic and it stands — this is one
+-- number in a fixed column, not a grid to read row by row. Measured: two
+-- digits is 14px in the real font, and 26 leaves room for a third without
+-- taking a pixel more from the bar than it has to.
+local COUNT_WIDTH = 26
+
+-- 868 usable, less the detail pane and the gutter, less the three text
+-- columns.
+local TRACK_WIDTH = 868 - DETAIL_WIDTH - GUTTER - NAME_WIDTH - VALUE_WIDTH
+    - COUNT_WIDTH - (PAD * 3)
 
 local ROW_HEIGHT = 22
 local LIST_TOP = 34
@@ -127,7 +142,9 @@ local function CreateRow(index)
 
     row:SetHeight(ROW_HEIGHT)
     row:SetPoint("TOPLEFT", 0, -(LIST_TOP + (index - 1) * ROW_HEIGHT))
-    row:SetWidth(NAME_WIDTH + PAD + TRACK_WIDTH + PAD + VALUE_WIDTH)
+    row:SetWidth(
+        NAME_WIDTH + PAD + TRACK_WIDTH + PAD + VALUE_WIDTH + PAD + COUNT_WIDTH
+    )
 
     local hover = Theme.CreateSolidTexture(row, "rowHover", "BACKGROUND")
     hover:SetAllPoints()
@@ -159,6 +176,11 @@ local function CreateRow(index)
     row.value:SetPoint("LEFT", row.track, "RIGHT", PAD, 0)
     row.value:SetWidth(VALUE_WIDTH)
     row.value:SetJustifyH("RIGHT")
+
+    row.count = Theme.CreateText(row, Theme.sizes.rowSmall, "textMuted")
+    row.count:SetPoint("LEFT", row.value, "RIGHT", PAD, 0)
+    row.count:SetWidth(COUNT_WIDTH)
+    row.count:SetJustifyH("RIGHT")
 
     row:SetScript("OnClick", function()
         selectedKey = row.entryKey
@@ -200,6 +222,13 @@ local function DrawRow(row, entry, highest, isSelected)
         row.value,
         isSelected and "accent" or (entry.ranked and "textSecondary" or "textMuted")
     )
+
+    -- Blank rather than a zero for somebody who has taken nothing. A column of
+    -- zeroes is noise, and the empty bar beside it already says it.
+    local taken = entry.scoringWins or 0
+
+    row.count:SetText(taken > 0 and tostring(taken) or "")
+    Theme.SetTextColor(row.count, isSelected and "accent" or "textMuted")
 
     row:Show()
 end

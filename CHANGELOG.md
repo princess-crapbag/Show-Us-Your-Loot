@@ -3,6 +3,36 @@
 What changed, for the person installing it. The commit history explains why;
 this says what you will notice.
 
+## 0.3.6 — 2026-08-20
+
+### Added
+
+- **Who else responded on an item, through RCLootCouncil.** Open a drop and the
+  list underneath now shows what the council was told — who needed it, who
+  greeded, who wanted it for transmog, their rolls, item levels and votes —
+  instead of the group-loot roll, which under a council reads "everybody
+  passed, the master looter took it" on every single item.
+
+  **You have to turn one thing on in RCLootCouncil first, and it is off by
+  default.** Its options have a setting called **Send Session Responses**;
+  until it is ticked, nothing anywhere keeps who responded — not this addon,
+  and not RCLootCouncil's own history screen either. Open any drop and this
+  addon will tell you if it is off and offer a button that turns it on.
+
+  It only applies from the next loot session onwards. Nights already raided
+  cannot be filled in, by anything, because the answers were never written
+  down.
+
+- **How many items each raider has taken**, on the Raiders board beside their
+  bar. Need and greed, not transmog. The bar answers how much; this answers how
+  often.
+
+### Fixed
+
+- **The drop list has column headings**, which it never had, and the window is
+  sized to the number of players in it rather than always reserving room for
+  fourteen.
+
 ## 0.3.5 — 2026-08-20
 
 ### Added
