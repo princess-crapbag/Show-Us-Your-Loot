@@ -33,6 +33,9 @@ DropRolls.ROW_HEIGHT = 20
 DropRolls.HEADER_HEIGHT = 20
 DropRolls.MAX_ROWS = 14
 
+-- The line naming which of the two sources the list came from.
+DropRolls.HEADING_HEIGHT = 18
+
 -- The room a "not recording" notice needs, when there is one.
 DropRolls.NOTICE_HEIGHT = 46
 
@@ -177,10 +180,19 @@ function DropRolls.Build(record)
         }
     end
 
+    -- NAMED WHENEVER THERE ARE TWO ANSWERS TO CHOOSE BETWEEN. With
+    -- RCLootCouncil installed the same eleven raiders read Pass here and Need
+    -- on the council's list, and without a line saying which one this is only
+    -- the changed columns tell them apart. With no RCLootCouncil there is only
+    -- ever one list and the heading would be noise.
     return {
         columns = GROUP_COLUMNS,
         rows = rows,
-        heading = notice and "EVERYONE ELIGIBLE" or nil,
+
+        heading = (council.state ~= "absent" and #rows > 0)
+            and "WHAT THE GROUP-LOOT ROLL SAID"
+            or nil,
+
         countLabel = "eligible",
         notice = notice,
     }
@@ -194,6 +206,7 @@ function DropRolls.HeightFor(view)
     return DropRolls.HEADER_HEIGHT
         + shown * DropRolls.ROW_HEIGHT
         + (view.notice and DropRolls.NOTICE_HEIGHT or 0)
+        + (view.heading and DropRolls.HEADING_HEIGHT or 0)
 end
 
 --------------------------------------------------------------------------

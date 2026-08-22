@@ -29,9 +29,12 @@ SYL.DropDetailWindow = DropDetailWindow
 local WINDOW_WIDTH = 500
 local FOOTER = 56
 
--- The credit block sits between the outcome line and the roll list.
--- UI/DropCredit.lua owns its internals and states what it costs.
+-- Where the roll list starts when the credit block is drawn, and where it
+-- starts when it is not. Hiding the block's parts does not reclaim the space
+-- they occupied, so a chat-captured item — which has no credit to show — drew
+-- 78px of nothing between the item details and the column headings.
 local LIST_TOP = 150 + SYL.DropCredit.HEIGHT
+local LIST_TOP_NO_CREDIT = 150
 
 local frame
 local rollRows = {}
@@ -102,11 +105,14 @@ end
 -- Everything below the credit block: the notice when there is one, the column
 -- headings, the rows, and the window's own height. Sized to the list, so a
 -- guild night with eleven raiders no longer draws three empty rows.
-local function LayoutList()
+local function LayoutList(listTop)
     local Rolls = SYL.DropRolls
-    local top = LIST_TOP
+    local top = listTop
 
     if view.notice then
+        frame.noticeText:ClearAllPoints()
+        frame.noticeText:SetPoint("TOPLEFT", 18, -(top + 2))
+        frame.noticeText:SetPoint("TOPRIGHT", -140, -(top + 2))
         frame.noticeText:SetText(view.notice.text)
         frame.noticeText:Show()
 
@@ -114,12 +120,28 @@ local function LayoutList()
         frame.noticeButton:SetWidth(
             Theme.MeasureText(Theme.sizes.rowSmall, view.notice.button) + 26
         )
+        frame.noticeButton:ClearAllPoints()
+        frame.noticeButton:SetPoint("TOPRIGHT", -16, -(top + 4))
         frame.noticeButton:Show()
 
         top = top + Rolls.NOTICE_HEIGHT
     else
         frame.noticeText:Hide()
         frame.noticeButton:Hide()
+    end
+
+    -- WHICH LIST THIS IS. Build works it out and this used to throw it away,
+    -- so the two sources — the group-loot roll and the council's answers —
+    -- looked the same but said opposite things about the same raiders.
+    if view.heading then
+        frame.headingText:ClearAllPoints()
+        frame.headingText:SetPoint("TOPLEFT", 22, -top)
+        frame.headingText:SetText(view.heading)
+        frame.headingText:Show()
+
+        top = top + Rolls.HEADING_HEIGHT
+    else
+        frame.headingText:Hide()
     end
 
     frame.header:ClearAllPoints()
@@ -148,7 +170,7 @@ local function LayoutList()
         end
     end
 
-    frame:SetHeight(LIST_TOP + Rolls.HeightFor(view) + FOOTER)
+    frame:SetHeight(listTop + Rolls.HeightFor(view) + FOOTER)
 end
 
 local function Refresh()
@@ -157,7 +179,8 @@ local function Refresh()
     end
 
     UpdateHeaderText()
-    SYL.DropCredit.Update(frame, currentRecord)
+
+    local creditShown = SYL.DropCredit.Update(frame, currentRecord)
 
     view = SYL.DropRolls.Build(currentRecord)
 
@@ -172,7 +195,7 @@ local function Refresh()
         SYL.Utilities.Count(total, "player") .. " " .. view.countLabel
     )
 
-    LayoutList()
+    LayoutList(creditShown and LIST_TOP or LIST_TOP_NO_CREDIT)
 end
 
 local function CreateWindow()
@@ -275,8 +298,6 @@ local function CreateWindow()
     frame.noticeText =
         Theme.CreateText(frame, Theme.sizes.columnHeader, "textMuted")
 
-    frame.noticeText:SetPoint("TOPLEFT", 18, -(LIST_TOP + 2))
-    frame.noticeText:SetPoint("TOPRIGHT", -140, -(LIST_TOP + 2))
     frame.noticeText:SetJustifyH("LEFT")
     frame.noticeText:SetWordWrap(true)
     frame.noticeText:Hide()
@@ -297,8 +318,12 @@ local function CreateWindow()
         Refresh()
     end)
 
-    frame.noticeButton:SetPoint("TOPRIGHT", -16, -(LIST_TOP + 4))
     frame.noticeButton:Hide()
+
+    frame.headingText =
+        Theme.CreateText(frame, Theme.sizes.columnHeader, "textMuted")
+
+    frame.headingText:Hide()
 
     frame.header = SYL.DropRolls.CreateHeader(frame)
 

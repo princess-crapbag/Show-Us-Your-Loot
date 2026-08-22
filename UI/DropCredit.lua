@@ -149,6 +149,11 @@ local function HideBlock(frame)
     end
 end
 
+-- Returns whether the block was drawn, so the caller can close the gap it
+-- would otherwise leave. Hiding the parts does not reclaim the space they
+-- occupy: the roll list underneath is anchored at a constant that includes
+-- this block's height, so a chat-captured item drew 78px of nothing between
+-- the item details and the column headings and read as a half-drawn window.
 function DropCredit.Update(frame, record)
     local credit = SYL.LootCredit.Describe(record)
 
@@ -165,7 +170,7 @@ function DropCredit.Update(frame, record)
     if not credit or not SYL.LootCredit.CanCorrect(record) then
         HideBlock(frame)
 
-        return
+        return false
     end
 
     for _, part in ipairs(frame.creditParts or {}) do
@@ -201,4 +206,6 @@ function DropCredit.Update(frame, record)
     else
         frame.undoButton:Hide()
     end
+
+    return true
 end
