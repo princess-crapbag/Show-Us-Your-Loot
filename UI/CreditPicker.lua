@@ -214,6 +214,15 @@ local function CreateWindow()
     frame.itemText:SetPoint("TOPLEFT", 18, -48)
     frame.itemText:SetPoint("TOPRIGHT", -16, -48)
 
+    -- The picker names the item it is about, so that name gets a tooltip too.
+    local itemHover = Widgets.MakeItemHoverable(frame, function()
+        return currentRecord and currentRecord.itemLink
+    end)
+
+    itemHover:SetPoint("TOPLEFT", 16, -47)
+    itemHover:SetPoint("TOPRIGHT", -16, -47)
+    itemHover:SetHeight(16)
+
     frame.countText =
         Theme.CreateText(frame, Theme.sizes.columnHeader, "textMuted")
 

@@ -162,6 +162,53 @@ function Widgets.MakeMovable(frame, titleBarOnly)
     frame:SetScript("OnDragStop", StopDragging)
 end
 
+-- AN ITEM NAME THAT IS NOT IN A LIST STILL DESERVES ITS TOOLTIP.
+--
+-- Aimee: "in the loot row the item has a tool tip but it the loot details
+-- window it doesnt. can the item always have a tooltip?" The list rows get one
+-- because the whole row is a Button; a heading is a FontString, and a
+-- FontString cannot take mouse input at all — the same reason
+-- Widgets.AttachNameCopy attaches to the row rather than to the text.
+--
+-- So this puts an invisible button over the text. §3z's trap applies and is
+-- the reason for the caller-supplied bounds rather than SetAllPoints on the
+-- parent: an invisible mouse-enabled child steals clicks from same-level
+-- siblings, so it must cover the words and nothing else.
+--
+-- Shift-click links the item, the same as a row, because somebody reading a
+-- drop is exactly who wants to paste it into chat.
+function Widgets.MakeItemHoverable(parent, getLink)
+    local hover = CreateFrame("Button", nil, parent)
+
+    hover:RegisterForClicks("LeftButtonUp")
+
+    hover:SetScript("OnEnter", function(self)
+        local link = getLink()
+
+        if not link then
+            return
+        end
+
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetHyperlink(link)
+        GameTooltip:Show()
+    end)
+
+    hover:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+
+    hover:SetScript("OnClick", function()
+        local link = getLink()
+
+        if link and IsModifiedClick("CHATLINK") then
+            ChatEdit_InsertLink(SYL.Utilities.NormalizeItemLink(link))
+        end
+    end)
+
+    return hover
+end
+
 -- Right-click a row to copy the name it is showing.
 --
 -- `getName` is called on the click rather than closed over, because rows are

@@ -366,6 +366,71 @@ LootScore.STATE_ORDER = {
 --
 -- Rows with no wins are dropped. A breakdown listing four zeroes to explain a
 -- score of zero says less than the sentence "no wins yet" does.
+-- WHICH ITEMS, not just how many. Aimee, looking at a raider's pane: "it would
+-- be great if from the view in the screenshot i could see what the items are
+-- the the player won."
+--
+-- The pane already shows the arithmetic — Need 2 x 100 = 200 — which answers
+-- "why is my number this" and not "which ones were mine". An officer settling
+-- an argument needs the second one, and it is the half nobody can dispute.
+--
+-- Credited, not won: the same rule the totals use, so this list adds up to the
+-- number printed above it. A drop handed to somebody else is theirs here.
+function LootScore.ItemsFor(key, drops)
+    local items = {}
+
+    if not key then
+        return items
+    end
+
+    for _, drop in ipairs(drops or {}) do
+        if SYL.DropRules.CountsAsUpgrade(drop) then
+            local state, credited
+
+            for _, roll in ipairs(drop.rolls or {}) do
+                if roll.isWinner then
+                    credited = SYL.Players.ResolveToMain(
+                        SYL.DropRules.CreditedKey(drop, roll.guid or roll.name)
+                    )
+
+                    state = SYL.DropRules.CreditedState(drop, roll.state)
+                end
+            end
+
+            if credited == nil and drop.winnerState ~= nil then
+                credited = SYL.Players.ResolveToMain(
+                    SYL.DropRules.CreditedKey(
+                        drop, drop.winnerGUID or drop.winnerName
+                    )
+                )
+
+                state = SYL.DropRules.CreditedState(drop, drop.winnerState)
+            end
+
+            if credited == key then
+                table.insert(items, {
+                    name = drop.itemName
+                        or (drop.itemLink
+                            and drop.itemLink:match("%[(.-)%]"))
+                        or "Unknown item",
+                    itemLink = drop.itemLink,
+                    state = state,
+                    label = LootScore.LABELS[state] or "Unknown",
+                    weight = LootScore.WeightOf(state),
+                    at = drop.timestamp or 0,
+                })
+            end
+        end
+    end
+
+    -- Newest first: the argument is nearly always about the last night.
+    table.sort(items, function(left, right)
+        return left.at > right.at
+    end)
+
+    return items
+end
+
 function LootScore.Breakdown(entry)
     local rows = {}
 

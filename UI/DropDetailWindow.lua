@@ -249,6 +249,17 @@ local function CreateWindow()
     frame.itemText:SetPoint("LEFT", frame.icon, "RIGHT", 8, 0)
     frame.itemText:SetPoint("RIGHT", -16, 0)
 
+    -- Over the icon and the name, and stopping short of the title bar so the
+    -- window can still be dragged from it. Widgets.TITLE_BAR_HEIGHT is 56 and
+    -- the icon starts at 48, so the top eight pixels are left alone.
+    local itemHover = Widgets.MakeItemHoverable(frame, function()
+        return currentRecord and currentRecord.itemLink
+    end)
+
+    itemHover:SetPoint("TOPLEFT", 16, -56)
+    itemHover:SetPoint("TOPRIGHT", -16, -56)
+    itemHover:SetHeight(16)
+
     frame.bossText =
         Theme.CreateText(frame, Theme.sizes.rowSmall, "textSecondary")
 

@@ -210,12 +210,28 @@ end
 -- are muted for a different reason — nobody chose anything.
 local STRONG_TYPES = { need = true, offspec = true }
 
+-- MARKS A DROP THAT WAS PASSED ON, and it is a guillemet because the game
+-- font does not have an arrow. frizqt__.ttf maps 253 characters and U+2192 is
+-- not one of them — it would have drawn an empty box, the same way a tick did
+-- once before. Checked against the font's own cmap rather than assumed.
+--
+-- Measured too: "» Razørtongue" is 78px against a PLAYER column of 130.
+local PASSED_ON = "9487 "
+
 local function FillFeedRow(row, entry, index)
     row.numberText:SetText(index)
-    row.playerText:SetText(entry.player or "Unknown")
 
-    local classColor = entry.drop
-        and Theme.GetClassColor(entry.drop.winnerClass)
+    row.playerText:SetText(
+        (entry.passedOn and PASSED_ON or "") .. (entry.player or "Unknown")
+    )
+
+    -- The class of whoever it counts for, not of whoever rolled. On a
+    -- master-looted night the winner's class is the same on every row and
+    -- says nothing.
+    local classColor = entry.creditedClass
+        and Theme.GetClassColor(entry.creditedClass)
+        or (entry.drop and not entry.passedOn
+            and Theme.GetClassColor(entry.drop.winnerClass))
 
     if classColor then
         Theme.SetCustomTextColor(

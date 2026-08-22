@@ -186,6 +186,32 @@ local function AttachItemRowScripts(row)
 
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         GameTooltip:SetHyperlink(self.itemLink)
+
+        -- BOTH HALVES, because the row only has room for one. A drop that was
+        -- handed on shows who it counts for; who won the roll is here. Aimee,
+        -- on a loot tab reading her own name eight times: "from the loot tab
+        -- it looks like i got all of these items."
+        -- The row already carries the feed entry it is drawing; see BindRow
+        -- in UI/LootListView.lua. Rows on other lists have a differently
+        -- shaped record and simply have no passedOn.
+        local entry = self.record
+
+        if entry and entry.passedOn then
+            GameTooltip:AddLine(" ")
+
+            GameTooltip:AddLine(
+                "Won by " .. tostring(entry.wonBy or "somebody"),
+                0.64, 0.61, 0.78
+            )
+
+            GameTooltip:AddLine(
+                (entry.creditSource == "traded" and "Traded to "
+                    or "Credited by hand to ")
+                .. tostring(entry.player or "somebody"),
+                0.55, 0.85, 1.00
+            )
+        end
+
         GameTooltip:Show()
     end)
 

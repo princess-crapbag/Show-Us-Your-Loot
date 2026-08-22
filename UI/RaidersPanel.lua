@@ -349,6 +349,10 @@ Refresh = function()
         frame.average:Hide()
     end
 
+    -- Handed the same drops the board was built from, so naming a raider's
+    -- items does not sweep the season again on every selection.
+    SYL.RaidersDetail.SetDrops(frame.detail, SYL.GetActiveDrops())
+
     SYL.RaidersDetail.Render(
         frame.detail, selectedKey and FindByKey(entries, selectedKey) or nil
     )

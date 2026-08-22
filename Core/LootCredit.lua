@@ -228,6 +228,25 @@ end
 --
 -- The order matches the rule: an override beats a trade, and a trade beats
 -- the roll.
+-- The class of whoever a name belongs to, for a screen that colors it. The
+-- roll list first, because it carries the class as recorded on the night;
+-- the registry after, because a credit can land on somebody who never rolled.
+local function ClassOf(drop, name)
+    if not name then
+        return nil
+    end
+
+    for _, roll in ipairs(drop.rolls or {}) do
+        if roll.name == name and roll.class then
+            return roll.class
+        end
+    end
+
+    local player = SYL.Players and SYL.Players.Get(name)
+
+    return player and player.class or nil
+end
+
 function LootCredit.Describe(drop)
     if not drop then
         return nil
@@ -248,8 +267,14 @@ function LootCredit.Describe(drop)
     local override = LootCredit.Get(drop)
 
     if override then
+        local name = override.name or override.guid
+
         return {
-            name = override.name or override.guid,
+            name = name,
+            class = ClassOf(drop, name)
+                or (SYL.Players and override.guid
+                    and (SYL.Players.Get(override.guid) or {}).class)
+                or nil,
             state = override.state == nil and rawState or override.state,
             source = "manual",
             priorName = rawName,
@@ -264,6 +289,7 @@ function LootCredit.Describe(drop)
     then
         return {
             name = drop.tradedTo,
+            class = ClassOf(drop, drop.tradedTo),
             state = rawState,
             source = "traded",
             priorName = rawName,
@@ -273,6 +299,7 @@ function LootCredit.Describe(drop)
 
     return {
         name = rawName,
+        class = ClassOf(drop, rawName) or drop.winnerClass,
         state = rawState,
         source = "roll",
     }

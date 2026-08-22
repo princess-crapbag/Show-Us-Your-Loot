@@ -122,13 +122,35 @@ end
 local function FromDrop(drop)
     local typeKey = DropType(drop)
 
+    -- WHO IT COUNTS FOR, NOT WHO THE CLIENT SAYS WON IT. Aimee, on a loot tab
+    -- showing her name against eight items she had handed out: "from the loot
+    -- tab it looks like i got all of these items."
+    --
+    -- Under a loot council she wins every roll and gives the item away, so her
+    -- name on every row is true and useless. The row names whoever the drop is
+    -- credited to and marks that it was passed on; who won the roll is on the
+    -- row's tooltip and on the drop detail, both one step away.
+    local credit = SYL.LootCredit and SYL.LootCredit.Describe(drop)
+
+    local passedOn = credit
+        and credit.source ~= "roll"
+        and credit.name ~= credit.priorName
+        or nil
+
     return {
         id = drop.id,
         source = "drop",
         record = drop,
         drop = drop,
 
-        player = DisplayName(drop.winnerName),
+        player = DisplayName(credit and credit.name or drop.winnerName),
+
+        -- Kept beside it rather than folded into the name, so the list can
+        -- mark the row and the tooltip can say both halves.
+        passedOn = passedOn,
+        wonBy = passedOn and DisplayName(credit.priorName) or nil,
+        creditSource = credit and credit.source or nil,
+        creditedClass = credit and credit.class or nil,
         itemLink = drop.itemLink,
         itemName = drop.itemName,
         itemID = drop.itemID,

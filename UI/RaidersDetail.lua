@@ -23,6 +23,11 @@ SYL.RaidersDetail = RaidersDetail
 local PAD = 10
 local LINE_GAP = 5
 
+-- The pane is 250 wide and its height is fixed by the board beside it, so the
+-- item list has a ceiling. Eight covers a full tier for most raiders and
+-- leaves room for the sentences under it.
+local MAX_ITEMS = 8
+
 function RaidersDetail.Create(parent, width, top)
     local detail = CreateFrame("Frame", nil, parent)
 
@@ -106,6 +111,12 @@ local function Line(detail, text, colorKey, size)
     return line
 end
 
+-- The drops the board was built from, so the pane can name the items without
+-- sweeping the season a second time per selection.
+function RaidersDetail.SetDrops(detail, drops)
+    detail.drops = drops
+end
+
 function RaidersDetail.Render(detail, entry)
     for _, line in ipairs(detail.lines) do
         line:Hide()
@@ -164,6 +175,36 @@ function RaidersDetail.Render(detail, entry)
         end
 
         Line(detail, string.format("Total  %d points", entry.lootScore or 0), "textPrimary")
+
+        -- WHICH ITEMS, under the arithmetic that counts them. Aimee: "it would
+        -- be great if from the view in the screenshot i could see what the
+        -- items are the the player won." The sum answers "why is my number
+        -- this"; the list answers "which ones were mine", and that is the half
+        -- nobody argues with.
+        --
+        -- Capped, because this pane is 250 wide and shares a fixed height with
+        -- everything above it. The overflow is counted rather than dropped
+        -- silently — a list that stops without saying so reads as the whole
+        -- list.
+        local items = SYL.LootScore.ItemsFor(entry.key, detail.drops)
+
+        if #items > 0 then
+            Line(detail, "WHAT THEY TOOK", "textMuted")
+
+            for index = 1, math.min(#items, MAX_ITEMS) do
+                local item = items[index]
+
+                Line(detail, string.format(
+                    "%s  ·  %s", item.name, item.label
+                ), item.weight > 0 and "textSecondary" or "textMuted")
+            end
+
+            if #items > MAX_ITEMS then
+                Line(detail, string.format(
+                    "and %d more", #items - MAX_ITEMS
+                ), "textMuted")
+            end
+        end
     end
 
     -- Said out loud, because the ranking is share and not score: somebody
