@@ -38,6 +38,39 @@ function RaidersDetail.Create(parent, width, top)
     detail.top = 12
     detail.width = width
 
+    -- THE ONE CONTROL ON THIS PANE, and it is here because this is where the
+    -- problem is visible: a faction change gives a character a new GUID, so
+    -- the board draws the same person twice and the roster screen cannot help
+    -- — the pre-change character is not in the guild any more. See
+    -- Core/CharacterMerge.lua.
+    detail.mergeButton = Theme.CreateButton(detail, 140, 22, "", function()
+        local proposal = detail.mergeProposal
+
+        if not proposal then
+            return
+        end
+
+        local ok, reason = SYL.CharacterMerge.Apply(proposal)
+
+        if not ok then
+            SYL:Print("Could not merge them: " .. tostring(reason))
+
+            return
+        end
+
+        SYL:Print(
+            "Merged into one raider. Their nights and loot are counted "
+            .. "together from now on. Undo it from the Roster window with "
+            .. "Not an alt."
+        )
+
+        if SYL.RefreshMainWindow then
+            SYL:RefreshMainWindow()
+        end
+    end)
+
+    detail.mergeButton:Hide()
+
     return detail
 end
 
@@ -80,6 +113,8 @@ function RaidersDetail.Render(detail, entry)
 
     detail.count = 0
     detail.top = 12
+    detail.mergeProposal = nil
+    detail.mergeButton:Hide()
 
     if not entry then
         Line(detail, "Pick a raider to see where their number came from.", "textMuted")
@@ -150,5 +185,29 @@ function RaidersDetail.Render(detail, entry)
             .. " there is not enough to divide by, so they are "
             .. "listed with the reason rather than given a number that would "
             .. "sort them straight to the top.", "textMuted")
+    end
+
+    -- Offered last, under the arithmetic it would change. Somebody reading a
+    -- number that looks wrong should see why before being offered the fix.
+    local proposal = SYL.CharacterMerge
+        and SYL.CharacterMerge.For(entry.key)
+
+    if proposal then
+        Line(detail, SYL.CharacterMerge.Describe(proposal), "warning")
+
+        detail.mergeProposal = proposal
+
+        local label = "Merge into one raider"
+
+        detail.mergeButton.label:SetText(label)
+        detail.mergeButton:SetWidth(
+            Theme.MeasureText(Theme.sizes.rowSmall, label) + 26
+        )
+
+        detail.mergeButton:ClearAllPoints()
+        detail.mergeButton:SetPoint("TOPLEFT", detail, "TOPLEFT", PAD, -detail.top)
+        detail.mergeButton:Show()
+
+        detail.top = detail.top + 26
     end
 end

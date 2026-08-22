@@ -27,6 +27,7 @@ Core\Recovery.lua
 Core\Seasons.lua
 Core\Players.lua
 Core\AltDetect.lua
+Core\CharacterMerge.lua
 Core\RaiderIO.lua
 Core\LootMessages.lua
 Core\LootCapture.lua
