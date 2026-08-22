@@ -61,6 +61,25 @@ local ROLL_STATE_TYPES = {
     [STATE.Greed] = "greed",
 }
 
+-- HOW THE PERSON WHO GOT IT GOT IT, not how the master looter rolled.
+--
+-- Aimee, on a dagger she rolled Mog on and credited to Hawt as a Need: "the
+-- type still shows as mog in the loot screen. i did roll as mog but he won it
+-- as need so it should really show how he won it."
+--
+-- The roll list first and the header second, the same order Core/LootScore.lua
+-- reads them in — a synced record carries no roll list, and the two must not
+-- disagree about one drop.
+local function CreditedState(drop)
+    for _, roll in ipairs(drop.rolls or {}) do
+        if roll.isWinner then
+            return SYL.DropRules.CreditedState(drop, roll.state)
+        end
+    end
+
+    return SYL.DropRules.CreditedState(drop, drop.winnerState)
+end
+
 local function DropType(drop)
     if drop.allPassed then
         return "passed"
@@ -69,7 +88,7 @@ local function DropType(drop)
     -- NoRoll, Pass and nil are not Need wins. Defaulting them to need
     -- overstated Need in the type column while DueList correctly refused to
     -- count them, so the list and the math disagreed about one record.
-    return ROLL_STATE_TYPES[drop.winnerState] or "personal"
+    return ROLL_STATE_TYPES[CreditedState(drop)] or "personal"
 end
 
 -- Chat records carry no roll, so the type is inferred from where and how the

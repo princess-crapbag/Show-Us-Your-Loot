@@ -324,6 +324,37 @@ def toc_order() -> list:
     return files
 
 
+
+# A byte no font draws, sitting in a string somebody will read on screen.
+#
+# THE BUG THIS EXISTS FOR. A "»" was written into UI/LootListView.lua as the
+# Lua escape "9487". The escape was read once too often on the way into
+# the file, so what landed was a literal backslash followed by 194 — and Lua
+# read THAT as its own octal escape  plus the digits 94. The player column
+# drew a box, then 94, then another box, then 87, on every row of a raid
+# night's loot. Aimee: "the weird symbols around the name".
+#
+# No test could catch it: the addon loaded, the suites passed, and the string
+# was only wrong once a person looked at it. A control byte in shipped source
+# is never intentional, so the linter is the right place to refuse it.
+CONTROL = {
+    code for code in range(0x20)
+    if code not in (0x09, 0x0A, 0x0D)   # tab, newline, carriage return
+}
+
+
+def check_control_bytes(name: str, raw: str, problems: list):
+    for lineno, line in enumerate(raw.splitlines(), 1):
+        for column, char in enumerate(line, 1):
+            if ord(char) in CONTROL:
+                problems.append(
+                    f"{name}:{lineno}:{column}: control byte "
+                    f"0x{ord(char):02X} in source — an escape that was "
+                    f"expanded twice, not a character anything can draw"
+                )
+
+                return
+
 def main() -> int:
     # advisories is size only: reported every run, never fatal. See the
     # note by the return for why that class is deliberately not a failure.
@@ -354,6 +385,8 @@ def main() -> int:
         raw = path.read_text(encoding="utf-8", errors="replace")
         code = strip_code(raw)
         bodies[name] = code
+
+        check_control_bytes(name, raw, problems)
 
         lines = len(code.splitlines())
         exempt, reason = size_exemption(raw)

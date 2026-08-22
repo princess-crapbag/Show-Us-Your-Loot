@@ -216,7 +216,14 @@ local STRONG_TYPES = { need = true, offspec = true }
 -- once before. Checked against the font's own cmap rather than assumed.
 --
 -- Measured too: "» Razørtongue" is 78px against a PLAYER column of 130.
-local PASSED_ON = "9487 "
+--
+-- Written as the character itself rather than as a numeric escape. Going in
+-- that way, the escape was expanded once too often on the way to the file
+-- and Lua then read what was left as an octal escape of its own, so the
+-- player column drew a box and two digits on every row of a raid night.
+-- tools/syl_check.py refuses a control byte in source for that reason. Lua
+-- strings are bytes, the file is UTF-8, and the character needs no escaping.
+local PASSED_ON = "» "
 
 local function FillFeedRow(row, entry, index)
     row.numberText:SetText(index)
