@@ -142,8 +142,20 @@ local function SameDay(entry, drop)
     return (entry.date:gsub("/", "-")) == drop.dateText
 end
 
+-- Returns the award and WHO RECEIVED IT, and the second one is not a field on
+-- the first.
+--
+-- The history is keyed by recipient — lootDB["Phreestyle-Area52"] is a list of
+-- what Phreestyle was given — so the winner is the key and nothing on the entry
+-- says it. `owner` is the master looter who held the item, which on her real
+-- data is Arcangila on every drop somebody else received. Reading `owner` as
+-- the winner would have marked the master looter as having got all of them,
+-- which is the exact mistake this whole feature exists to undo.
+--
+-- RCLootCouncil's own history screen does the same thing: it passes `row.name`
+-- into SessionData, and row.name is the key.
 function CouncilLoot.AwardFor(drop)
-    if not drop or not drop.itemLink then
+    if not drop or not drop.itemLink or drop.itemLink == "" then
         return nil
     end
 
@@ -153,11 +165,11 @@ function CouncilLoot.AwardFor(drop)
         return nil
     end
 
-    for _, awards in pairs(db) do
+    for winner, awards in pairs(db) do
         if type(awards) == "table" then
             for _, entry in ipairs(awards) do
                 if entry.lootWon == drop.itemLink and SameDay(entry, drop) then
-                    return entry
+                    return entry, winner
                 end
             end
         end
@@ -248,7 +260,7 @@ end
 -- kept this", which is the setting being off, and empty is "kept, and nobody
 -- answered", which is a real thing on an item the whole raid passed.
 function CouncilLoot.ResponsesFor(drop)
-    local entry = CouncilLoot.AwardFor(drop)
+    local entry, winner = CouncilLoot.AwardFor(drop)
 
     if not entry then
         return nil
@@ -268,9 +280,7 @@ function CouncilLoot.ResponsesFor(drop)
             -- The winner's own answer lives on the award rather than in the
             -- response table — RCLootCouncil stores only their item level and
             -- roll there, because the rest is already on the entry.
-            local isWinner = entry.player ~= nil and name == entry.player
-                or (entry.owner ~= nil and name == entry.owner
-                    and data.response == nil)
+            local isWinner = winner ~= nil and name == winner
 
             table.insert(list, {
                 name = name,

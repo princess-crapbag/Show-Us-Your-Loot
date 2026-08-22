@@ -120,7 +120,6 @@ lua.execute(
                         response = 'Greed',
                         votes = 3,
                         owner = 'Arcangila-Area52',
-                        player = 'Phreestyle-Area52',
                         sessionResponses = {
                             ['Phreestyle-Area52'] = { ilvl = 285, roll = 71 },
                             ['Razorshift-Thrall'] = {
@@ -177,6 +176,19 @@ check("the winner sorts first",
       rows[1].name == "Phreestyle-Area52", rows[1].name)
 
 # --- matching the right award ---------------------------------------------
+# THE WINNER IS THE KEY, NOT A FIELD, and getting that wrong would have
+# marked the master looter as having received everything — the exact thing
+# this feature exists to undo. `owner` on a real award is Arcangila on every
+# drop somebody else was given.
+entry, winner = CouncilLoot.AwardFor(drop())
+
+check("the award names who received it, from the key",
+      winner == "Phreestyle-Area52", winner)
+check("and that is not the entry's owner",
+      entry.owner == "Arcangila-Area52" and winner != entry.owner)
+check("nothing on the entry claims to be the winner",
+      entry.player is None)
+
 check("a different item finds nothing",
       CouncilLoot.AwardFor(drop(link=OTHER_LINK)) is None)
 
@@ -205,7 +217,7 @@ lua.execute(
                     date = '2026/08/18',
                     typeCode = 'default',
                     response = 'Greed',
-                    player = 'Phreestyle-Area52',
+                    owner = 'Arcangila-Area52',
                     SR = { ['x'] = '279@11@1@44@1' },
                 },
             },
