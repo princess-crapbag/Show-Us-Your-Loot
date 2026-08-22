@@ -232,7 +232,13 @@ function ArchiveControls.Create(parent, view, config)
             Changed()
         end)
 
-    bar.clearButton:SetPoint("LEFT", bar.mergeButton, "RIGHT", 12, 0)
+    -- CHAINED, NOT ALL HUNG OFF MERGE. This sat at merge's right edge and so
+    -- did Make active when it was added, so the two drew on top of each other
+    -- and the label read as one word of nonsense. Anchoring each button to the
+    -- one before it means adding another cannot collide with anything: the
+    -- gap after Make active is the wider one because the ticking control is a
+    -- different kind of thing from the three actions before it.
+    bar.clearButton:SetPoint("LEFT", bar.unarchiveButton, "RIGHT", 12, 0)
 
     local Tip = SYL.Tooltips.Attach
 
@@ -248,6 +254,11 @@ function ArchiveControls.Create(parent, view, config)
         "Folds every ticked season into the oldest one. Nothing is deleted, "
         .. "but which season each record came from cannot be recovered. Press "
         .. "it twice to confirm.")
+
+    Tip(bar.unarchiveButton, "Make active",
+        "Brings the one ticked season back as the season being raided in, so "
+        .. "its loot and nights count again. The season you are on now is "
+        .. "archived instead, unless it is empty.")
 
     Tip(bar.clearButton, "Untick all",
         "Clears the ticks. It changes no season.")
