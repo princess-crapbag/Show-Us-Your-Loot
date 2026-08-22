@@ -42,9 +42,11 @@ def check(label, ok, detail=None):
         failures.append(label)
 
 
-# file -> the frame whose children form one horizontal row
+# file, the frame whose children form one horizontal row, and how much room
+# that row has across its window.
 ROWS = [
-    ("ArchiveControls.lua", "bar"),
+    ("ArchiveControls.lua", "bar", 900 - 32),
+    ("RosterControls.lua", "frame", 900 - 32),
 ]
 
 ANCHOR = re.compile(
@@ -52,7 +54,7 @@ ANCHOR = re.compile(
     r"\s*\"(LEFT|RIGHT)\"\s*,\s*(-?\d+)"
 )
 
-for filename, frame in ROWS:
+for filename, frame, room in ROWS:
     source = (UI / filename).read_text(encoding="utf-8")
 
     print(filename)
@@ -84,18 +86,23 @@ for filename, frame in ROWS:
           clash and "%s and %s both sit at %s's %s edge"
           % (clash[0], clash[1], clash[2], clash[3]))
 
-    # Each link must point at something already placed, or the row is not a
-    # chain and the order on screen is whatever the engine decides.
+    # Each link must point at something already placed. A file can hold more
+    # than one row — RosterControls has a filter row and a footer row — and
+    # the first control of a row anchors to the window corner rather than to a
+    # sibling, so anything never seen as a LEFT-anchored child is a row head
+    # and is allowed. What is not allowed is pointing forward at something
+    # placed later, which leaves the order on screen to the engine.
+    children = [child for child, _ref, _gap in chain]
     placed = set()
     broken = []
 
     for child, ref, _gap in chain:
-        if ref not in placed and ref != chain[0][1]:
+        if ref in children and ref not in placed:
             broken.append((child, ref))
 
         placed.add(child)
 
-    check("  each control hangs off the one before it",
+    check("  each control hangs off one placed before it",
           not broken, broken)
 
     # And the row has to fit. Widths are declared at creation.
@@ -120,18 +127,29 @@ for filename, frame in ROWS:
     for _owner, child, width in text_widths:
         widths.setdefault(child, int(width))
 
-    total = 0
+    # Per row, not across the file: two rows in one window each get the width.
+    rows, current = [], []
 
     for child, ref, gap in chain:
-        total += widths.get(ref, 0) + gap
+        if ref not in children:
+            if current:
+                rows.append(current)
 
-    total += widths.get(chain[-1][0], 0) if chain else 0
+            current = [(ref, 0)]
 
-    # The main window is 900 and the bar insets 16 either side.
-    ROOM = 900 - 32
+        current.append((child, gap))
 
-    check("  the whole row fits across the window",
-          total <= ROOM, "%d used of %d" % (total, ROOM))
+    if current:
+        rows.append(current)
+
+    widest = 0
+
+    for row in rows:
+        used = sum(widths.get(name, 0) + gap for name, gap in row)
+        widest = max(widest, used)
+
+    check("  every row fits across the window",
+          widest <= room, "%d used of %d" % (widest, room))
 
 print()
 print("FAILURES:", failures or "none")

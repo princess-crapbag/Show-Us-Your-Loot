@@ -315,13 +315,65 @@ local function CreateActions(frame, handlers)
 
     frame.unaltButton:SetPoint("LEFT", frame.altButton, "RIGHT", 6, 0)
 
+    -- A CHARACTER THE CLIENT RENUMBERED, which is not the same thing as an
+    -- alt and cannot be typed into the box beside it. A faction change gives a
+    -- character a new GUID, so the addon sees two people — and the old one is
+    -- not in the guild any more, so it cannot be ticked, named, or reached by
+    -- anything else on this screen. Aimee: "he is only 1 character and the
+    -- former doesnt exist to mark as an alt or anything."
+    --
+    -- Here as well as on the Raiders board because that board is one season
+    -- and this is not: with an empty or freshly archived season the board has
+    -- no rows at all, so the only control was one nobody could get to. This
+    -- screen lists the guild whatever season is open.
+    --
+    -- Takes no name for the same reason Not an alt does not: the pair is
+    -- already known, and Core/CharacterMerge.lua decides whether there is one
+    -- rather than trusting a person to type it.
+    frame.mergeButton =
+        Theme.CreateButton(frame, 110, 22, "Same character", function()
+            local merged, none = 0, 0
+
+            EachSelected(function(entry)
+                local proposal = SYL.CharacterMerge.For(entry.guid)
+
+                if proposal and SYL.CharacterMerge.Apply(proposal) then
+                    merged = merged + 1
+                else
+                    none = none + 1
+                end
+            end)
+
+            if merged == 0 then
+                Finish(
+                    "No earlier version of "
+                    .. (none == 1 and "that character" or "those characters")
+                    .. " to fold in. This is for a character the client "
+                    .. "renumbered, usually a faction change — same realm, "
+                    .. "same name, same class, never in a raid together."
+                )
+
+                return
+            end
+
+            Finish(
+                merged .. " folded back into one raider"
+                .. (none > 0 and (", " .. none .. " had no earlier version")
+                    or "")
+                .. ". Their nights and loot count together from now on, and "
+                .. "Not an alt undoes it."
+            )
+        end)
+
+    frame.mergeButton:SetPoint("LEFT", frame.unaltButton, "RIGHT", 6, 0)
+
     frame.clearButton =
         Theme.CreateButton(frame, 86, 22, "Untick all", function()
             handlers.onClearSelection()
             handlers.onChanged()
         end)
 
-    frame.clearButton:SetPoint("LEFT", frame.unaltButton, "RIGHT", 12, 0)
+    frame.clearButton:SetPoint("LEFT", frame.mergeButton, "RIGHT", 12, 0)
 
     local Tip = SYL.Tooltips.Attach
 
@@ -341,6 +393,12 @@ local function CreateActions(frame, handlers)
         "Maps every ticked character to the main named on the left. This "
         .. "changes past numbers as well as future ones, because two "
         .. "characters then count as one person. Not an alt undoes it.")
+
+    Tip(frame.mergeButton, "Same character",
+        "For a character the client renumbered — a faction change gives one a "
+        .. "new GUID, so it shows up twice. Folds the older into the newer "
+        .. "when they share a realm, a name and a class and were never in a "
+        .. "raid together. Not an alt undoes it.")
 
     Tip(frame.unaltButton, "Not an alt",
         "Unmaps every ticked character, so each counts as itself again. Use "
