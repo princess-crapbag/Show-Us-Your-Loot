@@ -125,8 +125,28 @@ local function BuildRow(popup, index)
     row.highlight:SetAllPoints()
     row.highlight:Hide()
 
-    row:SetScript("OnEnter", function(self) self.highlight:Show() end)
-    row:SetScript("OnLeave", function(self) self.highlight:Hide() end)
+    -- THE HOVER FLAG IS WHAT MAKES CLICKING WORK AT ALL, and that is not
+    -- obvious from here. See the note on OnEditFocusLost below: taking the
+    -- mouse to this row takes focus off the edit box, and hiding the list at
+    -- that moment removed the button before its click could land.
+    row:SetScript("OnEnter", function(self)
+        self.highlight:Show()
+
+        popup.overRow = true
+    end)
+
+    row:SetScript("OnLeave", function(self)
+        self.highlight:Hide()
+
+        popup.overRow = false
+
+        -- Moving away without choosing, from a list the edit box has already
+        -- stopped owning. Nothing else would close it. Set in Attach, which
+        -- runs long before any row is built.
+        if popup.onLeftList then
+            popup.onLeftList()
+        end
+    end)
 
     row.name = Theme.CreateText(row, Theme.sizes.rowSmall, "textPrimary")
     row.name:SetPoint("LEFT", 6, 0)
@@ -251,10 +271,32 @@ function NameSuggest.Attach(holder, config)
 
     editBox:HookScript("OnEscapePressed", Hide)
 
-    -- Leaving the box without choosing dismisses the list. Without this it
-    -- hangs over whatever the window draws next, and it is drawn above
-    -- everything so it would be the top thing on screen.
-    editBox:HookScript("OnEditFocusLost", Hide)
+    -- LEAVING THE BOX DISMISSES THE LIST, EXCEPT TOWARDS THE LIST ITSELF.
+    --
+    -- Aimee: "if i type in syzz it will suggest syzzlac, but when i click on
+    -- the suggested name syzzlac it doesnt change the box". Clicking a
+    -- suggestion takes focus off the edit box, this fired, and the row was
+    -- hidden before its own click could land — so the only way to accept one
+    -- was the Enter key, which is not what a list of clickable rows promises.
+    --
+    -- Hiding is still right for every other way of leaving: without it the
+    -- list hangs over whatever the window draws next, and it sits at +20 frame
+    -- level so it would be the top thing on screen.
+    editBox:HookScript("OnEditFocusLost", function()
+        if popup.overRow then
+            return
+        end
+
+        Hide()
+    end)
+
+    -- The other half of that exception: the pointer leaves the list without
+    -- choosing, and the box no longer has focus to dismiss it later.
+    popup.onLeftList = function()
+        if not editBox:HasFocus() then
+            Hide()
+        end
+    end
 
     holder.suggest = popup
 
