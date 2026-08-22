@@ -288,15 +288,28 @@ end
 --
 -- dateText is preferred over recomputing from startedAt because a raid that
 -- runs past midnight already has one, written when the session opened.
+--
+-- THE INSTANCE IS NOT PART OF THE KEY, and it used to be. Aimee, on finding
+-- three guild nights where she had raided twice: "the nights showing should
+-- only be showing my 80% + guild run raids. that has only happened on this
+-- past tuesday and this past thursday. 2 total."
+--
+-- On the Thursday her guild cleared two different raids — instance 2987 and
+-- instance 3004 — and with the instance in the key that one evening counted
+-- as two nights. Everyone present got an extra night in the divisor and their
+-- share fell for turning up, which is the same fault this key was written to
+-- fix, one level further out: the comment above already says a night counts
+-- once "however many difficulties the night passed through", and how many
+-- raids it passed through is the same kind of detail.
+--
+-- A night is an evening. Two raids in one evening is one night; the same raid
+-- on two evenings is two.
 function RaidSession.NightKey(session)
     if not session then
         return nil
     end
 
-    return table.concat({
-        tostring(session.instanceID or 0),
-        session.dateText or date("%Y-%m-%d", session.startedAt or 0),
-    }, "-")
+    return session.dateText or date("%Y-%m-%d", session.startedAt or 0)
 end
 
 -- How many distinct nights a list of sessions represents.
@@ -572,7 +585,17 @@ function RaidSession.BuildAttendance(sessions)
     -- Mythic pulls after it on the same evening are one night present.
     local countedOn = {}
 
-    for _, session in ipairs(RaidSession.RaidsOnly(sessions)) do
+    -- GUILD NIGHTS, not every raid. Aimee: "the board should only be tracking
+    -- guild raid loot. no other loot should ever count as points ever." This
+    -- read RaidsOnly, which drops dungeons and Timewalking and keeps anything
+    -- else — so an LFR run and a thirty-person pug were adding nights to the
+    -- roster's attendance column and putting forty strangers on it.
+    --
+    -- It is also the half that has to match Core/DueList.lua, which counts
+    -- nights through NightsOnly. Two screens disagreeing about how many nights
+    -- somebody raided is how an officer stops trusting both: before this the
+    -- Roster window said Hinokamii had two and the board said one.
+    for _, session in ipairs(RaidSession.NightsOnly(sessions)) do
         local nightKey = RaidSession.NightKey(session)
 
         countedOn[nightKey] = countedOn[nightKey] or {}

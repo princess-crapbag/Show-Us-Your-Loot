@@ -231,6 +231,132 @@ drop_checks = [
 for label, ok in drop_checks:
     check(label, ok)
 
+# --- a night is an evening, not an instance -------------------------------
+#
+# Aimee, on finding three guild nights where she had raided twice: "that has
+# only happened on this past tuesday and this past thursday. 2 total."
+#
+# On the Thursday her guild cleared two different raids in one evening —
+# instance 2987 and instance 3004 — and the night key used to carry the
+# instance id, so that evening counted as two nights. Everyone present got an
+# extra night in the divisor and their share fell for turning up, which is the
+# same fault the key was written to fix one level further out.
+
+lua.execute(
+    """
+    -- NightKey falls back to formatting startedAt when a session has no
+    -- dateText, which only old records do. Stubbed rather than skipped: the
+    -- fallback is the branch that would go unnoticed if it broke.
+    date = date or function(_, at) return 'from-' .. tostring(at) end
+
+    function Night(instanceID, dateText)
+        return { instanceID = instanceID, dateText = dateText,
+                 startedAt = 1000, instanceType = 'raid', difficultyID = 14 }
+    end
+    """
+)
+
+Night = lua.globals().Night
+
+check("two raids in one evening are one night",
+      RaidSession.NightKey(Night(2987, "2026-08-20"))
+      == RaidSession.NightKey(Night(3004, "2026-08-20")))
+
+check("the same raid on two evenings is two nights",
+      RaidSession.NightKey(Night(3004, "2026-08-20"))
+      != RaidSession.NightKey(Night(3004, "2026-08-22")))
+
+check("a session with no date still keys off something",
+      RaidSession.NightKey(
+          lua.eval("{ instanceID = 1, startedAt = 1755000000 }")) is not None)
+
+check("and nothing at all keys off nothing", RaidSession.NightKey(None) is None)
+
+# --- attendance counts guild nights, and only those -----------------------
+#
+# The Roster window's NIGHTS column and the board's divisor come from two
+# different functions, and they disagreed: BuildAttendance filtered with
+# RaidsOnly, which keeps anything that is not a dungeon, so an LFR run and a
+# thirty-person pug were adding nights and putting strangers on the roster.
+# The board counted through NightsOnly and did not.
+
+lua.execute(
+    """
+    ShowUsYourLoot.Players = {
+        ResolveToMain = function(key) return key end,
+        Get = function() return nil end,
+    }
+
+    -- Her real shape: a guild Tuesday, a guild Thursday spread over two
+    -- instances, an LFR run on the Tuesday, and a pug on the Friday.
+    -- Arcangila is guilded in every session, because she always is. Without
+    -- that GuildDataIsTrustworthy reads the whole session as unknown and it
+    -- counts — which is the right rule, and would hide what is under test.
+    local function Roster(guilded, strangers)
+        local out = { Arcangila = {
+            guid = 'Arcangila', name = 'Arcangila', guildRank = 'Master',
+        } }
+
+        for _, name in ipairs(guilded or {}) do
+            out[name] = { guid = name, name = name, guildRank = 'Good Kitty' }
+        end
+
+        for _, name in ipairs(strangers or {}) do
+            out[name] = { guid = name, name = name }
+        end
+
+        return out
+    end
+
+    local GUILD = { 'Camcar', 'Hinokamii' }
+    local MANY = { 'S1','S2','S3','S4','S5','S6','S7','S8','S9','S10' }
+
+    ATTEND_SESSIONS = {
+        -- Tuesday: the guild raid.
+        { dateText = '2026-08-18', instanceID = 3004, instanceType = 'raid',
+          difficultyID = 14, startedAt = 1,
+          roster = Roster(GUILD), recordedBy = 'Arcangila' },
+
+        -- Tuesday: an LFR run she also did, one guildie among eleven.
+        { dateText = '2026-08-18', instanceID = 3004, instanceType = 'raid',
+          difficultyID = 17, startedAt = 2,
+          roster = Roster(nil, MANY), recordedBy = 'Arcangila' },
+
+        -- Thursday: one evening across two different raids.
+        { dateText = '2026-08-20', instanceID = 2987, instanceType = 'raid',
+          difficultyID = 14, startedAt = 3,
+          roster = Roster(GUILD), recordedBy = 'Arcangila' },
+
+        { dateText = '2026-08-20', instanceID = 3004, instanceType = 'raid',
+          difficultyID = 15, startedAt = 4,
+          roster = Roster(GUILD), recordedBy = 'Arcangila' },
+
+        -- Friday: a pug.
+        { dateText = '2026-08-22', instanceID = 3004, instanceType = 'raid',
+          difficultyID = 14, startedAt = 5,
+          roster = Roster(nil, MANY), recordedBy = 'Arcangila' },
+    }
+    """
+)
+
+# Two returns: the ordered list, and the same entries keyed for lookup.
+attendance, _by_key = RaidSession.BuildAttendance(lua.globals().ATTEND_SESSIONS)
+by_name = {}
+
+for i in range(1, len(attendance) + 1):
+    by_name[attendance[i].name] = attendance[i].nights
+
+check("THE TWO GUILD NIGHTS ARE TWO, NOT FOUR",
+      by_name.get("Camcar") == 2, by_name.get("Camcar"))
+
+check("the Thursday's two instances counted once",
+      by_name.get("Arcangila") == 2, by_name.get("Arcangila"))
+
+check("nobody from the LFR run is on the list",
+      "S1" not in by_name, sorted(by_name))
+
+check("nor anybody from the pug", "S10" not in by_name, sorted(by_name))
+
 print()
 print("FAILURES:", failures or "none")
 sys.exit(1 if failures else 0)
