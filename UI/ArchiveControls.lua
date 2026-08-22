@@ -173,6 +173,57 @@ function ArchiveControls.Create(parent, view, config)
 
     bar.mergeButton:SetPoint("LEFT", bar.renameButton, "RIGHT", 6, 0)
 
+    -- THE WAY BACK FROM THE ARCHIVE BUTTON, which had none. Aimee, having
+    -- archived a season she was still raiding: "i archived the 08/18-08/22.
+    -- now how do i unarchive them?" There was no answer anywhere in the
+    -- addon, which is the rule in HANDOFF broken plainly — anything that can
+    -- be created has to be undoable from the same screen, and this is that
+    -- screen.
+    --
+    -- MEASURED, like the two beside it: "Make active" is 65px in the real
+    -- font, so 84 holds it with the same padding Rename and Merge use.
+    bar.unarchiveButton =
+        Theme.CreateButton(bar, 84, 22, "Make active", function()
+            local indexes, names = ArchiveControls.Selected(view)
+
+            if #indexes ~= 1 then
+                SYL:Print("Tick exactly one season to bring back.")
+
+                return
+            end
+
+            local season, displaced = SYL.UnarchiveSeason(indexes[1])
+
+            if not season then
+                SYL:Print(displaced or "Could not bring that season back.")
+
+                return
+            end
+
+            ArchiveControls.Clear(view)
+
+            -- Said plainly, because this moves two seasons at once and only
+            -- one of them was ticked. Somebody who does not know the season
+            -- they were on has been filed away will go looking for it.
+            SYL:Print(
+                "\"" .. tostring(season.name or names[1])
+                .. "\" is the active season again."
+            )
+
+            if displaced then
+                SYL:Write(
+                    "The season you were on, \""
+                    .. tostring(displaced.name)
+                    .. "\", had records in it and was archived rather than "
+                    .. "thrown away. It is on this list."
+                )
+            end
+
+            Changed()
+        end)
+
+    bar.unarchiveButton:SetPoint("LEFT", bar.mergeButton, "RIGHT", 6, 0)
+
     bar.clearButton =
         Theme.CreateButton(bar, 84, 22, "Untick all", function()
             ArchiveControls.Clear(view)

@@ -384,6 +384,74 @@ function SYL.ArchiveCurrentSeason(newSeasonName)
     return archivedSeason, newSeason
 end
 
+-- THE WAY BACK, and until now there was not one.
+--
+-- Aimee, after working through the test list: "i archived the 08/18-08/22. now
+-- how do i unarchive them?" There was no answer — archiving was reachable from
+-- a button on the Archives tab and nothing anywhere undid it, which is the
+-- rule in HANDOFF broken in its plainest form: anything that can be created
+-- has to be undoable from the same screen.
+--
+-- WHAT HAPPENS TO THE SEASON THAT IS ACTIVE NOW. Archiving leaves a brand new
+-- empty one behind, and that is nearly always what is sitting there when
+-- somebody wants this. So an empty one is discarded rather than archived,
+-- because filing an empty season away as history is not history — it is
+-- litter, and it would accumulate one entry per mistake.
+--
+-- A season with records in it is archived properly instead. Nothing is thrown
+-- away that anybody could want, and the swap is symmetric: it is exactly what
+-- archiving does, in the other direction.
+--
+-- THE LOCK COMES OFF. An archive is sealed so its history cannot change, which
+-- is the promise that makes archiving safe; a season being raided in cannot be
+-- sealed, or the night's drops would have nowhere to go.
+function SYL.UnarchiveSeason(index)
+    local archives = ShowUsYourLootDB and ShowUsYourLootDB.archives
+
+    if type(archives) ~= "table" then
+        return nil, "There is nothing archived."
+    end
+
+    local season = archives[index]
+
+    if not season then
+        return nil, "That archived season is not there any more."
+    end
+
+    local active = SYL.GetActiveSeason()
+    local displaced
+
+    if active then
+        local records = #(active.drops or {}) + #(active.loot or {})
+
+        if records > 0 then
+            active.archivedAt = time()
+            active.settings = active.settings or {}
+            active.settings.locked = true
+
+            table.insert(archives, active)
+
+            displaced = active
+        end
+    end
+
+    table.remove(archives, index)
+
+    season.archivedAt = nil
+    season.settings = season.settings or {}
+    season.settings.locked = false
+
+    ShowUsYourLootDB.activeSeason = season
+
+    -- The drop index describes an array that has just been replaced wholesale,
+    -- the same as StartNewSeason above.
+    ShowUsYourLootDB.recentRecordIDs = {}
+
+    SYL.LootHistoryStore.RebuildIndex()
+
+    return season, displaced
+end
+
 function SYL.RenameActiveSeason(newName)
     newName = newName and
         newName:gsub("^%s+", ""):gsub("%s+$", "")

@@ -424,6 +424,84 @@ refused = g.TryRename("   ")
 check("an empty name is refused with a reason",
       refused.startswith("refused:") and refused != "refused:nil", refused)
 
+# --- and the way back ------------------------------------------------------
+#
+# Aimee, after archiving a season she was still raiding: "i archived the
+# 08/18-08/22. now how do i unarchive them?" There was no answer — Archive was
+# a button and nothing in the addon undid it.
+#
+# The half worth guarding is what happens to the season that is active at the
+# time. Archiving leaves a brand new empty one behind, and that is nearly
+# always what is sitting there when somebody wants this, so an empty one is
+# discarded rather than filed as history. One with records in it is archived
+# properly, because throwing away a raid night to recover a different one is
+# not a fix.
+
+# A clean database: this file has already archived a season above, and these
+# assertions count archives.
+lua.execute("ShowUsYourLootDB = nil")
+SYL.DatabaseInitialize()
+
+lua.execute(
+    """
+    function SeedSeason(name, dropID)
+        local season = ShowUsYourLootDB.activeSeason
+
+        season.name = name
+        season.drops = { { id = dropID, timestamp = 1, itemName = 'Thing' } }
+        season.loot = {}
+    end
+
+    function ActiveName() return ShowUsYourLootDB.activeSeason.name end
+    function ActiveDrops() return #(ShowUsYourLootDB.activeSeason.drops or {}) end
+    function ArchiveCount() return #ShowUsYourLootDB.archives end
+    function ArchiveName(i) return ShowUsYourLootDB.archives[i].name end
+    function ActiveLocked()
+        return ShowUsYourLootDB.activeSeason.settings
+            and ShowUsYourLootDB.activeSeason.settings.locked and true or false
+    end
+    """
+)
+
+g = lua.globals()
+
+g.SeedSeason("Raided In", "keep-me")
+SYL.ArchiveCurrentSeason("Fresh And Empty")
+
+check("archiving leaves an empty season behind", g.ActiveDrops() == 0)
+check("and the raided one is on the archive list", g.ArchiveCount() == 1)
+
+season, displaced = SYL.UnarchiveSeason(1)
+
+check("BRINGING IT BACK MAKES IT ACTIVE AGAIN",
+      g.ActiveName() == "Raided In", g.ActiveName())
+check("with its records", g.ActiveDrops() == 1, g.ActiveDrops())
+check("the empty season it displaced is discarded, not filed",
+      g.ArchiveCount() == 0, g.ArchiveCount())
+check("nothing is reported as displaced", displaced is None)
+check("and the lock comes off, or the night's drops have nowhere to go",
+      g.ActiveLocked() is False)
+
+# A season with records in it must not be thrown away to recover another.
+g.SeedSeason("Raided In", "keep-me")
+SYL.ArchiveCurrentSeason("Also Raided In")
+g.SeedSeason("Also Raided In", "keep-me-too")
+
+season, displaced = SYL.UnarchiveSeason(1)
+
+check("a season with records is archived rather than discarded",
+      g.ArchiveCount() == 1 and g.ArchiveName(1) == "Also Raided In",
+      (g.ArchiveCount(), g.ArchiveCount() and g.ArchiveName(1)))
+check("and it is named back, since only one of the two was ticked",
+      displaced is not None and displaced.name == "Also Raided In")
+check("the one asked for is active", g.ActiveName() == "Raided In")
+
+# Refusals name a reason rather than failing quietly.
+missing, why = SYL.UnarchiveSeason(99)
+
+check("an index that is not there is refused with a reason",
+      missing is None and type(why) is str and len(why) > 0, why)
+
 print()
 print("FAILURES:", failures or "none")
 sys.exit(1 if failures else 0)
