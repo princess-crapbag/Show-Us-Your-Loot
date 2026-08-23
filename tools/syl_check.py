@@ -355,6 +355,59 @@ def check_control_bytes(name: str, raw: str, problems: list):
 
                 return
 
+# Frames that take the mouse but draw nothing, and so are invisible when wrong.
+SIZING_CALLS = ("SetAllPoints", "SetPoint", "SetSize", "SetWidth", "SetHeight")
+
+
+def check_hover_bounds(name: str, code: str, problems: list):
+    """Every Widgets.MakeItemHoverable result has to be given bounds.
+
+    It returns a button with none on purpose -- its own comment explains that
+    covering more than the words steals clicks from siblings -- so the caller
+    owns the bounds. A caller that forgets gets a zero-by-zero button that
+    never takes the mouse: no error, nothing drawn, every test still green.
+    That is how the Raiders detail pane shipped without its item tooltip.
+    """
+    lines = code.splitlines()
+
+    for index, line in enumerate(lines):
+        if "MakeItemHoverable(" not in line:
+            continue
+
+        # The definition itself, which is the one place it is not a call.
+        if line.lstrip().startswith("function "):
+            continue
+
+        lineno = index + 1
+
+        # It has to be kept before it can be sized.
+        target = None
+
+        if "=" in line.split("MakeItemHoverable(")[0]:
+            target = line.split("=")[0].strip()
+            target = target.replace("local ", "").strip()
+
+        if not target:
+            problems.append(
+                f"{name}:{lineno}: MakeItemHoverable's button is discarded, "
+                f"so nothing can give it bounds — it will be zero by zero "
+                f"and never take the mouse"
+            )
+
+            continue
+
+        # Generously: the call runs several lines when the getter is an inline
+        # closure, and the reason for the bounds usually earns a comment first.
+        window = "\n".join(lines[index:index + 30])
+
+        if not any(f"{target}:{call}(" in window for call in SIZING_CALLS):
+            problems.append(
+                f"{name}:{lineno}: {target} is never given bounds — "
+                f"MakeItemHoverable returns a button with none, and an "
+                f"unsized one shows no tooltip and errors nowhere"
+            )
+
+
 def main() -> int:
     # advisories is size only: reported every run, never fatal. See the
     # note by the return for why that class is deliberately not a failure.
@@ -387,6 +440,7 @@ def main() -> int:
         bodies[name] = code
 
         check_control_bytes(name, raw, problems)
+        check_hover_bounds(name, code, problems)
 
         lines = len(code.splitlines())
         exempt, reason = size_exemption(raw)

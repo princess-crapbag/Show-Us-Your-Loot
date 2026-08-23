@@ -122,19 +122,32 @@ function Cards.Create(detail, width)
     card.letter:SetPoint("RIGHT", -(PAD - 6), 0)
     card.letter:SetJustifyH("RIGHT")
 
-    -- HookScript, NEVER SetScript. Widgets.MakeItemHoverable installs the
-    -- GameTooltip handler with SetScript, so setting one here afterwards would
-    -- replace it and silently delete the tooltip -- which is the feature this
-    -- whole card exists for.
-    card:HookScript("OnEnter", function() card.hover:Show() end)
-    card:HookScript("OnLeave", function() card.hover:Hide() end)
-
     -- Read on hover rather than captured here, because cards are pooled: a
     -- link closed over at creation belongs to whoever was in this slot when
     -- the pane was first built.
-    SYL.Widgets.MakeItemHoverable(card, function()
+    card.itemHover = SYL.Widgets.MakeItemHoverable(card, function()
         return card.itemLink
     end)
+
+    -- SIZED BY THE CALLER, ALWAYS. MakeItemHoverable deliberately leaves its
+    -- button with no bounds -- see its comment -- and this shipped without
+    -- any, so the button was zero by zero, never took the mouse, and the item
+    -- tooltip simply did not appear. Aimee, after a reload: "the only thing
+    -- its missing is the tool tip on hover."
+    --
+    -- The whole card is the right target here, unlike the other two callers
+    -- that cover only the words. Its warning about stealing clicks is about
+    -- same-level SIBLINGS, and a card has no other controls inside it -- the
+    -- icon, the spine and the letter are textures and font strings, none of
+    -- which take mouse input.
+    card.itemHover:SetAllPoints(card)
+
+    -- The highlight hangs off the hover button rather than off the card,
+    -- because the button now covers the card and the topmost mouse-enabled
+    -- frame is the one that gets OnEnter. Hooked rather than set, or it would
+    -- replace the tooltip handler that button was created for.
+    card.itemHover:HookScript("OnEnter", function() card.hover:Show() end)
+    card.itemHover:HookScript("OnLeave", function() card.hover:Hide() end)
 
     return card
 end
