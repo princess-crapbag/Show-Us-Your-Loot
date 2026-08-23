@@ -1,0 +1,240 @@
+[
+ {
+  "command": "",
+  "argument": null,
+  "description": "Open the loot window",
+  "common": true,
+  "developer": false
+ },
+ {
+  "command": "drops",
+  "argument": null,
+  "description": "Recent group-loot drops with winners and rolls",
+  "common": false,
+  "developer": false
+ },
+ {
+  "command": "season",
+  "argument": null,
+  "description": "Active-season information",
+  "common": false,
+  "developer": false
+ },
+ {
+  "command": "rename",
+  "argument": "NAME",
+  "description": "Rename the active season",
+  "common": false,
+  "developer": false
+ },
+ {
+  "command": "archive",
+  "argument": "NEW SEASON NAME",
+  "description": "Archive this season and start a new one",
+  "common": false,
+  "developer": false
+ },
+ {
+  "command": "archives",
+  "argument": null,
+  "description": "List archived seasons",
+  "common": false,
+  "developer": false
+ },
+ {
+  "command": "players",
+  "argument": null,
+  "description": "Per-player upgrades, drought and attendance",
+  "common": true,
+  "developer": false
+ },
+ {
+  "command": "raids",
+  "argument": null,
+  "description": "Raid nights, kills and who was there",
+  "common": true,
+  "developer": false
+ },
+ {
+  "command": "roster",
+  "argument": null,
+  "description": "Potential raiders, their classes and missing buffs",
+  "common": true,
+  "developer": false
+ },
+ {
+  "command": "alts",
+  "argument": null,
+  "description": "Which characters count as the same person",
+  "common": true,
+  "developer": false
+ },
+ {
+  "command": "export",
+  "argument": null,
+  "description": "Copyable raid night or season summary",
+  "common": true,
+  "developer": false
+ },
+ {
+  "command": "settings",
+  "argument": null,
+  "description": "Settings, including which qualities to record",
+  "common": true,
+  "developer": false
+ },
+ {
+  "command": "due",
+  "argument": null,
+  "description": "Who is owed loot — add 'window' for the old screen",
+  "common": true,
+  "developer": false
+ },
+ {
+  "command": "schedule",
+  "argument": null,
+  "description": "Your raid days, the next night, and who is out",
+  "common": true,
+  "developer": false
+ },
+ {
+  "command": "out",
+  "argument": null,
+  "description": "Mark somebody out — /syl out <name> [days] [reason]",
+  "common": true,
+  "developer": false
+ },
+ {
+  "command": "in",
+  "argument": null,
+  "description": "Cancel an absence — /syl in <name>",
+  "common": true,
+  "developer": false
+ },
+ {
+  "command": "trade",
+  "argument": null,
+  "description": "Reopen the trade window advisor for anything still open",
+  "common": true,
+  "developer": false
+ },
+ {
+  "command": "tonight",
+  "argument": null,
+  "description": "Summary of the raid night in progress",
+  "common": true,
+  "developer": false
+ },
+ {
+  "command": "bosses",
+  "argument": null,
+  "description": "Kills, pulls and drops for every boss",
+  "common": true,
+  "developer": false
+ },
+ {
+  "command": "sync",
+  "argument": null,
+  "description": "Sync status — add 'backfill' to ask for missing roll lists",
+  "common": false,
+  "developer": false
+ },
+ {
+  "command": "theme",
+  "argument": null,
+  "description": "Change the color scheme",
+  "common": false,
+  "developer": false
+ },
+ {
+  "command": "output",
+  "argument": null,
+  "description": "Send addon messages to the next chat window",
+  "common": false,
+  "developer": true
+ },
+ {
+  "command": "resetwindows",
+  "argument": null,
+  "description": "Put every window back to its default size and center",
+  "common": false,
+  "developer": false
+ },
+ {
+  "command": "capture",
+  "argument": null,
+  "description": "Toggle Loot History capture",
+  "common": false,
+  "developer": false
+ },
+ {
+  "command": "dev",
+  "argument": null,
+  "description": "Open the developer window",
+  "common": false,
+  "developer": true
+ },
+ {
+  "command": "api",
+  "argument": null,
+  "description": "Print the live Loot History API",
+  "common": false,
+  "developer": true
+ },
+ {
+  "command": "debug",
+  "argument": null,
+  "description": "Toggle debug messages",
+  "common": false,
+  "developer": true
+ },
+ {
+  "command": "announce",
+  "argument": null,
+  "description": "Toggle capture messages",
+  "common": false,
+  "developer": false
+ },
+ {
+  "command": "link",
+  "argument": "add|remove NAME URL",
+  "description": "The links shown on the dashboard",
+  "common": false,
+  "developer": false
+ },
+ {
+  "command": "keys",
+  "argument": null,
+  "description": "Mythic+ keystones on this account",
+  "common": false,
+  "developer": false
+ },
+ {
+  "command": "addraider",
+  "argument": "NAME-REALM CLASS",
+  "description": "Add someone joining the guild to the roster",
+  "common": false,
+  "developer": false
+ },
+ {
+  "command": "dropraider",
+  "argument": "NAME-REALM",
+  "description": "Remove someone from the joining list",
+  "common": false,
+  "developer": false
+ },
+ {
+  "command": "scope",
+  "argument": null,
+  "description": "Show the raid team, the guild, or everyone",
+  "common": false,
+  "developer": false
+ },
+ {
+  "command": "clear",
+  "argument": "confirm",
+  "description": "Clear active-season drops and loot",
+  "common": false,
+  "developer": false
+ }
+]

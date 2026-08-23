@@ -1,0 +1,119 @@
+{
+ "qualities": [
+  {
+   "label": "Poor (gray)",
+   "on": false
+  },
+  {
+   "label": "Common (white)",
+   "on": false
+  },
+  {
+   "label": "Uncommon (green)",
+   "on": false
+  },
+  {
+   "label": "Rare (blue)",
+   "on": false
+  },
+  {
+   "label": "Epic (purple)",
+   "on": true
+  },
+  {
+   "label": "Legendary (orange)",
+   "on": false
+  },
+  {
+   "label": "Artifact",
+   "on": false
+  },
+  {
+   "label": "Heirloom",
+   "on": true
+  }
+ ],
+ "features": [
+  {
+   "label": "Raid buffs",
+   "on": true
+  },
+  {
+   "label": "Mythic+ scores",
+   "on": true
+  },
+  {
+   "label": "Boss loot tables",
+   "on": true
+  },
+  {
+   "label": "Officer sync",
+   "on": true
+  },
+  {
+   "label": "Share keys",
+   "on": true
+  },
+  {
+   "label": "Trade advisor",
+   "on": true
+  },
+  {
+   "label": "Follow trades",
+   "on": true
+  },
+  {
+   "label": "Ask for keys",
+   "on": true
+  },
+  {
+   "label": "Share absences",
+   "on": true
+  },
+  {
+   "label": "Share roster",
+   "on": true
+  },
+  {
+   "label": "Dungeon lockouts",
+   "on": true
+  },
+  {
+   "label": "Developer tools",
+   "on": true
+  }
+ ],
+ "widgets": [
+  {
+   "label": "Last raid night",
+   "on": true
+  },
+  {
+   "label": "Next raid night",
+   "on": true
+  },
+  {
+   "label": "Who is due",
+   "on": true
+  },
+  {
+   "label": "Readiness",
+   "on": true
+  },
+  {
+   "label": "Tier progress",
+   "on": true
+  },
+  {
+   "label": "Who is out",
+   "on": true
+  },
+  {
+   "label": "Recording",
+   "on": true
+  }
+ ],
+ "palette": "nightfall",
+ "floor": 0,
+ "guildShare": 0.8
+}
