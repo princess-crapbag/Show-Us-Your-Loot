@@ -31,30 +31,20 @@ SYL.RaidersPanel = RaidersPanel
 local DETAIL_WIDTH = 250
 local GUTTER = 12
 
-local NAME_WIDTH = 120
-local VALUE_WIDTH = 64
-local PAD = 8
+-- 868 usable inside the window, less the detail pane and the gutter. Every
+-- column width inside it is measured rather than declared here -- see
+-- UI/RaidersBoard.lua, which owns the layout, and UI/RaidersBoardRows.lua,
+-- which draws against it.
+local BOARD_WIDTH = 868 - DETAIL_WIDTH - GUTTER
 
--- HOW MANY ITEMS THEY HAVE ACTUALLY TAKEN, need and greed, no transmog.
---
--- Aimee asked for it on the board and not only in the detail pane, and she is
--- right that it belongs here: the bar answers "how much" and this answers "how
--- often", and comparing the two across a raid is the thing you cannot do one
--- click at a time.
---
--- STILL NOT A TABLE. The file header is emphatic and it stands — this is one
--- number in a fixed column, not a grid to read row by row. Measured: two
--- digits is 14px in the real font, and 26 leaves room for a third without
--- taking a pixel more from the bar than it has to.
-local COUNT_WIDTH = 26
-
--- 868 usable, less the detail pane and the gutter, less the three text
--- columns.
-local TRACK_WIDTH = 868 - DETAIL_WIDTH - GUTTER - NAME_WIDTH - VALUE_WIDTH
-    - COUNT_WIDTH - (PAD * 3)
-
-local ROW_HEIGHT = 22
+local ROW_HEIGHT = SYL.RaidersBoard.ROW_HEIGHT
 local LIST_TOP = 34
+
+-- Where the rows begin, which is under the headings rather than at the top of
+-- the board. The roster view has no headings of its own and still starts at
+-- LIST_TOP, which is why the heading row hides when that view is showing.
+local ROWS_TOP = LIST_TOP + SYL.RaidersBoard.HEADER_HEIGHT
+
 local VISIBLE_ROWS = 16
 
 local frame
@@ -138,52 +128,8 @@ end
 --------------------------------------------------------------------------
 
 local function CreateRow(index)
-    local row = CreateFrame("Button", nil, frame)
-
-    row:SetHeight(ROW_HEIGHT)
-    row:SetPoint("TOPLEFT", 0, -(LIST_TOP + (index - 1) * ROW_HEIGHT))
-    row:SetWidth(
-        NAME_WIDTH + PAD + TRACK_WIDTH + PAD + VALUE_WIDTH + PAD + COUNT_WIDTH
-    )
-
-    local hover = Theme.CreateSolidTexture(row, "rowHover", "BACKGROUND")
-    hover:SetAllPoints()
-    hover:Hide()
-
-    row:SetScript("OnEnter", function() hover:Show() end)
-    row:SetScript("OnLeave", function() hover:Hide() end)
-
-    row.name = Theme.CreateText(row, Theme.sizes.rowSmall, "textPrimary")
-    row.name:SetPoint("LEFT", 3, 0)
-    row.name:SetWidth(NAME_WIDTH)
-    row.name:SetJustifyH("LEFT")
-    row.name:SetWordWrap(false)
-
-    -- The track is the full width every bar is measured against, so an empty
-    -- track reads as zero rather than as a missing row.
-    row.track = CreateFrame("Frame", nil, row)
-    row.track:SetSize(TRACK_WIDTH, 12)
-    row.track:SetPoint("LEFT", row.name, "RIGHT", PAD, 0)
-
-    local trackBase = Theme.CreateSolidTexture(row.track, "rowAlt", "BACKGROUND")
-    trackBase:SetAllPoints()
-
-    row.fill = Theme.CreateSolidTexture(row.track, "accent", "ARTWORK")
-    row.fill:SetPoint("TOPLEFT")
-    row.fill:SetPoint("BOTTOMLEFT")
-
-    row.value = Theme.CreateText(row, Theme.sizes.rowSmall, "textSecondary")
-    row.value:SetPoint("LEFT", row.track, "RIGHT", PAD, 0)
-    row.value:SetWidth(VALUE_WIDTH)
-    row.value:SetJustifyH("RIGHT")
-
-    row.count = Theme.CreateText(row, Theme.sizes.rowSmall, "textMuted")
-    row.count:SetPoint("LEFT", row.value, "RIGHT", PAD, 0)
-    row.count:SetWidth(COUNT_WIDTH)
-    row.count:SetJustifyH("RIGHT")
-
-    row:SetScript("OnClick", function()
-        selectedKey = row.entryKey
+    local row = SYL.RaidersBoardRows.Create(frame, index, ROWS_TOP, function(key)
+        selectedKey = key
 
         Refresh()
     end)
@@ -191,46 +137,6 @@ local function CreateRow(index)
     rows[index] = row
 
     return row
-end
-
-local function DrawRow(row, entry, highest, isSelected)
-    row.entryKey = entry.key
-
-    row.name:SetText(tostring(entry.name or "Unknown"))
-
-    local classColor = Theme.GetClassColor(entry.class)
-
-    if classColor then
-        Theme.SetCustomTextColor(row.name, classColor[1], classColor[2], classColor[3])
-    else
-        Theme.SetTextColor(row.name, "textPrimary")
-    end
-
-    local fraction = SYL.LootScore.BarFraction(entry, highest)
-
-    if fraction > 0 then
-        row.fill:SetWidth(math.max(2, fraction * TRACK_WIDTH))
-        row.fill:Show()
-    else
-        row.fill:Hide()
-    end
-
-    -- Selected reads as the accent on the number, not a border: a border on a
-    -- 22px row competes with the bar it is drawn beside.
-    row.value:SetText(SYL.LootScore.Describe(entry))
-    Theme.SetTextColor(
-        row.value,
-        isSelected and "accent" or (entry.ranked and "textSecondary" or "textMuted")
-    )
-
-    -- Blank rather than a zero for somebody who has taken nothing. A column of
-    -- zeroes is noise, and the empty bar beside it already says it.
-    local taken = entry.scoringWins or 0
-
-    row.count:SetText(taken > 0 and tostring(taken) or "")
-    Theme.SetTextColor(row.count, isSelected and "accent" or "textMuted")
-
-    row:Show()
 end
 
 --------------------------------------------------------------------------
@@ -259,6 +165,8 @@ Refresh = function()
     )
 
     if view == "roster" then
+        SYL.RaidersBoard.SetHeaderShown(frame.header, false)
+
         lastShown.roster = SYL.RaidersRoster.Refresh({
             frame = frame,
             boardRows = rows,
@@ -301,7 +209,7 @@ Refresh = function()
     if #entries == 0 then
         HideRows(rows)
 
-        frame.average:Hide()
+        SYL.RaidersBoard.SetHeaderShown(frame.header, false)
 
         frame.empty:SetText(
             SYL.Audience.ExplainEmpty(scope, beforeScope)
@@ -317,36 +225,43 @@ Refresh = function()
 
     frame.empty:Hide()
 
+    SYL.RaidersBoard.SetHeaderShown(frame.header, true)
+
     local highest = SYL.LootScore.Highest(entries)
     local average, ranked = SYL.LootScore.Average(entries)
+
+    -- WHAT EVERY RAID NIGHTS CELL IS COUNTED AGAINST, so it is worked out once
+    -- for the board rather than once per row. Guild nights only and the same
+    -- ones the attendance figures come from -- see RaidSession.NightsOnly --
+    -- because "2 of 2" has to mean two of the same two.
+    --
+    -- Deliberately not narrowed by the audience scope. How many nights the
+    -- guild ran is a fact about the guild, and it would be an odd board where
+    -- widening from the raid team to everyone changed the denominator.
+    local held = SYL.RaidSession.CountNights(
+        SYL.RaidSession.NightsOnly(SYL.GetActiveRaids())
+    )
+
+    -- The average only means anything once somebody is ranked. Passed as zero
+    -- otherwise, which is what makes the rows leave the marker off rather than
+    -- park it at the left-hand end where it would read as an average of none.
+    local view = {
+        highest = highest,
+        average = ranked > 0 and average or 0,
+        nightsHeld = held,
+    }
 
     for index = 1, VISIBLE_ROWS do
         local entry = entries[index + offset]
         local row = rows[index] or CreateRow(index)
 
         if entry then
-            DrawRow(row, entry, highest, entry.key == selectedKey)
+            SYL.RaidersBoardRows.Draw(
+                row, entry, view, entry.key == selectedKey
+            )
         else
             row:Hide()
         end
-    end
-
-    -- The line only means anything once somebody is ranked, and it is drawn
-    -- against the same highest the bars are, or it would sit at the wrong
-    -- place on a board whose longest bar is not the maximum.
-    if ranked > 0 and highest > 0 then
-        local shown = math.min(VISIBLE_ROWS, #entries)
-
-        frame.average:ClearAllPoints()
-        frame.average:SetPoint(
-            "TOPLEFT", frame, "TOPLEFT",
-            NAME_WIDTH + PAD + 3 + math.min(1, average / highest) * TRACK_WIDTH,
-            -(LIST_TOP - 4)
-        )
-        frame.average:SetSize(1, shown * ROW_HEIGHT + 4)
-        frame.average:Show()
-    else
-        frame.average:Hide()
     end
 
     -- Handed the same drops the board was built from, so naming a raider's
@@ -463,8 +378,11 @@ function RaidersPanel.Create(parent)
     -- as the window changing shape under you.
     frame.detail = SYL.RaidersDetail.Create(frame, DETAIL_WIDTH, LIST_TOP - 8)
 
-    frame.average = Theme.CreateSolidTexture(frame, "warning", "OVERLAY")
-    frame.average:Hide()
+    -- Measured before anything is anchored against it, and only now because
+    -- Theme.MeasureText needs a live client to measure with.
+    SYL.RaidersBoard.Measure(BOARD_WIDTH)
+
+    frame.header = SYL.RaidersBoard.CreateHeader(frame, LIST_TOP)
 
     frame.empty = Theme.CreateText(frame, Theme.sizes.row, "textMuted")
     frame.empty:SetPoint("TOPLEFT", 2, -(LIST_TOP + 6))

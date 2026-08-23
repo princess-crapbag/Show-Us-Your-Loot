@@ -3,6 +3,39 @@
 What changed, for the person installing it. The commit history explains why;
 this says what you will notice.
 
+## Unreleased
+
+### Changed
+
+- **The Raiders board has column headings, and its numbers now line up under
+  them.** Four numbers sat in a row with nothing naming them, and you had to
+  remember which was which. They are titled now — RAIDER, # ITEMS RECEIVED,
+  RAID NIGHTS, POINTS PER NIGHT, TOTAL POINTS — all left justified, all four
+  right-hand columns the same width, evenly spaced, with the names set in from
+  the edge rather than against it.
+
+  It is still a board and not a table. The bar is still what answers who is
+  behind; the headings only make the numbers beside it checkable.
+
+- **RAID NIGHTS now reads "attended of held"** — 2 of 2, or 1 of 2 — so a
+  raider's attendance is a figure you can check rather than one you have to
+  hold the raid total in your head to read. Guild nights only, the same ones
+  every other attendance figure counts.
+
+- **Bars are colored by difficulty**, using WoW's own quality colors: rare blue
+  for Normal, epic purple for Heroic, legendary orange for Mythic. A bar is cut
+  by points rather than by item count, so the colors always add up to the
+  length. Two raiders on the same total now read differently when one of them
+  got there on Heroic drops.
+
+- **The raid average is a mark above each bar** instead of a line drawn through
+  the whole list. Through the bars you could not tell a bar that stopped at the
+  average from one that crossed it.
+
+- **Pointing at a raider explains their row** — why somebody is not ranked,
+  which used to be printed in a column too narrow to hold it, and the split of
+  their bar by difficulty.
+
 ## 0.3.6 — 2026-08-20
 
 ### Added

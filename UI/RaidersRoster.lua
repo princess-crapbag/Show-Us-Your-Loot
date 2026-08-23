@@ -300,7 +300,11 @@ function RaidersRoster.Refresh(ctx)
         row:Hide()
     end
 
-    frame.average:Hide()
+    -- The board's raid-average marker used to be one line across the whole
+    -- list and this hid it. It is drawn per row now, so hiding the board's
+    -- rows above already takes it with them -- and the headings, which are the
+    -- other thing that would sit over this list, are the panel's to hide
+    -- before it hands over. See RaidersBoard.SetHeaderShown.
 
     if #roster == 0 then
         for _, row in ipairs(ctx.rosterRows) do

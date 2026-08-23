@@ -23,17 +23,41 @@ SYL.Tooltips = Tooltips
 -- Attached with HookScript rather than SetScript, because the buttons already
 -- use OnEnter and OnLeave for their hover color and replacing that would
 -- leave them stuck lit.
+--
+-- EITHER PART MAY BE A FUNCTION, resolved on hover rather than on attach. A
+-- fixed string is right for a button, which means the same thing every time
+-- it is pointed at. It is wrong for a list row, which is one frame reused for
+-- whichever raider is scrolled into it -- attaching a string there explains
+-- whoever happened to be in that slot when the window was built. Returning
+-- nil from the title function means this frame has nothing to say right now,
+-- and no tooltip is shown at all.
+local function Resolve(value, frame)
+    if type(value) == "function" then
+        return value(frame)
+    end
+
+    return value
+end
+
 function Tooltips.Attach(frame, title, body)
     if not frame then
         return
     end
 
     frame:HookScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_TOP")
-        GameTooltip:AddLine(title)
+        local heading = Resolve(title, self)
 
-        if body then
-            GameTooltip:AddLine(body, 0.72, 0.66, 0.68, true)
+        if not heading then
+            return
+        end
+
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        GameTooltip:AddLine(heading)
+
+        local text = Resolve(body, self)
+
+        if text then
+            GameTooltip:AddLine(text, 0.72, 0.66, 0.68, true)
         end
 
         GameTooltip:Show()

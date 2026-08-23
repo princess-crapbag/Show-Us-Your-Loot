@@ -118,6 +118,8 @@ UI\KeyRows.lua
 UI\KeysPanel.lua
 UI\RaidersDetail.lua
 UI\RaidersRoster.lua
+UI\RaidersBoard.lua
+UI\RaidersBoardRows.lua
 UI\RaidersPanel.lua
 UI\BossLoot.lua
 UI\BossesPanel.lua
