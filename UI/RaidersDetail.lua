@@ -169,14 +169,32 @@ local function Tail(detail, entry, y)
         )
     end
 
+    -- WHY THEY ARE NOT RANKED, WHICH IS NOT ALWAYS THE FLOOR. The rewrite
+    -- dropped the old pane's LootScore.Describe line and asserted the
+    -- min-nights rule for everybody, so a guild member with twelve nights who
+    -- simply is not on the raid team was shown "under 3 raid nights there is
+    -- not enough to divide by" directly beneath a stat block reading RAID
+    -- NIGHTS 12 -- contradicted by the pane itself, and disagreeing with what
+    -- that same person's row tooltip says one screen along.
+    --
     -- The live floor, not the default constant. The setting can move it and
     -- this sentence states it as fact, so a stale number here would be the
     -- addon explaining a rule it is no longer applying.
+    local floor = SYL.LootScore.MinNights()
+
+    if (entry.nights or 0) < floor then
+        return Parts.Line(
+            detail,
+            "Not ranked yet. Under "
+            .. SYL.Utilities.Count(floor, "raid night")
+            .. " there is not enough to divide by.",
+            "textMuted", y
+        )
+    end
+
     return Parts.Line(
         detail,
-        "Not ranked yet. Under "
-        .. SYL.Utilities.Count(SYL.LootScore.MinNights(), "raid night")
-        .. " there is not enough to divide by.",
+        "Not ranked: " .. SYL.LootScore.Describe(entry) .. ".",
         "textMuted", y
     )
 end
@@ -231,9 +249,15 @@ local function Header(detail, entry)
     local spare = (entry.lootWins or 0) - scoring
 
     if spare > 0 then
+        -- NAMED, not just counted. The old pane said "1 transmog, worth
+        -- nothing"; the rewrite shortened it to "1 more worth nothing", which
+        -- leaves an officer to work out what the one is.
         y = Parts.Line(
             detail,
-            string.format("%d more worth nothing", spare),
+            string.format(
+                "%s worth nothing",
+                SYL.Utilities.Count(spare, "Mog win")
+            ),
             "textMuted", y
         ) + 4
     end
@@ -270,19 +294,28 @@ function RaidersDetail.Render(detail, entry)
 
     local items = SYL.LootScore.ItemsFor(entry.key, detail.drops)
 
+    -- The merge block is asked about BEFORE the cards are laid out, because it
+    -- is drawn under them and the card list has to know to leave room for it.
+    -- Asking afterwards is how a button ends up below the bottom of a pane.
+    local proposal = SYL.CharacterMerge and SYL.CharacterMerge.For(entry.key)
+
+    local reserve = Parts.RESERVED
+
+    if proposal then
+        reserve = reserve + Parts.MERGE_RESERVE
+    end
+
     if #items == 0 then
         y = Parts.Line(detail, "Nothing has counted for them yet.",
                  "textSecondary", y)
     else
-        y = Parts.DrawGroups(detail, Parts.Groups(detail, items), y)
+        y = Parts.DrawGroups(detail, Parts.Groups(detail, items), y, reserve)
     end
 
     y = Tail(detail, entry, y)
 
     -- Offered last, under the arithmetic it would change. Somebody reading a
     -- number that looks wrong should see why before being offered the fix.
-    local proposal = SYL.CharacterMerge and SYL.CharacterMerge.For(entry.key)
-
     if not proposal then
         return
     end

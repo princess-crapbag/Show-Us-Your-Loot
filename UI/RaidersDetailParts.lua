@@ -26,9 +26,20 @@ local PAD = 10
 -- its height before a layout pass answers something else entirely.
 Parts.HEIGHT = 398
 
--- What the tail needs: a rule, the sum, and a sentence. Held back from the
--- card list so the arithmetic is never the thing that gets cut.
-Parts.RESERVED = 46
+-- What the tail needs: a rule, the sum, and the closing sentence.
+--
+-- MEASURED AGAINST THE SENTENCE THAT ACTUALLY WRAPS. This was 46, which is a
+-- rule plus two single lines -- but the closing sentence runs to two lines at
+-- this width and the not-ranked one to two as well, so the last line of the
+-- pane fell past its own bottom edge and simply was not drawn.
+--
+--   rule 9 + sum 15 + two wrapped lines 28 = 52, and 4 to spare.
+Parts.RESERVED = 56
+
+-- A merge proposal adds a wrapped warning and a button under everything else,
+-- and it is rare enough that holding this back on every raider would cost
+-- three cards for nothing. Added to the reserve only when there is one.
+Parts.MERGE_RESERVE = 90
 
 Parts.NIGHT_HEAD = 13
 Parts.NIGHT_RULE = 6
@@ -181,10 +192,10 @@ function Parts.NightOf(detail, at)
     local session = SYL.RaidSession.SessionAt(detail.sessions or {}, at)
 
     if session then
-        return SYL.RaidSession.NightKey(session)
+        return SYL.RaidSession.NightKey(session), session.startedAt or at
     end
 
-    return date("%Y-%m-%d", at or 0)
+    return date("%Y-%m-%d", at or 0), at
 end
 
 function Parts.NightLabel(at)
@@ -222,10 +233,24 @@ function Parts.Groups(detail, items)
     local order, byNight = {}, {}
 
     for _, item in ipairs(items) do
-        local key = Parts.NightOf(detail, item.at)
+        -- THE NIGHT'S OWN TIME, NOT THE ITEM'S. Grouping was already keyed on
+        -- the session, but the heading was drawn from whichever drop landed in
+        -- the group first -- and ItemsFor sorts newest first, so that is the
+        -- LATEST win of the night. A Tuesday raid ending after midnight was
+        -- therefore grouped correctly under Tuesday and then headed AUG 13.
+        --
+        -- Worse where it matters most: raid Tuesday to 00:30 and again on
+        -- Wednesday and the pane shows two separate blocks both headed AUG 13,
+        -- on the one screen somebody is standing at to argue about which night
+        -- was which.
+        --
+        -- The test that was supposed to cover this checked the group's key and
+        -- never the printed label, which is exactly the gap that let it
+        -- through 42 green suites.
+        local key, nightAt = Parts.NightOf(detail, item.at)
 
         if not byNight[key] then
-            byNight[key] = { key = key, at = item.at, items = {}, points = 0 }
+            byNight[key] = { key = key, at = nightAt, items = {}, points = 0 }
 
             table.insert(order, byNight[key])
         end
@@ -238,14 +263,16 @@ function Parts.Groups(detail, items)
     return order
 end
 
-function Parts.DrawGroups(detail, groups, y)
+function Parts.DrawGroups(detail, groups, y, reserve)
     local step = Cards().HEIGHT + Cards().GAP
     local left = 0
+
+    local floor = Parts.HEIGHT - (reserve or Parts.RESERVED)
 
     for index, group in ipairs(groups) do
         -- A heading with no room for even one card under it is worse than no
         -- heading: it names a night and then shows nothing from it.
-        if y + Parts.NIGHT_HEAD + Parts.NIGHT_RULE + step > Parts.HEIGHT - Parts.RESERVED then
+        if y + Parts.NIGHT_HEAD + Parts.NIGHT_RULE + step > floor then
             for rest = index, #groups do
                 left = left + #groups[rest].items
             end
@@ -263,7 +290,7 @@ function Parts.DrawGroups(detail, groups, y)
         local stopped = false
 
         for position, item in ipairs(group.items) do
-            if y + step > Parts.HEIGHT - Parts.RESERVED then
+            if y + step > floor then
                 left = left + (#group.items - position + 1)
 
                 for rest = index + 1, #groups do

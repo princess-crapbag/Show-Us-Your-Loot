@@ -110,15 +110,16 @@ lua.execute("""
         -- Flattened before it crosses back: `items` is a method name on the
         -- Python side of the bridge, so a nested table field called that
         -- cannot be read from there.
-        local keys, counts, points = {}, {}, {}
+        local keys, counts, points, stamps = {}, {}, {}, {}
 
         for index, group in ipairs(groups) do
             keys[index] = group.key
             counts[index] = #group.items
             points[index] = group.points
+            stamps[index] = group.at
         end
 
-        return keys, counts, points, #items
+        return keys, counts, points, stamps, #items
     end
 """)
 
@@ -127,7 +128,8 @@ drops, sessions = lua.globals().Fixture()
 check("the fixture's three drops all count",
       all(SYL.DropRules.CountsAsUpgrade(drops[i + 1]) for i in range(3)))
 
-keys, counts, points, count = lua.globals().GroupsFor(drops, sessions)
+keys, counts, points, labels, count = lua.globals().GroupsFor(
+    drops, sessions)
 
 check("all three items reach the pane", count == 3, "got %s" % count)
 
@@ -150,13 +152,26 @@ if len(groups) == 1:
 
     check("with every item under it", sizes[0] == 3, str(sizes))
 
+    # THE ASSERTION THIS FILE WAS MISSING. The group was keyed on the session
+    # all along -- that part was right and tested. What was never checked is
+    # the heading actually PRINTED above it, which came from whichever drop
+    # landed in the group first. ItemsFor sorts newest first, so that is the
+    # latest win of the night, and a Tuesday raid ending after midnight was
+    # grouped under Tuesday and then headed AUG 13.
+    printed = str(SYL.RaidersDetailParts.NightLabel(labels[1]))
+    expected = time.strftime("%b %d", time.localtime(TUESDAY_2000)).upper()
+
+    check("and the heading printed over it names that same night",
+          printed == expected, "printed %s, expected %s" % (printed, expected))
+
     # Mog weighs nothing, so the night's subtotal must not count it.
     check("the night's points exclude the mog",
           scores[0] == 200, "got %s" % scores)
 
 # Without any session to place them against, the pane still has to group
 # something rather than lumping every drop the addon has ever seen together.
-bare, _sizes, _scores, _count = lua.globals().GroupsFor(drops, lua.eval("{}"))
+bare, _sizes, _scores, _stamps, _count = lua.globals().GroupsFor(
+    drops, lua.eval("{}"))
 
 check("with no session at all it falls back to the drop's own date",
       len(bare) == 2, "got %d" % len(bare))

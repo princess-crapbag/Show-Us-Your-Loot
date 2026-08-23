@@ -2,7 +2,7 @@
 --
 -- Which upgrade track an item came from, as the single letter the Raiders
 -- detail pane prints beside it: V for Veteran, C for Champion, H for Hero,
--- M for Myth, and E and A for the two levelling tracks below them.
+-- M for Myth, and E and A for the two leveling tracks below them.
 --
 -- NOT FROM THE DIFFICULTY, which is the obvious idea and is wrong. Her own
 -- database disproves it: item levels 279 and 285 appear under BOTH Normal and
@@ -48,7 +48,7 @@ local LETTERS = {
     ["Explorer"] = "E", ["Expedicionario"] = "E", ["Forscher"] = "E",
     ["Explorateur"] = "E", ["Esploratore"] = "E", ["Explorador"] = "E",
     ["Исследователь"] = "E", ["탐험가"] = "E", ["探索者"] = "E",
-    ["探隘者"] = "E",
+    ["探險者"] = "E", ["Delve"] = "E",
 
     -- Adventurer
     ["Adventurer"] = "A", ["Aventurero"] = "A", ["Abenteurer"] = "A",
@@ -67,7 +67,8 @@ local LETTERS = {
 
     -- Hero
     ["Hero"] = "H", ["Héroe"] = "H", ["Held"] = "H", ["Héros"] = "H",
-    ["Eroe"] = "H", ["Heroí"] = "H", ["Герой"] = "H", ["영웅"] = "H",
+    ["Eroe"] = "H", ["Herói"] = "H", ["Heroí"] = "H",
+    ["Герой"] = "H", ["영웅"] = "H",
     ["英雄"] = "H",
 
     -- Myth

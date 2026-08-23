@@ -100,7 +100,13 @@ function Cards.Create(detail, width)
     card.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 
     local textX = ICON_X + ICON + 8
-    local room = (width - PAD) - textX - Reserve()
+
+    -- IN THE CARD'S COORDINATES, NOT THE PANE'S. The card starts 6 in from the
+    -- pane's left and is 12 narrower, so the pane's own right margin sits at
+    -- (width - PAD - 6) from the card's left edge. Measuring from (width - PAD)
+    -- made every text column six pixels wider than the space it had, which is
+    -- the too-wide half of the rule and just as much a defect as clipping.
+    local room = (width - PAD - 6) - textX - Reserve()
 
     card.name = Theme.CreateText(card, NAME_SIZE, "textPrimary")
     card.name:SetPoint("TOPLEFT", textX, -TextTop(Cards.HEIGHT))
