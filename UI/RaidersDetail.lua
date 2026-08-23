@@ -3,16 +3,28 @@
 -- The pane on the right of the Raiders board: who is selected, and the
 -- arithmetic behind their number.
 --
--- Split from UI/RaidersPanel.lua, which was over the size limit with both in
--- it. That file decides what the board looks like; this one decides what a
--- selected raider says, which is the same division as DashboardWidgets and
--- DashboardParts.
---
 -- THIS IS THE SCREEN SOMEBODY STANDS AT WHEN THEY DISAGREE WITH THEIR NUMBER,
 -- so it shows the sum rather than the conclusion: every win that counted, what
 -- each was worth, and the total those add to. It has to add up on its own. A
 -- number that cannot be taken apart is one people stop trusting, and an officer
 -- who cannot answer "why am I below him" loses the argument by default.
+--
+-- WHAT CHANGED, and why it is not decoration. Every line used to be the same
+-- size and nearly the same color, the item names were plain gray text, and the
+-- name was asked for at size 12 and silently drawn at 11 -- Line() only applied
+-- a size when it first created a pooled FontString, and the empty state always
+-- created the first one. Aimee, looking at it: "id like it to show the item
+-- link and just look better."
+--
+-- So the items are cards now, with real links on them -- see
+-- UI/RaidersDetailCards.lua -- and they are grouped under the raid night they
+-- were taken on, because the argument is nearly always about one night.
+--
+-- GROUPED BY THE SESSION'S NIGHT, NEVER BY THE DROP'S OWN DATE. A raid that
+-- runs past midnight writes tomorrow's date onto tonight's loot, and grouping
+-- on that would invent a raid night that never happened -- on a screen whose
+-- entire job is being checkable. RaidSession.SessionAt already answers which
+-- night a timestamp belongs to.
 
 local SYL = _G.ShowUsYourLoot
 local Theme = SYL.Theme
@@ -21,12 +33,16 @@ local RaidersDetail = {}
 SYL.RaidersDetail = RaidersDetail
 
 local PAD = 10
-local LINE_GAP = 5
 
--- The pane is 250 wide and its height is fixed by the board beside it, so the
--- item list has a ceiling. Eight covers a full tier for most raiders and
--- leaves room for the sentences under it.
-local MAX_ITEMS = 8
+local STAT_TOP = 32
+local STAT_HEIGHT = 36
+local STAT_GAP = 76
+
+local Parts = SYL.RaidersDetailParts
+
+--------------------------------------------------------------------------
+-- Building
+--------------------------------------------------------------------------
 
 function RaidersDetail.Create(parent, width, top)
     local detail = CreateFrame("Frame", nil, parent)
@@ -38,15 +54,55 @@ function RaidersDetail.Create(parent, width, top)
     local back = Theme.CreateSolidTexture(detail, "rowAlt", "BACKGROUND")
     back:SetAllPoints()
 
-    detail.lines = {}
-    detail.count = 0
-    detail.top = 12
     detail.width = width
+    detail.lines = {}
+    detail.nights = {}
+    detail.cards = {}
+    detail.rules = {}
+    detail.ruleCount = 0
+    detail.lineCount = 0
+    detail.nightCount = 0
+    detail.cardCount = 0
+
+    detail.name = Theme.CreateText(detail, Theme.sizes.row, "textPrimary")
+    detail.name:SetPoint("TOPLEFT", PAD, -12)
+    detail.name:SetWidth(width - (PAD * 2) - 92)
+    detail.name:SetJustifyH("LEFT")
+    detail.name:SetWordWrap(false)
+
+    detail.share = Theme.CreateText(detail, Theme.sizes.row, "accent")
+    detail.share:SetPoint("TOPRIGHT", -PAD, -13)
+    detail.share:SetJustifyH("RIGHT")
+
+    -- The three figures, which Aimee picked off one of the samples: "i like how
+    -- the top part of the panel looks on 4 columns where it shows the raid
+    -- nights and items and points."
+    detail.statBand = Theme.CreateSolidTexture(detail, "rowAlt", "BACKGROUND")
+    detail.statBand:SetPoint("TOPLEFT", 6, -STAT_TOP)
+    detail.statBand:SetSize(width - 12, STAT_HEIGHT)
+
+    detail.stats = {}
+
+    for index = 1, 3 do
+        local x = 16 + (index - 1) * STAT_GAP
+
+        local stat = {
+            value = Theme.CreateText(detail, Theme.sizes.row, "textPrimary"),
+            label = Theme.CreateText(
+                detail, Theme.sizes.columnHeader, "textMuted"
+            ),
+        }
+
+        stat.value:SetPoint("TOPLEFT", x, -(STAT_TOP + 3))
+        stat.label:SetPoint("TOPLEFT", x, -(STAT_TOP + 19))
+
+        detail.stats[index] = stat
+    end
 
     -- THE ONE CONTROL ON THIS PANE, and it is here because this is where the
     -- problem is visible: a faction change gives a character a new GUID, so
     -- the board draws the same person twice and the roster screen cannot help
-    -- — the pre-change character is not in the guild any more. See
+    -- -- the pre-change character is not in the guild any more. See
     -- Core/CharacterMerge.lua.
     detail.mergeButton = Theme.CreateButton(detail, 140, 22, "", function()
         local proposal = detail.mergeProposal
@@ -63,6 +119,10 @@ function RaidersDetail.Create(parent, width, top)
             return
         end
 
+        -- HOW TO UNDO IT, said at the moment it is done. Folding two
+        -- characters together rewrites every number on the board
+        -- retroactively, and somebody who has just done that by mistake
+        -- should not have to go looking for the way back.
         SYL:Print(
             "Merged into one raider. Their nights and loot are counted "
             .. "together from now on. Undo it from the Roster window with "
@@ -79,176 +139,168 @@ function RaidersDetail.Create(parent, width, top)
     return detail
 end
 
--- Lines are pooled and reused, so anything a previous selection wrote has to be
--- overwritten rather than left behind. The dashboard tiles hit exactly this and
--- inherited a stale offset that pushed rows off the body.
-local function Line(detail, text, colorKey, size)
-    detail.count = detail.count + 1
-
-    local line = detail.lines[detail.count]
-
-    if not line then
-        line = Theme.CreateText(
-            detail, size or Theme.sizes.rowSmall, colorKey or "textSecondary"
-        )
-
-        line:SetWidth(detail.width - (PAD * 2))
-        line:SetJustifyH("LEFT")
-        line:SetWordWrap(true)
-
-        detail.lines[detail.count] = line
-    end
-
-    line:ClearAllPoints()
-    line:SetPoint("TOPLEFT", detail, "TOPLEFT", PAD, -detail.top)
-
-    Theme.SetTextColor(line, colorKey or "textSecondary")
-    line:SetText(text)
-    line:Show()
-
-    detail.top = detail.top + line:GetStringHeight() + LINE_GAP
-
-    return line
+-- The drops and the sessions the board was built from, so the pane can name a
+-- raider's items and place them on a night without sweeping the season again
+-- on every selection.
+function RaidersDetail.SetDrops(detail, drops, sessions)
+    detail.drops = drops
+    detail.sessions = sessions
 end
 
--- The drops the board was built from, so the pane can name the items without
--- sweeping the season a second time per selection.
-function RaidersDetail.SetDrops(detail, drops)
-    detail.drops = drops
+--------------------------------------------------------------------------
+-- Rendering
+--------------------------------------------------------------------------
+
+local function Tail(detail, entry, y)
+    y = Parts.Rule(detail, y + 4)
+
+    local sum = Parts.SumLine(entry)
+
+    if sum then
+        y = Parts.Line(detail, sum, "textMuted", y)
+    end
+
+    if entry.ranked then
+        return Parts.Line(
+            detail,
+            "Ranked on points per night, lowest first — turning up more "
+            .. "makes you more due, not less.",
+            "textMuted", y
+        )
+    end
+
+    -- The live floor, not the default constant. The setting can move it and
+    -- this sentence states it as fact, so a stale number here would be the
+    -- addon explaining a rule it is no longer applying.
+    return Parts.Line(
+        detail,
+        "Not ranked yet. Under "
+        .. SYL.Utilities.Count(SYL.LootScore.MinNights(), "raid night")
+        .. " there is not enough to divide by.",
+        "textMuted", y
+    )
+end
+
+local function Header(detail, entry)
+    detail.name:SetText(tostring(entry.name or "Unknown"))
+
+    local classColor = Theme.GetClassColor(entry.class)
+
+    if classColor then
+        Theme.SetCustomTextColor(
+            detail.name, classColor[1], classColor[2], classColor[3]
+        )
+    else
+        Theme.SetTextColor(detail.name, "textPrimary")
+    end
+
+    detail.name:Show()
+
+    if entry.ranked then
+        detail.share:SetText(string.format("%.1f", entry.share or 0))
+        Theme.SetTextColor(detail.share, "accent")
+    else
+        detail.share:SetText("not ranked")
+        Theme.SetTextColor(detail.share, "textMuted")
+    end
+
+    detail.share:Show()
+
+    local scoring = entry.scoringWins or 0
+
+    local figures = {
+        { entry.nights or 0, "RAID NIGHTS" },
+        { scoring, "ITEMS" },
+        { entry.lootScore or 0, "POINTS" },
+    }
+
+    for index, stat in ipairs(detail.stats) do
+        stat.value:SetText(tostring(figures[index][1]))
+        stat.label:SetText(figures[index][2])
+        stat.value:Show()
+        stat.label:Show()
+    end
+
+    detail.statBand:Show()
+
+    local y = STAT_TOP + STAT_HEIGHT + 10
+
+    -- ITEMS counts only what scored, so without this the pane quietly
+    -- disagrees with the list underneath it -- which is the first gap somebody
+    -- arguing about their number will find.
+    local spare = (entry.lootWins or 0) - scoring
+
+    if spare > 0 then
+        y = Parts.Line(
+            detail,
+            string.format("%d more worth nothing", spare),
+            "textMuted", y
+        ) + 4
+    end
+
+    return y
+end
+
+local function HideHeader(detail)
+    detail.name:Hide()
+    detail.share:Hide()
+    detail.statBand:Hide()
+
+    for _, stat in ipairs(detail.stats) do
+        stat.value:Hide()
+        stat.label:Hide()
+    end
 end
 
 function RaidersDetail.Render(detail, entry)
-    for _, line in ipairs(detail.lines) do
-        line:Hide()
-    end
+    Parts.Reset(detail)
 
-    detail.count = 0
-    detail.top = 12
     detail.mergeProposal = nil
     detail.mergeButton:Hide()
 
     if not entry then
-        Line(detail, "Pick a raider to see where their number came from.", "textMuted")
+        HideHeader(detail)
+        Parts.Line(detail, "Pick a raider to see where their number came from.",
+             "textMuted", 12)
 
         return
     end
 
-    local name = Line(detail, tostring(entry.name or "Unknown"), "textPrimary", Theme.sizes.row)
-    local classColor = Theme.GetClassColor(entry.class)
+    local y = Header(detail, entry)
 
-    if classColor then
-        Theme.SetCustomTextColor(name, classColor[1], classColor[2], classColor[3])
-    end
+    local items = SYL.LootScore.ItemsFor(entry.key, detail.drops)
 
-    Line(detail, SYL.LootScore.Describe(entry), entry.ranked and "accent" or "textMuted")
-
-    -- "WINS THAT COUNTED" COUNTED TRANSMOG, which is the one thing on this
-    -- pane that did not count. entry.lootWins is every win; scoringWins is the
-    -- need and greed ones, and only those are worth anything. Saying the
-    -- transmog wins out loud beside them is the same argument the breakdown
-    -- below makes: the number somebody is arguing with is the one that does
-    -- not mention them.
-    local scoring = entry.scoringWins or 0
-    local transmog = (entry.lootWins or 0) - scoring
-
-    Line(detail, string.format(
-        "%s · %s that scored%s",
-        SYL.Utilities.Count(entry.nights or 0, "raid night"),
-        SYL.Utilities.Count(scoring, "item"),
-        transmog > 0
-            and (" · " .. transmog .. " transmog, worth nothing")
-            or ""
-    ), "textSecondary")
-
-    local breakdown = SYL.LootScore.Breakdown(entry)
-
-    if #breakdown == 0 then
-        Line(detail, "No wins have counted yet.", "textMuted")
+    if #items == 0 then
+        y = Parts.Line(detail, "Nothing has counted for them yet.",
+                 "textSecondary", y)
     else
-        Line(detail, "WHERE THE SCORE CAME FROM", "textMuted")
-
-        for _, row in ipairs(breakdown) do
-            Line(detail, string.format(
-                "%s  ·  %d × %d  =  %d",
-                row.label, row.count, row.weight, row.points
-            ), "textSecondary")
-        end
-
-        Line(detail, string.format("Total  %d points", entry.lootScore or 0), "textPrimary")
-
-        -- WHICH ITEMS, under the arithmetic that counts them. Aimee: "it would
-        -- be great if from the view in the screenshot i could see what the
-        -- items are the the player won." The sum answers "why is my number
-        -- this"; the list answers "which ones were mine", and that is the half
-        -- nobody argues with.
-        --
-        -- Capped, because this pane is 250 wide and shares a fixed height with
-        -- everything above it. The overflow is counted rather than dropped
-        -- silently — a list that stops without saying so reads as the whole
-        -- list.
-        local items = SYL.LootScore.ItemsFor(entry.key, detail.drops)
-
-        if #items > 0 then
-            Line(detail, "WHAT THEY TOOK", "textMuted")
-
-            for index = 1, math.min(#items, MAX_ITEMS) do
-                local item = items[index]
-
-                Line(detail, string.format(
-                    "%s  ·  %s", item.name, item.label
-                ), item.weight > 0 and "textSecondary" or "textMuted")
-            end
-
-            if #items > MAX_ITEMS then
-                Line(detail, string.format(
-                    "and %d more", #items - MAX_ITEMS
-                ), "textMuted")
-            end
-        end
+        y = Parts.DrawGroups(detail, Parts.Groups(detail, items), y)
     end
 
-    -- Said out loud, because the ranking is share and not score: somebody
-    -- reading a big total needs to know it is divided before it is compared,
-    -- or the board looks like it is punishing them for turning up.
-    if entry.ranked then
-        Line(detail, string.format(
-            "%d points over %d nights is %s. The board is ordered by that, "
-            .. "lowest first — turning up more makes you more due, not less.",
-            entry.lootScore or 0, entry.nights or 0, SYL.LootScore.Describe(entry)
-        ), "textMuted")
-    else
-        -- The live floor, not the default constant. The setting can move it
-        -- and this sentence states it as fact, so a stale number here would be
-        -- the addon explaining a rule it is no longer applying.
-        Line(detail,
-            "Not ranked yet. Under "
-            .. SYL.Utilities.Count(SYL.LootScore.MinNights(), "raid night")
-            .. " there is not enough to divide by, so they are "
-            .. "listed with the reason rather than given a number that would "
-            .. "sort them straight to the top.", "textMuted")
-    end
+    y = Tail(detail, entry, y)
 
     -- Offered last, under the arithmetic it would change. Somebody reading a
     -- number that looks wrong should see why before being offered the fix.
-    local proposal = SYL.CharacterMerge
-        and SYL.CharacterMerge.For(entry.key)
+    local proposal = SYL.CharacterMerge and SYL.CharacterMerge.For(entry.key)
 
-    if proposal then
-        Line(detail, SYL.CharacterMerge.Describe(proposal), "warning")
-
-        detail.mergeProposal = proposal
-
-        local label = "Merge into one raider"
-
-        detail.mergeButton.label:SetText(label)
-        detail.mergeButton:SetWidth(
-            Theme.MeasureText(Theme.sizes.rowSmall, label) + 26
-        )
-
-        detail.mergeButton:ClearAllPoints()
-        detail.mergeButton:SetPoint("TOPLEFT", detail, "TOPLEFT", PAD, -detail.top)
-        detail.mergeButton:Show()
-
-        detail.top = detail.top + 26
+    if not proposal then
+        return
     end
+
+    y = Parts.Line(detail, SYL.CharacterMerge.Describe(proposal), "warning", y)
+
+    detail.mergeProposal = proposal
+
+    local label = "Merge into one raider"
+
+    detail.mergeButton.label:SetText(label)
+    detail.mergeButton:SetWidth(
+        Theme.MeasureText(Theme.sizes.rowSmall, label) + 26
+    )
+
+    detail.mergeButton:ClearAllPoints()
+    detail.mergeButton:SetPoint("TOPLEFT", detail, "TOPLEFT", PAD, -y)
+    detail.mergeButton:Show()
 end
+
+RaidersDetail.HEIGHT = Parts.HEIGHT

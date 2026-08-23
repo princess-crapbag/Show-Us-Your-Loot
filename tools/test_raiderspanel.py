@@ -241,7 +241,7 @@ labels = (
     else []
 )
 
-check("the transmog win is listed", "Transmog" in labels, labels)
+check("the mog win is listed", "Mog" in labels, labels)
 check(
     "and is worth nothing",
     selunne is not None and g.BreakdownTotal(selunne) == 100,

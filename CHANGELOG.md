@@ -7,6 +7,23 @@ this says what you will notice.
 
 ### Changed
 
+- **A raider's loot, grouped by the night they took it**, with the item's real
+  link on it. Click somebody on the Raiders board and every item is now a card:
+  its icon, its name in its quality color, how it was won, the boss it came
+  off, and its upgrade track as a single letter — V, C, H or M. Hovering an
+  item gives the game's own tooltip and shift-clicking pastes it into chat,
+  which plain gray text never did.
+
+  The nights are the raid's, not the calendar's. A raid that runs past midnight
+  stamps tomorrow's date on tonight's last few drops, and grouping on that
+  would put a heading on the pane for a raid night that never happened.
+
+  The three figures across the top — raid nights, items, points — say at a
+  glance what the arithmetic underneath adds up to.
+
+- **Transmog now reads "Mog"** everywhere it appears: the loot list, the
+  breakdown that explains a score, the settings screen and every item card.
+
 - **The Raiders board has column headings, and its numbers now line up under
   them.** Four numbers sat in a row with nothing naming them, and you had to
   remember which was which. They are titled now — RAIDER, # ITEMS RECEIVED,

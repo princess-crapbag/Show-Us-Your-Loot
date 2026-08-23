@@ -92,6 +92,13 @@ Theme.sizes = {
     row = 12,
     rowSmall = 11,
     columnHeader = 10,
+
+    -- The Raiders detail pane's item cards, and nothing else yet. Aimee asked
+    -- for that text smaller than anything the addon had: "i dont want it to be
+    -- too cluttered and i want that text to be smaller if possible." Named
+    -- rather than passed as a bare 9, because no other file in UI/ passes a
+    -- size that is not one of these and this should not be the first.
+    tiny = 9,
 }
 
 Theme.metrics = {

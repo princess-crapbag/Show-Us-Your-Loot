@@ -57,6 +57,7 @@ Core\BossStats.lua
 Core\PersonalLoot.lua
 Core\LootFeed.lua
 Core\Links.lua
+Core\GearTrack.lua
 Core\LootScore.lua
 Core\Dashboard.lua
 Core\DueList.lua
@@ -116,8 +117,10 @@ UI\KeyRequestList.lua
 UI\LockoutsGrid.lua
 UI\KeyRows.lua
 UI\KeysPanel.lua
-UI\RaidersDetail.lua
 UI\RaidersRoster.lua
+UI\RaidersDetailCards.lua
+UI\RaidersDetailParts.lua
+UI\RaidersDetail.lua
 UI\RaidersBoard.lua
 UI\RaidersBoardRows.lua
 UI\RaidersPanel.lua

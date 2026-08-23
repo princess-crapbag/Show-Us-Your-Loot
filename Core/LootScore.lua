@@ -45,12 +45,18 @@ LootScore.WEIGHTS = {
     [API.ROLL_STATE.Transmog] = 0,
 }
 
--- Shown in the settings screen and in the tooltip that explains a number.
+-- Shown in the settings screen, in the tooltip that explains a number, on the
+-- loot list and on every item card in the Raiders detail pane.
+--
+-- "Mog" and not "Transmog", which is Aimee's word for it and the shorter one:
+-- "i do want to change transmog to Mog everywhere, thats fine." One string,
+-- because every screen reads this table rather than spelling it out, which is
+-- what makes "everywhere" a one-line change rather than a sweep.
 LootScore.LABELS = {
     [API.ROLL_STATE.NeedMainSpec] = "Need",
     [API.ROLL_STATE.NeedOffSpec] = "Offspec",
     [API.ROLL_STATE.Greed] = "Greed",
-    [API.ROLL_STATE.Transmog] = "Transmog",
+    [API.ROLL_STATE.Transmog] = "Mog",
 }
 
 -- The default floor: how many nights somebody has to have raided before this
@@ -456,6 +462,13 @@ function LootScore.ItemsFor(key, drops)
                             and drop.itemLink:match("%[(.-)%]"))
                         or "Unknown item",
                     itemLink = drop.itemLink,
+                    itemLevel = drop.itemLevel,
+
+                    -- WHERE IT CAME FROM, which the cards print under the
+                    -- name. Already on the record; it was simply never passed
+                    -- out of here.
+                    boss = drop.encounterName,
+
                     state = state,
                     label = LootScore.LABELS[state] or "Unknown",
                     weight = LootScore.WeightOf(state),
