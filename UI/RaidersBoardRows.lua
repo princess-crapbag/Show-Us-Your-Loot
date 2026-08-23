@@ -72,7 +72,7 @@ local function TooltipBody(row)
     local parts, named = {}, 0
 
     for _, track in ipairs(RaidersBoard.TRACKS) do
-        local points = byTrack[track.name] or 0
+        local points = byTrack[track.id] or 0
 
         if points > 0 then
             named = named + points
@@ -201,7 +201,7 @@ local function Segments(entry)
     local out, named = {}, 0
 
     for _, track in ipairs(RaidersBoard.TRACKS) do
-        local points = byTrack[track.name] or 0
+        local points = byTrack[track.id] or 0
 
         if points > 0 then
             named = named + points
@@ -209,10 +209,9 @@ local function Segments(entry)
         end
     end
 
-    -- Whatever the tracks did not account for -- a synced record from a client
-    -- that stored no difficulty. It has to be drawn, or the bar would be
-    -- shorter than the total printed beside it, which is the one thing a bar
-    -- must never be.
+    -- Whatever the three tracks did not account for. It has to be drawn, or
+    -- the bar would be shorter than the total printed beside it, which is the
+    -- one thing a bar must never be.
     local rest = (entry.lootScore or 0) - named
 
     if rest > 0 then

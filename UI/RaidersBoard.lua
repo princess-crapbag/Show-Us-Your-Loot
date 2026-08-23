@@ -43,7 +43,7 @@ local GAP = 14
 local LEFT_INSET = GAP
 
 -- The widest name in her 595-player registry, which is also twelve characters
--- -- the most a WoW name can be. Given ten per cent more, as she asked, so a
+-- -- the most a WoW name can be. Given ten percent more, as she asked, so a
 -- wider one still has somewhere to sit. Declared as the string rather than as
 -- a number so it is re-measured if the font ever changes.
 local WIDEST_NAME = "Shadowdancez"
@@ -67,15 +67,18 @@ RaidersBoard.BAR_INSET = 9
 -- for the same reason item quality and class colors go through
 -- Theme.SetCustomTextColor: these are not the theme's to repaint. Nightfall or
 -- daylight, epic is still purple.
+-- BY DIFFICULTY ID. The name is for reading, never for matching -- see the
+-- comment on byTrack in Core/LootScore.lua for what keying on the name cost.
 RaidersBoard.TRACKS = {
-    { name = "Normal", color = { 0.000, 0.439, 0.867 } },
-    { name = "Heroic", color = { 0.639, 0.208, 0.933 } },
-    { name = "Mythic", color = { 1.000, 0.502, 0.000 } },
+    { id = 14, name = "Normal", color = { 0.000, 0.439, 0.867 } },
+    { id = 15, name = "Heroic", color = { 0.639, 0.208, 0.933 } },
+    { id = 16, name = "Mythic", color = { 1.000, 0.502, 0.000 } },
 }
 
--- Anything else -- a synced record from a client that did not store the
--- difficulty -- still has to be drawn or the bar would be shorter than the
--- total beside it, which is the one thing a bar must never be.
+-- Anything the three tracks above do not account for -- Looking For Raid, a
+-- timewalking id, an old ten or twenty-five player raid -- still has to be
+-- drawn, or the bar would be shorter than the total printed beside it, which
+-- is the one thing a bar must never be.
 RaidersBoard.UNKNOWN_COLOR = { 0.55, 0.85, 1.00 }
 
 RaidersBoard.EMPTY = "—"

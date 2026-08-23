@@ -135,7 +135,7 @@ end
 -- that reads WEIGHTS is also the place that can remember what was counted.
 -- Without that, a total is a number with no way back to the wins behind it,
 -- and "where did my score come from" cannot be answered from stored data.
-local function Add(totals, key, state, at, track)
+local function Add(totals, key, state, at, difficulty)
     if not key then
         return
     end
@@ -190,6 +190,24 @@ local function Add(totals, key, state, at, track)
     -- for Mythic -- so two raiders on the same total read differently when one
     -- of them got there on Heroic drops.
     --
+    -- KEYED ON THE DIFFICULTY ID, NEVER ON ITS NAME. This bucketed on
+    -- drop.difficultyName, and two whole populations of drops would have
+    -- colored as unknown:
+    --
+    --   Synced records have no name at all. Core/Sync.lua sends the id and
+    --   only the id -- see Encode, which writes Clean(record.difficultyID) --
+    --   so every drop from a night somebody else recorded arrived nameless.
+    --   In a guild where a co-officer does most of the recording that is most
+    --   of the board.
+    --
+    --   And the name is localized. It comes from GetInstanceInfo by way of
+    --   Utilities.GetLocationInformation, so a German client stores
+    --   "Heroisch" and a French one "Heroique". Neither matches a literal.
+    --
+    -- The id is on every record, survives the wire, and reads the same in
+    -- every language. UI/RaidersBoard.lua declares which ids it draws and
+    -- what to call them; nothing here needs to know their names.
+    --
     -- Points and not items, because the bar is a length in points. Splitting a
     -- bar by item count would put segment boundaries where the eye cannot
     -- reconcile them with the length they add up to.
@@ -198,7 +216,7 @@ local function Add(totals, key, state, at, track)
     -- no length, so a segment for it would be a track named on the bar with
     -- nothing drawn.
     if weight > 0 then
-        local key = track or "Unknown"
+        local key = difficulty or 0
 
         entry.byTrack[key] = (entry.byTrack[key] or 0) + weight
     end
@@ -239,7 +257,7 @@ function LootScore.BuildTotals(drops)
                         ),
                         SYL.DropRules.CreditedState(drop, roll.state),
                         drop.timestamp,
-                        drop.difficultyName
+                        drop.difficultyID
                     )
 
                     counted = true
@@ -256,7 +274,7 @@ function LootScore.BuildTotals(drops)
                     ),
                     SYL.DropRules.CreditedState(drop, drop.winnerState),
                     drop.timestamp,
-                    drop.difficultyName
+                    drop.difficultyID
                 )
             end
         end
@@ -288,7 +306,7 @@ function LootScore.Attach(entries, drops)
 
         entry.byState = totalsFor and totalsFor.byState or {}
 
-        -- Points per difficulty, which is what colors the board's bars.
+        -- Points per difficulty id, which is what colors the board's bars.
         entry.byTrack = totalsFor and totalsFor.byTrack or {}
 
         local nights = entry.nights or 0

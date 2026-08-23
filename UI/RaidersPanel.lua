@@ -272,12 +272,35 @@ Refresh = function()
         frame.detail, selectedKey and FindByKey(entries, selectedKey) or nil
     )
 
-    frame.caption:SetText(
-        string.format(
-            "%d shown · raid average %.1f per night · %s",
-            #entries, average, SYL.Audience.Note(scope)
+    -- "RAID AVERAGE 0.0 PER NIGHT" IS NOT AN AVERAGE, it is the absence of
+    -- one, and it was printed as fact for the whole first stretch of a tier.
+    -- With a rank floor set, nobody clears it until the guild's third or
+    -- fourth night -- so every bar is empty, there is no average marker, and
+    -- the caption underneath used to insist the average was zero.
+    --
+    -- Said once here rather than sixteen times on the rows. The floor is read
+    -- live rather than from the constant, for the same reason
+    -- UI/RaidersDetail.lua reads it live: this sentence states the rule as
+    -- fact, and a stale number would be the addon explaining a rule it is no
+    -- longer applying.
+    if ranked == 0 then
+        frame.caption:SetText(
+            string.format(
+                "%d shown · nobody has %s yet, so there is nothing to divide "
+                .. "by — no bars and no average until then · %s",
+                #entries,
+                SYL.Utilities.Count(SYL.LootScore.MinNights(), "raid night"),
+                SYL.Audience.Note(scope)
+            )
         )
-    )
+    else
+        frame.caption:SetText(
+            string.format(
+                "%d shown · raid average %.1f per night · %s",
+                #entries, average, SYL.Audience.Note(scope)
+            )
+        )
+    end
 end
 
 RaidersPanel.Refresh = Refresh

@@ -140,6 +140,105 @@ view2 = lua.eval("{ nightsHeld = 9 }")
 check("raid nights counts against nights held, not against itself",
       str(columns[2].value(ranked, view2)) == "2 of 9")
 
+# --------------------------------------------------------------------------
+# The bar's colors, keyed on the difficulty id rather than its name.
+#
+# This is the regression test for the one defect the stubbed client could not
+# have caught. The bars bucketed on drop.difficultyName, and two whole
+# populations of drops have no usable name:
+#
+#   Synced records have none at all -- Core/Sync.lua sends the id and only the
+#   id -- so every drop from a night somebody else recorded colored as unknown.
+#   In a guild where a co-officer does most of the recording that is most of
+#   the board, which is to say the whole feature was inert.
+#
+#   And the name is localized, coming from GetInstanceInfo, so a German
+#   client's "Heroisch" matched no literal either and colored the same way.
+#
+# Nothing about that is visible to a test that only checks totals, so this
+# checks the bucket keys directly.
+# --------------------------------------------------------------------------
+
+NEED = SYL.LootHistoryAPI.ROLL_STATE.NeedMainSpec
+
+check("Need is worth a hundred points",
+      SYL.LootScore.WeightOf(NEED) == 100,
+      "WeightOf(%s) = %s" % (NEED, SYL.LootScore.WeightOf(NEED)))
+
+lua.globals().NEED = NEED
+
+lua.execute("""
+    -- Shaped like the real thing on both paths: a locally captured drop
+    -- carries a name, a synced one carries only an id, and both carry the
+    -- winner in the header because sync sends no roll list.
+    function TrackDrops()
+        return {
+            {
+                id = "local-heroic",
+                timestamp = 1000,
+                difficultyID = 15,
+                difficultyName = "Heroic",
+                winnerName = "Someone",
+                winnerState = NEED,
+                rolls = {},
+            },
+            {
+                id = "synced-heroic",
+                timestamp = 2000,
+                difficultyID = 15,
+                winnerName = "Someone",
+                winnerState = NEED,
+                rolls = {},
+            },
+            {
+                id = "german-mythic",
+                timestamp = 3000,
+                difficultyID = 16,
+                difficultyName = "Heroisch",
+                winnerName = "Someone",
+                winnerState = NEED,
+                rolls = {},
+            },
+        }
+    end
+""")
+
+drops = lua.globals().TrackDrops()
+
+check("the three sample drops all count toward a score",
+      all(SYL.DropRules.CountsAsUpgrade(drops[i + 1]) for i in range(3)))
+
+totals = SYL.LootScore.BuildTotals(drops)
+mine = totals["Someone"]
+
+check("all three scored", mine is not None and mine.score == 300,
+      "score %s" % (mine and mine.score))
+
+byTrack = {k: mine.byTrack[k] for k in mine.byTrack} if mine else {}
+
+check("points are bucketed by difficulty id, not by name",
+      byTrack == {15: 200, 16: 100}, str(byTrack))
+
+# The board declares which ids it draws. If these drift apart the bars go
+# gray without anything erroring, which is the failure mode this whole test
+# exists for.
+ids = [board.TRACKS[i + 1].id for i in range(len(board.TRACKS))]
+
+check("the board draws ids 14, 15 and 16", ids == [14, 15, 16], str(ids))
+
+check("every bucket a board track claims is a number the board declares",
+      all(key in ids for key in byTrack), str(byTrack))
+
+# A synced record and a local one for the same difficulty have to land in the
+# SAME bucket, or one raid night draws as two colors.
+check("a synced drop and a local drop share a bucket",
+      byTrack.get(15) == 200,
+      "the local Heroic and the synced Heroic did not merge: %s" % byTrack)
+
+# A localized name must not create a bucket of its own.
+check("a localized name does not open its own bucket",
+      "Heroisch" not in byTrack and len(byTrack) == 2, str(byTrack))
+
 print()
 print("FAILURES: %s" % (failures or "none"))
 sys.exit(1 if failures else 0)
