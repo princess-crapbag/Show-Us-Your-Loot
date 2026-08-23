@@ -134,15 +134,16 @@ Six people rolled Need on the same weapon. One of them won it. Ask a month later
 
 Show Us Your Loot keeps it.
 
-Every group loot drop gets recorded off Blizzard's Loot History API: the item, who won, what they rolled, and every player who was eligible, along with what each one chose. Need, offspec, greed, transmog, or pass. That last part is what makes the rest of this work. Eleven people eligible and no upgrades reads completely differently depending on whether they passed or lost.
+Every group loot drop gets recorded off Blizzard's Loot History API: the item, who won, what they rolled, and every player who was eligible, along with what each one chose. Need, offspec, greed, Mog, or pass. That last part is what makes the rest of this work. Eleven people eligible and no upgrades reads completely differently depending on whether they passed or lost.
 
 This is not a loot council addon. It awards nothing and changes nothing about how loot is handed out. You keep using Group Loot. This answers the argument afterwards.
 
 
 Who is due
 
-* Ranked by loot taken per raid night rather than by raw count, so somebody with perfect attendance sits above somebody who turns up half the time on the same amount of gear. Need is worth 100, offspec and greed 20 each, transmog nothing, divided by the nights attended.
-* Click any raider and you get the arithmetic. Every win that counted, what each one was worth, and the total those add up to. When somebody thinks their number is wrong, that is the screen they stand at.
+* Ranked by loot taken per raid night rather than by raw count, so somebody with perfect attendance sits above somebody who turns up half the time on the same amount of gear. Need is worth 100, offspec and greed 20 each, Mog nothing, divided by the nights attended.
+* Click any raider and you get the arithmetic, and the loot itself. Every item they took is listed under the raid night they took it on, with the real item link, the boss it came off, how it was won and its upgrade track. Hover one for the game's own tooltip; shift-click to paste it into chat. Underneath, every win that counted, what each was worth, and the total those add up to. When somebody thinks their number is wrong, that is the screen they stand at.
+* The board itself is a bar per raider against the raid average, with the bar colored by the difficulty the loot came from -- rare blue for Normal, epic purple for Heroic, legendary orange for Mythic -- so two raiders on the same total read differently when one of them got there on Heroic drops.
 * Under three raid nights nobody is ranked at all. They are listed with the reason instead, because one lucky night should not sit at the top of the list.
 * Vault gear, M+ chests, catalyst, delves, BoEs, bonus rolls, and warbound items are all recorded where your client can see them, and none of them move the ranking.
 
