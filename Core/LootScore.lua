@@ -67,7 +67,7 @@ LootScore.LABELS = {
 -- first. They agree at three by coincidence. Do not wire them together.
 LootScore.MIN_NIGHTS = 3
 
--- WHY THE FLOOR IS A SETTING. For the first fortnight of a tier nobody has
+-- WHY THE FLOOR IS A SETTING. For the first two weeks of a tier nobody has
 -- three nights, so every raider is unranked, the board has no order at all,
 -- and the trade advisor weighs "under 3 nights" against "under 3 nights" —
 -- which is the screen at the exact moment it is most wanted. Aimee's call,

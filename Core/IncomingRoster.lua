@@ -194,7 +194,7 @@ end
 --
 -- Only ever moves things ON. If the character already had a role set, that is
 -- somebody's later decision about a character the client can actually see,
--- and a placeholder typed a fortnight ago should not overrule it.
+-- and a placeholder typed two weeks ago should not overrule it.
 function IncomingRoster.PromoteJoined()
     local store = Store()
 

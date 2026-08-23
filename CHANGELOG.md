@@ -231,7 +231,7 @@ this says what you will notice.
 
 ### Changed
 
-- **Bonus rolls are labelled.** They already counted for nothing — a bonus
+- **Bonus rolls are labeled.** They already counted for nothing — a bonus
   roll is not loot the raid awarded — but nothing on screen said so.
 
 ### Fixed
@@ -555,7 +555,7 @@ corrected when it is read.
   as future ones.
 - **Mythic+ scores** in the players window, when the Raider.IO addon is
   installed. Sort by the column to rank your roster. Nothing in the fairness
-  maths reads it — it is context, not an input.
+  math reads it — it is context, not an input.
 - **Whole guild** toggle, so the players window shows every guild member
   rather than only those this addon has recorded loot for.
 - **Boss loot tables.** Press *Loot tables* in the boss window to see how much
