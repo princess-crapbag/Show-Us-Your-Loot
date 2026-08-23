@@ -2,9 +2,13 @@
 --
 -- The settings window: the frame, the title, and the close button.
 --
--- Everything inside it — the quality list, the behavior toggles and the
--- layout math that decide how tall the window has to be — lives in
--- UI/SettingsRows.lua.
+-- Everything inside it lives elsewhere: the rows in UI/SettingsRows.lua, the
+-- dashboard widget list in UI/SettingsWidgets.lua, and which of them appears on
+-- which tab in UI/SettingsTabs.lua.
+--
+-- IT SCROLLED BECAUSE IT WAS ONE COLUMN. Five tabs is the answer to the same
+-- problem the scroll frame was: the tallest tab is shorter than the screen, so
+-- nothing has to scroll and nothing is below the fold.
 
 local SYL = _G.ShowUsYourLoot
 local Theme = SYL.Theme
@@ -15,6 +19,13 @@ local SettingsRows = SYL.SettingsRows
 -- than one down. 560 still leaves room beside a 900px main window on any
 -- monitor the main window itself fits on.
 local WINDOW_WIDTH = 560
+
+-- Chrome above the pages: the accent mark and title, the subtitle, the rule
+-- under them, the tab strip, and the rule under that.
+local PAGE_TOP = 110
+
+-- The rule above the Close button, and the button itself.
+local FOOTER_HEIGHT = 52
 
 local frame
 
@@ -30,7 +41,7 @@ local function CreateSettingsWindow()
         "BackdropTemplate"
     )
 
-    frame:SetSize(WINDOW_WIDTH, SettingsRows.WindowHeight())
+    frame:SetSize(WINDOW_WIDTH, 400)
     frame:SetPoint("CENTER")
     frame:SetFrameStrata("DIALOG")
     frame:SetClampedToScreen(true)
@@ -61,50 +72,37 @@ local function CreateSettingsWindow()
 
     closeCorner:SetPoint("TOPRIGHT", -6, -6)
 
-    -- THE CONTENT SCROLLS, THE CHROME DOES NOT. Every feature added is another
-    -- 38px of settings, and the window used to be sized to fit all of it — so
-    -- it grew past the bottom of the screen and the last sections were simply
-    -- unreachable. The window is capped to the screen now and this carries the
-    -- overflow.
-    local scroll = CreateFrame("ScrollFrame", nil, frame)
+    -- THE TABS, and the rule under them that separates the strip from
+    -- whichever page it is pointing at.
+    local tabs = SYL.SettingsTabs.Create(frame, WINDOW_WIDTH, PAGE_TOP)
 
-    scroll:SetPoint("TOPLEFT", 4, -72)
-    scroll:SetPoint("BOTTOMRIGHT", -4, 52)
+    local strip
 
-    local content = CreateFrame("Frame", nil, scroll)
+    -- THE WINDOW IS AS TALL AS THE TAB IS, not as tall as the tallest.
+    -- Features needs 296 and Tools needs 610; standing at 610 for both leaves
+    -- Features with 300px of empty window under it, which reads as a screen
+    -- that failed to load rather than as a short one.
+    local function Show(key)
+        tabs:Select(key)
+        strip:SetSelected(key)
 
-    content:SetSize(WINDOW_WIDTH - 8, SettingsRows.ContentHeight())
+        frame:SetHeight(PAGE_TOP + tabs:HeightOf(key) + FOOTER_HEIGHT)
 
-    scroll:SetScrollChild(content)
+        ShowUsYourLootDB.settings = ShowUsYourLootDB.settings or {}
+        ShowUsYourLootDB.settings.settingsTab = key
+    end
 
-    -- The wheel is the only way to reach the bottom, so it is not optional.
-    -- Clamped rather than free: scrolling past the end leaves a blank window
-    -- with no indication that anything is above it.
-    scroll:EnableMouseWheel(true)
-    scroll:SetScript("OnMouseWheel", function(self, delta)
-        local range = math.max(
-            0, content:GetHeight() - self:GetHeight()
-        )
-
-        local position = math.min(
-            range, math.max(0, self:GetVerticalScroll() - delta * 28)
-        )
-
-        self:SetVerticalScroll(position)
-    end)
-
-    frame.scroll = scroll
-    frame.content = content
-
-    SettingsRows.BuildQualitySection(content)
-    SettingsRows.BuildToggleSection(content)
-    SettingsRows.BuildFeatureSection(content)
-
-    SYL.SettingsWidgets.Build(
-        content,
-        SettingsRows.WidgetSectionTop(),
-        SettingsRows.AddSection
+    strip = SYL.TabStrip.Create(
+        frame, SYL.SettingsTabs.DEFINITIONS, Show, 18, -74
     )
+
+    local tabRule = Theme.CreateSeparator(frame)
+    tabRule:SetPoint("TOPLEFT", 16, -(PAGE_TOP - 8))
+    tabRule:SetPoint("TOPRIGHT", -16, -(PAGE_TOP - 8))
+
+    frame.tabs = tabs
+    frame.strip = strip
+    frame.ShowTab = Show
 
     local footerRule = Theme.CreateSeparator(frame)
     footerRule:SetPoint("BOTTOMLEFT", 16, 44)
@@ -116,7 +114,18 @@ local function CreateSettingsWindow()
 
     closeButton:SetPoint("BOTTOMRIGHT", -16, 12)
 
-    frame:SetScript("OnShow", SettingsRows.Refresh)
+    -- WHERE THEY LEFT OFF. Somebody who opens settings twice in a row is
+    -- nearly always going back to the same tab, and the first one is a poor
+    -- guess for anybody whose reason for opening it is on the fifth.
+    local remembered = ShowUsYourLootDB.settings
+        and ShowUsYourLootDB.settings.settingsTab
+
+    Show(tabs.pages[remembered] and remembered or "recording")
+
+    frame:SetScript("OnShow", function()
+        SettingsRows.Refresh()
+        SYL.SettingsWidgets.Refresh()
+    end)
     frame:Hide()
 
     return frame

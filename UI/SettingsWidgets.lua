@@ -94,7 +94,15 @@ end
 function SettingsWidgets.Build(parent, top, addSection)
     local container = addSection(parent, "DASHBOARD WIDGETS", top)
 
-    container:SetHeight(#SYL.Dashboard.WIDGETS * ROW_HEIGHT + 24)
+    -- THE GRID IS THREE ACROSS, so seven widgets are three lines and not
+    -- seven. Sizing this as one-per-line made the container 164 tall against
+    -- a 60px grid, and the Default order button below it was anchored off the
+    -- same wrong number -- which put it 82px past the bottom of the section
+    -- and clean off the window. It has been drawn but unreachable ever since
+    -- the section went three across.
+    local lines = SYL.SettingsRows.GridRows(#SYL.Dashboard.WIDGETS, COLUMNS)
+
+    container:SetHeight(lines * ROW_HEIGHT + 26)
 
     rows = {}
 
@@ -128,7 +136,7 @@ function SettingsWidgets.Build(parent, top, addSection)
         Changed()
     end)
 
-    reset:SetPoint("TOPLEFT", 0, -(#SYL.Dashboard.WIDGETS * ROW_HEIGHT + 2))
+    reset:SetPoint("TOPLEFT", 0, -(lines * ROW_HEIGHT + 4))
 
     SettingsWidgets.container = container
     SettingsWidgets.parent = parent
@@ -137,7 +145,9 @@ function SettingsWidgets.Build(parent, top, addSection)
 
     SettingsWidgets.Refresh()
 
-    return container
+    -- The height as well, so a tab can stack whatever comes next under it.
+    -- The button is inside the container, so it is inside this number.
+    return container, HEADING_HEIGHT + lines * ROW_HEIGHT + 26
 end
 
 -- Tears the section down and builds it again, which is how a reorder shows.

@@ -155,6 +155,7 @@ UI\ItemTooltip.lua
 UI\ExportWindow.lua
 UI\SettingsRows.lua
 UI\SettingsWidgets.lua
+UI\SettingsTabs.lua
 UI\SettingsWindow.lua
 UI\DeveloperReport.lua
 UI\DeveloperWindow.lua

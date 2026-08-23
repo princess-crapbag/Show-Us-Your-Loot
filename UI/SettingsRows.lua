@@ -243,9 +243,17 @@ local function ToggleSectionTop()
     return QualityBlockBottom() - NOTE_HEIGHT - SECTION_GAP
 end
 
-function SettingsRows.BuildQualitySection(parent)
-    local container =
-        AddSection(parent, "RECORD THESE ITEM QUALITIES", QUALITY_TOP)
+-- `top` overrides where the section starts.
+--
+-- Each builder used to derive its own top by stacking on the section above it,
+-- which is right for one long page and wrong for tabs: on a tab, every section
+-- starts from that tab's own top rather than from wherever the previous
+-- section happened to end. Passing nothing keeps the old stacking, so the
+-- change is invisible to anything that has not moved.
+function SettingsRows.BuildQualitySection(parent, top)
+    local container = AddSection(
+        parent, "RECORD THESE ITEM QUALITIES", top or QUALITY_TOP
+    )
 
     container:SetHeight(
         SettingsRows.GridRows(#ItemQuality.ORDER, QUALITY_COLUMNS) * ROW_HEIGHT
@@ -296,6 +304,12 @@ function SettingsRows.BuildQualitySection(parent)
         "Unticked qualities are never recorded. This does not remove records "
         .. "you already have."
     )
+
+    -- Heading, grid and note, so a tab can put the next section
+    -- underneath without measuring anything itself.
+    return container, HEADING_HEIGHT
+        + SettingsRows.GridRows(#ItemQuality.ORDER, QUALITY_COLUMNS)
+        * ROW_HEIGHT + NOTE_HEIGHT
 end
 
 local TOGGLES = {
@@ -304,6 +318,7 @@ local TOGGLES = {
         -- picking one is a matter of clicking until it looks right instead of
         -- reading color names and guessing.
         label = "Color scheme",
+        tab = "display",
         action = function()
             local palette =
                 SYL.Theme.Apply(SYL.Palettes.Next(SYL.Theme.paletteKey))
@@ -326,6 +341,7 @@ local TOGGLES = {
         -- the same people — Core/LootScore.lua:MinNights has the argument — so
         -- the fourth position would have been a control that does nothing.
         label = "Rank raiders after",
+        tab = "scoring",
         action = function()
             local ORDER = { 3, 2, 0 }
             local current = SYL.LootScore.MinNights()
@@ -360,6 +376,7 @@ local TOGGLES = {
     },
     {
         label = "Record group loot from Loot History",
+        tab = "recording",
         key = "lootHistoryCapture",
 
         onChanged = function(enabled)
@@ -372,6 +389,7 @@ local TOGGLES = {
     },
     {
         label = "Show the minimap button",
+        tab = "display",
         key = "showMinimapButton",
 
         onChanged = function(enabled)
@@ -393,11 +411,13 @@ local TOGGLES = {
         -- section is about what gets recorded, and the note underneath says
         -- the rest.
         label = "Announce gear in chat",
+        tab = "recording",
         key = "announceCaptures",
     },
     {
         -- Not a checkbox: it cycles windows and reports where it landed.
         label = "Output window",
+        tab = "display",
         action = function()
             local name = SYL.Output.CycleWindow()
 
@@ -411,6 +431,7 @@ local TOGGLES = {
     },
     {
         label = "Show debug messages",
+        tab = "display",
         key = "debug",
     },
     {
@@ -428,6 +449,7 @@ local TOGGLES = {
         -- note on "Announce gear in chat" above exists. This one is 107 and
         -- has room to spare.
         label = "Reset window sizes",
+        tab = "tools",
         action = function()
             local reset = SYL.Widgets.ResetSizes()
 
@@ -529,14 +551,38 @@ function SettingsRows.NeedsScrolling()
         > (SettingsRows.WindowHeight() - CHROME_HEIGHT) + 1
 end
 
-function SettingsRows.BuildToggleSection(parent)
-    local container = AddSection(parent, "BEHAVIOR", ToggleSectionTop())
+-- ONE TAB'S WORTH OF TOGGLES, not all eight.
+--
+-- The rows under BEHAVIOR were never one subject: the rank floor is scoring,
+-- the color scheme and the minimap button are display, capture and announcing
+-- are recording, and resetting window sizes is what you click when something
+-- has gone wrong. They shared a heading because a single scrolling column had
+-- nowhere else to put them.
+--
+-- Called with no tab it builds all eight under the old heading, so anything
+-- that has not moved to a tab yet is unaffected.
+function SettingsRows.BuildToggleSection(parent, top, tab, title)
+    local wanted = {}
 
-    container:SetHeight(
-        SettingsRows.GridRows(#TOGGLES, TOGGLE_COLUMNS) * ROW_HEIGHT
+    for _, toggle in ipairs(TOGGLES) do
+        if not tab or toggle.tab == tab then
+            table.insert(wanted, toggle)
+        end
+    end
+
+    if #wanted == 0 then
+        return nil
+    end
+
+    local container = AddSection(
+        parent, title or "BEHAVIOR", top or ToggleSectionTop()
     )
 
-    for index, toggle in ipairs(TOGGLES) do
+    container:SetHeight(
+        SettingsRows.GridRows(#wanted, TOGGLE_COLUMNS) * ROW_HEIGHT
+    )
+
+    for index, toggle in ipairs(wanted) do
         local isAction = toggle.action ~= nil
 
         local row = CreateSettingRow(
@@ -602,6 +648,10 @@ function SettingsRows.BuildToggleSection(parent)
         .. "with them, so counting gear taken without a roll mostly counts "
         .. "yours."
     )
+
+    return container, HEADING_HEIGHT
+        + SettingsRows.GridRows(#wanted, TOGGLE_COLUMNS) * ROW_HEIGHT
+        + (tab and 0 or NOTE_HEIGHT)
 end
 
 -- Whole features, switched on and off.
@@ -609,9 +659,9 @@ end
 -- Taller rows than the toggles above, because each one carries a line saying
 -- what it costs when it is on. A switch with no stated price is a guess, and
 -- the point of this list is that somebody can decide rather than wonder.
-function SettingsRows.BuildFeatureSection(parent)
+function SettingsRows.BuildFeatureSection(parent, top)
     local container =
-        AddSection(parent, "FEATURES", FeatureSectionTop())
+        AddSection(parent, "FEATURES", top or FeatureSectionTop())
 
     container:SetHeight(
         SettingsRows.GridRows(#SYL.Features.LIST, FEATURE_COLUMNS) * ROW_HEIGHT
@@ -645,4 +695,8 @@ function SettingsRows.BuildFeatureSection(parent)
 
         table.insert(rows, row)
     end
+
+    return container, HEADING_HEIGHT
+        + SettingsRows.GridRows(#SYL.Features.LIST, FEATURE_COLUMNS)
+        * ROW_HEIGHT
 end
