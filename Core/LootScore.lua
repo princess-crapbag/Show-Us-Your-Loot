@@ -38,12 +38,25 @@ local API = SYL.LootHistoryAPI
 
 -- Keyed by the roll state the API reports, so this table is the only place
 -- the weights live and the UI never does arithmetic of its own.
-LootScore.WEIGHTS = {
+-- WHAT A WIN IS WORTH, and what it is worth if nobody has said otherwise.
+--
+-- These were constants, and the argument for keeping them that way was that
+-- editing them mid-tier silently rewrites every historical number at once.
+-- That is still true and the settings screen says so in red; it is Aimee's
+-- guild and her call: "i think they should be editable but give a caution
+-- about editing them mid season. but not all guilds will use the same weights
+-- i use."
+LootScore.DEFAULT_WEIGHTS = {
     [API.ROLL_STATE.NeedMainSpec] = 100,
     [API.ROLL_STATE.NeedOffSpec] = 20,
     [API.ROLL_STATE.Greed] = 20,
     [API.ROLL_STATE.Transmog] = 0,
 }
+
+-- Kept under its old name for anything that wants the defaults. Nothing reads
+-- it to score -- LootScore.WeightOf is the only path, which is what made this
+-- a small change rather than a sweep.
+LootScore.WEIGHTS = LootScore.DEFAULT_WEIGHTS
 
 -- Shown in the settings screen, in the tooltip that explains a number, on the
 -- loot list and on every item card in the Raiders detail pane.
@@ -94,8 +107,82 @@ function LootScore.MinNights()
     return floor
 end
 
+local function Settings()
+    ShowUsYourLootDB = ShowUsYourLootDB or {}
+    ShowUsYourLootDB.settings = ShowUsYourLootDB.settings or {}
+
+    return ShowUsYourLootDB.settings
+end
+
+-- WHETHER OFFSPEC SCORES SEPARATELY FROM GREED.
+--
+-- The client reports four roll states and her season contains all four -- 16
+-- offspec rolls, though none of them have won yet. She asked to see three
+-- rows rather than four: "leave the 4 weights, i only want to see the 3 for
+-- me if possible."
+--
+-- So the fourth weight still exists and still scores; it simply follows greed.
+-- That is what makes hiding it safe rather than merely tidy: a hidden number
+-- that could drift from the visible one would eventually score sixteen rolls
+-- at a value nobody could see or explain.
+function LootScore.IsOffspecSplit()
+    return Settings().splitOffspec and true or false
+end
+
+function LootScore.SetOffspecSplit(split)
+    Settings().splitOffspec = split and true or nil
+end
+
 function LootScore.WeightOf(state)
-    return LootScore.WEIGHTS[state] or 0
+    if state == nil then
+        return 0
+    end
+
+    if state == API.ROLL_STATE.NeedOffSpec
+        and not LootScore.IsOffspecSplit() then
+        state = API.ROLL_STATE.Greed
+    end
+
+    local weights = Settings().weights
+    local stored = weights and weights[state]
+
+    if type(stored) == "number" then
+        return stored
+    end
+
+    return LootScore.DEFAULT_WEIGHTS[state] or 0
+end
+
+-- Negative weights are refused rather than clamped silently: somebody typing
+-- one meant something, and scoring a win as a penalty is a different feature
+-- with different consequences everywhere else.
+function LootScore.SetWeight(state, value)
+    if state == nil or type(value) ~= "number" or value < 0 then
+        return false
+    end
+
+    local settings = Settings()
+
+    settings.weights = settings.weights or {}
+    settings.weights[state] = math.floor(value + 0.5)
+
+    return true
+end
+
+-- The three rows the settings screen draws, in the order it draws them.
+-- Offspec is deliberately absent unless it has been split off.
+function LootScore.EditableStates()
+    local states = {
+        API.ROLL_STATE.NeedMainSpec,
+        API.ROLL_STATE.Greed,
+        API.ROLL_STATE.Transmog,
+    }
+
+    if LootScore.IsOffspecSplit() then
+        table.insert(states, 2, API.ROLL_STATE.NeedOffSpec)
+    end
+
+    return states
 end
 
 --------------------------------------------------------------------------

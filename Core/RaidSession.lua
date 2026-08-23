@@ -372,7 +372,49 @@ end
 -- A threshold rather than unanimity, because a real Tuesday has a pug tank and
 -- a trial in it, and a rule that eighty percent clears is one those nights
 -- still pass.
-RaidSession.GUILD_SHARE = 0.80
+RaidSession.DEFAULT_GUILD_SHARE = 0.80
+
+-- Kept under the old name for anything reading the default.
+RaidSession.GUILD_SHARE = RaidSession.DEFAULT_GUILD_SHARE
+
+-- HOW MUCH OF THE GROUP HAS TO BE GUILD FOR THE NIGHT TO COUNT.
+--
+-- Named Threshold and not Share because RaidSession.GuildShare
+-- already exists and answers a different question -- what fraction of
+-- one session was guild. Two functions of that name is one function:
+-- the second definition wins and the first quietly stops existing.
+--
+-- A constant until Aimee asked for it: "a real setting. again other guilds may
+-- have different expectations." Worth knowing before it is moved -- since
+-- 0.4.0 this does not only decide attendance and the calendar, it gates
+-- DropRules.CountsAsUpgrade, so raising it re-scores nights already raided the
+-- same way changing a weight does. The settings screen says so.
+--
+-- Stored as a percentage because that is what the screen shows and what an
+-- officer says out loud; a 0.8 in the saved variables is a number somebody
+-- would eventually read as eighty.
+function RaidSession.GuildThreshold()
+    local settings = ShowUsYourLootDB and ShowUsYourLootDB.settings
+    local percent = settings and settings.guildSharePercent
+
+    if type(percent) ~= "number" or percent < 0 or percent > 100 then
+        return RaidSession.DEFAULT_GUILD_SHARE
+    end
+
+    return percent / 100
+end
+
+function RaidSession.SetGuildThreshold(percent)
+    if type(percent) ~= "number" or percent < 0 or percent > 100 then
+        return false
+    end
+
+    ShowUsYourLootDB = ShowUsYourLootDB or {}
+    ShowUsYourLootDB.settings = ShowUsYourLootDB.settings or {}
+    ShowUsYourLootDB.settings.guildSharePercent = math.floor(percent + 0.5)
+
+    return true
+end
 
 -- Whether the guild roster had actually loaded when this session was recorded.
 --
@@ -467,7 +509,7 @@ function RaidSession.CountsAsNight(session)
         return true
     end
 
-    return share >= RaidSession.GUILD_SHARE
+    return share >= RaidSession.GuildThreshold()
 end
 
 function RaidSession.NightsOnly(sessions)
