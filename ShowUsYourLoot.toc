@@ -126,6 +126,7 @@ UI\RaidersRoster.lua
 UI\RaidersDetailCards.lua
 UI\RaidersDetailParts.lua
 UI\RaidersDetail.lua
+UI\RaidersSort.lua
 UI\RaidersBoard.lua
 UI\RaidersBoardRows.lua
 UI\RaidersPanel.lua

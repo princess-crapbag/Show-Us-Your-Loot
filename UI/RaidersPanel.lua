@@ -58,6 +58,18 @@ local selectedKey
 -- Refresh does immediately afterwards. Recorded while drawing instead.
 local lastShown = { board = 0, roster = 0 }
 local view = "board"
+
+-- WHICH COLUMN THE BOARD IS SORTED BY, and which way.
+--
+-- Kept here, in the panel, and applied as a DISPLAY PASS after ranking. It
+-- must never be pushed into LootScore.Rank: that is the choke point /syl due,
+-- the dashboard "who is due" tile and UI/DueWindow.lua all read, and the last
+-- time two screens ranked by different rules it took days to notice -- see the
+-- note above LootScore.Sort, which was written about exactly that.
+--
+-- Opens on the order the board has always used, which is LootScore.Sort's:
+-- points per night, lowest first, because the board answers who is owed.
+-- The sort state lives in UI/RaidersSort.lua.
 local Refresh
 
 --------------------------------------------------------------------------
@@ -226,6 +238,11 @@ Refresh = function()
     frame.empty:Hide()
 
     SYL.RaidersBoard.SetHeaderShown(frame.header, true)
+    local sortKey, sortReversed = SYL.RaidersSort.Key()
+
+    SYL.RaidersSort.UpdateHeader(frame.header, sortKey, sortReversed)
+
+    entries = SYL.RaidersSort.Entries(entries, sortKey, sortReversed)
 
     local highest = SYL.LootScore.Highest(entries)
     local average, ranked = SYL.LootScore.Average(entries)
@@ -423,7 +440,12 @@ function RaidersPanel.Create(parent)
     -- Theme.MeasureText needs a live client to measure with.
     SYL.RaidersBoard.Measure(BOARD_WIDTH)
 
-    frame.header = SYL.RaidersBoard.CreateHeader(frame, LIST_TOP)
+    frame.header = SYL.RaidersBoard.CreateHeader(
+        frame, LIST_TOP,
+        function(key)
+            SYL.RaidersSort.OnClick(key, Refresh)
+        end
+    )
 
     frame.empty = Theme.CreateText(frame, Theme.sizes.row, "textMuted")
     frame.empty:SetPoint("TOPLEFT", 2, -(LIST_TOP + 6))

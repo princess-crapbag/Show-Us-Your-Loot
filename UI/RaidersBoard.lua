@@ -91,9 +91,15 @@ RaidersBoard.EMPTY = "—"
 -- somebody has a good week.
 RaidersBoard.COLUMNS = {
     {
+        key = "items",
         top = "# ITEMS",
         bottom = "RECEIVED",
         widest = "999",
+
+        -- Ties are broken by name in RaidersPanel, not here.
+        sortBy = function(entry)
+            return entry.scoringWins or 0
+        end,
 
         -- Need and greed only. Transmog is excluded on purpose -- see
         -- LootScore's scoringWins, and Aimee's "we should not include mogs in
@@ -105,9 +111,14 @@ RaidersBoard.COLUMNS = {
         end,
     },
     {
+        key = "nights",
         top = "RAID",
         bottom = "NIGHTS",
         widest = "99 of 99",
+
+        sortBy = function(entry)
+            return entry.nights or 0
+        end,
 
         -- Attended of held, both counted the same way: guild nights only, one
         -- evening being one night however many bosses or difficulties it
@@ -119,9 +130,16 @@ RaidersBoard.COLUMNS = {
         end,
     },
     {
+        key = "share",
         top = "POINTS",
         bottom = "PER NIGHT",
         widest = "9999.9",
+
+        -- The board opens on this, ascending -- it is what LootScore.Sort
+        -- already orders by, and the bar is a picture of it.
+        sortBy = function(entry)
+            return entry.share or 0
+        end,
 
         -- The number the bar is a picture of. A dash rather than a reason:
         -- the reason does not fit a 53px column and never did, so it moved to
@@ -135,9 +153,14 @@ RaidersBoard.COLUMNS = {
         end,
     },
     {
+        key = "points",
         top = "TOTAL",
         bottom = "POINTS",
         widest = "99999",
+
+        sortBy = function(entry)
+            return entry.lootScore or 0
+        end,
 
         value = function(entry)
             local score = entry.lootScore or 0
@@ -220,9 +243,9 @@ end
 -- named column further along saying the "per night" half.
 local BAR_HEADING = "RAID AVERAGE"
 
-function RaidersBoard.CreateHeader(parent, top)
+function RaidersBoard.CreateHeader(parent, top, onSort)
     local layout = RaidersBoard.layout
-    local header = { parts = {} }
+    local header = { parts = {}, buttons = {}, arrows = {} }
 
     local function Heading(text, x, line)
         local fontString = Theme.CreateText(parent, HEAD_SIZE, "textMuted")
@@ -239,14 +262,45 @@ function RaidersBoard.CreateHeader(parent, top)
 
     -- RAIDER and the bar heading sit on the lower line, level with the second
     -- word of the stacked headings rather than floating above them.
-    Heading("RAIDER", layout.left, 11)
+    --
+    -- RAIDER SORTS TOO, alphabetically, which is the one order somebody uses
+    -- to FIND a person rather than to rank them.
+    local raider = Heading("RAIDER", layout.left, 11)
+
+    header.buttons.name = SYL.RaidersSort.HeadingButton(
+        parent, layout.left, top + 11,
+        Theme.MeasureText(HEAD_SIZE, "RAIDER"),
+        function()
+            onSort("name")
+        end
+    )
+
+    header.arrows.name =
+        Theme.CreateText(parent, HEAD_SIZE, "accent")
+
+    header.arrows.name:SetPoint("LEFT", raider, "RIGHT", 5, 0)
+
+    -- THE BAR HEADING IS NOT A SECOND CONTROL FOR THE SAME SORT. It names the
+    -- same number POINTS PER NIGHT does, so making both clickable would give
+    -- one sort two buttons and two places to draw one arrow.
     Heading(BAR_HEADING, layout.bar, 11)
 
     for index, column in ipairs(RaidersBoard.COLUMNS) do
         local x = RaidersBoard.ColumnX(index)
 
         Heading(column.top, x, 0)
-        Heading(column.bottom, x, 11)
+
+        local bottom = Heading(column.bottom, x, 11)
+
+        header.buttons[column.key] =
+            SYL.RaidersSort.HeadingButton(parent, x, top, layout.column, function()
+                onSort(column.key)
+            end)
+
+        header.arrows[column.key] =
+            Theme.CreateText(parent, HEAD_SIZE, "accent")
+
+        header.arrows[column.key]:SetPoint("LEFT", bottom, "RIGHT", 5, 0)
     end
 
     header.rule = Theme.CreateSolidTexture(parent, "separator", "ARTWORK")
@@ -271,6 +325,12 @@ function RaidersBoard.CreateHeader(parent, top)
     return header
 end
 
+-- Which column is showing an arrow, and which way it points.
+--
+-- Called on every refresh rather than only on a click, because the board is
+-- rebuilt whenever the scope or the season changes and an arrow left behind
+-- on a column nothing is sorted by is a lie about what is on screen.
+
 -- The roster view shares this strip of the panel and has no headings of its
 -- own, so the board's have to stand down rather than sit over its first two
 -- rows. Same when the board is empty: headings above nothing name columns that
@@ -286,6 +346,17 @@ function RaidersBoard.SetHeaderShown(header, shown)
 
     for _, tick in ipairs(header.ticks) do
         tick:SetShown(shown)
+    end
+
+    -- The buttons and the arrows go with them. A hidden heading with a live
+    -- button still under it is a strip of the roster view that sorts a board
+    -- nobody is looking at.
+    for _, button in pairs(header.buttons or {}) do
+        button:SetShown(shown)
+    end
+
+    for _, arrow in pairs(header.arrows or {}) do
+        arrow:SetShown(shown)
     end
 
     header.rule:SetShown(shown)
