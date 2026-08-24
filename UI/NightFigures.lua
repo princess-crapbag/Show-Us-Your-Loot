@@ -171,10 +171,15 @@ function NightFigures.Bosses(day)
     -- need to scan [...] but has to be obvious to other users on curse."
     if not total then
         table.insert(lines, "")
+        -- NAMES THE REAL BUTTON. "Read the Adventure Guide" is what it says
+        -- on the Bosses tab (UI/BossesPanel.lua), and telling somebody to
+        -- press a control that does not exist under that name is the same
+        -- fault the Raiders board tooltip had.
         table.insert(lines,
-            "How many bosses this raid holds is not known yet. Open the "
-            .. "Bosses tab once to read the journal, and this becomes "
-            .. "\"" .. day.bossCount .. " of N\".")
+            "How many bosses this raid holds is not known yet. Press \"Read "
+            .. "the Adventure Guide\" on the Bosses tab once, and this "
+            .. "becomes \"" .. day.bossCount .. " of 8\" instead of just \""
+            .. day.bossCount .. "\".")
     end
 
     return value, "bosses down", table.concat(lines, "\n")

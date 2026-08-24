@@ -416,6 +416,23 @@ check("and the figure says the bare count",
 check("and says out loud that the total is not known yet",
       "not known yet" in str(body))
 
+# NAMES THE REAL BUTTON. Telling somebody to press a control that does not
+# exist under that name is the fault the Raiders board tooltip had for months.
+check("and names the button that fixes it, in the words it actually uses",
+      "Read the Adventure Guide" in str(body))
+
+panel_src = test_load.ROOT.joinpath("UI/BossesPanel.lua").read_text(
+    encoding="utf-8")
+
+check("and pressing it actually walks the journal",
+      "EncounterJournal.IsAvailable()" in panel_src)
+
+boss_src = test_load.ROOT.joinpath("UI/BossesPanel.lua").read_text(
+    encoding="utf-8")
+
+check("with that exact label on the button",
+      '"Read the Adventure Guide"' in boss_src)
+
 # Now the journal knows this raid.
 lua.execute("KNOWN = {}")
 known = lua.globals().KNOWN

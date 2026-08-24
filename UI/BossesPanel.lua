@@ -220,10 +220,24 @@ function BossesPanel.ToggleMode()
     BossesPanel.SetMode(mode == "missing" and "dropped" or "missing")
 end
 
+-- ALSO WHAT FILLS THE NIGHT PANE'S BOSS TOTAL.
+--
+-- The walk counts bosses per raid as it goes -- see
+-- Core/EncounterJournal.lua -- which is what turns "5 bosses down" on the
+-- calendar into "5 of 8". IsAvailable is what actually walks; journalRead
+-- only lets this panel ask for the expensive lookups.
 function BossesPanel.ReadJournal()
     journalRead = true
 
+    SYL.EncounterJournal.IsAvailable()
+
     Refresh()
+
+    -- The calendar is very likely open behind this, and its denominators have
+    -- just become knowable.
+    if SYL.RefreshMainWindow then
+        SYL:RefreshMainWindow()
+    end
 end
 
 function BossesPanel.Select(key)
