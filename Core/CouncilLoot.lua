@@ -333,3 +333,68 @@ function CouncilLoot.Describe(drop)
 
     return { state = "none" }
 end
+
+--------------------------------------------------------------------------
+-- Matching an award to a drop
+--------------------------------------------------------------------------
+
+-- WHAT RCLOOTCOUNCIL SAYS THIS DROP WAS AWARDED TO, ready for the picker.
+--
+-- Aimee: "go ahead and make the 'match against RCLootCouncil history' button
+-- that pre-fills the credit picker for you to confirm."
+--
+-- CONFIRM-FIRST, NEVER A SILENT WRITE, and the reason is not caution for its
+-- own sake. RCLootCouncil ships three responses and every guild renames them:
+-- slot 3 is "Minor Upgrade" on a default install and "Mog" on hers. The same
+-- numeric id therefore means real gear on one machine and a cosmetic on
+-- another, and this addon goes to strangers on CurseForge. There is no
+-- mapping that is right for everybody, so the response is offered as a
+-- suggestion and a person decides.
+--
+-- Core/LootCredit.lua's own header is the other half of it: "the person doing
+-- the telling was in the raid and the addon was not."
+--
+-- Returns nil when RCLootCouncil is absent, when its history holds nothing
+-- for this item, or when the award names the person already credited -- in
+-- which case there is nothing to offer.
+function CouncilLoot.SuggestedCredit(drop)
+    if not CouncilLoot.IsPresent() then
+        return nil
+    end
+
+    local entry, winner = CouncilLoot.AwardFor(drop)
+
+    if not entry or not winner then
+        return nil
+    end
+
+    local current = SYL.DropRules.CreditedKey(
+        drop, drop.winnerGUID or drop.winnerName
+    )
+
+    -- The winner is the TABLE KEY, not entry.owner -- owner is the master
+    -- looter, which on a master-looted night is the same person on every
+    -- award. See the note on AwardFor.
+    local name = tostring(winner)
+
+    if current and SYL.Players.ResolveToMain(current)
+        == SYL.Players.ResolveToMain(name)
+    then
+        return nil
+    end
+
+    return {
+        name = name,
+        guid = SYL.Players.GUIDForName(name),
+
+        -- RCLootCouncil's own words for what they asked for. Shown rather
+        -- than mapped, because the mapping is the part that cannot be right
+        -- for every guild.
+        response = entry.response,
+        responseID = entry.responseID,
+
+        -- Unique per award, so a second identical item on the same night can
+        -- be told apart from the first.
+        awardID = entry.id,
+    }
+end

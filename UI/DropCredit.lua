@@ -98,6 +98,25 @@ function DropCredit.Build(frame, handlers)
     frame.undoButton:SetPoint("RIGHT", change, "LEFT", -8, 0)
     frame.undoButton:Hide()
 
+    -- MATCH TO RCLOOTCOUNCIL, shown only when there is something to match.
+    --
+    -- It pre-fills the picker rather than writing the credit, which is
+    -- Aimee's own call: "make the 'match against RCLootCouncil history'
+    -- button that pre-fills the credit picker for you to confirm."
+    --
+    -- Hidden by default and revealed in Update, because most drops will never
+    -- have an award to match -- and a button that is always there and usually
+    -- does nothing teaches people not to press it.
+    local matchLabel = "Match to RCLC"
+    local matchWidth = Theme.MeasureText(Theme.sizes.rowSmall, matchLabel) + 26
+
+    frame.matchButton = Part(Theme.CreateButton(
+        frame, matchWidth, 22, matchLabel, handlers.onMatch
+    ))
+
+    frame.matchButton:SetPoint("RIGHT", frame.undoButton, "LEFT", -8, 0)
+    frame.matchButton:Hide()
+
     local separator = Part(Theme.CreateSeparator(frame))
 
     separator:SetPoint("TOPLEFT", 16, -DropCredit.SEPARATOR_TOP)
@@ -130,6 +149,13 @@ local function NoteFor(credit)
     if credit.source == "traded" then
         return "traded to them by "
             .. tostring(credit.priorName or "the winner")
+    end
+
+    -- THE TWO STATES THAT USED TO SHARE THESE WORDS. On a master-looted
+    -- night every drop names the master looter, so "I checked, it is mine"
+    -- and "nobody has looked at this" both read as "won the roll".
+    if credit.source == "masterloot" then
+        return "master looter -- not assigned to anybody yet"
     end
 
     return "won the roll, never traded"
@@ -167,6 +193,26 @@ function DropCredit.Update(frame, record)
 
     for _, part in ipairs(frame.creditParts or {}) do
         part:Show()
+    end
+
+    -- Only when RCLootCouncil actually has an award for this item that names
+    -- somebody other than whoever is credited now.
+    frame.suggested = SYL.CouncilLoot.SuggestedCredit(record)
+
+    frame.matchButton:SetShown(frame.suggested ~= nil)
+
+    if frame.suggested then
+        SYL.Tooltips.Attach(
+            frame.matchButton,
+            "Match to RCLootCouncil",
+            "RCLootCouncil awarded this to "
+            .. tostring(frame.suggested.name)
+            .. (frame.suggested.response
+                and (" as \"" .. tostring(frame.suggested.response) .. "\"")
+                or "")
+            .. ". This opens the picker with that name chosen -- nothing "
+            .. "changes until you confirm it."
+        )
     end
 
     frame.creditName:SetText(tostring(credit.name or "Nobody"))

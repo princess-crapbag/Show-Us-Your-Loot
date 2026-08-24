@@ -202,3 +202,57 @@ function DropRules.WorthHaving(drop)
 
     return SYL.Players.ResolveToMain(key) or key
 end
+
+-- MIND THE NAME FORM. The master looter is stored with a realm --
+-- "Arcangila-Area52", from Utilities.GetPlayerFullName -- and a drop's
+-- winnerName is the bare "Arcangila" for somebody on your own realm.
+-- Core/RaidSession.lua has a local doing exactly this comparison, and its
+-- comment records what happened when the first version compared them
+-- directly: it found nobody and quietly reported every night's guild share as
+-- unknown, turning the whole filter off. Not exported from there because it
+-- takes a roster member rather than a name.
+local function SameName(left, right)
+    if type(left) ~= "string" or type(right) ~= "string" then
+        return false
+    end
+
+    return (left:match("^([^-]+)") or left)
+        == (right:match("^([^-]+)") or right)
+end
+
+-- A DROP NOBODY HAS LOOKED AT YET, on a master-looted night.
+--
+-- Aimee: "when loot drops can it be listed as 'MasterLooter Won' and only
+-- reassigned to me when i award it to me [...] that way its clear what i
+-- received vs what i won as ml"
+--
+-- WHY THIS IS THE FIX AND AUTO-CREDITING IS NOT. Blizzard's Loot History
+-- names the master looter as the winner of everything, so all eighteen drops
+-- on her two guild nights record her. She corrects them by hand and the
+-- corrections are what make the fairness board honest. The credit is not
+-- wrong -- she checked two that looked like oversights against
+-- RCLootCouncil's own award history and both are genuinely hers.
+--
+-- What was missing is that "I checked this and it is mine" and "nobody has
+-- ever looked at this" rendered as the same thing: source = "roll", drawn as
+-- "won the roll, never traded".
+--
+-- NOT USED BY ANY FAIRNESS FIGURE. Turning an unreviewed drop into a
+-- non-drop would put eighteen items in limbo instead of two, and
+-- Core/CreditCandidates.lua explains why the roll list cannot supply a
+-- replacement: under a council everybody passes, so the only candidate the
+-- client offers is the master looter. This marks; it does not withhold.
+function DropRules.NeedsReview(drop)
+    if not drop or SYL.LootCredit.IsSet(drop) then
+        return false
+    end
+
+    local session =
+        SYL.RaidSession.SessionAt(SYL.GetActiveRaids(), drop.timestamp)
+
+    -- No `if not looter` guard: SameName refuses anything that is not a
+    -- string, so a session that never recorded a master looter -- which is
+    -- every session in the database before this shipped -- already answers
+    -- false. A second check would be a branch no test could reach.
+    return SameName(session and session.masterLooter, drop.winnerName)
+end

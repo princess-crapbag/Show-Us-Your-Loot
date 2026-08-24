@@ -275,6 +275,15 @@ local function CreateWindow()
             end
         end,
 
+        onMatch = function()
+            if currentRecord then
+                SYL.CreditPicker.Open(
+                    currentRecord,
+                    SYL.CouncilLoot.SuggestedCredit(currentRecord)
+                )
+            end
+        end,
+
         onUndo = function()
             if not currentRecord then
                 return

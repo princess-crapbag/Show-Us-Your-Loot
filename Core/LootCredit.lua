@@ -297,6 +297,26 @@ function LootCredit.Describe(drop)
         }
     end
 
+    -- A FOURTH SOURCE, and the only one that says "nobody has looked".
+    --
+    -- On a master-looted night the client reports the master looter as the
+    -- winner of everything, so "I checked this and it is mine" and "this has
+    -- never been looked at" both arrived here as source = "roll" and drew the
+    -- same words. Aimee: "that way its clear what i received vs what i won as
+    -- ml."
+    --
+    -- The name and the state are unchanged. Nothing is withheld from any
+    -- fairness figure -- see DropRules.NeedsReview for why marking beats
+    -- withholding.
+    if SYL.DropRules.NeedsReview(drop) then
+        return {
+            name = rawName,
+            class = ClassOf(drop, rawName) or drop.winnerClass,
+            state = rawState,
+            source = "masterloot",
+        }
+    end
+
     return {
         name = rawName,
         class = ClassOf(drop, rawName) or drop.winnerClass,

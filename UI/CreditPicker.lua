@@ -346,7 +346,14 @@ local function PlaceBeside(window)
     end
 end
 
-function CreditPicker.Open(record)
+-- `suggested` is optional: a name to open on rather than the current holder.
+--
+-- The "Match to RCLootCouncil" button hands one over. It pre-selects and does
+-- not commit, because RCLootCouncil's response slots are renamed by every
+-- guild -- slot 3 is "Minor Upgrade" by default and "Mog" on Aimee's -- so a
+-- silent write would be right on her machine and wrong on a stranger's. See
+-- CouncilLoot.SuggestedCredit.
+function CreditPicker.Open(record, suggested)
     if not record then
         return
     end
@@ -374,6 +381,10 @@ function CreditPicker.Open(record)
         guid = override and override.guid or original.guid,
         name = override and override.name or original.name,
     }
+
+    if suggested and suggested.name then
+        holder = { guid = suggested.guid, name = suggested.name }
+    end
 
     -- Opens on the current holder, so the first thing the list says is where
     -- the credit is rather than where it started. Copied rather than aliased:
