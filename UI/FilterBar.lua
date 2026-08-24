@@ -184,7 +184,7 @@ function FilterBar.Create(parent, config)
             width = 86,
 
             getOptions = function()
-                return Filters.DeriveOptions(
+                return SYL.FilterOptions.Derive(
                     config.getRecords(),
                     config.getFields(),
                     field
@@ -215,7 +215,7 @@ function FilterBar.Create(parent, config)
                     Filters.SelectShowing(
                         state,
                         field,
-                        Filters.DeriveOptions(
+                        SYL.FilterOptions.Derive(
                             config.getRecords(),
                             config.getFields(),
                             field
@@ -231,7 +231,7 @@ function FilterBar.Create(parent, config)
                 Filters.SelectAll(
                     state,
                     field,
-                    Filters.DeriveOptions(
+                    SYL.FilterOptions.Derive(
                         config.getRecords(),
                         config.getFields(),
                         field

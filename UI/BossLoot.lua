@@ -136,7 +136,35 @@ local function DrawList(pane, items, describe)
     end
 end
 
+-- THE WHOLE PANE OFF SCREEN, for when the tab is drawing something else.
+--
+-- Render(pane, nil) empties it but leaves the headings and the "Pick a boss
+-- on the left" standing, which is right when there are no bosses and wrong
+-- when the tab has swapped to the raid lockouts -- that text would sit
+-- underneath them saying to pick something that is not there. Same reason
+-- UI/SelectionBar.lua has a HideAll of its own.
+function BossLoot.Hide(pane)
+    if not pane then
+        return
+    end
+
+    HideRowsFrom(pane, 1)
+
+    -- THE FRAME, NOT ITS PARTS. The first version cleared the four font
+    -- strings and hid a `pane.background` that does not exist -- the
+    -- background is a local in Create and was never put on the pane -- so the
+    -- panel's rowAlt block stayed on screen under the lockout list. The test
+    -- client answers a function for any field it has not been given, which is
+    -- what turned an invented field into an error rather than a silent
+    -- nothing.
+    pane:Hide()
+end
+
 function BossLoot.Render(pane, boss, mode, journalRead)
+    -- Shown here rather than in each branch: a pane with no boss selected is
+    -- still a pane, and it is Hide that takes it off screen.
+    pane:Show()
+
     if not boss then
         pane.heading:SetText("No boss selected")
         pane.subheading:SetText("")

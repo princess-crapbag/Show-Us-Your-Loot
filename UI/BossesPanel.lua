@@ -39,6 +39,15 @@ local rows = {}
 local offset = 0
 local selectedKey
 local mode = "missing"
+
+-- "bosses" or "lockouts". The tab draws one or the other, the way the Keys
+-- tab already swaps between keystones and dungeon lockouts -- same control in
+-- the same corner, so it is a pattern rather than a new idea.
+--
+-- Raid lockouts are here and not on Keys because Keys is about Mythic+ and a
+-- raid lockout is not. Aimee: "this raid lockout info should not be in the
+-- keys tab."
+local view = "bosses"
 local journalRead = false
 local Refresh
 
@@ -145,6 +154,34 @@ Refresh = function()
         return
     end
 
+    frame.viewButton.label:SetText(view == "bosses" and "Lockouts" or "Bosses")
+
+    -- THE BOSS LIST AND ITS PANE GO AWAY ENTIRELY in the lockouts view, or
+    -- they sit under it. Hiding the container is not enough: the rows, the
+    -- pane and the caption are all parented to the panel rather than to a
+    -- body frame, which is the same reason UI/SelectionBar.lua has a HideAll.
+    if view == "lockouts" then
+        for _, row in ipairs(rows) do
+            row:Hide()
+        end
+
+        frame.empty:Hide()
+        frame.caption:SetText("")
+        frame.modeButton:Hide()
+        frame.readButton:Hide()
+
+        SYL.BossLoot.Hide(frame.pane)
+
+        frame.lockouts:Show()
+        SYL.RaidLockoutsView.Refresh()
+
+        return
+    end
+
+    frame.lockouts:Hide()
+    frame.modeButton:Show()
+    frame.readButton:Show()
+
     local bosses = Build()
 
     frame.modeButton.label:SetText(mode == "missing" and "Not dropped" or "Dropped")
@@ -240,6 +277,12 @@ function BossesPanel.ReadJournal()
     end
 end
 
+function BossesPanel.ToggleView()
+    view = view == "bosses" and "lockouts" or "bosses"
+
+    Refresh()
+end
+
 function BossesPanel.Select(key)
     selectedKey = key
 
@@ -294,7 +337,27 @@ function BossesPanel.Create(parent)
         .. "froze the game."
     )
 
+    -- The raid lockouts, as a second view of this tab.
+    frame.viewButton =
+        Theme.CreateButton(frame, 100, 20, "Lockouts", function()
+            BossesPanel.ToggleView()
+        end)
+
+    frame.viewButton:SetPoint("LEFT", frame.readButton, "RIGHT", 8, 0)
+
+    SYL.Tooltips.Attach(
+        frame.viewButton,
+        "Bosses / Lockouts",
+        "Lockouts shows which raids each of your characters is saved to this "
+        .. "week and how many bosses are already dead on each. It fills in as "
+        .. "you log into them, the same way keystones do."
+    )
+
     frame.pane = SYL.BossLoot.Create(frame, PANE_WIDTH, LIST_TOP - 8)
+
+    frame.lockouts = SYL.RaidLockoutsView.Create(frame)
+    frame.lockouts:SetPoint("TOPLEFT", 2, -(LIST_TOP - 12))
+    frame.lockouts:SetPoint("BOTTOMRIGHT", -2, 0)
 
     frame.empty = Theme.CreateText(frame, Theme.sizes.row, "textMuted")
     frame.empty:SetPoint("TOPLEFT", 2, -(LIST_TOP + 6))

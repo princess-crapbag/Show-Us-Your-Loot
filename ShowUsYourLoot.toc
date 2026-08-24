@@ -15,6 +15,7 @@ Main.lua
 Core\Output.lua
 Core\Utilities.lua
 Core\Filters.lua
+Core\FilterOptions.lua
 Core\DropRules.lua
 Core\DropIdentity.lua
 Core\Serializer.lua
@@ -48,6 +49,7 @@ Core\EncounterJournal.lua
 Core\LootTable.lua
 Core\Keystone.lua
 Core\Lockouts.lua
+Core\RaidLockouts.lua
 Core\KeystoneSync.lua
 Core\IncomingRoster.lua
 Core\RaidTeam.lua
@@ -131,6 +133,7 @@ UI\RaidersBoard.lua
 UI\RaidersBoardRows.lua
 UI\RaidersPanel.lua
 UI\BossLoot.lua
+UI\RaidLockoutsView.lua
 UI\BossesPanel.lua
 UI\NightFigures.lua
 UI\NightStats.lua

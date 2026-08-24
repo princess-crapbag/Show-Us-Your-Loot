@@ -181,6 +181,21 @@ local function OnInstanceInfoUpdated()
     if changed and entry then
         SYL:DebugPrint("Lockouts now: " .. SYL.Lockouts.Describe(entry))
     end
+
+    -- RAID LOCKOUTS READ FROM THE SAME EVENT, because it is the same client
+    -- answer: UPDATE_INSTANCE_INFO is what tells anybody their saved
+    -- instances have been resolved, and Core/Lockouts.lua has been throwing
+    -- the raid half of it away since it was written.
+    --
+    -- Behind the same feature switch, because it is the same cost.
+    local raid, raidChanged = SYL.RaidLockouts.Update()
+
+    if raidChanged and raid then
+        SYL:DebugPrint(
+            "Raid lockouts now: " .. (raid.count or 0)
+            .. ", " .. (raid.bossesKilled or 0) .. " bosses killed"
+        )
+    end
 end
 
 local function OnChatMessageLoot(message)

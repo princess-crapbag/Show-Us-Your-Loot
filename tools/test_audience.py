@@ -113,6 +113,13 @@ lua.execute(
 lua.execute((CORE / "Audience.lua").read_text(encoding="utf-8"))
 lua.execute((CORE / "Filters.lua").read_text(encoding="utf-8"))
 
+# THIS SUITE BUILDS ITS OWN WORLD out of individual Core files rather than
+# loading the whole .toc, so every file the ones above call has to be listed
+# here too. Deriving a dropdown's options moved out of Filters.lua when it
+# crossed the size limit, and this broke at the first call -- the same shape
+# HANDOFF.md records for test_duelist and test_lootscore.
+lua.execute((CORE / "FilterOptions.lua").read_text(encoding="utf-8"))
+
 # RaidSummary asks the session for its own shape. Kills and duration are
 # RaidSession's job and are stubbed flat; only the roster arithmetic is under
 # test here.
@@ -187,7 +194,7 @@ lua.execute(
         }
 
         return table.concat(
-            SYL.Filters.DeriveOptions(records, fields, 'player'), ','
+            SYL.FilterOptions.Derive(records, fields, 'player'), ','
         )
     end
 
@@ -204,7 +211,7 @@ lua.execute(
         }
 
         return table.concat(
-            SYL.Filters.DeriveOptions(records, fields, 'item'), ','
+            SYL.FilterOptions.Derive(records, fields, 'item'), ','
         )
     end
 

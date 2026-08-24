@@ -164,7 +164,7 @@ check("and it is L, N, H, M in that order",
       [str(v) for v in Filters.RAID_DIFFICULTY_ORDER.values()]
       == ["L", "N", "H", "M"])
 
-options = Filters.DeriveOptions(records, fields, "difficulty")
+options = SYL.FilterOptions.Derive(records, fields, "difficulty")
 
 check("the options come out as the ladder, not the alphabet",
       [str(o) for o in options.values()] == ["L", "N", "H", "M"],
