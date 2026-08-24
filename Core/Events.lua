@@ -277,12 +277,33 @@ end
 -- night. There is no "raid over" event, so leaving is the closest honest
 -- signal; RaidSession only reports a night that actually had pulls, and only
 -- once.
+-- ARRIVING AND LEAVING, on the event that was already registered.
+--
+-- PLAYER_ENTERING_WORLD fires on both, which is why this handler already had
+-- to ask which it was. A session opens at the first PULL -- EnsureSession is
+-- reachable from nowhere but OnEncounterStart -- so without this the addon
+-- can never report the half hour between zoning in and pulling. Aimee's raid
+-- starts at 6:30 and her 08-18 session opens at 6:42.
+--
+-- Nothing new is registered and no new work is done when not in a raid.
 local function OnPlayerEnteringWorld()
     local inInstance, instanceType = IsInInstance()
 
-    if inInstance and (instanceType == "raid" or instanceType == "party") then
+    if inInstance and instanceType == "raid" then
+        local location = SYL.Utilities.GetLocationInformation()
+
+        SYL.RaidSession.NoteArrival(time(), location.instanceID)
+
         return
     end
+
+    if inInstance and instanceType == "party" then
+        return
+    end
+
+    -- Out of the raid. Stamped before the summary, because the summary reads
+    -- the session this is closing off.
+    SYL.RaidSession.NoteDeparture(time())
 
     SYL.RaidSummary.ReportIfFinished()
 end

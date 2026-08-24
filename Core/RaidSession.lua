@@ -25,6 +25,9 @@ SYL.RaidSession = RaidSession
 
 local currentSessionID
 
+-- When the group last zoned into a raid, and which one. See NoteArrival.
+local arrival
+
 -- One session per instance, difficulty and day. Re-entering the same raid the
 -- same evening continues the night rather than starting a second one.
 --
@@ -147,6 +150,20 @@ local function EnsureSession(timestamp)
         endedAt = timestamp,
         dateText = date("%Y-%m-%d", timestamp),
 
+        -- The moment the group zoned in, if that was seen. nil on a session
+        -- that began before this was recorded, which is every session already
+        -- in the database -- so anything reading it has to treat "unknown" as
+        -- an ordinary answer rather than as zero.
+        enteredAt = (arrival and arrival.instanceID == location.instanceID)
+            and arrival.at or nil,
+
+        -- WHO WAS HANDING OUT LOOT. Every drop on a master-looted night
+        -- records the master looter as the winner, because that is what the
+        -- client reports -- so without this there is no way to tell a drop
+        -- somebody reviewed and kept from a drop nobody has looked at.
+        lootMethod = location.lootMethod,
+        masterLooter = location.masterLooter,
+
         encounters = {},
         roster = {},
         rosterCount = 0,
@@ -159,6 +176,61 @@ local function EnsureSession(timestamp)
     currentSessionID = sessionID
 
     return session
+end
+
+--------------------------------------------------------------------------
+-- Arriving and leaving
+--------------------------------------------------------------------------
+
+-- WHEN THE RAID ACTUALLY GOT THERE, which a session cannot know by itself.
+--
+-- A session is created by the first ENCOUNTER_START -- EnsureSession is
+-- reachable from nowhere else -- so it opens at the first pull and can never
+-- report the half hour before it. Aimee's raid is 6:30 to 9:30 and her
+-- 2026-08-18 session opens at 6:42, so "2h 42m" was never the evening.
+--
+-- Her ask: "can we record first zone in and last zone out?"
+--
+-- The arrival is remembered rather than written to a session, because at the
+-- moment it happens there is usually no session to write to. EnsureSession
+-- claims it when it creates one, and only when the instance matches -- an
+-- arrival at one raid must not stamp itself onto another.
+--
+-- `arrival` itself is declared at the top of the file, beside
+-- currentSessionID, because EnsureSession reads it and EnsureSession is
+-- above this. Declared here it was a nil global read from line 135, which
+-- syl_check caught -- the same local-used-before-declaration fault this
+-- repository has shipped three times.
+function RaidSession.NoteArrival(timestamp, instanceID)
+    if not instanceID then
+        return
+    end
+
+    -- FIRST arrival, not the latest. Somebody who zones out to repair and
+    -- comes back has not started the night again.
+    if arrival and arrival.instanceID == instanceID then
+        return
+    end
+
+    arrival = { at = timestamp, instanceID = instanceID }
+end
+
+-- The last time the group left the instance this session is in. Written
+-- straight onto the session, because by now there certainly is one.
+--
+-- RaidSession.GetCurrent, NOT a second accessor of my own. Writing one was the
+-- reflex and it is the exact trap HANDOFF.md records twice: GuildShare already
+-- existed and answered a different question, and defining a second one simply
+-- replaced it. GetCurrent is declared far below this line but is only called
+-- at runtime, so the ordering is fine.
+function RaidSession.NoteDeparture(timestamp)
+    local session = RaidSession.GetCurrent()
+
+    if not session then
+        return
+    end
+
+    session.leftAt = timestamp
 end
 
 -- Merged rather than replaced, so someone who was present early still counts
@@ -245,12 +317,33 @@ function RaidSession.OnEncounterEnd(encounterID, encounterName, difficultyID, gr
 
     session.endedAt = timestamp
 
+    -- WHEN THE PULL STARTED, which was already being collected and thrown
+    -- away.
+    --
+    -- `at` is the moment the pull ENDED -- a ten-minute pull begun at 9:10
+    -- is stamped 9:20 -- so a night's records could say when it finished and
+    -- never how long any of it took. OnEncounterStart has been writing
+    -- startedAt onto pendingEncounter since sessions existed; it was simply
+    -- never carried across, so nothing could tell three minutes of fighting
+    -- from three minutes of standing around.
+    --
+    -- Guarded on the id: ENCOUNTER_START and ENCOUNTER_END can interleave
+    -- across a zone change or a disconnect, and inheriting the previous
+    -- boss's start would make one pull look like an hour.
+    local pending = session.pendingEncounter
+    local startedAt
+
+    if pending and pending.encounterID == encounterID then
+        startedAt = pending.startedAt
+    end
+
     table.insert(session.encounters, {
         encounterID = encounterID,
         name = encounterName,
         difficultyID = difficultyID,
         groupSize = groupSize,
         killed = success == 1 or success == true,
+        startedAt = startedAt,
         at = timestamp,
     })
 
@@ -599,10 +692,102 @@ function RaidSession.GetKillCount(session)
     return kills
 end
 
+-- FIRST PULL TO LAST PULL, and it is worth being clear that it is not the
+-- evening. A session opens at the first ENCOUNTER_START, so this measures the
+-- fighting part of the night and always has. Whatever draws it must not call
+-- it time in the instance -- see PresentMinutes below for that.
 function RaidSession.GetDurationMinutes(session)
     local seconds = (session.endedAt or 0) - (session.startedAt or 0)
 
     return math.max(0, math.floor(seconds / 60))
+end
+
+-- ZONED IN TO ZONED OUT, which is the evening as a person remembers it.
+--
+-- Returns nil rather than zero when either end was not recorded -- every
+-- session already in the database predates this, and a zero would read as
+-- "they were in and out instantly" rather than as "not known". Callers show
+-- the pull span instead.
+function RaidSession.PresentMinutes(session)
+    local from = session and session.enteredAt
+    local to = session and (session.leftAt or session.endedAt)
+
+    if type(from) ~= "number" or type(to) ~= "number" or to < from then
+        return nil
+    end
+
+    return math.floor((to - from) / 60)
+end
+
+-- HOW MUCH OF THE NIGHT WAS SPENT IN COMBAT, and how much between pulls.
+--
+-- Returns fighting minutes, between-pull minutes, and how many pulls could be
+-- measured at all. The third number is the honest part: an encounter recorded
+-- before pull starts were kept has no startedAt, so a night that is half old
+-- records must say so rather than reporting half the fighting it did.
+--
+-- Between-pulls is measured against the PULL SPAN and not the evening,
+-- because time spent outside the instance is not standing around in it.
+function RaidSession.FightingMinutes(session)
+    local fighting, measured, total = 0, 0, 0
+
+    for _, encounter in ipairs((session or {}).encounters or {}) do
+        total = total + 1
+
+        local from = encounter.startedAt
+        local to = encounter.at
+
+        if type(from) == "number" and type(to) == "number" and to >= from then
+            fighting = fighting + (to - from)
+            measured = measured + 1
+        end
+    end
+
+    if measured == 0 then
+        return nil, nil, 0, total
+    end
+
+    local span = math.max(0, (session.endedAt or 0) - (session.startedAt or 0))
+
+    return math.floor(fighting / 60),
+        math.floor(math.max(0, span - fighting) / 60),
+        measured,
+        total
+end
+
+-- The longest run of pulls on one boss, which is where a progression night
+-- actually went. Returns the name, the difficulty and the count.
+function RaidSession.HardestFight(session)
+    local counts, order = {}, {}
+
+    for _, encounter in ipairs((session or {}).encounters or {}) do
+        local key = tostring(encounter.name) .. "|"
+            .. tostring(encounter.difficultyID)
+
+        if not counts[key] then
+            counts[key] = {
+                name = encounter.name,
+                difficultyID = encounter.difficultyID,
+                pulls = 0,
+                killed = false,
+            }
+
+            table.insert(order, counts[key])
+        end
+
+        counts[key].pulls = counts[key].pulls + 1
+        counts[key].killed = counts[key].killed or encounter.killed
+    end
+
+    local worst
+
+    for _, entry in ipairs(order) do
+        if not worst or entry.pulls > worst.pulls then
+            worst = entry
+        end
+    end
+
+    return worst
 end
 
 -- The summary lives in Core/RaidSummary.lua and needs to close the night off

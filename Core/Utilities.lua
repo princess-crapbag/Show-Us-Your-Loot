@@ -46,6 +46,46 @@ function Utilities.NormalizePlayerName(name)
     return name
 end
 
+-- The loot method, and the master looter's name when there is one.
+--
+-- Returns two values so a caller can tell "not master loot" from "master loot
+-- and I could not read who". GetLootMethod answers the raid index of the
+-- master looter, which has to be turned into a name through the raid roster;
+-- a nil there is ordinary while the group is still forming.
+local function MasterLooter()
+    if not _G.GetLootMethod then
+        return nil, nil
+    end
+
+    local ok, method, partyIndex, raidIndex = pcall(GetLootMethod)
+
+    if not ok or method ~= "master" then
+        return method, nil
+    end
+
+    local unit
+
+    if raidIndex and raidIndex > 0 then
+        unit = "raid" .. raidIndex
+    elseif partyIndex == 0 then
+        unit = "player"
+    elseif partyIndex then
+        unit = "party" .. partyIndex
+    end
+
+    if not unit then
+        return method, nil
+    end
+
+    local named, name, realm = pcall(UnitFullName, unit)
+
+    if not named or not name then
+        return method, nil
+    end
+
+    return method, (realm and realm ~= "" and (name .. "-" .. realm)) or name
+end
+
 function Utilities.GetLocationInformation()
     local zoneName =
         GetRealZoneText()
@@ -66,6 +106,8 @@ function Utilities.GetLocationInformation()
     local inInstance =
         select(1, IsInInstance())
 
+    local lootMethod, masterLooter = MasterLooter()
+
     return {
         zoneName = zoneName,
         instanceName = instanceName or zoneName,
@@ -78,6 +120,19 @@ function Utilities.GetLocationInformation()
         inInstance = inInstance or false,
         inRaidGroup = IsInRaid(),
         inGroup = IsInGroup(),
+
+        -- WHO IS HANDING OUT THE LOOT, and by what method.
+        --
+        -- The addon had no master-looter awareness at all -- GetLootMethod,
+        -- IsMasterLooter and masterLooter did not appear anywhere in it. That
+        -- is why every drop on a master-looted night reads as the master
+        -- looter's win and nothing can tell a drop somebody reviewed and kept
+        -- from one nobody has looked at.
+        --
+        -- pcall'd and read here rather than at each call site, because this
+        -- is already the one place the addon asks the client where it is.
+        lootMethod = lootMethod,
+        masterLooter = masterLooter,
     }
 end
 
