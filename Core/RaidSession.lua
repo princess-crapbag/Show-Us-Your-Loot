@@ -558,19 +558,46 @@ end
 -- What share of the people there were in the guild, or nil when the client
 -- never said. nil means "unknown", which is not the same as zero and must not
 -- be read as one.
-function RaidSession.GuildShare(session)
+-- THE TWO NUMBERS BEHIND THE SHARE: how many of the group were guilded, and
+-- how many there were.
+--
+-- Its own function rather than two more return values on GuildShare, which
+-- was the first attempt. In Lua that is harmless -- an expression adjusts a
+-- call to one value -- but it is a footgun anywhere the call is not the last
+-- thing in a list, and tools/test_guildnights.py subtracts directly from the
+-- result and broke immediately. A function that answers a fraction should
+-- answer a fraction.
+--
+-- Two screens were re-deriving this pair, one of them from session.rosterCount
+-- -- which is maintained separately and can drift from the roster table the
+-- share is computed over.
+function RaidSession.GuildCounts(session)
     if not GuildDataIsTrustworthy(session) then
-        return nil
+        return nil, nil
     end
 
     local total, guilded = 0, 0
 
-    for _, member in pairs(session.roster or {}) do
+    for _, member in pairs((session or {}).roster or {}) do
         total = total + 1
 
         if member.guildRank then
             guilded = guilded + 1
         end
+    end
+
+    if total == 0 then
+        return nil, nil
+    end
+
+    return guilded, total
+end
+
+function RaidSession.GuildShare(session)
+    local guilded, total = RaidSession.GuildCounts(session)
+
+    if not total then
+        return nil
     end
 
     if total == 0 then
@@ -755,40 +782,13 @@ function RaidSession.FightingMinutes(session)
         total
 end
 
--- The longest run of pulls on one boss, which is where a progression night
--- actually went. Returns the name, the difficulty and the count.
-function RaidSession.HardestFight(session)
-    local counts, order = {}, {}
-
-    for _, encounter in ipairs((session or {}).encounters or {}) do
-        local key = tostring(encounter.name) .. "|"
-            .. tostring(encounter.difficultyID)
-
-        if not counts[key] then
-            counts[key] = {
-                name = encounter.name,
-                difficultyID = encounter.difficultyID,
-                pulls = 0,
-                killed = false,
-            }
-
-            table.insert(order, counts[key])
-        end
-
-        counts[key].pulls = counts[key].pulls + 1
-        counts[key].killed = counts[key].killed or encounter.killed
-    end
-
-    local worst
-
-    for _, entry in ipairs(order) do
-        if not worst or entry.pulls > worst.pulls then
-            worst = entry
-        end
-    end
-
-    return worst
-end
+-- HardestFight WAS HERE AND WAS DELETED BEFORE IT EVER HAD A CALLER.
+--
+-- It counted pulls per boss per difficulty across one session, which is
+-- exactly what Core/NightIndex.lua already builds across a whole night in
+-- day.fights -- and the night is the unit every screen asks about. Two
+-- functions counting the same thing over different spans is how two screens
+-- come to disagree about which fight was the hard one.
 
 -- The summary lives in Core/RaidSummary.lua and needs to close the night off
 -- once it has reported, so the next pull opens a fresh session rather than

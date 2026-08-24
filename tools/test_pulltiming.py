@@ -197,36 +197,11 @@ check("a backwards pull is ignored rather than subtracted",
       "got %r fighting from %r measured" % (fighting, measured))
 
 
-# --------------------------------------------------------------------------
-# Where the night went
-# --------------------------------------------------------------------------
-
-worst = Session.HardestFight(fought)
-
-check("the hardest fight is the one with the most pulls",
-      worst is not None and str(worst.name) == "Sszorak"
-      and int(worst.pulls) == 2,
-      "got %s" % (worst and "%s x%d" % (worst.name, worst.pulls)))
-
-check("and it knows whether it eventually died", worst.killed is True)
-
-# The same boss on two difficulties is two fights, not one. Her 2026-08-20
-# has exactly this: Nymrissa killed on Normal and wiped three times on Heroic.
-twoWays = session(encounters=[
-    {"name": "Nymrissa", "difficultyID": 14, "at": 10, "killed": True},
-    {"name": "Nymrissa", "difficultyID": 15, "at": 20, "killed": False},
-    {"name": "Nymrissa", "difficultyID": 15, "at": 30, "killed": False},
-])
-
-worst = Session.HardestFight(twoWays)
-
-check("the same boss on two difficulties is two fights",
-      int(worst.pulls) == 2 and int(worst.difficultyID) == 15,
-      "got %s" % (worst and "%d pulls at difficulty %d"
-                  % (worst.pulls, worst.difficultyID)))
-
-check("a session with no pulls has no hardest fight",
-      Session.HardestFight(session()) is None)
+# WHERE THE NIGHT WENT used to be answered by RaidSession.HardestFight, which
+# was deleted before it ever had a caller: Core/NightIndex.lua already builds
+# the same per-boss pull counts across a whole night in day.fights, and the
+# night is the unit every screen asks about. Those assertions live in
+# tools/test_nightfigures.py now, against day.fights and NightFigures.MostPulls.
 
 
 # --------------------------------------------------------------------------

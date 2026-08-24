@@ -347,6 +347,45 @@ function Utilities.FormatDateTime(timestamp)
     return date("%m/%d/%Y %I:%M %p", timestamp)
 end
 
+-- A WALL CLOCK, which is how a raid night is remembered. "6:42 PM".
+--
+-- Aimee: "the time should be in 12 hours am/pm format rather than 24 hour
+-- format." The leading zero goes because "06:42 PM" is not how anybody says
+-- it and the pane is tight for width.
+function Utilities.FormatClock(timestamp)
+    if not timestamp then
+        return "?"
+    end
+
+    return (date("%I:%M %p", timestamp):gsub("^0", ""))
+end
+
+-- The player's own time zone, short. "MST", "EST".
+--
+-- The client answers a long name on most systems -- "Mountain Standard Time"
+-- -- so the capitals are taken, which is how those names abbreviate in every
+-- locale that has them. Anything that does not reduce to two to five capitals
+-- answers nothing rather than a guess, and the caller simply omits the zone.
+function Utilities.TimeZoneLabel()
+    local ok, name = pcall(date, "%Z")
+
+    if not ok or type(name) ~= "string" or name == "" then
+        return nil
+    end
+
+    if #name <= 5 then
+        return name
+    end
+
+    local short = name:gsub("[^A-Z]", "")
+
+    if #short >= 2 and #short <= 5 then
+        return short
+    end
+
+    return nil
+end
+
 -- The list columns' version. "08/05/26 12:32 PM" is seventeen characters
 -- against a column that also has to share a row with an item name, and it was
 -- the format, not the width, that made the date column impossible. Dropping

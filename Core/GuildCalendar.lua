@@ -156,7 +156,7 @@ function GuildCalendar.Import(year, month)
     end
 
     if not year or not month then
-        year, month = SYL.NightIndex.Today()
+        year, month = SYL.NightCalendar.Today()
     end
 
     local events, err = GuildCalendar.ReadMonth(year, month)
@@ -168,7 +168,7 @@ function GuildCalendar.Import(year, month)
     local added, skipped = 0, 0
 
     for _, event in ipairs(events) do
-        local dayKey = SYL.NightIndex.DayKeyFor(year, month, event.day)
+        local dayKey = SYL.NightCalendar.DayKeyFor(year, month, event.day)
 
         local ok = SYL.RaidSchedule.SetNight(dayKey, {
             source = "calendar",

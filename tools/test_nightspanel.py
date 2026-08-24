@@ -62,19 +62,19 @@ MONTH_CASES = [
 ]
 
 for label, y, m, want in MONTH_CASES:
-    check(label, SYL.NightIndex.DaysInMonth(y, m) == want, SYL.NightIndex.DaysInMonth(y, m))
+    check(label, SYL.NightCalendar.DaysInMonth(y, m) == want, SYL.NightCalendar.DaysInMonth(y, m))
 
 # 1 = Sunday, matching date("*t").wday. 2026-08-01 was a Saturday.
 check(
     "the first of August 2026 is a Saturday",
-    SYL.NightIndex.FirstWeekday(2026, 8) == 7,
-    SYL.NightIndex.FirstWeekday(2026, 8),
+    SYL.NightCalendar.FirstWeekday(2026, 8) == 7,
+    SYL.NightCalendar.FirstWeekday(2026, 8),
 )
 
 check(
     "a day key is zero padded",
-    SYL.NightIndex.DayKeyFor(2026, 8, 4) == "2026-08-04",
-    SYL.NightIndex.DayKeyFor(2026, 8, 4),
+    SYL.NightCalendar.DayKeyFor(2026, 8, 4) == "2026-08-04",
+    SYL.NightCalendar.DayKeyFor(2026, 8, 4),
 )
 
 # --- a fresh install ------------------------------------------------------
@@ -181,7 +181,7 @@ lua.execute(
             ShowUsYourLoot.GetActiveRaids(), ShowUsYourLoot.GetActiveDrops()
         )
 
-        local year, month = ShowUsYourLoot.NightIndex.LatestMonth(days)
+        local year, month = ShowUsYourLoot.NightCalendar.LatestMonth(days)
 
         return string.format('%04d-%02d', year, month)
     end

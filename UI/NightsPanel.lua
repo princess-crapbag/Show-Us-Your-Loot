@@ -154,10 +154,34 @@ local function DrawBlank(cell)
     cell:Show()
 end
 
-local function DrawDay(cell, dayNumber, dayKey, night, isSelected)
+local function DrawDay(cell, dayNumber, dayKey, night, isSelected, other)
     cell.dayKey = dayKey
     cell.day:SetText(tostring(dayNumber))
     cell.back:SetAlpha(1)
+
+    -- A RECORDED RAID THAT IS NOT A GUILD NIGHT, drawn quieter on purpose.
+    --
+    -- Aimee: "can the color on the calendar be different from the guild raid
+    -- days? id prefer the guild raids to standout and the non guild raids
+    -- blend in more." So it keeps the day number readable and says what it
+    -- was, in muted text, with no kill count competing with the real nights
+    -- either side of it.
+    if not night and other then
+        cell.kills:SetText("")
+
+        cell.detail:SetText(
+            Count(other.pulls, "pull") .. " · not guild"
+        )
+
+        cell.back:SetAlpha(0.35)
+
+        Theme.SetTextColor(cell.day, "textMuted")
+        Theme.SetTextColor(cell.detail, "textMuted")
+
+        cell:Show()
+
+        return
+    end
 
     if not night then
         cell.kills:SetText("")
@@ -194,8 +218,23 @@ local function DrawDay(cell, dayNumber, dayKey, night, isSelected)
     -- night different at a glance rather than both just being "we raided".
     Theme.SetTextColor(cell.day, "textPrimary")
 
-    cell.kills:SetText(night.kills .. "/" .. night.pulls)
-    Theme.SetTextColor(cell.kills, night.kills > 0 and "accent" or "textMuted")
+    -- BOSSES OVER BOSSES, not kills over pulls.
+    --
+    -- This cell drew the same ratio the stat pane did -- "5/10" where the ten
+    -- was PULLS -- so fixing one and not the other would have put two
+    -- different answers to the same question on one screen. The denominator
+    -- is what the raid holds, and there is nothing to draw after the number
+    -- when the journal has not been read.
+    local total = SYL.NightFigures.BossTotal(night)
+
+    cell.kills:SetText(
+        total and (night.bossCount .. "/" .. total)
+        or tostring(night.bossCount)
+    )
+
+    Theme.SetTextColor(
+        cell.kills, night.bossCount > 0 and "accent" or "textMuted"
+    )
 
     cell.detail:SetText(
         Count(night.rosterCount, "raider")
@@ -223,15 +262,20 @@ Refresh = function()
 
     local days, byDay = Build()
 
+    -- The evenings that were recorded and are not guild nights. Indexed
+    -- separately and never mixed in: nothing here reaches a fairness figure.
+    -- See NightIndex.OtherNights.
+    local others = SYL.NightIndex.OtherNights(SYL.GetActiveRaids())
+
     if not year then
-        year, month = SYL.NightIndex.LatestMonth(days)
+        year, month = SYL.NightCalendar.LatestMonth(days)
     end
 
     frame.monthLabel:SetText((MONTHS[month] or "?") .. " " .. year)
     frame.viewButton.label:SetText(view == "month" and "Month" or "Week")
 
-    local daysInMonth = SYL.NightIndex.DaysInMonth(year, month)
-    local firstWeekday = SYL.NightIndex.FirstWeekday(year, month)
+    local daysInMonth = SYL.NightCalendar.DaysInMonth(year, month)
+    local firstWeekday = SYL.NightCalendar.FirstWeekday(year, month)
 
     local total, startDay
 
@@ -255,14 +299,17 @@ Refresh = function()
         if dayNumber < 1 or dayNumber > daysInMonth then
             DrawBlank(cell)
         else
-            local dayKey = SYL.NightIndex.DayKeyFor(year, month, dayNumber)
+            local dayKey = SYL.NightCalendar.DayKeyFor(year, month, dayNumber)
             local night = byDay[dayKey]
 
             if night then
                 raidedThisMonth = raidedThisMonth + 1
             end
 
-            DrawDay(cell, dayNumber, dayKey, night, dayKey == selectedKey)
+            DrawDay(
+                cell, dayNumber, dayKey, night, dayKey == selectedKey,
+                others[dayKey]
+            )
         end
     end
 
@@ -274,7 +321,10 @@ Refresh = function()
     -- about days that have not happened yet, so the day somebody most wants to
     -- click is exactly the one with no record behind it.
     SYL.NightStats.Render(
-        frame.stats, selectedKey and byDay[selectedKey] or nil, selectedKey
+        frame.stats,
+        selectedKey and byDay[selectedKey] or nil,
+        selectedKey,
+        selectedKey and others[selectedKey] or nil
     )
 
     frame.caption:SetText(
@@ -326,8 +376,8 @@ function NightsPanel.Step(by)
         weekOffset = weekOffset + by
 
         local weeks = math.ceil(
-            (SYL.NightIndex.DaysInMonth(year, month)
-                + SYL.NightIndex.FirstWeekday(year, month) - 1) / COLUMNS
+            (SYL.NightCalendar.DaysInMonth(year, month)
+                + SYL.NightCalendar.FirstWeekday(year, month) - 1) / COLUMNS
         )
 
         if weekOffset < 0 then

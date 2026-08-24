@@ -45,6 +45,19 @@ local JOURNAL_ADDON = "Blizzard_EncounterJournal"
 -- dungeonEncounterID -> { journalEncounterID, journalInstanceID, name }
 local bridge = {}
 
+-- journalInstanceID -> how many bosses that raid holds.
+--
+-- Counted during the walk that already runs, because "5 of 8 bosses down"
+-- needs a denominator and the pane had none. Aimee: "there are 8 bosses in the
+-- venomous abyss but i realize we only pulled 6, 5 of which we killed. i think
+-- it probably makes the most sense to say 5 of 8 bosses down as thats the
+-- total in that raid."
+--
+-- Not stored anywhere. The journal is the client's own and a tier's boss list
+-- can change, so it is re-read per session rather than remembered wrongly
+-- across a patch.
+local bossCounts = {}
+
 -- Counts down. nil means the walk has not started; 0 means every tier has
 -- been read and anything still missing is genuinely not a raid boss.
 local nextTier
@@ -105,6 +118,10 @@ local function WalkSelectedTier()
 
         EJ_SelectInstance(journalInstanceID)
 
+        -- Reset rather than added to, so walking a tier twice cannot double
+        -- the count.
+        bossCounts[journalInstanceID] = 0
+
         local encounterIndex = 1
 
         while true do
@@ -118,6 +135,9 @@ local function WalkSelectedTier()
             -- Older journal entries predate dungeonEncounterID and return
             -- nil. Those bosses get no bridge, which reads downstream as "no
             -- loot table known" rather than as a wrong one.
+            bossCounts[journalInstanceID] =
+                (bossCounts[journalInstanceID] or 0) + 1
+
             if dungeonEncounterID and not bridge[dungeonEncounterID] then
                 bridge[dungeonEncounterID] = {
                     journalEncounterID = journalEncounterID,
@@ -203,6 +223,32 @@ function Journal.Find(dungeonEncounterID, mayWalk)
     notInJournal[dungeonEncounterID] = true
 
     return nil
+end
+
+-- HOW MANY BOSSES THE RAID A GIVEN BOSS BELONGS TO HOLDS.
+--
+-- Asked with a dungeonEncounterID, because that is what a session's encounter
+-- records carry -- the journal's own instance id is a different number space
+-- and the addon never sees it.
+--
+-- NEVER WALKS. This is read while drawing a panel, and the walk takes several
+-- seconds; a night pane that froze the game to find a denominator would be a
+-- worse fault than the missing denominator. Returns nil until something else
+-- has read the journal, which is what the Scan button on the pane is for.
+function Journal.BossCountFor(dungeonEncounterID)
+    local entry = bridge[dungeonEncounterID]
+
+    if not entry then
+        return nil
+    end
+
+    local count = bossCounts[entry.journalInstanceID]
+
+    if not count or count <= 0 then
+        return nil
+    end
+
+    return count
 end
 
 -- True once the journal has opened and the newest tier has produced bosses.

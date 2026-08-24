@@ -66,9 +66,9 @@ RaidSchedule.Store = Store
 --------------------------------------------------------------------------
 
 local function TodayKey()
-    local year, month, day = SYL.NightIndex.Today()
+    local year, month, day = SYL.NightCalendar.Today()
 
-    return SYL.NightIndex.DayKeyFor(year, month, day)
+    return SYL.NightCalendar.DayKeyFor(year, month, day)
 end
 
 RaidSchedule.TodayKey = TodayKey

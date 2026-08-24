@@ -143,3 +143,62 @@ function DropRules.CreditedState(drop, rawState)
 
     return SYL.LootCredit.StateFor(drop, rawState)
 end
+
+-- WHO A DROP GAVE SOMETHING WORTH HAVING TO, or nil.
+--
+-- Returns the credited person's key, folded to their main, so a caller can
+-- count PEOPLE rather than items. The night pane's "6 of 11 went home with
+-- gear" is this, and the figure it replaced was a count of drop RECORDS read
+-- off the raw roll state -- which on a master-looted night is the master
+-- looter's roll, counted once per item.
+--
+-- MOG DOES NOT COUNT. Aimee: "i dont want to say someone went home with loot
+-- if all they got was a mog item." Need, offspec and greed do.
+--
+-- THIS IS A WIDER SET THAN THE DROUGHT'S, deliberately. Core/DueList.lua
+-- admits only need and offspec, because being owed loot is about upgrades.
+-- This answers a different question -- did the evening give you anything --
+-- and a greed win is something.
+-- BUILT ON FIRST CALL, NOT AT LOAD. This file is fourth in the .toc and
+-- Core/LootHistoryAPI.lua is fiftieth, so reading ROLL_STATE at file scope
+-- indexes a nil and kills the whole file -- which is how it failed the first
+-- time. Every screen downstream then reads as empty rather than as broken.
+local worthHaving
+
+local function WorthHavingStates()
+    if worthHaving then
+        return worthHaving
+    end
+
+    local states = SYL.LootHistoryAPI.ROLL_STATE
+
+    worthHaving = {
+        [states.NeedMainSpec] = true,
+        [states.NeedOffSpec] = true,
+        [states.Greed] = true,
+    }
+
+    return worthHaving
+end
+
+function DropRules.WorthHaving(drop)
+    if not drop then
+        return nil
+    end
+
+    local state = DropRules.CreditedState(drop, drop.winnerState)
+
+    if not WorthHavingStates()[state] then
+        return nil
+    end
+
+    local key = DropRules.CreditedKey(
+        drop, drop.winnerGUID or drop.winnerName
+    )
+
+    if not key then
+        return nil
+    end
+
+    return SYL.Players.ResolveToMain(key) or key
+end

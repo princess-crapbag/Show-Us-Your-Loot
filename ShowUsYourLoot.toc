@@ -63,6 +63,7 @@ Core\LootScore.lua
 Core\Dashboard.lua
 Core\DueList.lua
 Core\RaidSummary.lua
+Core\NightCalendar.lua
 Core\NightIndex.lua
 Core\TradeAdvisor.lua
 Core\CreditCandidates.lua
@@ -130,6 +131,7 @@ UI\RaidersBoardRows.lua
 UI\RaidersPanel.lua
 UI\BossLoot.lua
 UI\BossesPanel.lua
+UI\NightFigures.lua
 UI\NightStats.lua
 UI\ArchiveControls.lua
 UI\AbsenceControls.lua
