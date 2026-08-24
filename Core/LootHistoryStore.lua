@@ -271,8 +271,11 @@ function Store.RecordSnapshot(snapshot)
     local added, updated = 0, 0
 
     for _, drop in ipairs(snapshot.drops or {}) do
+        -- Both filters, in the order Core/LootCapture.lua asks them. See
+        -- Core/ItemTypes.lua for why kind is a separate question from grade.
         if IsComplete(drop)
             and SYL.ItemQuality.ShouldTrackLink(drop.itemHyperlink)
+            and SYL.ItemTypes.ShouldTrackLink(drop.itemHyperlink)
         then
             local recordID = BuildRecordID(snapshot, drop)
             local existing = dropIndex[recordID]

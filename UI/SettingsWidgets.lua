@@ -50,6 +50,17 @@ local function CreateRow(parent, index, widget, onChanged)
     row:SetWidth(width - 6)
     row:SetPoint("TOPLEFT", column * width, -(line * ROW_HEIGHT))
 
+    -- ALL SEVEN OF THESE TOOLTIPS WERE DEAD, and this line is why.
+    --
+    -- The row is a plain Frame, and a Frame does not take the mouse unless it
+    -- is told to. Tooltips.Attach hooks OnEnter, which a mouse-disabled frame
+    -- never fires -- so every widget note in Core/Dashboard.lua:33-78 was
+    -- unreachable text. Only the 14x14 box took clicks, and it is a Button,
+    -- which is why toggling a widget worked and pointing at one did nothing.
+    --
+    -- It looked exactly like a tooltip nobody had bothered to write.
+    row:EnableMouse(true)
+
     local box = CreateFrame("Button", nil, row)
 
     box:SetSize(14, 14)

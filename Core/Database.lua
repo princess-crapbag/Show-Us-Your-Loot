@@ -155,6 +155,15 @@ local function InitializeSettings()
             SYL.ItemQuality.GetDefaults()
     end
 
+    -- And every kind of item, for the same reason and with a second one: an
+    -- addon upgrading from 0.4.0 has to record exactly what it recorded
+    -- yesterday. A default that filtered anything would change what an
+    -- existing season captures without anybody asking for it.
+    if ShowUsYourLootDB.settings.trackedItemTypes == nil then
+        ShowUsYourLootDB.settings.trackedItemTypes =
+            SYL.ItemTypes.GetDefaults()
+    end
+
     if ShowUsYourLootDB.settings.showMinimapButton == nil then
         ShowUsYourLootDB.settings.showMinimapButton = true
     end

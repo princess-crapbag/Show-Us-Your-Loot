@@ -287,6 +287,17 @@ function LootCapture.HandleChatMessage(message)
         return
     end
 
+    -- The second filter, and it is a separate one on purpose: quality cannot
+    -- say "record epics but not the epic mount", which is the whole reason
+    -- Core/ItemTypes.lua exists. An item has to pass both.
+    if not SYL.ItemTypes.ShouldTrackLink(item.itemLink) then
+        SYL:DebugPrint(
+            "Skipped by item type filter: " .. tostring(item.itemLink)
+        )
+
+        return
+    end
+
     local season = SYL.GetActiveSeason()
 
     if not season then

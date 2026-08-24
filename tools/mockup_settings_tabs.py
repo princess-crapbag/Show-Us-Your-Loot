@@ -9,6 +9,28 @@ excluded from the addon zip by .pkgmeta.
 
 Writes screenshots/settings-five-tabs.png.
 
+RE-RENDERED 2026-08-23 EVENING, after the redesign was finished, so the
+picture and the addon agree again. Three things moved away from the drawing
+Aimee approved that morning, and each one is marked NEW or noted below:
+
+  /syl clear is OUT of the Tools list and into a danger block of its own, with
+  the client's alert icon, an explanation in short words, and a dialog that
+  will not act until the season's name has been typed. Aimee: "dont make it a
+  normal button. or make it harder to do. [...] give an explanation of what it
+  does so they youngest user can understand."
+
+  The Raiders board gets a row. It is the headline screen of this addon and it
+  had no door of its own anywhere -- the drawing listed "Roster", which is the
+  standalone roster window, a different screen. Both are listed now.
+
+  "Who the boards show" carries the current scope in its label, because a row
+  that cycles a setting without showing it is one you press twice to find out
+  where you started.
+
+Item types are drawn all ticked, which is what a real install shows: the
+default records everything, so that an addon upgrading from 0.4.0 captures
+exactly what it captured yesterday.
+
 Real width (560), real row height (20), real headings (18), real section gap
 (24), real Nightfall palette composited the way the client composites it, real
 game font. Her own switches: only Epic and Heirloom qualities are recorded,
@@ -218,15 +240,17 @@ TABS = ["Recording", "Scoring", "Features", "Display", "Tools"]
 # RCLootCouncil, Auctionator, Syndicator, EllesmereUIBags and WilduTools --
 # all installed here, all keying on the same constant. It was the one row the
 # 08-19 proposal could not verify.
+# Order and labels read straight off Core/ItemTypes.ORDER and .NAMES.
+# All ticked, because that is the default and the default is deliberate.
 ITEM_TYPES = [
     {"label": "Raid gear", "on": True},
     {"label": "Warbound gear", "on": True},
-    {"label": "Pets", "on": False},
+    {"label": "Pets", "on": True},
     {"label": "Mounts", "on": True},
-    {"label": "Toys", "on": False},
+    {"label": "Toys", "on": True},
     {"label": "Housing decor", "on": True},
-    {"label": "Profession supplies", "on": False},
-    {"label": "Quest items", "on": False},
+    {"label": "Profession supplies", "on": True},
+    {"label": "Quest items", "on": True},
     {"label": "Sparks and hides", "on": True},
 ]
 
@@ -250,6 +274,15 @@ def tab_recording(c, y):
         {"label": "Record group loot from Loot History", "on": True},
         {"label": "Announce gear in chat", "on": True},
     ], 1)
+
+    # THIS SENTENCE WAS BEING DRAWN ON EVERY TAB, 244px down, at an offset
+    # computed for the single scrolling column that no longer exists. It
+    # shipped that way in 7efaad7. It belongs here, under the heading about
+    # what gets recorded.
+    y = note(c, y + 4,
+             "Your client only sees other people's loot while you are grouped "
+             "with them, so counting gear taken without a roll mostly counts "
+             "yours.")
 
     return y
 
@@ -323,20 +356,29 @@ def tab_display(c, y):
 # and /syl help can never disagree -- one list, three doors.
 TOOL_GROUPS = [
     ("OPEN A SCREEN", [
+        # NEW. The headline screen of this addon, and it had no door of its
+        # own anywhere -- the only way to it was the tab strip on a window you
+        # already had open.
+        ("Raiders board", "raiders"),
         ("Players", "players"), ("Raid nights", "raids"),
         ("Who is due", "due"), ("Bosses", "bosses"),
-        ("Roster", "roster"), ("Schedule", "schedule"),
+        # Renamed from "Roster": this is the standalone window with search and
+        # buff coverage, which is a different screen from the board above.
+        ("Full roster", "roster"), ("Schedule", "schedule"),
         ("Keystones", "keys"), ("Export for Discord", "export"),
     ]),
     ("THIS SEASON", [
         ("Season status", "season"), ("Rename season...", "rename"),
-        ("Archive and start new...", "archive"), ("Archived seasons", "archives"),
-        ("Clear season loot...", "clear"),
+        ("Archive and start new...", "archive"),
+        ("Archived seasons", "archives"),
+        # `clear` is deliberately NOT here. See the danger block below.
     ]),
     ("PEOPLE", [
         ("Mark somebody out...", "out"), ("Cancel an absence...", "in"),
         ("Alts and mains", "alts"), ("Add a recruit...", "addraider"),
-        ("Remove a recruit...", "dropraider"), ("Who the boards show", "scope"),
+        ("Remove a recruit...", "dropraider"),
+        # Carries its current value, like the cycling rows on Display do.
+        ("Who the boards show: Raid team", "scope"),
     ]),
     ("SHARING AND TRADES", [
         ("Sync status", "sync"), ("Trade advisor", "trade"),
@@ -348,13 +390,51 @@ TOOL_GROUPS = [
     ]),
     ("IF SOMETHING GOES WRONG", [
         ("Reset window sizes", "resetwindows"),
-        ("Toggle Loot History capture", "capture"),
     ]),
 ]
 
-DESTRUCTIVE = {"clear"}
-NEEDS_INPUT = {"rename", "archive", "clear", "out", "in", "link",
+NEEDS_INPUT = {"rename", "archive", "out", "in", "link",
                "addraider", "dropraider"}
+
+
+# THE DANGER BLOCK, which is what /syl clear became instead of a row.
+#
+# Aimee: "dont make it a normal button. or make it harder to do. make sure
+# there is an explanation as to why someone should use this button and what
+# will happen if they do. maybe have a danger image near it. or it can just be
+# a slash command. but dont make it a normal button and give an explanation of
+# what it does so they youngest user can understand."
+#
+# So there are four guards, and only the first two are visible here: it is
+# below everything under its own warning rule beside the client's own alert
+# icon, and it says in short words what goes and what to do instead. The other
+# two are in the dialog it opens -- the season's name has to be typed, and the
+# Erase button is dead until it matches. UI/ClearSeasonDialog.lua.
+DANGER_HEADING = "ERASING A SEASON CANNOT BE UNDONE"
+DANGER_LINK = "Erase this season's records..."
+DANGER_NOTE = (
+    "This throws away everything the addon has written down for the season "
+    "you are raiding now, and you cannot get it back. Use it only if it "
+    "recorded a lot you did not want. If the season is just over, use "
+    "Archive and start new above -- that keeps everything."
+)
+
+
+def danger_block(c, y):
+    c.rect(PAD, y, CONTENT, 1, WARNING)
+
+    # The client's own alert icon, drawn here as the square it occupies.
+    c.rect(PAD, y + 12, 24, 24, WARNING)
+
+    c.text(PAD + 32, y + 16, DANGER_HEADING, 10, WARNING)
+    c.text(PAD + 30, y + 33, DANGER_LINK, 11, WARNING)
+
+    lines = wrap(DANGER_NOTE, 10, CONTENT - 32)
+
+    for n, line in enumerate(lines):
+        c.text(PAD + 32, y + 54 + n * 12, line, 10, TEXT_3)
+
+    return y + 54 + len(lines) * 12 + 8
 
 
 def tab_tools(c, y):
@@ -366,8 +446,12 @@ def tab_tools(c, y):
     col_w = CONTENT / 2
     tops = [y, y]
 
-    for index, (title, entries) in enumerate(TOOL_GROUPS):
-        col = index % 2
+    # Packed into whichever column is shorter, not alternated by index --
+    # the groups are nine rows and one row, so alternating put eighteen rows
+    # on the left against eight on the right. Same rule as BuildGroups in
+    # UI/SettingsTools.lua.
+    for title, entries in TOOL_GROUPS:
+        col = 0 if tops[0] <= tops[1] else 1
         x = left + col * col_w
         at = tops[col]
 
@@ -375,18 +459,12 @@ def tab_tools(c, y):
         at += HEADING - 2
 
         for label, cmd in entries:
-            shown = label
-            color = TEXT_2
-
-            if cmd in DESTRUCTIVE:
-                color = WARNING
-
-            c.text(x + 6, at + 3, shown, 11, color)
+            c.text(x + 6, at + 3, label, 11, TEXT_2)
 
             if cmd in NEEDS_INPUT:
                 c.right(x + col_w - 14, at + 3, "...", 10, TEXT_3)
 
-            check("tool '%s'" % label, measure(shown, 11), col_w - 34)
+            check("tool '%s'" % label, measure(label, 11), col_w - 34)
 
             at += ROW - 2
 
@@ -394,11 +472,7 @@ def tab_tools(c, y):
 
     y = max(tops)
 
-    y = note(c, y + 2,
-             "Rows that end in ... need a name or a number typed first. "
-             "Clearing a season is the one that cannot be undone.")
-
-    return y
+    return danger_block(c, y + 6)
 
 
 DRAW = {
@@ -520,6 +594,15 @@ if __name__ == "__main__":
         "The Tools tab is the second door. The minimap menu already lists 30 "
         "of the 34 commands -- but it is a checkbox, and turning it off today "
         "leaves thirteen of them unreachable by any click.",
+        "Erasing a season is not a row in that list. It sits under its own "
+        "warning rule with the client's alert icon and an explanation, and "
+        "the dialog it opens will not do anything until the season's name has "
+        "been typed into it. Archive is offered first and is the bigger of "
+        "the two buttons.",
+        "Three commands could not simply be wired to their own names: bosses "
+        "and roster open standalone windows rather than the tabs, and due "
+        "prints to chat unless you append 'window'. Scope had no click "
+        "anywhere in the addon at all.",
     ]):
         for m, part in enumerate(wrap(line, 10, W - MARGIN * 2)):
             page.text(MARGIN, y + m * 14, part, 10, G3)

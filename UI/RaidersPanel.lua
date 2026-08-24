@@ -395,11 +395,23 @@ function RaidersPanel.Create(parent)
 
     frame.rosterButton:SetPoint("LEFT", frame.viewButton, "RIGHT", 8, 0)
 
+    -- THIS TOOLTIP USED TO SAY SOMETHING UNTRUE.
+    --
+    -- It sent people to the full roster window to add a recruit who is not in
+    -- the guild yet. IncomingRoster.Add has never had a caller anywhere in
+    -- UI/ -- the only way in was `/syl addraider`, a command nobody had been
+    -- told about, which is the house rule broken in the place it is easiest
+    -- to believe it is kept. Somebody following this sentence would have
+    -- opened that window and hunted for a control that was not there.
+    --
+    -- There is a real screen for it now: Settings, Tools tab, "Add a
+    -- recruit" -- UI/NamePromptDialog.lua. This says where.
     SYL.Tooltips.Attach(
         frame.rosterButton,
         "The full roster window",
-        "Search, raid buff coverage, and adding a recruit who is not in the "
-        .. "guild yet. /syl players is still the per-player history."
+        "Search and raid buff coverage. Adding a recruit who is not in the "
+        .. "guild yet is under Settings, Tools. /syl players is still the "
+        .. "per-player history."
     )
 
     -- The detail pane, on the right and always present. An empty pane that

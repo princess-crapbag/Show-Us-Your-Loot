@@ -92,6 +92,17 @@ local function CreateSettingsWindow()
         ShowUsYourLootDB.settings.settingsTab = key
     end
 
+    -- A TAB CAN CHANGE HEIGHT WHILE IT IS OPEN. The Scoring tab grows a row
+    -- when the offspec link is broken, and the window is sized from a number
+    -- cached when the tab was built. Re-showing the active tab is how the new
+    -- number reaches the frame; there is nothing else to redraw, because the
+    -- section rebuilt itself.
+    tabs.onResize = function()
+        if tabs.active then
+            Show(tabs.active)
+        end
+    end
+
     strip = SYL.TabStrip.Create(
         frame, SYL.SettingsTabs.DEFINITIONS, Show, 18, -74
     )

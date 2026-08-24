@@ -20,6 +20,7 @@ Core\DropIdentity.lua
 Core\Serializer.lua
 Core\Guild.lua
 Core\ItemQuality.lua
+Core\ItemTypes.lua
 Core\Features.lua
 Core\Migrations.lua
 Core\Database.lua
@@ -103,6 +104,8 @@ UI\Selection.lua
 UI\ScrollArea.lua
 UI\ArchivePopup.lua
 UI\SeasonRenameDialog.lua
+UI\NamePromptDialog.lua
+UI\ClearSeasonDialog.lua
 UI\FilterDropdown.lua
 UI\FilterBar.lua
 UI\SelectionBar.lua
@@ -153,7 +156,13 @@ UI\BossTooltip.lua
 UI\BossWindow.lua
 UI\ItemTooltip.lua
 UI\ExportWindow.lua
+UI\SettingsToggles.lua
 UI\SettingsRows.lua
+UI\SettingsNumberRow.lua
+UI\SettingsItemTypes.lua
+UI\SettingsScoring.lua
+UI\SettingsToolsList.lua
+UI\SettingsTools.lua
 UI\SettingsWidgets.lua
 UI\SettingsTabs.lua
 UI\SettingsWindow.lua

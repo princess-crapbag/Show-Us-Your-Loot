@@ -55,28 +55,56 @@ SettingsTabs.DEFINITIONS = {
 -- because only the builder knows what it drew.
 local BUILDERS = {}
 
+-- A tab's own top and bottom padding, applied once here so no builder has to
+-- know them. Every builder returns the height of what it drew and nothing
+-- else.
+local function TabHeight(content)
+    return -TAB_TOP + (content or 0) + TAB_BOTTOM
+end
+
+-- The gap between a paragraph and the heading under it. Smaller than
+-- SECTION_GAP because SettingsRows.AddNote already carries its own padding,
+-- and stacking both leaves a hole that reads as a missing section.
+local NOTE_GAP = 6
+
 function BUILDERS.recording(page)
     local y = TAB_TOP
 
-    local _, height = SettingsRows.BuildQualitySection(page, y)
+    -- The quality grid keeps its note to itself only when nothing follows it.
+    -- Here the item-type grid does, and one paragraph speaks for both: the
+    -- two filters have exactly the same non-retroactive contract, and two
+    -- near-identical sentences a section apart is how they come to disagree.
+    local _, quality =
+        SettingsRows.BuildQualitySection(page, y, { suppressNote = true })
 
-    y = y - height - SECTION_GAP
+    y = y - quality - SECTION_GAP
 
-    local _, toggles = SettingsRows.BuildToggleSection(
+    local _types, types = SYL.SettingsItemTypes.Build(page, y)
+
+    y = y - types - 4
+
+    local shared =
+        SettingsRows.AddNote(page, y, SYL.SettingsItemTypes.SHARED_NOTE)
+
+    y = y - shared - NOTE_GAP
+
+    local _capture, capture = SettingsRows.BuildToggleSection(
         page, y, "recording", "CAPTURE"
     )
 
-    return -(y - (toggles or 0)) + TAB_BOTTOM
+    y = y - (capture or 0) - 4
+
+    local personal =
+        SettingsRows.AddNote(page, y, SYL.SettingsToggles.PERSONAL_LOOT_NOTE)
+
+    -- TAB_TOP - y is everything stacked so far, because y walks down from
+    -- TAB_TOP. Written that way rather than by keeping a running total,
+    -- so the height cannot disagree with where the last thing was put.
+    return TabHeight(TAB_TOP - y + personal)
 end
 
 function BUILDERS.scoring(page)
-    local y = TAB_TOP
-
-    local _, height = SettingsRows.BuildToggleSection(
-        page, y, "scoring", "FAIRNESS"
-    )
-
-    return -(y - (height or 0)) + TAB_BOTTOM
+    return TabHeight(SYL.SettingsScoring.Build(page, TAB_TOP))
 end
 
 function BUILDERS.features(page)
@@ -84,7 +112,16 @@ function BUILDERS.features(page)
 
     local _, height = SettingsRows.BuildFeatureSection(page, y)
 
-    return -(y - height) + TAB_BOTTOM
+    y = y - height - 4
+
+    local note = SettingsRows.AddNote(
+        page,
+        y,
+        "Sharing switches send to your guild. Everything you receive can be "
+        .. "cleared from the screen it arrived on. Most need a /reload."
+    )
+
+    return TabHeight(height + 4 + note)
 end
 
 function BUILDERS.display(page)
@@ -94,22 +131,41 @@ function BUILDERS.display(page)
         page, y, "display", "APPEARANCE"
     )
 
-    y = y - (height or 0) - SECTION_GAP
+    y = y - (height or 0) - 4
+
+    -- THE ONE SENTENCE THAT HAD TO BE ON THIS TAB. The minimap button is a
+    -- checkbox two rows above it, and turning it off is what strands about
+    -- thirteen commands -- UI/SettingsTools.lua has the count. Somebody
+    -- switching it off should meet that before they do, not afterwards.
+    local note = SettingsRows.AddNote(
+        page,
+        y,
+        "The minimap button is the door to the command menu. Turning it off "
+        .. "leaves the Tools tab as the only way to click most of them."
+    )
+
+    y = y - note - NOTE_GAP
 
     local _widgets, widgets =
         SYL.SettingsWidgets.Build(page, y, SettingsRows.AddSection)
 
-    return -(y - (widgets or 0)) + TAB_BOTTOM
+    return TabHeight(TAB_TOP - y + (widgets or 0))
 end
 
 function BUILDERS.tools(page)
     local y = TAB_TOP
 
-    local _, height = SettingsRows.BuildToggleSection(
+    local height = SYL.SettingsTools.Build(page, y)
+
+    y = y - height - SECTION_GAP
+
+    -- The one toggle that belongs here rather than in the command list: it is
+    -- a saved setting, not an act. UI/SettingsRows.lua owns its wording.
+    local _, toggles = SettingsRows.BuildToggleSection(
         page, y, "tools", "IF SOMETHING GOES WRONG"
     )
 
-    return -(y - (height or 0)) + TAB_BOTTOM
+    return TabHeight(height + SECTION_GAP + (toggles or 0))
 end
 
 --------------------------------------------------------------------------
@@ -144,6 +200,18 @@ function SettingsTabs.Create(parent, width, top)
 
     function tabs:HeightOf(key)
         return self.heights[key] or 0
+    end
+
+    -- THE SCORING TAB CHANGES HEIGHT WHILE IT IS OPEN. Breaking the offspec
+    -- link adds a fourth weight row, so the tab is 20px taller with it -- and
+    -- the window is sized from a number cached at build time. This is how
+    -- that number gets corrected, and how the window is told to re-apply it.
+    SYL.SettingsScoring.onHeightChanged = function(content)
+        tabs.heights.scoring = TabHeight(content)
+
+        if tabs.onResize then
+            tabs.onResize()
+        end
     end
 
     function tabs:Tallest()

@@ -13,12 +13,18 @@
 -- window cycle through values when pressed, and drawing those as checkboxes
 -- meant drawing a box that could never be ticked.
 --
--- syl-check: size-exempt — three sections of one window, and they share the
--- row factory, the section helper, the row registry and the layout constants
--- that decide where each section starts. Splitting the last one out to save
--- ten lines would mean exporting five internals: more surface than it
--- removes, and the layout math would then live apart from the thing it
--- measures.
+-- syl-check: size-exempt — this is the row factory, the section helper, the
+-- note measurer and the layout constants that decide where a section starts,
+-- and every settings file in UI/ is built out of them. Splitting THOSE apart
+-- would put the layout math in a different file from the thing it measures.
+--
+-- WHAT THE EXEMPTION NO LONGER COVERS. It used to say "three sections of one
+-- window", and that stopped being true: the item types, the scoring numbers
+-- and the tools list are each their own file now, built through the two
+-- exports below, and the eight toggle declarations moved to
+-- UI/SettingsToggles.lua. Anything that is a LIST rather than a mechanism
+-- belongs outside this file. An exemption is not a licence, and this one has
+-- been used to hold things it was not written for.
 
 local SYL = _G.ShowUsYourLoot
 local Theme = SYL.Theme
@@ -188,6 +194,26 @@ local function CreateSettingRow(parent, index, labelText, onClick, options)
     return row
 end
 
+-- THE ROW FACTORY AND THE REGISTRY, exported.
+--
+-- Three sections now live in files of their own -- the item types, the
+-- scoring numbers and the tools list -- for the reason the header gives: this
+-- file is already size-exempt and growing it to hold them would mean trimming
+-- comments to fit, which has happened twice. They are still the same rows,
+-- built by the same factory and refreshed from the same list, so a row in
+-- another file cannot drift from a row in here.
+--
+-- Two exports rather than five: the factory, and the registry it feeds.
+function SettingsRows.CreateRow(parent, index, labelText, onClick, options)
+    return CreateSettingRow(parent, index, labelText, onClick, options)
+end
+
+function SettingsRows.Register(row)
+    table.insert(rows, row)
+
+    return row
+end
+
 function SettingsRows.Refresh()
     for _, row in ipairs(rows) do
         if row.isChecked then
@@ -199,17 +225,46 @@ function SettingsRows.Refresh()
         end
     end
 
+    -- ONE REFRESH PATH. A number row has neither a tick nor a cycling label,
+    -- so it keeps its own list rather than being made to look like a
+    -- checkbox -- but it is refreshed from here, so nothing has to remember
+    -- to call two things after changing a setting.
+    if SYL.SettingsNumberRow then
+        SYL.SettingsNumberRow.Refresh()
+    end
+
+    -- The Tools tab's scope row carries its current value in its label, so it
+    -- goes stale the moment anything else changes the audience.
+    if SYL.SettingsTools then
+        SYL.SettingsTools.Refresh()
+    end
+
     if SYL.RefreshMainWindow then
         SYL:RefreshMainWindow()
     end
 end
 
-local function AddSection(parent, title, offsetY)
+-- `rightLabel` is the small muted word at the far end of a heading rule --
+-- "NEW", "EDITABLE". It marks a section that has changed rather than
+-- decorating one, and it is a font string on the parent like the heading is,
+-- so a section that tears itself down takes it along.
+local function AddSection(parent, title, offsetY, rightLabel)
     local heading =
         Theme.CreateText(parent, Theme.sizes.columnHeader, "textMuted")
 
     heading:SetPoint("TOPLEFT", 20, offsetY)
     heading:SetText(title)
+
+    local marker
+
+    if rightLabel then
+        marker =
+            Theme.CreateText(parent, Theme.sizes.columnHeader, "textMuted")
+
+        marker:SetPoint("TOPRIGHT", -20, offsetY)
+        marker:SetJustifyH("RIGHT")
+        marker:SetText(rightLabel)
+    end
 
     local container = CreateFrame("Frame", nil, parent)
 
@@ -230,6 +285,7 @@ local function AddSection(parent, title, offsetY)
     -- a bare module global, so neither rule applies. luacheck is the tool that
     -- catches this class and it is still the open tooling item in HANDOFF.md.
     container.heading = heading
+    container.marker = marker
 
     return container
 end
@@ -250,10 +306,20 @@ end
 -- starts from that tab's own top rather than from wherever the previous
 -- section happened to end. Passing nothing keeps the old stacking, so the
 -- change is invisible to anything that has not moved.
-function SettingsRows.BuildQualitySection(parent, top)
-    local container = AddSection(
-        parent, "RECORD THESE ITEM QUALITIES", top or QUALITY_TOP
-    )
+-- `options.suppressNote` leaves the closing paragraph off.
+--
+-- The Recording tab puts the item-type grid directly underneath this one and
+-- says the same thing once for both -- "Unticked types and qualities are
+-- never recorded" -- rather than printing two near-identical sentences a
+-- section apart. Anything still building this section on its own keeps the
+-- note it had.
+function SettingsRows.BuildQualitySection(parent, top, options)
+    options = options or {}
+
+    top = top or QUALITY_TOP
+
+    local container =
+        AddSection(parent, "RECORD THESE ITEM QUALITIES", top)
 
     container:SetHeight(
         SettingsRows.GridRows(#ItemQuality.ORDER, QUALITY_COLUMNS) * ROW_HEIGHT
@@ -292,10 +358,29 @@ function SettingsRows.BuildQualitySection(parent, top)
         table.insert(rows, row)
     end
 
-    local note = Theme.CreateText(parent, Theme.sizes.rowSmall, "textMuted")
+    -- Heading and grid. A tab stacks the next section under this without
+    -- measuring anything itself.
+    local height = HEADING_HEIGHT
+        + SettingsRows.GridRows(#ItemQuality.ORDER, QUALITY_COLUMNS)
+        * ROW_HEIGHT
 
-    note:SetPoint("TOPLEFT", 20, QualityBlockBottom() - 6)
-    note:SetPoint("TOPRIGHT", -20, QualityBlockBottom() - 6)
+    if options.suppressNote then
+        return container, height
+    end
+
+    -- DERIVED FROM `top`, NOT FROM QualityBlockBottom().
+    --
+    -- This used to be anchored at the constant, which is where the section
+    -- sat on the old single scrolling column. It agreed with the Recording
+    -- tab by two pixels of luck -- QUALITY_TOP is -8 and the tab's own top is
+    -- -6 -- and it would have drifted the moment either moved. The toggle
+    -- section had the same fault and was drawing its note 244px down every
+    -- tab; see the note there.
+    local note = Theme.CreateText(parent, Theme.sizes.rowSmall, "textMuted")
+    local noteTop = top - height - 6
+
+    note:SetPoint("TOPLEFT", 20, noteTop)
+    note:SetPoint("TOPRIGHT", -20, noteTop)
     note:SetWordWrap(true)
     note:SetJustifyH("LEFT")
     note:SetHeight(30)
@@ -305,180 +390,12 @@ function SettingsRows.BuildQualitySection(parent, top)
         .. "you already have."
     )
 
-    -- Heading, grid and note, so a tab can put the next section
-    -- underneath without measuring anything itself.
-    return container, HEADING_HEIGHT
-        + SettingsRows.GridRows(#ItemQuality.ORDER, QUALITY_COLUMNS)
-        * ROW_HEIGHT + NOTE_HEIGHT
+    return container, height + NOTE_HEIGHT
 end
-
-local TOGGLES = {
-    {
-        -- Cycles rather than opening a menu, and repaints immediately, so
-        -- picking one is a matter of clicking until it looks right instead of
-        -- reading color names and guessing.
-        label = "Color scheme",
-        tab = "display",
-        action = function()
-            local palette =
-                SYL.Theme.Apply(SYL.Palettes.Next(SYL.Theme.paletteKey))
-
-            SYL:Print(
-                "Color scheme: " .. palette.name .. " — " .. palette.note .. "."
-            )
-        end,
-        describe = function()
-            local palette = SYL.Theme.Current()
-
-            return "Color scheme: " .. (palette and palette.name or "unknown")
-        end,
-    },
-    {
-        -- Cycles for the same reason the color scheme does: three positions,
-        -- and the answer is visible on the board the moment you close this.
-        --
-        -- Off / 2 / 3, not Off / 1 / 2 / 3. One night and no floor rank exactly
-        -- the same people — Core/LootScore.lua:MinNights has the argument — so
-        -- the fourth position would have been a control that does nothing.
-        label = "Rank raiders after",
-        tab = "scoring",
-        action = function()
-            local ORDER = { 3, 2, 0 }
-            local current = SYL.LootScore.MinNights()
-            local nextFloor = ORDER[1]
-
-            for index, value in ipairs(ORDER) do
-                if value == current then
-                    nextFloor = ORDER[(index % #ORDER) + 1]
-                    break
-                end
-            end
-
-            ShowUsYourLootDB.settings.minRankNights = nextFloor
-
-            SYL:Print(nextFloor == 0
-                and "Ranking everybody from their first raid night."
-                or ("Ranking raiders once they have "
-                    .. SYL.Utilities.Count(nextFloor, "raid night") .. "."))
-
-            if SYL.RefreshMainWindow then
-                SYL:RefreshMainWindow()
-            end
-        end,
-        describe = function()
-            local floor = SYL.LootScore.MinNights()
-
-            return floor == 0
-                and "Rank raiders after: their first night"
-                or ("Rank raiders after: "
-                    .. SYL.Utilities.Count(floor, "night"))
-        end,
-    },
-    {
-        label = "Record group loot from Loot History",
-        tab = "recording",
-        key = "lootHistoryCapture",
-
-        onChanged = function(enabled)
-            if enabled then
-                SYL.LootHistory.Enable()
-            else
-                SYL.LootHistory.Disable()
-            end
-        end,
-    },
-    {
-        label = "Show the minimap button",
-        tab = "display",
-        key = "showMinimapButton",
-
-        onChanged = function(enabled)
-            SYL.MinimapButton.SetShown(enabled)
-        end,
-    },
-    {
-        -- Says gear, because that is now all it announces. Every quality is
-        -- still recorded; announcing every quality was what doubled the
-        -- user's loot chat with grays after a Mythic+ run.
-        -- SHORTENED BECAUSE IT DID NOT FIT. It rendered as "Announce gear in
-        -- chat when it is recor..." on the settings screenshot in the
-        -- CurseForge gallery. Measured in the real font at 232px against a
-        -- cell that takes about 202 — "Record group loot from Loot History"
-        -- is the longest label that fits, and it measures exactly that.
-        -- Anything added here should be checked against it.
-        --
-        -- "when it is recorded" was the part carrying no information: this
-        -- section is about what gets recorded, and the note underneath says
-        -- the rest.
-        label = "Announce gear in chat",
-        tab = "recording",
-        key = "announceCaptures",
-    },
-    {
-        -- Not a checkbox: it cycles windows and reports where it landed.
-        label = "Output window",
-        tab = "display",
-        action = function()
-            local name = SYL.Output.CycleWindow()
-
-            SYL:Print(
-                "Messages now go to the \"" .. tostring(name) .. "\" window."
-            )
-        end,
-        describe = function()
-            return "Output window: " .. SYL.Output.GetWindowName()
-        end,
-    },
-    {
-        label = "Show debug messages",
-        tab = "display",
-        key = "debug",
-    },
-    {
-        -- THE RECOVERY THAT ONLY A COMMAND COULD REACH. This is the way back
-        -- from a window dragged past the edge of the screen — where the grip
-        -- that would move it is off the monitor with it — and it lived behind
-        -- `/syl resetwindows` and nowhere else. Somebody who has lost a window
-        -- cannot be expected to know a command nobody told them about, and
-        -- this is the one case where they cannot see the interface that would
-        -- have told them.
-        --
-        -- Measured in the real font, like every other label here. "Put windows
-        -- back where they started" says more and comes to 203px against a cell
-        -- that takes about 202 — one pixel over, which is the whole reason the
-        -- note on "Announce gear in chat" above exists. This one is 107 and
-        -- has room to spare.
-        label = "Reset window sizes",
-        tab = "tools",
-        action = function()
-            local reset = SYL.Widgets.ResetSizes()
-
-            -- Saved sizes go either way; only windows opened this session can
-            -- be moved on the spot. Zero is an ordinary answer rather than a
-            -- failure, and saying so stops it reading as one. Same wording as
-            -- the command, because they are the same act.
-            if reset == 0 then
-                SYL:Print(
-                    "Saved window sizes and positions cleared. Every window "
-                    .. "will open at its default size, in the middle of the "
-                    .. "screen."
-                )
-
-                return
-            end
-
-            SYL:Print(
-                SYL.Utilities.Count(reset, "open window")
-                .. " put back to the default size and centered. Saved sizes "
-                .. "and positions cleared."
-            )
-        end,
-    },
-}
 
 local function FeatureSectionTop()
     return ToggleSectionTop() - HEADING_HEIGHT
-        - SettingsRows.GridRows(#TOGGLES, TOGGLE_COLUMNS) * ROW_HEIGHT
+        - SettingsRows.GridRows(#SYL.SettingsToggles.LIST, TOGGLE_COLUMNS) * ROW_HEIGHT
         - NOTE_HEIGHT - SECTION_GAP
 end
 
@@ -496,10 +413,70 @@ end
 -- and build it again need both: the heading is a font string on the parent,
 -- not a child of the container, so hiding the container alone left it behind
 -- and every rebuild stacked another one in the same place.
-function SettingsRows.AddSection(parent, title, offsetY)
-    local container = AddSection(parent, title, offsetY)
+function SettingsRows.AddSection(parent, title, offsetY, rightLabel)
+    local container = AddSection(parent, title, offsetY, rightLabel)
 
     return container, container.heading
+end
+
+-- A paragraph under a section, and how tall it is.
+--
+-- MEASURED AND WRAPPED HERE RATHER THAN ASKED OF THE FRAME. A FontString
+-- reports its own height as zero until a layout pass has run, and the test
+-- client answers 100 to every getter, so a tab that sized itself off the
+-- note it had just drawn would be wrong in the game and differently wrong in
+-- the suite. Theme.MeasureText is the same ruler every column width in this
+-- addon is measured with.
+local NOTE_LINE = 14
+local NOTE_PADDING = 8
+
+-- The width a note has to wrap inside: the container's, which is the window
+-- less the 20px inset on each side.
+local function NoteWidth(parent)
+    local width = parent and parent.GetWidth and parent:GetWidth()
+
+    if type(width) ~= "number" or width <= 40 then
+        return 512
+    end
+
+    return width - 40
+end
+
+function SettingsRows.NoteHeight(text, width)
+    local size = Theme.sizes.rowSmall
+    local lines, current = 1, ""
+
+    for word in tostring(text):gmatch("%S+") do
+        local candidate = current == "" and word or (current .. " " .. word)
+
+        if current ~= "" and Theme.MeasureText(size, candidate) > width then
+            lines = lines + 1
+            current = word
+        else
+            current = candidate
+        end
+    end
+
+    return lines * NOTE_LINE + NOTE_PADDING
+end
+
+-- Returns the height it took, so a caller stacks the next thing under it
+-- without measuring anything itself.
+function SettingsRows.AddNote(parent, top, text, colorKey)
+    local width = NoteWidth(parent)
+    local height = SettingsRows.NoteHeight(text, width)
+
+    local note =
+        Theme.CreateText(parent, Theme.sizes.rowSmall, colorKey or "textMuted")
+
+    note:SetPoint("TOPLEFT", 20, top)
+    note:SetPoint("TOPRIGHT", -20, top)
+    note:SetWordWrap(true)
+    note:SetJustifyH("LEFT")
+    note:SetHeight(height - NOTE_PADDING)
+    note:SetText(text)
+
+    return height, note
 end
 
 -- The title, subtitle and separator above the scrolling area, and the rule and
@@ -561,10 +538,21 @@ end
 --
 -- Called with no tab it builds all eight under the old heading, so anything
 -- that has not moved to a tab yet is unaffected.
-function SettingsRows.BuildToggleSection(parent, top, tab, title)
+-- `options` is { columns = n, extraRows = n }.
+--
+-- COLUMNS, because two across is right for a tab holding four short toggles
+-- and wrong for the Scoring tab, where a row is a sentence with a number
+-- beside it. extraRows reserves lines at the bottom of the container so a
+-- caller can put its own rows there and still get one honest height back --
+-- the alternative was returning the row count and making every caller redo
+-- the same arithmetic, which is how two files come to disagree about how
+-- tall a section is.
+function SettingsRows.BuildToggleSection(parent, top, tab, title, options)
+    options = options or {}
+
     local wanted = {}
 
-    for _, toggle in ipairs(TOGGLES) do
+    for _, toggle in ipairs(SYL.SettingsToggles.LIST) do
         if not tab or toggle.tab == tab then
             table.insert(wanted, toggle)
         end
@@ -578,9 +566,11 @@ function SettingsRows.BuildToggleSection(parent, top, tab, title)
         parent, title or "BEHAVIOR", top or ToggleSectionTop()
     )
 
-    container:SetHeight(
-        SettingsRows.GridRows(#wanted, TOGGLE_COLUMNS) * ROW_HEIGHT
-    )
+    local columns = options.columns or TOGGLE_COLUMNS
+    local lines = SettingsRows.GridRows(#wanted, columns)
+        + (options.extraRows or 0)
+
+    container:SetHeight(lines * ROW_HEIGHT)
 
     for index, toggle in ipairs(wanted) do
         local isAction = toggle.action ~= nil
@@ -613,7 +603,7 @@ function SettingsRows.BuildToggleSection(parent, top, tab, title)
                 SettingsRows.Refresh()
             end,
 
-            { isAction = isAction, columns = TOGGLE_COLUMNS }
+            { isAction = isAction, columns = columns }
         )
 
         if not isAction then
@@ -629,29 +619,38 @@ function SettingsRows.BuildToggleSection(parent, top, tab, title)
         table.insert(rows, row)
     end
 
-    -- The one setting here that changes a number rather than a behavior, and
-    -- the only one whose default is a judgement call rather than an obvious
-    -- choice. Saying why beats leaving an officer to discover it.
-    local note = Theme.CreateText(parent, Theme.sizes.rowSmall, "textMuted")
+    -- THIS NOTE WAS BEING DRAWN ON EVERY TAB, at an offset computed for the
+    -- single column that no longer exists.
+    --
+    -- ToggleSectionTop() is where the BEHAVIOR block sat on the old scrolling
+    -- page, so noteTop came to -244 -- and each of the four tabs that build a
+    -- toggle section drew its own copy of this sentence 244px down its own
+    -- page, through whatever was there. It shipped in 7efaad7 with the tabs
+    -- themselves, because the tabbed path was given a `top` and this was the
+    -- one thing in the function that ignored it.
+    --
+    -- Only the untabbed path draws it now, and only the untabbed path adds
+    -- NOTE_HEIGHT for it. The sentence itself is not lost: it is about what
+    -- the client can and cannot see, so UI/SettingsItemTypes.lua says it
+    -- under CAPTURE, which is where somebody reading about recording is.
+    if not tab then
+        local note =
+            Theme.CreateText(parent, Theme.sizes.rowSmall, "textMuted")
 
-    local noteTop = ToggleSectionTop() - HEADING_HEIGHT
-        - SettingsRows.GridRows(#TOGGLES, TOGGLE_COLUMNS) * ROW_HEIGHT - 6
+        local noteTop = ToggleSectionTop() - HEADING_HEIGHT
+            - SettingsRows.GridRows(#SYL.SettingsToggles.LIST, TOGGLE_COLUMNS) * ROW_HEIGHT - 6
 
-    note:SetPoint("TOPLEFT", 20, noteTop)
-    note:SetPoint("TOPRIGHT", -20, noteTop)
-    note:SetWordWrap(true)
-    note:SetJustifyH("LEFT")
-    note:SetHeight(NOTE_HEIGHT)
+        note:SetPoint("TOPLEFT", 20, noteTop)
+        note:SetPoint("TOPRIGHT", -20, noteTop)
+        note:SetWordWrap(true)
+        note:SetJustifyH("LEFT")
+        note:SetHeight(NOTE_HEIGHT)
 
-    note:SetText(
-        "Your client only sees other people's loot while you are grouped "
-        .. "with them, so counting gear taken without a roll mostly counts "
-        .. "yours."
-    )
+        note:SetText(SYL.SettingsToggles.PERSONAL_LOOT_NOTE)
+    end
 
-    return container, HEADING_HEIGHT
-        + SettingsRows.GridRows(#wanted, TOGGLE_COLUMNS) * ROW_HEIGHT
-        + (tab and 0 or NOTE_HEIGHT)
+    return container, HEADING_HEIGHT + lines * ROW_HEIGHT
+        + (tab and 0 or NOTE_HEIGHT), #wanted
 end
 
 -- Whole features, switched on and off.
