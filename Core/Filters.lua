@@ -21,14 +21,128 @@ SYL.Filters = Filters
 
 -- Multi-select fields. Date is a range and search is free text, so neither
 -- belongs here.
-Filters.FIELDS = { "player", "item", "location", "wintype" }
+Filters.FIELDS = { "player", "item", "location", "wintype", "difficulty" }
 
 Filters.LABELS = {
     player = "Player",
     item = "Item",
     location = "Location",
     wintype = "Win type",
+    difficulty = "Difficulty",
 }
+
+-- RAID DIFFICULTY, IN ONE LETTER EACH. Aimee drew it as
+-- "[] L  [] N  [] H  [] M", and these are the four a raid can be run on.
+--
+-- Utilities.ShortDifficulty is not reused here: it answers "LFR", "N", "HC",
+-- "M" and covers dungeons and delves too, and this filter is about the four
+-- rungs of a raid ladder. A dungeon drop answers nothing and is therefore
+-- filtered out whenever a raid difficulty is chosen, which is what a control
+-- named Raid Difficulty should do.
+Filters.RAID_DIFFICULTY = {
+    [17] = "L",
+    [151] = "L",
+    [14] = "N",
+    [33] = "N",
+    [15] = "H",
+    [16] = "M",
+}
+
+-- The order they appear in, which is the ladder rather than the alphabet.
+Filters.RAID_DIFFICULTY_ORDER = { "L", "N", "H", "M" }
+
+Filters.RAID_DIFFICULTY_NAMES = {
+    L = "Looking For Raid",
+    N = "Normal",
+    H = "Heroic",
+    M = "Mythic",
+}
+
+-- HIDDEN UNTIL SOMEBODY ASKS FOR THEM, out of the box.
+--
+-- Aimee: "have the win type default on greed, mog, need. default off
+-- personal."
+--
+-- WRITTEN AS AN EXCLUSION AND NOT AS A LIST OF THREE, which matters more than
+-- it looks. Her dropdown shows four types today because four are in her data,
+-- and an explicit {Greed, Mog, Need} would silently hide Offspec the first
+-- time one is recorded -- her own season already holds sixteen offspec rolls.
+-- An exclusion cannot do that: anything new is visible by default and only
+-- what is named here is not.
+--
+-- IT APPLIES ONLY WHILE NOBODY HAS TOUCHED THE FIELD. The moment a value is
+-- ticked the selection is explicit and this stops applying, so the control
+-- always says what it is doing.
+Filters.HIDDEN_BY_DEFAULT = {
+    wintype = {
+        -- Personal loot is outside the fairness math by design -- it never
+        -- reaches the group-loot store at all -- so a list that opens on it
+        -- opens on records the boards will never argue about.
+        Personal = true,
+    },
+}
+
+function Filters.HiddenByDefault(field, value)
+    local hidden = Filters.HIDDEN_BY_DEFAULT[field]
+
+    return (hidden and value ~= nil and hidden[value]) and true or false
+end
+
+-- Whether the dropdown should draw this value ticked. Not the same question
+-- as IsSelected: with nothing chosen, everything except the defaults-off set
+-- is showing, and the tickboxes have to say so.
+function Filters.IsShowing(state, field, value)
+    if Filters.CountSelected(state, field) > 0 then
+        return Filters.IsSelected(state, field, value)
+    end
+
+    return not Filters.HiddenByDefault(field, value)
+end
+
+-- THE DIFFICULTY THE LAST RAID WAS ON, as one of L/N/H/M.
+--
+-- Aimee: "have it default to the last raid difficulty you were in." Read off
+-- the most recent recorded raid session rather than from a setting, so it
+-- follows the guild through a tier without anybody maintaining it -- the
+-- night after they step up to Heroic, the list opens on Heroic.
+--
+-- Returns nil when nothing has been recorded yet, which leaves the filter
+-- unconstrained rather than picking one arbitrarily.
+function Filters.LastRaidDifficulty(sessions)
+    local latest, letter
+
+    for _, session in ipairs(sessions or {}) do
+        local rung = Filters.RAID_DIFFICULTY[session.difficultyID]
+
+        if rung and (not latest or (session.startedAt or 0) > latest) then
+            latest = session.startedAt or 0
+            letter = rung
+        end
+    end
+
+    return letter
+end
+
+-- Sets the difficulty filter to whatever was last raided, once.
+--
+-- ONLY WHEN NOTHING HAS BEEN CHOSEN, so reopening the window cannot undo a
+-- choice somebody made -- and it clears itself rather than sticking if there
+-- is no answer.
+function Filters.ApplyDefaultDifficulty(state, sessions)
+    if not state or Filters.CountSelected(state, "difficulty") > 0 then
+        return nil
+    end
+
+    local letter = Filters.LastRaidDifficulty(sessions)
+
+    if not letter then
+        return nil
+    end
+
+    state.selected.difficulty[letter] = true
+
+    return letter
+end
 
 function Filters.CreateState()
     return {
@@ -41,6 +155,7 @@ function Filters.CreateState()
             item = {},
             location = {},
             wintype = {},
+            difficulty = {},
         },
 
         dateFrom = nil,
@@ -99,6 +214,23 @@ function Filters.SelectAll(state, field, values)
     end
 end
 
+-- Ticks everything that is currently showing, which is everything except the
+-- defaults-off set. The step that turns "nothing chosen" into an explicit
+-- selection without changing what is on screen.
+function Filters.SelectShowing(state, field, values)
+    local set = state.selected[field]
+
+    if not set then
+        return
+    end
+
+    for _, value in ipairs(values or {}) do
+        if not Filters.HiddenByDefault(field, value) then
+            set[value] = true
+        end
+    end
+end
+
 function Filters.ClearField(state, field)
     state.selected[field] = {}
 end
@@ -113,7 +245,18 @@ function Filters.ClearAll(state)
     end
 end
 
+-- ALWAYS ACTIVE WHILE ANYTHING IS HIDDEN BY DEFAULT.
+--
+-- Filters.Apply returns the records untouched when this is false, so a
+-- default exclusion that did not make the state "active" would never run --
+-- the list would open showing personal loot and only start hiding it once
+-- some other filter was set. Found by asking why the first version changed
+-- nothing.
 function Filters.IsActive(state)
+    if next(Filters.HIDDEN_BY_DEFAULT) ~= nil then
+        return true
+    end
+
     if state.search and state.search ~= "" then
         return true
     end
@@ -222,12 +365,17 @@ end
 -- ticking a player and a boss narrows it.
 local function MatchesSelections(state, fields, record)
     for _, field in ipairs(Filters.FIELDS) do
-        if Filters.CountSelected(state, field) > 0 then
-            local value = ReadField(fields, field, record)
+        local chosen = Filters.CountSelected(state, field) > 0
+        local value = ReadField(fields, field, record)
 
+        if chosen then
             if not value or not Filters.IsSelected(state, field, value) then
                 return false
             end
+        elseif Filters.HiddenByDefault(field, value) then
+            -- Nothing chosen in this field, so everything shows except what
+            -- HIDDEN_BY_DEFAULT names. See the note there.
+            return false
         end
     end
 
@@ -343,6 +491,18 @@ function Filters.DeriveOptions(records, fields, field)
 
     if field == "player" then
         RankByAudience(options)
+    elseif field == "difficulty" then
+        -- THE LADDER, NOT THE ALPHABET. Sorted, L H M N reads as nothing;
+        -- the four rungs have an order everybody already knows.
+        local rank = {}
+
+        for index, letter in ipairs(Filters.RAID_DIFFICULTY_ORDER) do
+            rank[letter] = index
+        end
+
+        table.sort(options, function(left, right)
+            return (rank[left] or 99) < (rank[right] or 99)
+        end)
     else
         table.sort(options)
     end

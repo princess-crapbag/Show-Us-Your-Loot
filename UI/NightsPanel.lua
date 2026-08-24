@@ -101,6 +101,21 @@ local function CreateCell(index)
     cell.hover:SetAllPoints()
     cell.hover:Hide()
 
+    -- TODAY, MARKED. Aimee: "from the calendar view, can you make 'today'
+    -- more visable?"
+    --
+    -- An accent edge down the left of the cell and the day number in full
+    -- colour, rather than a fill: the grid already uses fill for "a raid was
+    -- recorded here" and selection, and a third meaning on the same channel
+    -- would make all three harder to read. This is the one cell somebody
+    -- locates by scanning, so it wants a different KIND of mark, not a
+    -- stronger one.
+    cell.today = Theme.CreateSolidTexture(cell, "accent", "ARTWORK")
+    cell.today:SetPoint("TOPLEFT", 0, 0)
+    cell.today:SetPoint("BOTTOMLEFT", 0, 0)
+    cell.today:SetWidth(2)
+    cell.today:Hide()
+
     cell:SetScript("OnEnter", function() cell.hover:Show() end)
     cell:SetScript("OnLeave", function() cell.hover:Hide() end)
 
@@ -159,6 +174,13 @@ local function DrawDay(cell, dayNumber, dayKey, night, isSelected, other)
     cell.day:SetText(tostring(dayNumber))
     cell.back:SetAlpha(1)
 
+    -- Shown before anything else returns, so every branch below gets it --
+    -- a recorded night, an off-raid, an empty future day and an empty past
+    -- one all have to be able to be today.
+    local isToday = dayKey == SYL.RaidSchedule.TodayKey()
+
+    cell.today:SetShown(isToday)
+
     -- A RECORDED RAID THAT IS NOT A GUILD NIGHT, drawn quieter on purpose.
     --
     -- Aimee: "can the color on the calendar be different from the guild raid
@@ -175,7 +197,7 @@ local function DrawDay(cell, dayNumber, dayKey, night, isSelected, other)
 
         cell.back:SetAlpha(0.35)
 
-        Theme.SetTextColor(cell.day, "textMuted")
+        Theme.SetTextColor(cell.day, isToday and "accent" or "textMuted")
         Theme.SetTextColor(cell.detail, "textMuted")
 
         cell:Show()
@@ -207,7 +229,11 @@ local function DrawDay(cell, dayNumber, dayKey, night, isSelected, other)
         )
 
         Theme.SetTextColor(cell.detail, out > 0 and "warning" or "textSecondary")
-        Theme.SetTextColor(cell.day, scheduled and "textPrimary" or "textMuted")
+        Theme.SetTextColor(
+            cell.day,
+            isToday and "accent"
+                or (scheduled and "textPrimary" or "textMuted")
+        )
 
         cell:Show()
 
@@ -216,7 +242,7 @@ local function DrawDay(cell, dayNumber, dayKey, night, isSelected, other)
 
     -- Shaded with the kill count, which is what makes a good night and a wipe
     -- night different at a glance rather than both just being "we raided".
-    Theme.SetTextColor(cell.day, "textPrimary")
+    Theme.SetTextColor(cell.day, isToday and "accent" or "textPrimary")
 
     -- BOSSES OVER BOSSES, not kills over pulls.
     --

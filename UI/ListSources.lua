@@ -20,6 +20,13 @@ local FEED_FIELDS = {
     item = function(entry) return entry.itemName end,
     location = function(entry) return entry.where end,
     timestamp = function(entry) return entry.timestamp end,
+
+    -- Nil for anything that is not a raid, so choosing a raid difficulty
+    -- filters dungeons out rather than keeping them. See
+    -- Filters.RAID_DIFFICULTY.
+    difficulty = function(entry)
+        return SYL.Filters.RAID_DIFFICULTY[entry.difficultyID]
+    end,
     -- IGNORED AND BONUS ROLL ARE TYPES HERE, EVEN THOUGH THEY ARE NOT WIN
     -- TYPES. Aimee asked for this in the Type section because that is where
     -- she went looking for it, and it is the honest place: what somebody wants

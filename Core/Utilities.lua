@@ -388,9 +388,14 @@ end
 
 -- The list columns' version. "08/05/26 12:32 PM" is seventeen characters
 -- against a column that also has to share a row with an item name, and it was
--- the format, not the width, that made the date column impossible. Dropping
--- to a 24 hour clock loses the " PM" and three characters with it, and stays
--- unambiguous.
+-- the format, not the width, that made the date column impossible.
+--
+-- IT WENT BACK TO 12 HOUR, and the column was widened for it. Aimee, reading
+-- "08/23/26 19:35" in the loot list: "make sure its reading the correct time
+-- zone and in 12 hour format." The saving this note argued for was three
+-- characters, and the cost was the one format in the addon that did not read
+-- the way she reads a clock -- every other date on screen has been 12 hour
+-- since Utilities.FormatDateTime was written.
 --
 -- THE ONE PLACE THE YEAR STAYS TWO DIGITS. The DATE column is 96px and this
 -- string already had to be cut down once to fit it; a four digit year puts
@@ -401,7 +406,9 @@ function Utilities.FormatDateCompact(timestamp)
         return "Unknown"
     end
 
-    return date("%m/%d/%y %H:%M", timestamp)
+    -- The leading zero goes, like FormatClock: "6:42 PM" is how it is said
+    -- and the column is tight.
+    return (date("%m/%d/%y %I:%M %p", timestamp):gsub("/(%d%d) 0", "/%1 "))
 end
 
 -- Difficulty names are long enough to break any column they land in:

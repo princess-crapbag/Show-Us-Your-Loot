@@ -191,15 +191,38 @@ function FilterBar.Create(parent, config)
                 )
             end,
 
+            -- IsShowing, not IsSelected. With nothing chosen, the list is
+            -- showing everything except what Filters.HIDDEN_BY_DEFAULT names,
+            -- and a box drawn empty beside a row that IS showing is a control
+            -- lying about what it is doing.
             isSelected = function(value)
-                return Filters.IsSelected(state, field, value)
+                return Filters.IsShowing(state, field, value)
             end,
 
             getCount = function()
                 return Filters.CountSelected(state, field)
             end,
 
+            -- THE FIRST CLICK IN A FIELD MAKES THE SELECTION EXPLICIT.
+            --
+            -- Before it, nothing is chosen and the default exclusion decides.
+            -- Toggling one value there would leave the other three unticked
+            -- and hide them, which is the opposite of what unticking one box
+            -- looks like it should do. So the first click starts from what
+            -- was on screen and then applies itself.
             onToggle = function(value)
+                if Filters.CountSelected(state, field) == 0 then
+                    Filters.SelectShowing(
+                        state,
+                        field,
+                        Filters.DeriveOptions(
+                            config.getRecords(),
+                            config.getFields(),
+                            field
+                        )
+                    )
+                end
+
                 Filters.Toggle(state, field, value)
                 onChange()
             end,

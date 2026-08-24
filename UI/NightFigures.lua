@@ -73,21 +73,28 @@ local function Attended(day)
     local people = {}
 
     for key, member in pairs(day.roster or {}) do
-        if type(member) == "table" then
-            table.insert(people, {
-                key = key,
-                name = member.name or key,
-                class = member.class,
-            })
-        else
-            local player = SYL.Players.Get(key)
+        -- THE REGISTRY FIRST, THE ROSTER SECOND.
+        --
+        -- day.roster is keyed by the MAIN, but the value is whichever
+        -- CHARACTER was actually in the group -- so reading member.name shows
+        -- the alt, and it shows a renamed character under whatever it was
+        -- called on the night. Aimee: "hinokamii name changed to
+        -- misothelioma. i cant get his old name to go away." Her alt mapping
+        -- was already correct; this line was ignoring it.
+        --
+        -- Her answer on which to show, asked earlier: "incase someone swaps
+        -- toons mid raid lets just stay with the main for now."
+        local player = SYL.Players.Get(key)
 
-            table.insert(people, {
-                key = key,
-                name = (player and player.name) or key,
-                class = player and player.class,
-            })
-        end
+        table.insert(people, {
+            key = key,
+            name = (player and player.name)
+                or (type(member) == "table" and member.name)
+                or key,
+            class = (player and player.class)
+                or (type(member) == "table" and member.class)
+                or nil,
+        })
     end
 
     table.sort(people, ByName)

@@ -36,14 +36,19 @@ local view = {
     showHidden = false,
     allSeasons = false,
 
-    -- Raid, dungeon or both. "all" so nothing already recorded vanishes on
-    -- update; narrowing is the officer's choice, not one made for them.
-    contentScope = "all",
+    -- RAIDS ONLY, which is Aimee's default: "default to gear only, raids
+    -- only. still give the option to swap through others."
+    --
+    -- The note this replaces argued for "all" so nothing already recorded
+    -- vanishes on update. That was the right caution when the scope button
+    -- was new and nobody had met it; it is now a labelled control on the bar
+    -- above the list, and the list this addon exists for is the raid's.
+    contentScope = "raid",
 
-    -- Narrowed to gear somebody actually received. Off for the same
-    -- reason: hiding three hundred records without being asked is how an
-    -- update looks like data loss.
-    gearOnly = false,
+    -- Narrowed to gear somebody actually received. On, hers -- the fairness
+    -- boards only ever argue about gear, and the button beside the list says
+    -- what it is doing and turns off in one click.
+    gearOnly = true,
 
     -- Newest first, which is what the list has always shown. Every other
     -- window in the addon has had a sortable header for a while; this one,
@@ -52,6 +57,8 @@ local view = {
     sortKey = "date",
     sortReversed = false,
 
+    -- Filters.CreateState leaves every field unconstrained; the difficulty
+    -- is then set to whatever she last raided. See DefaultDifficulty below.
     filters = Filters.CreateState(),
     selection = Selection.Create(),
     feedRows = {},
@@ -454,6 +461,13 @@ local function CreateMainWindow()
     if frame then
         return frame
     end
+
+    -- OPENS ON THE DIFFICULTY THE GUILD LAST RAIDED. Hers. Done here rather
+    -- than in the view table above, because the answer comes from the
+    -- database and that table is built at file scope, before there is one.
+    SYL.Filters.ApplyDefaultDifficulty(
+        view.filters, SYL.GetActiveRaids()
+    )
 
     frame = CreateFrame(
         "Frame",

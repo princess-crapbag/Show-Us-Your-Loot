@@ -56,7 +56,11 @@ local COLUMN_SETS = {
 -- shortfall is taken from ITEM, which is the column with room to give.
 -- Totals stay exactly as they were, which keeps the layout inside the
 -- budget tools/syl_check.py enforces.
-local WIDEST_DATE = "00/00/00 00:00"
+-- WIDENED FOR THE 12 HOUR CLOCK. " PM" is three characters the 24 hour
+-- version did not need, and the column is measured from this string rather
+-- than guessed -- see Theme.MeasureText and the note in
+-- Utilities.FormatDateCompact.
+local WIDEST_DATE = "00/00/00 00:00 PM"
 local DATE_PADDING = 10
 
 local function FitDateColumn(columns)

@@ -99,12 +99,29 @@ function SelectionBar.Create(parent, view, config)
 
     bar.action:SetPoint("RIGHT", bar.allSeasons, "LEFT", -6, 0)
 
+    -- HIDE EVERY COPY, AS A BUTTON.
+    --
+    -- This could already be done -- Hide has honoured Shift since it was
+    -- written -- and the only place that said so was the Hide tooltip. Aimee,
+    -- who has been using this screen for weeks: "when i select an item like a
+    -- crystal id like to be able to 'hide all'." She had not found it, which
+    -- is the house rule about commands applied to a modifier key: a thing
+    -- nobody is told about is a thing nobody has.
+    --
+    -- Same code path, same undo, same reassurance. Only the door is new.
+    bar.hideAllCopies =
+        Theme.CreateButton(parent, 74, 20, "Hide all", function()
+            bar:ApplyHidden(true)
+        end)
+
+    bar.hideAllCopies:SetPoint("RIGHT", bar.action, "LEFT", -6, 0)
+
     -- Takes the ticked records out of every number without deleting them.
     bar.ignore = Theme.CreateButton(parent, 74, 20, "Ignore", function()
         bar:ApplyIgnored(IsShiftKeyDown())
     end)
 
-    bar.ignore:SetPoint("RIGHT", bar.action, "LEFT", -6, 0)
+    bar.ignore:SetPoint("RIGHT", bar.hideAllCopies, "LEFT", -6, 0)
 
     bar.deselect = Theme.CreateButton(parent, 78, 20, "Deselect all", function()
         Selection.Clear(view.selection)
@@ -145,9 +162,13 @@ function SelectionBar.Create(parent, view, config)
         "Widens the list to archived seasons as well as the active one.")
 
     Tip(bar.action, "Hide or unhide",
-        "Sets the ticked rows aside. Hold Shift to hide every copy of the "
-        .. "same item on this list, not just the rows you ticked. Nothing is "
+        "Sets the ticked rows aside -- only the rows you ticked. Nothing is "
         .. "deleted and the numbers do not change.")
+
+    Tip(bar.hideAllCopies, "Hide every copy",
+        "Tick one crystal and this hides every crystal on the list, not just "
+        .. "that row. Same as Hide otherwise: nothing is deleted, the numbers "
+        .. "do not change, and Show hidden brings them all back.")
 
     Tip(bar.ignore, "Ignore or restore",
         "Takes the ticked rows out of every number — the due list, droughts, "
@@ -254,9 +275,14 @@ function SelectionBar.Create(parent, view, config)
     -- Everything this bar owns, off screen. A panel mode draws its own body
     -- and these would otherwise sit on top of it — Update alone is not enough,
     -- because it only ever decides between showing and hiding for the list.
+    --
+    -- MIND THE TWO MEANINGS OF "HIDE ALL" IN THIS FILE. This one hides the
+    -- BAR. The button added above is `hideAllCopies` and hides every copy of
+    -- an item, which is why it is not called HideAll -- a second HideAll
+    -- would simply have replaced this one.
     bar.HideAll = function(self)
         for _, control in ipairs({
-            self.showHidden, self.action, self.ignore,
+            self.showHidden, self.action, self.hideAllCopies, self.ignore,
             self.deselect, self.selectAll, self.allSeasons,
             self.contentScope, self.gearOnly,
         }) do
@@ -274,7 +300,8 @@ function SelectionBar.Create(parent, view, config)
         -- does not reflow every time the selection changes.
         for _, control in ipairs({
             self.showHidden,
-            self.action, self.ignore, self.deselect, self.selectAll,
+            self.action, self.hideAllCopies, self.ignore,
+            self.deselect, self.selectAll,
         }) do
             if onList then
                 control:Show()

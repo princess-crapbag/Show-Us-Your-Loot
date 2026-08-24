@@ -273,12 +273,46 @@ function Absences.WhoIsOut(dayKey)
         return out
     end
 
+    -- ONE ENTRY PER PERSON, NOT PER CHARACTER.
+    --
+    -- Two of somebody's characters marked out on the same night is one person
+    -- who is not coming, and the calendar was listing both -- which reads as
+    -- two people missing and is the arithmetic every attendance figure
+    -- underneath it depends on.
+    --
+    -- Aimee: "my calendar is showing Saebie and Talestra out. they are the
+    -- same person." Folding is the fix for the CLASS of bug; those two are
+    -- not linked in her registry, so the addon has no way to know they are
+    -- one person until they are. Once she maps one as the other's alt, this
+    -- shows one name -- the main's.
+    --
+    -- The first one wins rather than the last, so a shared absence cannot
+    -- displace one she set herself.
+    local seen = {}
+
     for index, absence in ipairs(store.absences) do
-        if absence.from <= dayKey and absence.to >= dayKey then
+        local person = absence.key
+            and SYL.Players.ResolveToMain(absence.key)
+            or absence.key
+            or absence.name
+
+        if absence.from <= dayKey and absence.to >= dayKey
+            and not seen[person]
+        then
+            seen[person] = true
+
+            local record = absence.key and SYL.Players.Get(person)
+
             table.insert(out, {
                 index = index,
                 id = absence.id,
-                name = absence.name,
+
+                -- The person's name, which is the main's when the character
+                -- marked out was an alt. Falls back to what was recorded for
+                -- anybody the registry has never seen.
+                name = (record and record.name) or absence.name,
+                class = record and record.class,
+
                 key = absence.key,
                 reason = absence.reason,
                 source = absence.source,
