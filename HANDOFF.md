@@ -32,7 +32,7 @@ upgrade, who turned up, and what each boss has given.
 - **`main` is pushed and reads 0.3.5 in the `.toc`. There is no v0.3.5 tag,
   so nothing has reached a user.** Verify rather than trust this line:
   `git log --oneline v0.3.4..main` and `git tag --sort=-v:refname`.
-- 138 Lua files in the `.toc`, 37 test suites in `tools/`.
+- 156 Lua files in the `.toc`, 45 test suites in `tools/`.
 
 **Aimee runs the addon from a symlink**, `Interface/AddOns/ShowUsYourLoot ->
 Desktop/ShowUsYourLoot`. Edits are live in game immediately; only a `/reload`
@@ -178,7 +178,7 @@ again:
 python -m venv .venv && .venv/Scripts/python -m pip install lupa
 ```
 
-Thirty suites. Each reads its Lua straight out of the addon, so none can drift
+Forty-five suites. Each reads its Lua straight out of the addon, so none can drift
 from the code, and each exits non-zero on failure. `release.yml` runs the lot
 before building a zip, so a failing suite blocks a release.
 
@@ -292,163 +292,177 @@ pushes need no prompt. Never put a token in a URL.
 
 ## 3y. The 2026-08-23 session — READ THIS FIRST
 
-**v0.4.0 is live on CurseForge.** Two commits sit on `main` after the tag,
-pushed to GitHub but not released: `7efaad7` and `9f1d2f9`, both part of the
-settings redesign below. 43 suites green, `syl_check` exit 0, working tree
-clean, `.toc` still reads 0.4.0.
+**v0.4.0 is live on CurseForge. The settings redesign is finished and is NOT
+released.** Everything under it sits on `main` after the v0.4.0 tag, so no
+user has any of it. 45 suites green, `syl_check` exit 0, working tree clean,
+`.toc` still reads 0.4.0.
 
-The settings redesign is **half built**. What is done is committed and safe to
-reload; what is left is listed under "Still to build" and has a drawing she has
-already approved.
+To release it: the CHANGELOG's `## Unreleased` block is already written, bump
+`## Version:` in the `.toc` by hand, commit, tag, push the tag. See §1.
 
-### The drawing, which is the spec
+### The drawing, which is the spec, and which now matches the addon
 
-`screenshots/settings-five-tabs.png` — the five tabs at the real 560px width,
-drawn from her real settings. Her words on it: **"i love it."** Build to that
-picture. The script that made it is `tools/mockup_settings_tabs.py`, kept in the repo
-for exactly this reason; it reads `tools/mockup_settings.json` and
-`tools/mockup_commands.json` beside it, both dumped from her live saved
-variables. Re-run it after changing a tab and compare.
+`screenshots/settings-five-tabs.png` — the five tabs at the real 560px width.
+Aimee on the morning version: **"i love it."** `tools/mockup_settings_tabs.py`
+makes it and reads `tools/mockup_settings.json` and `tools/mockup_commands.json`
+beside it. **Re-run it after changing a tab.** It also measures every label in
+the real game font and prints what overflows, which is the check that caught
+"Announce gear in chat" being three pixels too wide.
 
-The five tabs are **Recording** (what gets written down), **Scoring** (the
-numbers the boards argue about), **Features** (what runs at all), **Display**
-(look and noise), **Tools** (what you go looking for rather than set once).
+`screenshots/clear-season-dialog.png` and `tools/mockup_clear_dialog.py` are
+the second drawing: the erase-a-season guard, in both its locked and unlocked
+states.
 
-### Done and committed
+Tab heights, which is what decides the window size: Recording 462, Scoring
+428, Features 296, Display 378, Tools 610. The old single column was 656.
 
-**`7efaad7` — the five tabs exist.** `UI/SettingsTabs.lua` is new and owns
-which sections live on which tab. Every one of the eight old BEHAVIOR rows now
-carries a `tab` field in `UI/SettingsRows.lua` and the builder filters on it,
-so they are already spread across four tabs. The scroll frame is gone with the
-column it existed for. The window is as tall as the tab it shows, and it
-remembers the tab.
+### What was built, in the order it was asked for
 
-That commit also fixed a bug it uncovered: the dashboard widget section sized
-its container as if the grid were one row per widget, but it has been three
-across for a while — so the **Default order** button was anchored 82px below
-the section and clean off the window. Drawn and unreachable, probably for
-weeks.
+**The editable-number widget** — `UI/SettingsNumberRow.lua`. The thing the
+whole redesign was blocked on: every row in this window was a checkbox or a
+value that cycles, and cycling is wrong for a weight. Label, right-aligned
+field, commit on Enter **and on focus lost**, Escape reverts, refusal printed
+rather than clamped.
 
-**`9f1d2f9` — the weights and the guild threshold are settings.**
-`LootScore.WeightOf` reads `settings.weights` and falls back to
-`LootScore.DEFAULT_WEIGHTS`; `LootScore.SetWeight` writes.
-`RaidSession.GuildThreshold()` and `SetGuildThreshold()` replace the constant.
-`tools/test_scoringsettings.py` covers both.
+**It does not use `SetNumeric(true)`**, and the comment in that file says why
+at length: a numeric EditBox eats every non-digit including the ones the
+widget writes itself, so the guild threshold's "80%" would have come back as
+"80" or as nothing. It filters in `OnTextChanged` instead. **The test client's
+EditBox is a stub that accepts anything, so no suite can see this.**
 
-**The offspec link is the load-bearing part and must not be simplified away.**
-Four roll states exist and her season contains all four — 16 offspec rolls,
-zero offspec wins. She asked to see three rows: *"leave the 4 weights, i only
-want to see the 3 for me if possible."* So offspec **follows greed** unless
-`LootScore.SetOffspecSplit(true)`. Hiding a weight is only safe while the
-hidden one cannot drift from a visible one; otherwise those sixteen rolls
-eventually score at a number nobody can see or explain, which is the exact
-failure the fairness board exists to prevent. `LootScore.EditableStates()`
-returns the three, or four when split.
+**The Scoring tab** — `UI/SettingsScoring.lua`. Rank floor, guild threshold,
+three weight rows, the offspec-split checkbox, and the caution in red on the
+tab. It **rebuilds itself** when the offspec link is broken, because that adds
+a fourth row and the tab is 20px taller with it: `SettingsScoring.onHeightChanged`
+to `tabs.onResize` to the window re-applying its height.
 
-### Still to build
+**The item types** — `Core/ItemTypes.lua`, `UI/SettingsItemTypes.lua`. Nine
+rows, three across, under the qualities. Gates capture in the same two places
+quality does and an item must pass both. Everything on by default, so an addon
+upgrading from 0.4.0 records exactly what it recorded yesterday.
 
-In the order I would do them.
+**The Tools tab** — `UI/SettingsToolsList.lua` (what) and `UI/SettingsTools.lua`
+(how). Twenty-four rows in six groups, two columns **packed into whichever
+column is shorter** rather than alternating — alternating put 18 rows against
+8 and wasted 90px of window.
 
-**1. The Scoring tab's number rows.** The tab currently shows only the rank
-floor, because there is no editable-number widget in the addon — every row
-today is a checkbox or a cycling value. That widget is the real work. It needs:
-a label, a small `EditBox` right-aligned, numbers only, commit on enter and on
-focus lost, and a refusal path (`SetWeight` returns false for negatives and
-non-numbers rather than clamping silently). Then three rows off
-`LootScore.EditableStates()`, the **Score offspec separately** checkbox, the
-guild-threshold field, and the red caution — which belongs on the tab, not in a
-tooltip.
+**Three dialogs** — `UI/ClearSeasonDialog.lua` and `UI/NamePromptDialog.lua`
+are new; the two that already existed are wired to their rows.
 
-**2. The Recording tab's item types.** Nine rows, per the drawing. Housing
-decor is **`Enum.ItemClass.Housing`, class ID 20** — confirmed, not guessed,
-against five addons installed on her machine (`RCLootCouncil/Core/Constants.lua:211`,
-`Auctionator/Source/Groups/Constants.lua:47`, `EllesmereUIBags`, `!WilduTools`,
-and `Syndicator/Search/CheckItem.lua:375`, which also uses
-`Enum.ItemHousingSubclass.Decor`). Her screenshot of four unlearned decor items
-is what settled it. Needs a `Core/ItemTypes.lua` alongside `Core/ItemQuality.lua`
-and a hook in the same place quality filtering happens.
+### The clear guard, which is Aimee's design and not a default
 
-**3. The Tools tab's command buttons.** See the traps below before starting.
+Her words: *"dont make it a normal button. or make it harder to do. make sure
+there is an explanation as to why someone should use this button and what will
+happen if they do. maybe have a danger image near it. or it can just be a
+slash command. but dont make it a normal button and give an explanation of
+what it does so they youngest user can understand."*
 
-### Traps this session paid for, in the commands
+Four guards, and **none of them is decoration**:
 
-An inventory agent read all 34 `CommandList.ENTRIES` against the whole `UI/`
-tree. The findings that change the design:
+1. It is **not a row in the Tools list**. Own block at the bottom, own warning
+   rule, the client's alert icon, warning color.
+2. The dialog **explains before it asks** — real counts, what goes, what
+   stays, what to do instead, in short words.
+3. **The season's name has to be typed.** Not "confirm", which is what the
+   command takes and which can be typed without reading. The name cannot.
+4. **Erase is dead until it matches**, and a line under the box says which of
+   the two states it is in.
 
-- **The Tools tab already exists.** `UI/CommandMenu.lua` renders 30 of the 34
-  as clickable rows off the minimap right-click. The set reachable by **no**
-  click anywhere is exactly `{dev, api}`, both developer-only. The tab is a
-  second door, not new UI — and it is worth building anyway, because the
-  minimap button is a checkbox (`UI/SettingsRows.lua`, default on) and turning
-  it off strands about thirteen commands.
-- **`/syl bosses` does not open the Bosses tab.** It opens the standalone
-  `UI/BossWindow.lua`. Same for `roster` (opens RosterWindow, not the Raiders
-  tab) and `due` (prints unless you append `window`). A button wired to the
-  command string reopens the legacy window instead of the tab in front of you.
-- **`/syl clear` destroys a season** and its required argument is the only
-  thing keeping it safe in a browsable list — `Core/CommandList.lua:155-165`
-  records that it once emptied a season on one click from the minimap menu.
-- **`/syl scope` has no click door anywhere**, and it is the setting the due
-  and players windows both read. Building the tab exactly as drawn still leaves
-  the house rule broken.
-- **`ENTRIES` is not the whole command surface.** `archive rename`,
-  `archive merge`, `due window`, `sync backfill`, `help all` and `archives <n>`
-  all dispatch and are not in the 34.
-- Six entries take an argument. `rename` and `archive` already have dialogs
-  (`UI/SeasonRenameDialog.lua`, `UI/ArchivePopup.lua`); `link`, `addraider`,
-  `dropraider` and `clear` have nothing. The name-entry pattern to copy is
-  `UI/AbsenceControls.lua` plus `UI/NameSuggest.lua`.
+Archive is offered first and is the larger button. The dialog runs
+`/syl clear confirm` rather than emptying the tables itself, so the
+account-wide `Recovery.NoteDeliberateClear` stamp cannot be forgotten in one
+of two copies — an alt would otherwise report data loss on its next login.
 
-### Open bugs found and not yet fixed
+**`tools/test_settingstabs.py` asserts that no Tools row clears a season, both
+by label and by running every row and watching what it dispatches. Do not
+delete that assertion to make a refactor pass.**
 
-- **All seven dashboard widget tooltips are dead.** `UI/SettingsWidgets.lua`
-  creates the row as a `CreateFrame("Frame", ...)` with no `EnableMouse(true)`;
-  only the 14x14 box takes clicks. `Tooltips.Attach` hooks OnEnter, which a
-  mouse-disabled frame never fires. Every widget note in
-  `Core/Dashboard.lua:33-78` is unreachable text.
-- **The Raiders tab tooltip states something untrue.**
-  `UI/RaidersPanel.lua:396-401` says adding a recruit lives in the full roster
-  window. `IncomingRoster.Add` has no caller in `UI/` at all.
-- **Export is behind a door that does not exist.** Its only in-addon button is
-  inside `UI/PlayerWindow.lua`, which is itself reachable only by typing
-  `/syl players`.
+### Four bugs fixed on the way, three of them shipped-and-invisible
+
+- **All seven dashboard widget tooltips were dead.** `UI/SettingsWidgets.lua`
+  built the row as a `Frame` with no `EnableMouse(true)`, and `Tooltips.Attach`
+  hooks OnEnter, which such a frame never fires. Every note in
+  `Core/Dashboard.lua:33-78` was unreachable text. **This is a whole class of
+  bug in this codebase** — check `EnableMouse` before believing a tooltip.
+- **A stray paragraph was drawn through four of the five tabs.**
+  `BuildToggleSection` anchored its closing note at `ToggleSectionTop()`, an
+  offset for the column the tabs replaced, and ignored the `top` it was given
+  — so every tab drew that sentence 244px down its own page. It shipped in
+  `7efaad7`. `BuildQualitySection` had the same fault and agreed with the
+  Recording tab **by two pixels of luck**; both derive from `top` now.
+- **The Raiders board told people something untrue** — that adding a recruit
+  lived in the full roster window. `IncomingRoster.Add` had no caller in `UI/`
+  at all. There is a real dialog now and the tooltip points at it.
+- **Export had no door.** Its only button was inside `UI/PlayerWindow.lua`,
+  reachable only by typing `/syl players`.
+
+### The one thing inferred rather than confirmed
+
+**"Sparks and hides" and "Profession supplies" are a split taken from the
+labels, not one the client draws.** Housing decor is confirmed — class 20,
+against five installed addons — and the other eight rows key on confirmed
+class and subclass ids. But the client has no category that separates a
+raid-drop reagent from an ordinary crafting material, so:
+
+- **Sparks and hides** = Tradegoods, Reagent, ItemEnhancement. Catches Spark
+  of Radiance and Void-Tempered Hide from her season — **and Bright Linen and
+  Resilient Leather with them.**
+- **Profession supplies** = Recipe and Profession. Recipes, patterns, tools.
+
+If she wants ordinary mats separated from raid reagents that is a real change,
+and the honest way is a name list rather than a class rule.
 
 ### Decided, so nobody re-asks
 
-- Weights **editable**, with the caution on the tab. Her call, over my
-  objection that mid-tier edits rewrite history — she owns the guild.
-- Guild threshold a **real setting**. Worth knowing: since `bbcf4dc` it also
-  gates `DropRules.CountsAsUpgrade`, so changing it re-scores nights already
-  raided, exactly like a weight does.
-- Three weight rows for her, four in the data. See the offspec link above.
+- Weights **editable**, with the caution on the tab. Her call over my
+  objection that mid-tier edits rewrite history.
+- Guild threshold a **real setting**. Since `bbcf4dc` it also gates
+  `DropRules.CountsAsUpgrade`, so moving it re-scores nights already raided.
+- Three weight rows, four in the data. Offspec follows greed unless split.
 - Housing decor **ships as a real filter**, class 20.
+- Item types **all on by default** — an upgrade must not change what is
+  captured.
+- **Two rows the drawing did not have**: "Raiders board", because the headline
+  screen had no door of its own anywhere in the addon, and "Full roster"
+  renamed from "Roster" so the two screens are not confused. Both flagged to
+  her.
 
-### Two naming traps this session hit, both caught before shipping
+### Traps this session paid for
 
-- `RaidSession.GuildShare(session)` already existed and answers a different
-  question — what fraction of one night was guild. Defining a second
-  `GuildShare()` for the threshold simply replaced it, and `IsGuildNight` would
-  then have asked a nil session for its share. Hence `GuildThreshold`. The test
-  asserts the two are different functions.
-- `SYL.Rows` exists (`UI/Rows.lua`), so a local named `Rows` in
-  `UI/SettingsTabs.lua` shadowed it and `syl_check` correctly read the calls as
-  members `SYL.Rows` does not have.
+- **`UI/SettingsRows.lua`'s size exemption had gone stale and was being used
+  to hold things it was not written for.** Its note said "three sections of
+  one window sharing a row factory"; those three are separate files now. The
+  eight toggle declarations moved to `UI/SettingsToggles.lua` and the note was
+  rewritten. **Anything that is a LIST rather than a mechanism belongs outside
+  that file.**
+- **Moving `PERSONAL_LOOT_NOTE` left a dangling `SettingsRows.` reference** in
+  `UI/SettingsTabs.lua`, which would have drawn nil as an empty paragraph.
+  Both `syl_check` and the suite caught it — which is the shape a rename
+  always leaves behind, exactly as §2 says.
+- **The test client returns the parent frame itself from `CreateFontString`.**
+  Every "font string" in a suite is therefore the same table, so a harness
+  that wrapped `SetText` to record what was drawn NESTED its wrappers and
+  every count came back a multiple of the truth. `rawget` is needed for the
+  guard, because a plain field read on that stub answers a function, which is
+  truthy.
+- **`Enum` is `{}` in the test client**, so `Enum.ItemClass.Housing` throws.
+  `Core/ItemTypes.lua` carries the numbers as fallbacks and reads the live
+  enum when it exists, resolved lazily and never at load.
 
-### Not this work, still open
+### Still open, and none of it is this work
 
-`Core/Sync.lua` sends the item **id** and never the item **link**, so a
-co-officer's synced drops arrive with no icon, no quality color, no tooltip and
-no track letter on the new Raiders detail pane. She has no synced records
-today. That file's header says widening what it transmits is a decision to take
-deliberately — **it is hers, not a fix to slip in.** Appending a field is
-backward compatible; bumping `PROTOCOL` is not, and would break sync with
-guildmates who have not updated.
-
-Her own next task, unrelated: **CurseForge project screenshots.** The shot list
-in `SCREENSHOTS.md` has ten shots and the Raiders board is not one of them —
-the headline screen has never had a picture on the project page. Shoot Settings
-last, after this redesign lands. `CURSEFORGE.md` already carries the updated
-description text for her to paste.
+- **`Core/Sync.lua` sends the item id and never the item link**, so a
+  co-officer's synced drops arrive with no icon, no quality color, no tooltip
+  and no track letter on the Raiders detail pane. **Aimee's decision, not a
+  fix to slip in.** Appending a field is backward compatible; bumping
+  `PROTOCOL` is not, and would break sync with guildmates who have not
+  updated.
+- **Aimee's own next task: CurseForge project screenshots.** `SCREENSHOTS.md`
+  has ten shots and the Raiders board is not one of them — the headline screen
+  has never had a picture on the project page. Shoot Settings **after** this
+  ships. `CURSEFORGE.md` already holds the description text.
+- **She has a list of minor issues** she wants worked next, mentioned at the
+  end of this session. Ask her for it.
 
 ---
 

@@ -3,6 +3,98 @@
 What changed, for the person installing it. The commit history explains why;
 this says what you will notice.
 
+## Unreleased
+
+### Added
+
+- **Settings is five tabs.** Recording, Scoring, Features, Display and Tools —
+  what gets written down, the numbers the boards argue about, what runs at
+  all, look and noise, and everything you go looking for rather than set once.
+
+  It used to be one 656-pixel column that scrolled, and the order in it was
+  the order things happened to be built in — so the rank floor, the number
+  that decides who gets ranked at all, sat between "record group loot" and
+  "show the minimap button". Nothing scrolls now, nothing is below the fold,
+  and the window is as tall as the tab you are looking at rather than as tall
+  as the longest one. It remembers which tab you left it on.
+
+- **The Scoring tab can be typed into.** Need, Greed and Mog are numbers you
+  set, not constants somebody else chose, and the guild threshold — the
+  percentage of a raid that has to be guild before the night counts at all —
+  is a real setting beside them. Type a number, press Enter or click away, and
+  it takes. Press Escape and it goes back.
+
+  A weight that is refused says so instead of being quietly rounded into
+  something else. Negatives are refused: a win cannot be worth a penalty.
+
+  The caution is on the tab in red, not hidden in a tooltip. Changing a weight
+  re-scores **every night already raided**, not just the next one, and so does
+  moving the guild threshold. Set these before a season and leave them.
+
+  Three rows, four weights. Your client reports offspec separately from greed;
+  unless you tick **Score offspec separately** they are worth the same, so only
+  one row shows and offspec follows it. Untick the link and a fourth row
+  appears.
+
+- **Choose which KINDS of item get recorded**, on the Recording tab, beside the
+  qualities. Nine rows: raid gear, warbound gear, pets, mounts, toys, housing
+  decor, profession supplies, quest items, and sparks and hides. A Mythic night
+  drops gear, a mount, a decor piece and a fistful of reagents, and they are
+  all the same purple — quality alone could never tell them apart.
+
+  Everything is recorded until you turn something off, so nothing you already
+  capture stops being captured. Unticking never removes records you already
+  have. Every row explains what it catches on hover.
+
+- **A Tools tab: every command as something you click.** Twenty-four of them,
+  grouped by what you came looking for — open a screen, this season, people,
+  sharing and trades, reports in chat, and if something goes wrong. The
+  minimap menu already listed most of these, but the minimap button is a
+  checkbox, and turning it off used to strand about thirteen commands with no
+  click anywhere.
+
+  Three of them could not simply be wired to their own names, and are fixed
+  here: **Bosses** opens the Bosses tab rather than the old standalone window,
+  **Who is due** opens a window rather than printing to chat, and **Who the
+  boards show** — the raid team / guild / everyone switch that the due list and
+  the players window both read — has a click for the first time, with the
+  current setting in its own label.
+
+  **Adding and removing a recruit** are real boxes now. Both were
+  `/syl addraider Name-Realm CLASS` and nothing else, and the Raiders board
+  told you they lived in the full roster window, where they never were.
+
+  **Export for Discord** has a door. Its only button was inside a window you
+  could reach only by typing `/syl players`.
+
+### Changed
+
+- **Erasing a season is behind four locks now**, and it is not a button in a
+  list. It sits at the bottom of the Tools tab under its own warning rule with
+  an alert icon, and it says in plain words what goes, what stays, and what to
+  do instead. Opening it does not erase anything: you have to type the
+  season's own name before the Erase button will do anything at all, and
+  **Archive instead** is offered first and larger, because that is what almost
+  everybody who gets there actually wanted.
+
+  `/syl clear confirm` still works exactly as it did.
+
+### Fixed
+
+- **Every dashboard widget tooltip was dead.** All seven had explanations
+  written for them and none of them could ever appear — the row did not take
+  the mouse, so pointing at one did nothing. They work now.
+
+- **A stray sentence was being drawn through four of the five tabs**, 244
+  pixels down, at a position left over from the single scrolling column the
+  tabs replaced. It now appears once, on the Recording tab, where it belongs.
+
+- **The Raiders board no longer tells you something untrue.** Its full-roster
+  button said adding a recruit lived in that window. It never did.
+
+- **The Default order button on the Display tab** could be drawn off the bottom
+  of the window in some layouts.
+
 ## 0.4.0 — 2026-08-22
 
 ### Changed
