@@ -424,12 +424,12 @@ if __name__ == "__main__":
     GA = over((0.55, 0.85, 1.00, 1), GROUND)
     GW = over((0.95, 0.35, 0.32, 1), GROUND)
 
-    page.text(MARGIN, 28, "The raid night pane, second pass", 15, G1)
+    page.text(MARGIN, 28, "The raid night pane, as built", 15, G1)
     page.text(MARGIN, 56,
-              "Your notes applied: 12-hour times with a zone, bosses over the "
-              "raid's total, difficulty in the hover, \"pieces of loot\", mog "
-              "excluded from \"went home with gear\", \"most pull attempts\", "
-              "and names in class color.", 10, G3)
+              "Built and committed. Every note applied: 12-hour times with a "
+              "zone, bosses over the raid's total, difficulty in the hover, "
+              "\"pieces of loot\", mog excluded from \"went home with gear\", "
+              "\"most pull attempts\", and names in class color.", 10, G3)
 
     y = 108
 
