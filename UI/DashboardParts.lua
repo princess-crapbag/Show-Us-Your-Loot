@@ -61,11 +61,15 @@ end
 function DashboardParts.PlayerRow(tile, index, name, class, valueText, valueColor)
     local row, left = DashboardParts.Row(tile, index, name, valueText, "textPrimary", valueColor)
 
-    local color = Theme.GetClassColor(class)
-
-    if color then
-        Theme.SetCustomTextColor(left, color[1], color[2], color[3])
+    -- THE ONE SITE WITH ITS OWN FALLBACK. Row above has already painted the
+    -- name "textPrimary", so an unknown class must leave that standing rather
+    -- than repaint it -- which is why ClassColor.Set returns whether it did
+    -- anything, and why this is the only caller that looks at the answer.
+    if not SYL.ClassColor.Get(class) then
+        return row
     end
+
+    SYL.ClassColor.Set(left, class)
 
     return row
 end

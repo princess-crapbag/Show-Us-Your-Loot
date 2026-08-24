@@ -177,7 +177,15 @@ end
 --
 -- Shift-click links the item, the same as a row, because somebody reading a
 -- drop is exactly who wants to paste it into chat.
-function Widgets.MakeItemHoverable(parent, getLink)
+-- `getNote` is optional and adds one line of ours under the game's own item
+-- tooltip. Read on hover for the same reason the link is: rows are pooled.
+--
+-- IT EXISTS FOR THE TRACK LETTER. The Raiders detail cards print V, C, H or M
+-- in the corner and there was nowhere at all to learn what those mean --
+-- Core/GearTrack.lua carries a NAMES table and a Describe() written for "the
+-- tooltip that explains a card", and that tooltip had never been built. The
+-- letter has been on screen, undecodable, since the cards shipped.
+function Widgets.MakeItemHoverable(parent, getLink, getNote)
     local hover = CreateFrame("Button", nil, parent)
 
     hover:RegisterForClicks("LeftButtonUp")
@@ -191,6 +199,13 @@ function Widgets.MakeItemHoverable(parent, getLink)
 
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         GameTooltip:SetHyperlink(link)
+
+        local note = getNote and getNote()
+
+        if note then
+            GameTooltip:AddLine(note, 0.72, 0.66, 0.68, true)
+        end
+
         GameTooltip:Show()
     end)
 

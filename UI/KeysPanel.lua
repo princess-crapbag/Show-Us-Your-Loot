@@ -235,15 +235,7 @@ Refresh = function()
 
                 row.cells.name:SetText(tostring(entry.name))
 
-                local classColor = Theme.GetClassColor(entry.class)
-
-                if classColor then
-                    Theme.SetCustomTextColor(
-                        row.cells.name, classColor[1], classColor[2], classColor[3]
-                    )
-                else
-                    Theme.SetTextColor(row.cells.name, "textPrimary")
-                end
+                SYL.ClassColor.Set(row.cells.name, entry.class)
 
                 row.cells.dungeon:SetText(
                     tostring(SYL.Keystone.GetMapName(entry.mapID) or "Unknown")

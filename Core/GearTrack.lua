@@ -90,43 +90,88 @@ GearTrack.NAMES = {
 
 GearTrack.ORDER = { "E", "A", "V", "C", "H", "M" }
 
--- The letter for a link, or nil when the client cannot say.
+-- WHAT THE RAID DIFFICULTY IMPLIES, for items the upgrade API will not answer
+-- for.
+--
+-- TIER TOKENS HAVE NO TRACK ON THEM AT ALL. Aimee, who settled this: "there is
+-- no track on the token. but champion drops from normal and hero drops from
+-- heroic, mythic from mythic. veteran from lfr." A token is
+-- Enum.ItemClass.Miscellaneous rather than equipment, so
+-- C_Item.GetItemUpgradeInfo has nothing to say about it -- three addons
+-- installed on this machine gate that same call behind an equipment test for
+-- the same reason.
+--
+-- So the track is read off the difficulty the thing dropped on, which the
+-- addon already records on every drop.
+--
+-- THIS IS NOT A TABLE OF BONUS IDS, and the distinction matters. The header
+-- above refuses to build on bonus ids because they are re-issued every season
+-- and a table of them is wrong the month after it is written. Difficulty ids
+-- are not like that: 14, 15, 16 and 17 have meant Normal, Heroic, Mythic and
+-- Looking For Raid for a decade, and Core/Utilities.lua's RAID_DIFFICULTIES
+-- has depended on exactly that since this addon was written.
+GearTrack.BY_DIFFICULTY = {
+    [17] = "V",     -- Looking For Raid
+    [151] = "V",    -- Timewalking LFR
+    [14] = "C",     -- Normal
+    [33] = "C",     -- Timewalking raid
+    [15] = "H",     -- Heroic
+    [16] = "M",     -- Mythic
+}
+
+-- The letter for a link, or nil when nothing can say.
+--
+-- `difficultyID` is optional and is only consulted when the client has no
+-- answer of its own. The API wins wherever it speaks, because it knows about
+-- upgrades and the difficulty does not: a Champion piece crested up to Hero
+-- still dropped on Normal, and the item is what it is now rather than what it
+-- was when it fell.
 --
 -- pcall'd like every other client call in this addon: GetItemUpgradeInfo is
 -- newer than most of the API surface here, and a missing function has to read
 -- as "no answer" rather than as an error thrown out of a draw.
-function GearTrack.LetterFor(itemLink)
+function GearTrack.LetterFor(itemLink, difficultyID)
     if type(itemLink) ~= "string" or itemLink == "" then
         return nil
     end
 
-    if not C_Item or not C_Item.GetItemUpgradeInfo then
-        return nil
+    if C_Item and C_Item.GetItemUpgradeInfo then
+        local ok, info = pcall(C_Item.GetItemUpgradeInfo, itemLink)
+
+        if ok and type(info) == "table" then
+            local letter = LETTERS[info.trackString or ""]
+
+            if letter then
+                return letter
+            end
+        end
     end
 
-    local ok, info = pcall(C_Item.GetItemUpgradeInfo, itemLink)
-
-    if not ok or type(info) ~= "table" then
-        return nil
-    end
-
-    return LETTERS[info.trackString or ""]
+    return GearTrack.BY_DIFFICULTY[difficultyID]
 end
 
 -- The letter and how far up the track it is, for the tooltip: "Champion 3 of
 -- 6". The maximum is read from the client rather than assumed, because it is
 -- not the same number every season -- it was 8, it is 6 now, and a hardcoded
 -- "/8" would be a wrong fact printed confidently.
-function GearTrack.Describe(itemLink)
-    local letter = GearTrack.LetterFor(itemLink)
+function GearTrack.Describe(itemLink, difficultyID)
+    local letter = GearTrack.LetterFor(itemLink, difficultyID)
 
     if not letter then
         return nil
     end
 
+    if not C_Item or not C_Item.GetItemUpgradeInfo then
+        return GearTrack.NAMES[letter]
+    end
+
     local ok, info = pcall(C_Item.GetItemUpgradeInfo, itemLink)
 
     if not ok or type(info) ~= "table" then
+        -- A TIER TOKEN LANDS HERE, and it is right that it says "Champion"
+        -- and stops. The letter came from the difficulty, so there is no
+        -- current level to report -- and "Champion 1 of 6" would be a number
+        -- invented to fill the shape of the sentence.
         return GearTrack.NAMES[letter]
     end
 

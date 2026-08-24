@@ -108,19 +108,11 @@ end
 -- Filling it in
 --------------------------------------------------------------------------
 
-local function ColorFor(record, credit)
-    if credit.source == "roll" then
-        return Theme.GetClassColor(record.winnerClass)
-    end
-
-    for _, roll in ipairs(record.rolls or {}) do
-        if roll.name == credit.name then
-            return Theme.GetClassColor(roll.class)
-        end
-    end
-
-    return nil
-end
+-- THE CLASS WAS ALREADY IN HAND AND THIS WALKED THE ROLL LIST AGAIN TO FIND
+-- IT. LootCredit.Describe sets `class` on every descriptor it returns -- for
+-- all three sources, manual, traded and roll -- and this function existed
+-- beside a variable that already held it. Deleted; `credit.class` is used
+-- directly below.
 
 -- The words describe what happened rather than naming a setting, because the
 -- person reading this is trying to answer "why does it say that".
@@ -179,15 +171,7 @@ function DropCredit.Update(frame, record)
 
     frame.creditName:SetText(tostring(credit.name or "Nobody"))
 
-    local classColor = ColorFor(record, credit)
-
-    if classColor then
-        Theme.SetCustomTextColor(
-            frame.creditName, classColor[1], classColor[2], classColor[3]
-        )
-    else
-        Theme.SetTextColor(frame.creditName, "textPrimary")
-    end
+    SYL.ClassColor.Set(frame.creditName, credit.class)
 
     local stateLabel = SYL.LootScore.LABELS[credit.state]
         or SYL.LootHistoryAPI.ShortRollState(credit.state)

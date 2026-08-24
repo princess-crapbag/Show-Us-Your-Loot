@@ -556,6 +556,12 @@ function LootScore.ItemsFor(key, drops)
                     -- out of here.
                     boss = drop.encounterName,
 
+                    -- THE TRACK LETTER FOR A TIER TOKEN COMES FROM HERE.
+                    -- A token carries no upgrade track of its own, so
+                    -- Core/GearTrack.lua reads the difficulty it dropped on
+                    -- instead. Already on the record; never passed out.
+                    difficultyID = drop.difficultyID,
+
                     state = state,
                     label = LootScore.LABELS[state] or "Unknown",
                     weight = LootScore.WeightOf(state),

@@ -133,15 +133,7 @@ end
 local function UpdateHeaderText(entry, totals)
     frame.nameText:SetText(tostring(entry.name or "Unknown"))
 
-    local classColor = Theme.GetClassColor(entry.class)
-
-    if classColor then
-        Theme.SetCustomTextColor(
-            frame.nameText, classColor[1], classColor[2], classColor[3]
-        )
-    else
-        Theme.SetTextColor(frame.nameText, "textPrimary")
-    end
+    SYL.ClassColor.Set(frame.nameText, entry.class)
 
     local rankParts = {}
 

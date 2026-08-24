@@ -90,15 +90,7 @@ function PlayerRows.Fill(row, entry)
 
     cells.name:SetText(tostring(entry.name or "Unknown"))
 
-    local classColor = Theme.GetClassColor(entry.class)
-
-    if classColor then
-        Theme.SetCustomTextColor(
-            cells.name, classColor[1], classColor[2], classColor[3]
-        )
-    else
-        Theme.SetTextColor(cells.name, "textPrimary")
-    end
+    SYL.ClassColor.Set(cells.name, entry.class)
 
     -- Blank rather than "not in guild": most of a pug raid is not, and saying
     -- so on every row would be noise.

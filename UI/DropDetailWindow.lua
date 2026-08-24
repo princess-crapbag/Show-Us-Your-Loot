@@ -89,16 +89,7 @@ local function UpdateHeaderText()
             .. (record.winnerRoll and (" with " .. record.winnerRoll) or "")
         )
 
-        local classColor = Theme.GetClassColor(record.winnerClass)
-
-        if classColor then
-            Theme.SetCustomTextColor(
-                frame.outcomeText,
-                classColor[1], classColor[2], classColor[3]
-            )
-        else
-            Theme.SetTextColor(frame.outcomeText, "accent")
-        end
+        SYL.ClassColor.Set(frame.outcomeText, record.winnerClass, "accent")
     end
 end
 

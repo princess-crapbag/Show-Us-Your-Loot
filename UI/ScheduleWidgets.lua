@@ -107,13 +107,23 @@ SYL.DashboardWidgets.RENDERERS.whoIsOut = function(tile)
     for index = 1, math.min(DashboardParts.RowCapacity(tile), #out) do
         local absence = out[index]
 
-        DashboardParts.Row(tile, index,
+        -- PlayerRow, not Row. The two tiles either side of this one -- last
+        -- night's winners and who is due -- both name players in class color
+        -- through the class-colored version of this same call, and this one
+        -- did not, for no reason but that it was written separately.
+        --
+        -- The class comes from the registry rather than from the absence:
+        -- Core/Absences.lua stamps `key` with the player's GUID when the
+        -- absence is written, which is exactly what Players.Get resolves.
+        -- Nothing is stored twice and no schema changes.
+        DashboardParts.PlayerRow(tile, index,
             absence.name,
+            (SYL.Players.Get(absence.key) or {}).class,
             absence.multiDay
                 and ("to " .. SYL.Utilities.FormatDateOnly(
                     SYL.RaidSchedule.TimestampOf(absence.to)))
                 or (absence.reason or "out"),
-            "textPrimary", "textMuted")
+            "textMuted")
     end
 
     DashboardParts.Caption(tile,

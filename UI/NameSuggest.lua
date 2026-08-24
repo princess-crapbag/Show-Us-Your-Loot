@@ -95,7 +95,7 @@ local function Note(entry)
     local parts = {}
 
     if entry.class then
-        table.insert(parts, Theme.ClassLabel(entry.class))
+        table.insert(parts, SYL.ClassColor.Label(entry.class))
     end
 
     if entry.isAlt and entry.mainName then
@@ -221,15 +221,7 @@ function NameSuggest.Attach(holder, config)
 
             row.name:SetText(entry.name)
 
-            local classColor = Theme.GetClassColor(entry.class)
-
-            if classColor then
-                Theme.SetCustomTextColor(
-                    row.name, classColor[1], classColor[2], classColor[3]
-                )
-            else
-                Theme.SetTextColor(row.name, "textPrimary")
-            end
+            SYL.ClassColor.Set(row.name, entry.class)
 
             row.note:SetText(Note(entry))
 

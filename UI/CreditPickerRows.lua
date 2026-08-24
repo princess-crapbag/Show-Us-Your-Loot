@@ -81,15 +81,7 @@ function CreditPickerRows.FillRow(row, candidate, state)
 
     row.nameText:SetText(tostring(candidate.name))
 
-    local classColor = Theme.GetClassColor(candidate.class)
-
-    if classColor then
-        Theme.SetCustomTextColor(
-            row.nameText, classColor[1], classColor[2], classColor[3]
-        )
-    else
-        Theme.SetTextColor(row.nameText, "textPrimary")
-    end
+    SYL.ClassColor.Set(row.nameText, candidate.class)
 
     if state.chosen then
         row.selected:Show()

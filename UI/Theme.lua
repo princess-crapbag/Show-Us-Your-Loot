@@ -441,45 +441,13 @@ function Theme.GetItemIcon(itemLink)
     return nil
 end
 
--- Drop records store the winner's class file name, so their names can be
--- class-colored. Chat-derived loot records cannot: they hold only a name.
--- "DEATHKNIGHT" is what the roster stores, because it keys the colors above
--- and the buff lookups. "Death Knight" is what a person reads.
+-- CLASS COLOR MOVED TO UI/ClassColor.lua, along with ClassLabel.
 --
--- Beside GetClassColor rather than in the one file that happened to need it
--- first: two screens now turn a class into text, and a second copy of this
--- would be a second place for a locale to be handled differently.
-function Theme.ClassLabel(classFile)
-    if not classFile or classFile == "" then
-        return ""
-    end
-
-    local localized = _G.LOCALIZED_CLASS_NAMES_MALE
-
-    return (localized and localized[classFile]) or classFile
-end
-
-function Theme.GetClassColor(classFile)
-    if not classFile or classFile == "" then
-        return nil
-    end
-
-    local color
-
-    if C_ClassColor and C_ClassColor.GetClassColor then
-        color = C_ClassColor.GetClassColor(classFile)
-    end
-
-    if not color and RAID_CLASS_COLORS then
-        color = RAID_CLASS_COLORS[classFile]
-    end
-
-    if not color then
-        return nil
-    end
-
-    return { color.r, color.g, color.b }
-end
+-- Nineteen call sites across seventeen files hand-rolled the same six lines
+-- around GetClassColor, and every screen that gained a name copied them
+-- again. They call SYL.ClassColor.Set now. Both functions went with it rather
+-- than staying behind: one subject with two homes is how two homes come to
+-- disagree, and this file is over the size limit besides.
 
 -- Returns nil when the item is not cached yet, which the caller uses as a
 -- signal to retry shortly rather than to render a wrong color permanently.

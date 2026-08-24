@@ -160,13 +160,7 @@ local function DrawEntry(block, entry, top)
             .. "  " .. candidate.stateLabel
         )
 
-        local classColor = Theme.GetClassColor(candidate.class)
-
-        if classColor then
-            Theme.SetCustomTextColor(row.name, classColor[1], classColor[2], classColor[3])
-        else
-            Theme.SetTextColor(row.name, "textPrimary")
-        end
+        SYL.ClassColor.Set(row.name, candidate.class)
 
         row.value:SetText(SYL.TradeAdvisor.DescribeCandidate(candidate))
 

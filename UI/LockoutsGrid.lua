@@ -222,15 +222,7 @@ function LockoutsGrid.Refresh()
         if character then
             row.name:SetText(tostring(character.name))
 
-            local classColor = Theme.GetClassColor(character.class)
-
-            if classColor then
-                Theme.SetCustomTextColor(
-                    row.name, classColor[1], classColor[2], classColor[3]
-                )
-            else
-                Theme.SetTextColor(row.name, "textPrimary")
-            end
+            SYL.ClassColor.Set(row.name, character.class)
 
             for cellIndex = 1, math.max(#columns, #cells[index]) do
                 local cell = CellAt(index, cellIndex)

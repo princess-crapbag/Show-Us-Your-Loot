@@ -212,7 +212,13 @@ end
 -- thing on the row Aimee's list did not title -- it had never needed one,
 -- being the only bar on screen. With four named columns beside it the unnamed
 -- one starts to look like a decoration, so it says what it measures.
-local BAR_HEADING = "PER NIGHT, AGAINST THE RAID AVERAGE"
+--
+-- SHORTENED FROM "PER NIGHT, AGAINST THE RAID AVERAGE", which is Aimee's
+-- call. The long version explained the mark rather than naming the column,
+-- and a heading that has to explain itself is doing the tooltip's job: the
+-- mark on each bar already stands where it means, and POINTS PER NIGHT is a
+-- named column further along saying the "per night" half.
+local BAR_HEADING = "RAID AVERAGE"
 
 function RaidersBoard.CreateHeader(parent, top)
     local layout = RaidersBoard.layout

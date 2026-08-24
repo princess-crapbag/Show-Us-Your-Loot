@@ -122,17 +122,9 @@ function RosterRows.Fill(row, entry, isSelected)
 
     cells.name:SetText(tostring(entry.name or "Unknown"))
 
-    local classColor = Theme.GetClassColor(entry.class)
+    SYL.ClassColor.Set(cells.name, entry.class)
 
-    if classColor then
-        Theme.SetCustomTextColor(
-            cells.name, classColor[1], classColor[2], classColor[3]
-        )
-    else
-        Theme.SetTextColor(cells.name, "textPrimary")
-    end
-
-    cells.class:SetText(Theme.ClassLabel(entry.class))
+    cells.class:SetText(SYL.ClassColor.Label(entry.class))
     Theme.SetTextColor(cells.class, "textSecondary")
 
     local role, detected = SYL.RaidTeam.GetRole(entry.key)

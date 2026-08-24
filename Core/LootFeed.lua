@@ -109,6 +109,18 @@ local LootTypeOf = SYL.PersonalLoot.LootTypeOf
 -- keeps its realm suffix and stays its own entry, because two people really
 -- called Aimee are two people, and merging them would be a worse error than
 -- listing them twice.
+-- RETURNS THE CLASS TOO, and that second value is the whole reason every
+-- chat-captured row in the loot list was drawn in plain white.
+--
+-- Personal loot, vault items, crafted gear and world drops all come through
+-- FromLoot below, and it set `player` from here and no class at all -- so
+-- UI/LootListView.lua had nothing to color with and fell through to
+-- textPrimary on what is by far the most numerous kind of row in the list.
+-- Her database holds 193 chat-captured records against 38 group-loot ones.
+--
+-- The player record was already being fetched and thrown away one line later.
+-- No new lookup, nothing stored, and an unresolvable name still answers no
+-- class rather than a guessed one.
 local function DisplayName(name)
     if type(name) ~= "string" or name == "" then
         return name
@@ -117,7 +129,11 @@ local function DisplayName(name)
     local guid = SYL.Players.GUIDForName(name)
     local player = guid and SYL.Players.Get(guid)
 
-    return (player and player.name) or name
+    if not player then
+        return name
+    end
+
+    return player.name or name, player.class
 end
 
 local function WhereOf(record)
@@ -193,13 +209,19 @@ end
 
 local function FromLoot(record)
     local typeKey = LootTypeOf(record)
+    local displayName, displayClass = DisplayName(record.recipient)
 
     return {
         id = record.id,
         source = "loot",
         record = record,
 
-        player = DisplayName(record.recipient),
+        player = displayName,
+
+        -- The same field name FromDrop uses, so UI/LootListView.lua asks one
+        -- question of both kinds of row.
+        creditedClass = displayClass,
+
         itemLink = record.itemLink,
         itemName = record.itemName,
         itemID = record.itemID,

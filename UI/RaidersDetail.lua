@@ -202,15 +202,7 @@ end
 local function Header(detail, entry)
     detail.name:SetText(tostring(entry.name or "Unknown"))
 
-    local classColor = Theme.GetClassColor(entry.class)
-
-    if classColor then
-        Theme.SetCustomTextColor(
-            detail.name, classColor[1], classColor[2], classColor[3]
-        )
-    else
-        Theme.SetTextColor(detail.name, "textPrimary")
-    end
+    SYL.ClassColor.Set(detail.name, entry.class)
 
     detail.name:Show()
 

@@ -258,9 +258,15 @@ function Reports.Due(limit)
     for index = 1, math.min(limit or 10, #entries) do
         local entry = entries[index]
 
+        -- CLASS COLOR IN CHAT NEEDS AN ESCAPE CODE, not SetTextColor -- a
+        -- chat line is a string, not a font string. The class is right here
+        -- on the entry and there was no way to use it; UI/ClassColor.lua's
+        -- Name wraps it and hands back a plain name when the class is
+        -- unknown, so a line can never end up with half an escape sequence
+        -- in it.
         SYL:Write(
             "  " .. index .. ". "
-            .. tostring(entry.name)
+            .. SYL.ClassColor.Name(entry.name, entry.class)
             .. " — " .. SYL.LootScore.Describe(entry)
             .. " (" .. entry.nights
             .. (entry.nights == 1 and " night, " or " nights, ")

@@ -259,15 +259,7 @@ function RaidersBoardRows.Draw(row, entry, view, isSelected)
 
     row.name:SetText(tostring(entry.name or "Unknown"))
 
-    local classColor = Theme.GetClassColor(entry.class)
-
-    if classColor then
-        Theme.SetCustomTextColor(
-            row.name, classColor[1], classColor[2], classColor[3]
-        )
-    else
-        Theme.SetTextColor(row.name, "textPrimary")
-    end
+    SYL.ClassColor.Set(row.name, entry.class)
 
     DrawBar(row, entry, view.highest)
 

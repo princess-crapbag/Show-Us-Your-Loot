@@ -131,9 +131,18 @@ function Cards.Create(detail, width)
     -- Read on hover rather than captured here, because cards are pooled: a
     -- link closed over at creation belongs to whoever was in this slot when
     -- the pane was first built.
-    card.itemHover = SYL.Widgets.MakeItemHoverable(card, function()
-        return card.itemLink
-    end)
+    card.itemHover = SYL.Widgets.MakeItemHoverable(
+        card,
+        function()
+            return card.itemLink
+        end,
+
+        -- What the letter in the corner means. Set in Draw, read here, for
+        -- the pooling reason above.
+        function()
+            return card.trackNote
+        end
+    )
 
     -- SIZED BY THE CALLER, ALWAYS. MakeItemHoverable deliberately leaves its
     -- button with no bounds -- see its comment -- and this shipped without
@@ -199,7 +208,19 @@ function Cards.Draw(card, item, y)
 
     card.meta:SetText(table.concat(parts, " · "))
 
-    card.letter:SetText(SYL.GearTrack.LetterFor(item.itemLink) or "")
+    -- THE LETTER, AND WHAT IT MEANS.
+    --
+    -- A tier token has no upgrade track of its own, so the letter comes from
+    -- the difficulty it dropped on -- Aimee: "champion drops from normal and
+    -- hero drops from heroic, mythic from mythic. veteran from lfr." Before
+    -- this, every token drew a blank where a letter belongs.
+    card.letter:SetText(
+        SYL.GearTrack.LetterFor(item.itemLink, item.difficultyID) or ""
+    )
+
+    local track = SYL.GearTrack.Describe(item.itemLink, item.difficultyID)
+
+    card.trackNote = track and ("Upgrade track: " .. track) or nil
 
     card:Show()
 

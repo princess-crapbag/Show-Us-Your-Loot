@@ -235,18 +235,13 @@ local function FillFeedRow(row, entry, index)
     -- The class of whoever it counts for, not of whoever rolled. On a
     -- master-looted night the winner's class is the same on every row and
     -- says nothing.
-    local classColor = entry.creditedClass
-        and Theme.GetClassColor(entry.creditedClass)
-        or (entry.drop and not entry.passedOn
-            and Theme.GetClassColor(entry.drop.winnerClass))
-
-    if classColor then
-        Theme.SetCustomTextColor(
-            row.playerText, classColor[1], classColor[2], classColor[3]
-        )
-    else
-        Theme.SetTextColor(row.playerText, "textPrimary")
-    end
+    SYL.ClassColor.Set(
+        row.playerText,
+        entry.creditedClass
+            or (entry.drop and not entry.passedOn
+                and entry.drop.winnerClass)
+            or nil
+    )
 
     row.typeText:SetText(entry.typeLabel or "")
 

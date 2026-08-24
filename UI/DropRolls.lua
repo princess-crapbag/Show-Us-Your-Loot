@@ -268,15 +268,7 @@ function DropRolls.FillRow(row, entry, columns)
         cell:SetText(tostring(entry[column.key] or ""))
 
         if column.key == "name" then
-            local classColor = Theme.GetClassColor(entry.class)
-
-            if classColor then
-                Theme.SetCustomTextColor(
-                    cell, classColor[1], classColor[2], classColor[3]
-                )
-            else
-                Theme.SetTextColor(cell, "textPrimary")
-            end
+            SYL.ClassColor.Set(cell, entry.class)
         elseif column.key == "marker" then
             Theme.SetTextColor(cell, "accent")
         elseif column.key == "response" then
