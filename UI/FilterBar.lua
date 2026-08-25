@@ -176,92 +176,25 @@ function FilterBar.Create(parent, config)
         onChange()
     end)
 
-    local previous = search
-
-    for _, field in ipairs(Filters.FIELDS) do
-        local dropdown = FilterDropdown.Create(bar, {
-            label = Filters.LABELS[field],
-            width = 86,
-
-            getOptions = function()
-                return SYL.FilterOptions.Derive(
-                    config.getRecords(),
-                    config.getFields(),
-                    field
-                )
-            end,
-
-            -- IsShowing, not IsSelected. With nothing chosen, the list is
-            -- showing everything except what Filters.HIDDEN_BY_DEFAULT names,
-            -- and a box drawn empty beside a row that IS showing is a control
-            -- lying about what it is doing.
-            isSelected = function(value)
-                return Filters.IsShowing(state, field, value)
-            end,
-
-            getCount = function()
-                return Filters.CountSelected(state, field)
-            end,
-
-            -- THE FIRST CLICK IN A FIELD MAKES THE SELECTION EXPLICIT.
-            --
-            -- Before it, nothing is chosen and the default exclusion decides.
-            -- Toggling one value there would leave the other three unticked
-            -- and hide them, which is the opposite of what unticking one box
-            -- looks like it should do. So the first click starts from what
-            -- was on screen and then applies itself.
-            onToggle = function(value)
-                if Filters.CountSelected(state, field) == 0 then
-                    Filters.SelectShowing(
-                        state,
-                        field,
-                        SYL.FilterOptions.Derive(
-                            config.getRecords(),
-                            config.getFields(),
-                            field
-                        )
-                    )
-                end
-
-                Filters.Toggle(state, field, value)
-                onChange()
-            end,
-
-            onSelectAll = function()
-                Filters.SelectAll(
-                    state,
-                    field,
-                    SYL.FilterOptions.Derive(
-                        config.getRecords(),
-                        config.getFields(),
-                        field
-                    )
-                )
-
-                onChange()
-            end,
-
-            onClear = function()
-                Filters.ClearField(state, field)
-                onChange()
-            end,
-        })
-
-        dropdown:SetPoint("LEFT", previous, "RIGHT", CONTROL_GAP, 0)
-
-        -- Ticking two values inside one dropdown widens the result; ticking
-        -- across two dropdowns narrows it. That is what people expect from
-        -- checkbox filters and it is not obvious from looking at them.
-        SYL.Tooltips.Attach(
-            dropdown,
-            Filters.LABELS[field],
-            "Tick several to see any of them. Filters in different dropdowns "
-            .. "apply together."
-        )
-
-        bar.dropdowns[field] = dropdown
-        previous = dropdown
+    -- THE DROPDOWNS LEFT THIS BAR AND MOVED INTO THE COLUMN HEADERS.
+    --
+    -- Aimee: "another thing to make it take up less space would be the filter
+    -- options are in the column header like it would be in excel." And the
+    -- row could not hold them anyway -- five 86px dropdowns plus two date
+    -- fields put Clear 25px underneath the To field, because Clear is
+    -- anchored to the right edge and does not move when the row in front of
+    -- it grows.
+    --
+    -- They are the same dropdowns. FilterBar.OpenFor builds one on demand and
+    -- UI/SortHeader.lua's caret calls it, so there is one definition of what
+    -- a filter is and one place it is configured.
+    -- Handed to UI/SortHeader.lua, which places the button it gets back at
+    -- the caret and never has to know what a filter is.
+    bar.MakeFilter = function(_, field, parent)
+        return FilterBar.Open(bar, state, config, field, parent, onChange)
     end
+
+    local previous = search
 
     local fromInput = CreateDateField(
         bar, "From", state, "dateFrom", false, onChange, previous
@@ -323,3 +256,112 @@ function FilterBar.Create(parent, config)
 
     return bar
 end
+
+--------------------------------------------------------------------------
+-- One dropdown, opened from a column header
+--------------------------------------------------------------------------
+
+-- Built on first use and reused, because a dropdown is a panel with a scroll
+-- list in it and six of them created up front is six panels most people never
+-- open.
+local dropdowns = {}
+
+-- Returns the bare dropdown button for one field, building it the first time
+-- it is asked for.
+function FilterBar.Open(bar, state, config, field, parent, onChange)
+    local dropdown = dropdowns[field]
+
+    if not dropdown then
+        dropdown = FilterDropdown.Create(parent, {
+            label = Filters.LABELS[field],
+
+            -- No background and no label: the header draws the caret.
+            bare = true,
+            width = 18,
+
+            getOptions = function()
+                return SYL.FilterOptions.Derive(
+                    config.getRecords(),
+                    config.getFields(),
+                    field
+                )
+            end,
+
+            -- IsShowing, not IsSelected. With nothing chosen, the list is
+            -- showing everything except what Filters.HIDDEN_BY_DEFAULT names,
+            -- and a box drawn empty beside a row that IS showing is a control
+            -- lying about what it is doing.
+            isSelected = function(value)
+                return Filters.IsShowing(state, field, value)
+            end,
+
+            getCount = function()
+                return Filters.CountSelected(state, field)
+            end,
+
+            -- THE FIRST CLICK IN A FIELD MAKES THE SELECTION EXPLICIT.
+            --
+            -- Before it, nothing is chosen and the default exclusion decides.
+            -- Toggling one value there would leave the other three unticked
+            -- and hide them, which is the opposite of what unticking one box
+            -- looks like it should do. So the first click starts from what
+            -- was on screen and then applies itself.
+            onToggle = function(value)
+                if Filters.CountSelected(state, field) == 0 then
+                    Filters.SelectShowing(
+                        state,
+                        field,
+                        SYL.FilterOptions.Derive(
+                            config.getRecords(),
+                            config.getFields(),
+                            field
+                        )
+                    )
+                end
+
+                Filters.Toggle(state, field, value)
+                onChange()
+            end,
+
+            onSelectAll = function()
+                Filters.SelectAll(
+                    state,
+                    field,
+                    SYL.FilterOptions.Derive(
+                        config.getRecords(),
+                        config.getFields(),
+                        field
+                    )
+                )
+
+                onChange()
+            end,
+
+            -- The dropdown's None. SelectNone, not ClearField: it has to
+            -- leave the field EMPTY AND TOUCHED, or the empty set reads as
+            -- "nothing chosen yet" and the list shows everything -- which is
+            -- what None did for as long as it existed.
+            onClear = function()
+                Filters.SelectNone(state, field)
+                onChange()
+            end,
+        })
+
+
+        -- Ticking two values inside one dropdown widens the result; ticking
+        -- across two dropdowns narrows it. That is what people expect from
+        -- checkbox filters and it is not obvious from looking at them.
+        SYL.Tooltips.Attach(
+            dropdown,
+            Filters.LABELS[field],
+            "Tick several to see any of them. Filters in different dropdowns "
+            .. "apply together."
+        )
+
+        bar.dropdowns[field] = dropdown
+        dropdowns[field] = dropdown
+    end
+
+    return dropdown
+end
+

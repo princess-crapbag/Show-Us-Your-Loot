@@ -105,7 +105,7 @@ local function CreateCell(index)
     -- more visable?"
     --
     -- An accent edge down the left of the cell and the day number in full
-    -- colour, rather than a fill: the grid already uses fill for "a raid was
+    -- color, rather than a fill: the grid already uses fill for "a raid was
     -- recorded here" and selection, and a third meaning on the same channel
     -- would make all three harder to read. This is the one cell somebody
     -- locates by scanning, so it wants a different KIND of mark, not a

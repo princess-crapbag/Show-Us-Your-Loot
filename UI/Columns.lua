@@ -41,9 +41,39 @@ local COLUMN_SETS = {
         { key = "select", label = "", width = 16, gap = 8, sortable = false },
         { key = "number", label = "#", width = 30, gap = 8, sortable = false },
         { key = "player", label = "PLAYER", width = 130, gap = 8 },
-        { key = "item", label = "ITEM", width = 250, gap = 10 },
+
+        -- ITEM PAID FOR THE DIFFICULTY COLUMN, and it is the column that
+        -- could: the longest real item name in her database, "Skullguard of
+        -- the Risen Sacrifice", measures 166.5 and the icon takes 20, so 214
+        -- still leaves 27 spare. This is the same place FitDateColumn below
+        -- takes its shortfall from, and for the same reason.
+        --
+        -- THE BUDGET IS 830, NOT 868. The drawing this was designed from
+        -- measured against the window less its 16px insets; the scroll frame
+        -- is WINDOW_WIDTH - 70, because the scrollbar takes the rest.
+        -- tools/syl_check.py enforces it and caught the 16px overrun.
+        { key = "item", label = "ITEM", width = 214, gap = 10 },
+
         { key = "wintype", label = "TYPE", width = 76, gap = 8 },
-        { key = "location", label = "WHERE", width = 150, gap = 10 },
+
+        -- WHERE NEVER NEEDED 150. "The Tidebound Grotto" is the longest
+        -- instance name in her seasons at 116.
+        { key = "location", label = "WHERE", width = 122, gap = 6 },
+
+        -- SPELLED OUT, which is Aimee's: "i wonder if we should put
+        -- Difficulty and spell the raid difficulty out. LFR, Normal, Heroic,
+        -- Mythic."
+        --
+        -- 72 is set by the HEADER, not by the values: "DIFFICULTY" measures
+        -- 55 and the longest value, "Normal", only 38.5 -- and the filter
+        -- caret sits after the name, so the column needs 55 + 4 + 8. Drawn at
+        -- 58 first and the caret ran into DATE.
+        --
+        -- It used to be printed on the end of the WHERE cell, so the row is
+        -- no wider than it was and the letter is now scannable down a column
+        -- and filterable from a header of its own.
+        { key = "difficulty", label = "DIFFICULTY", width = 72, gap = 10 },
+
         { key = "date", label = "DATE", width = 96, gap = 10 },
     },
 }

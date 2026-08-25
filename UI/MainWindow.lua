@@ -16,11 +16,20 @@ local LootListView = SYL.LootListView
 
 local WINDOW_WIDTH = 900
 local WINDOW_HEIGHT = 596
-local VISIBLE_ROWS = 13
+local VISIBLE_ROWS = 14
 
 -- The scroll frame is inset by this much top and bottom, from ScrollArea, so
 -- the rows that fit follow from the window height. MAX_ROWS caps the pool.
-local LIST_TOP_INSET = 180
+-- THE LIST STARTS 28px HIGHER than it did.
+--
+-- The stack above it used to be the title, the tabs, the filter bar, the
+-- SELECTION BAR and the column header. The selection bar's buttons moved to
+-- the footer line -- which was empty on its left, because UI/MainFooter.lua's
+-- button list has been {} since all six of its buttons became tabs -- so a
+-- whole 28px row came out of the top and none was added at the bottom.
+--
+-- 596 - 152 - 52 is 392, which is fourteen rows of 28. It was thirteen.
+local LIST_TOP_INSET = 152
 local LIST_BOTTOM_INSET = 52
 local MAX_ROWS = 60
 
@@ -382,7 +391,7 @@ local function CreateScrollArea(parent)
     view.countText =
         Theme.CreateText(parent, Theme.sizes.subtitle, "textMuted")
 
-    view.countText:SetPoint("TOPLEFT", 18, -130)
+    view.countText:SetPoint("TOPLEFT", 200, -105)
     view.countText:SetText("0 items")
 
     view.emptyText =
@@ -404,7 +413,7 @@ local function CreateScrollArea(parent)
     view.feedHeader = SYL.SortHeader.Create(parent, {
         columns = SYL.Columns.Get("feed"),
         offsets = SYL.Columns.offsets.feed,
-        top = 178,
+        top = LIST_TOP_INSET - 2,
 
         getSort = function()
             return view.sortKey, view.sortReversed
@@ -420,6 +429,24 @@ local function CreateScrollArea(parent)
             Selection.Clear(view.selection)
 
             UpdateRows()
+        end,
+
+        -- THE FILTERS LIVE IN THE HEADERS NOW. The bar builds the dropdown
+        -- and the header places it at the caret; neither has to know what the
+        -- other does. See UI/SortHeader.lua.
+        makeFilter = function(key, headerFrame)
+            if not view.filterBar or not view.filterBar.MakeFilter then
+                return nil
+            end
+
+            return view.filterBar:MakeFilter(key, headerFrame)
+        end,
+
+        -- What colors a column name accent: it is narrowing the list.
+        isFiltered = function(key)
+            return Filters.CountSelected(view.filters, key) > 0
+                or (view.filters.touched and view.filters.touched[key])
+                and true or false
         end,
     })
 
@@ -457,17 +484,32 @@ local function CreateFooter(parent)
     })
 end
 
+-- WHAT THE WINDOW OPENS ON, applied every time it is opened rather than once
+-- at file scope.
+--
+-- Clear deliberately opens the list all the way up -- see the note on the
+-- Clear handler, and the bulk Hide it cost her when it did not. But `view` is
+-- a module local that only resets on /reload, so after one Clear she was on
+-- all-content, no-gear-filter for the rest of the session rather than until
+-- she reopened the window.
+--
+-- Her call, given the two: "do as you suggest" -- Clear still opens
+-- everything, and reopening the window puts the defaults back. The count line
+-- says "38 of 53 items · 18 hidden" either way, so neither state is silent.
+local function ApplyDefaults()
+    view.contentScope = "raid"
+    view.gearOnly = true
+    view.allSeasons = false
+
+    SYL.Filters.ApplyDefaultDifficulty(view.filters, SYL.GetActiveRaids())
+end
+
 local function CreateMainWindow()
     if frame then
         return frame
     end
 
-    -- OPENS ON THE DIFFICULTY THE GUILD LAST RAIDED. Hers. Done here rather
-    -- than in the view table above, because the answer comes from the
-    -- database and that table is built at file scope, before there is one.
-    SYL.Filters.ApplyDefaultDifficulty(
-        view.filters, SYL.GetActiveRaids()
-    )
+    ApplyDefaults()
 
     frame = CreateFrame(
         "Frame",
@@ -573,6 +615,8 @@ end
 --------------------------------------------------------------------------
 
 function SYL:OpenMainWindow()
+    ApplyDefaults()
+
     -- Raises a buried window rather than hiding it; see
     -- WindowStack.ToggleWindow.
     SYL.WindowStack.ToggleWindow(CreateMainWindow())
@@ -583,6 +627,8 @@ end
 -- to put them on the screen that answers it — "/syl keys to answer" printed in
 -- chat is only useful if typing it lands somewhere.
 function SYL:OpenMainWindowAt(mode)
+    ApplyDefaults()
+
     local window = CreateMainWindow()
 
     SYL.WindowStack.ShowWindow(window)

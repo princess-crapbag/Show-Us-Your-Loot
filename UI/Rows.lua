@@ -273,6 +273,11 @@ function Rows.CreateFeedRow(parent, index, onSelect, onActivate)
 
     PlaceInColumn(row.locationText, "feed", "location")
 
+    row.difficultyText =
+        Theme.CreateText(row, Theme.sizes.rowSmall, "textSecondary")
+
+    PlaceInColumn(row.difficultyText, "feed", "difficulty")
+
     row.dateText = Theme.CreateText(row, Theme.sizes.rowSmall, "textMuted")
     PlaceInColumn(row.dateText, "feed", "date")
 

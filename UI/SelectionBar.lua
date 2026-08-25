@@ -33,7 +33,30 @@ function SelectionBar.Create(parent, view, config)
             onChanged()
         end)
 
-    bar.showHidden:SetPoint("TOPRIGHT", -16, -128)
+    -- THE WHOLE BAR MOVED TO THE FOOTER LINE.
+    --
+    -- Aimee: "maybe the select all, deselect all, ignore, hide, hide all and
+    -- show hidden options can be at the bottom of the frame to free up space
+    -- on the top?"
+    --
+    -- It also had to move: with Hide all added, the buttons reached back into
+    -- the "N items · N hidden" summary on the left. That is the second time
+    -- this row has collided with that summary -- see the note further down --
+    -- and there is no arrangement of nine buttons and a sentence that fits
+    -- 830px.
+    --
+    -- The footer line was free. UI/MainFooter.lua's BUTTONS list has been
+    -- empty since all six of its buttons became tabs, so only Close was on
+    -- it, hard against the right edge. The actions flow from the LEFT and the
+    -- scope toggles sit beside Close on the right, because the two groups do
+    -- different things: one acts on the list, the other narrows it.
+    --
+    -- FOOTER_Y matches UI/MainFooter.lua's own 12-from-the-bottom, so the two
+    -- rows are one row.
+    local FOOTER_Y = 13
+
+    -- Close is 100 wide at -16, so the scope group starts at -122.
+    bar.showHidden:SetPoint("BOTTOMRIGHT", -(16 + 100 + 6), FOOTER_Y)
 
     -- Three states rather than two, so it cycles instead of toggling. A
     -- Mythic+ drop says nothing about who is due in the raid, and a guild
@@ -97,7 +120,6 @@ function SelectionBar.Create(parent, view, config)
         bar:ApplyHidden(IsShiftKeyDown())
     end)
 
-    bar.action:SetPoint("RIGHT", bar.allSeasons, "LEFT", -6, 0)
 
     -- HIDE EVERY COPY, AS A BUTTON.
     --
@@ -114,14 +136,12 @@ function SelectionBar.Create(parent, view, config)
             bar:ApplyHidden(true)
         end)
 
-    bar.hideAllCopies:SetPoint("RIGHT", bar.action, "LEFT", -6, 0)
 
     -- Takes the ticked records out of every number without deleting them.
     bar.ignore = Theme.CreateButton(parent, 74, 20, "Ignore", function()
         bar:ApplyIgnored(IsShiftKeyDown())
     end)
 
-    bar.ignore:SetPoint("RIGHT", bar.hideAllCopies, "LEFT", -6, 0)
 
     bar.deselect = Theme.CreateButton(parent, 78, 20, "Deselect all", function()
         Selection.Clear(view.selection)
@@ -129,7 +149,6 @@ function SelectionBar.Create(parent, view, config)
         onChanged()
     end)
 
-    bar.deselect:SetPoint("RIGHT", bar.ignore, "LEFT", -6, 0)
 
     -- Selects what is on the list, which after filtering means what the
     -- filters matched rather than the whole season.
@@ -139,12 +158,37 @@ function SelectionBar.Create(parent, view, config)
         onChanged()
     end)
 
-    bar.selectAll:SetPoint("RIGHT", bar.deselect, "LEFT", -6, 0)
 
     -- Four of these narrow or widen the same list along different axes and
     -- three of them are toggles, so pressing one to find out what it does
     -- changes what you were reading. See UI/Tooltips.lua.
     local Tip = SYL.Tooltips.Attach
+
+    -- THE ACTION GROUP, PLACED IN ONE PASS AND CHAINED.
+    --
+    -- Chained rather than given fixed offsets, because the buttons are five
+    -- different widths -- 68, 78, 74, 70, 74 -- and a hand-added offset is a
+    -- number that goes stale the first time a label changes. It flows from
+    -- the LEFT so the group can grow without ever reaching the scope group on
+    -- the right, which is exactly what Hide all did to the old right-anchored
+    -- chain.
+    --
+    -- Placed here rather than beside each button because selectAll anchors
+    -- the rest and is created last.
+    local previous
+
+    for _, control in ipairs({
+        bar.selectAll, bar.deselect, bar.ignore, bar.action,
+        bar.hideAllCopies,
+    }) do
+        if previous then
+            control:SetPoint("LEFT", previous, "RIGHT", 6, 0)
+        else
+            control:SetPoint("BOTTOMLEFT", 16, FOOTER_Y)
+        end
+
+        previous = control
+    end
 
     Tip(bar.showHidden, "Show hidden",
         "Hidden rows are set aside, never deleted. This shows only those, "

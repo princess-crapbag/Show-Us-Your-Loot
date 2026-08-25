@@ -4,7 +4,7 @@
 --
 -- WHY THIS IS A FILE AND NOT FOUR LINES. Every row in this addon's settings
 -- window was a checkbox or a value that cycles when you press it. Cycling is
--- right for three colour schemes and wrong for a weight, which is any number
+-- right for three color schemes and wrong for a weight, which is any number
 -- at all -- so the Scoring tab could not be built until something here could
 -- take a typed number. It is the whole reason that tab shipped in 0.4.0
 -- showing one row.

@@ -251,6 +251,13 @@ local function FillFeedRow(row, entry, index)
     )
 
     row.locationText:SetText(entry.where or "")
+
+    -- Its own column now rather than the end of the WHERE cell. Blank for
+    -- anything that is not raid content, which is honest: a Mythic+ dungeon
+    -- has no raid difficulty and a dash would imply one is missing.
+    row.difficultyText:SetText(
+        SYL.Filters.RAID_DIFFICULTY[entry.difficultyID] or ""
+    )
     row.dateText:SetText(Utilities.FormatDateCompact(entry.timestamp))
 
     return Rows.SetRowItem(row, entry.itemLink, entry.itemName)

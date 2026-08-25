@@ -76,14 +76,28 @@ local painted = {
 -- once already, a few lines below.
 local focusedWindow = nil
 
+-- WINDOWS ARE SOLID. Aimee: "no opacity slider. keep it solid."
+--
+-- Every palette carried 0.97 and only the front window was ever painted at 1,
+-- so the alpha was doing a job as well as a look: it is how you could tell
+-- which of two overlapping windows was in front. That job moves to the
+-- BORDER -- see FocusBorder below -- rather than being quietly dropped, and
+-- this function stays so the palette still decides. It simply reads 1 now.
 local function WindowAlpha(frame)
-    local alpha = Theme.colors.window[4] or 1
+    return Theme.colors.window[4] or 1
+end
 
+-- The front window's edge, and everybody else's.
+--
+-- Accent rather than a brighter grey, because the accent is already what this
+-- addon means by "this is the thing you are looking at" -- the selected tab,
+-- the sorted column, the mark on a bar.
+local function FocusBorder(frame)
     if frame == focusedWindow then
-        return 1
+        return Theme.colors.accent
     end
 
-    return alpha
+    return Theme.colors.border
 end
 
 Theme.sizes = {
@@ -127,7 +141,7 @@ function Theme.StyleWindow(frame)
 
     frame:SetBackdrop(WINDOW_BACKDROP)
     frame:SetBackdropColor(color[1], color[2], color[3], WindowAlpha(frame))
-    frame:SetBackdropBorderColor(unpack(Theme.colors.border))
+    frame:SetBackdropBorderColor(unpack(FocusBorder(frame)))
 
     painted.windows[frame] = true
 end
@@ -152,6 +166,11 @@ function Theme.SetFocusedWindow(frame)
         window:SetBackdropColor(
             color[1], color[2], color[3], WindowAlpha(window)
         )
+
+        -- The edge is what says which one is in front now that they are all
+        -- solid. Repainted for every window, not only the new front one, or
+        -- the old front one keeps its accent and two windows both claim it.
+        window:SetBackdropBorderColor(unpack(FocusBorder(window)))
     end
 
     return true

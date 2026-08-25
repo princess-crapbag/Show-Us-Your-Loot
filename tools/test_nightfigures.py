@@ -219,7 +219,7 @@ DROPS.append(drop(RAID_AT + 1200, "Arcangila", NEED, "Guildie6", NEED,
 # Guildie7 raided on Guildie7alt and won on it. The roster carries the alt;
 # the main is what every fairness figure counts. Without the fold the night
 # reports one more person than turned up, and reports them as having gone home
-# with gear under a name nobody recognises.
+# with gear under a name nobody recognizes.
 lua.execute("""
     ShowUsYourLoot.Players.Ensure({
         guid = "Guildie7", name = "Guildie7", class = "MAGE",

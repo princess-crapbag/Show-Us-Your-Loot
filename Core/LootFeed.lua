@@ -143,13 +143,13 @@ local function WhereOf(record)
         return ""
     end
 
-    local difficulty = Utilities.ShortDifficulty(
-        record.difficultyID, record.difficultyName
-    )
-
-    if difficulty then
-        return place .. "  " .. difficulty
-    end
+    -- THE DIFFICULTY USED TO BE APPENDED HERE and now has a column of its
+    -- own -- see UI/Columns.lua. Leaving it on the end as well would print it
+    -- twice on every row, three inches apart.
+    --
+    -- Aimee asked for it spelled out, which is the other half of why it
+    -- moved: "LFR" fits on the end of an instance name and "Heroic" does
+    -- not, and a column can be measured for its own contents.
 
     return place
 end

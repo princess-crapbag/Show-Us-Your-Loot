@@ -15,7 +15,13 @@ SYL.FilterDropdown = FilterDropdown
 local VISIBLE_OPTIONS = 12
 local OPTION_HEIGHT = 20
 -- Header row plus the search field beneath it.
-local PANEL_HEADER = 26
+-- TALL ENOUGH FOR TWO LINES, because it holds two things.
+--
+-- It was 26, with the counts on the left of one line and All and None on the
+-- right of it -- and "4 options · 3 selected" plus two 44px buttons does not
+-- fit 210px however it is arranged, so they overlapped. The buttons keep the
+-- top line and the counts move under them.
+local PANEL_HEADER = 44
 local SEARCH_HEIGHT = 22
 local PANEL_PADDING = 6
 
@@ -228,7 +234,19 @@ local function CreatePanel(button, config)
     panel.headerText =
         Theme.CreateText(panel, Theme.sizes.columnHeader, "textMuted")
 
-    panel.headerText:SetPoint("TOPLEFT", PANEL_PADDING + 4, -8)
+    -- Its own line, under the buttons. See PANEL_HEADER.
+    panel.headerText:SetPoint("TOPLEFT", PANEL_PADDING + 4, -26)
+
+    -- WHICH FIELD THIS IS, now that the dropdown is opened from a caret in a
+    -- column header rather than from a button that said so. The panel used to
+    -- appear under a button labelled "Win type"; it now appears under an
+    -- 8-pixel chevron, and a floating list of ticks with no title is a list
+    -- you have to remember the provenance of.
+    panel.titleText =
+        Theme.CreateText(panel, Theme.sizes.rowSmall, "textPrimary")
+
+    panel.titleText:SetPoint("TOPLEFT", PANEL_PADDING + 4, -8)
+    panel.titleText:SetText(config.label or "")
 
     panel.noneButton = Theme.CreateButton(panel, 44, 16, "None", function()
         config.onClear()
@@ -304,10 +322,32 @@ end
 -- Public
 --------------------------------------------------------------------------
 
+-- `config.bare` makes the button invisible: no background, no label, just the
+-- click and the panel it opens.
+--
+-- IT EXISTS FOR THE COLUMN HEADERS. The filters moved out of the bar and into
+-- the headers, where the thing you click is an 18px caret drawn by
+-- UI/SortHeader.lua -- so the dropdown needs to hang off a button somebody
+-- else placed rather than draw one of its own. Everything below this line is
+-- the same for both: the same panel, the same rows, the same All and None.
 function FilterDropdown.Create(parent, config)
-    local button = Theme.CreateButton(parent, config.width, 22, config.label)
+    local button
+
+    if config.bare then
+        button = CreateFrame("Button", nil, parent)
+        button:SetSize(config.width or 18, config.height or 22)
+    else
+        button = Theme.CreateButton(parent, config.width, 22, config.label)
+    end
 
     button.UpdateLabel = function(self)
+        -- A bare button has no label to update. The header it sits on draws
+        -- the caret and colors it from Filters.IsShowing, which is a truer
+        -- signal than a count anyway.
+        if config.bare then
+            return
+        end
+
         local count = config.getCount()
 
         self.label:SetText(

@@ -19,7 +19,7 @@
 -- added lines and nobody can tell which are which.
 --
 -- ROWS ARE OF TWO KINDS AND HAVE TO LOOK IT. Most are checkboxes bound to a
--- saved setting. Two are not settings at all -- the colour scheme and the
+-- saved setting. Two are not settings at all -- the color scheme and the
 -- output window cycle through values when pressed, and drawing those as
 -- checkboxes meant drawing a box that could never be ticked. An entry with an
 -- `action` is the second kind, and it carries its current value in its label

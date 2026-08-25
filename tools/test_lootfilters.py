@@ -22,6 +22,7 @@ hiding it once some other filter was set.
 
 Needs `lupa` - see tools/test_lootmessages.py for the setup.
 """
+import re
 import sys
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -160,23 +161,26 @@ state = Filters.CreateState()
 check("difficulty is one of the filter fields",
       "difficulty" in [str(f) for f in Filters.FIELDS.values()])
 
-check("and it is L, N, H, M in that order",
+# SPELLED OUT, hers: "put Difficulty and spell the raid difficulty out. LFR,
+# Normal, Heroic, Mythic."
+check("and it is LFR, Normal, Heroic, Mythic in that order",
       [str(v) for v in Filters.RAID_DIFFICULTY_ORDER.values()]
-      == ["L", "N", "H", "M"])
+      == ["LFR", "Normal", "Heroic", "Mythic"])
 
 options = SYL.FilterOptions.Derive(records, fields, "difficulty")
 
 check("the options come out as the ladder, not the alphabet",
-      [str(o) for o in options.values()] == ["L", "N", "H", "M"],
+      [str(o) for o in options.values()]
+      == ["LFR", "Normal", "Heroic", "Mythic"],
       "%r" % [str(o) for o in options.values()])
 
-Filters.Toggle(state, "difficulty", "H")
+Filters.Toggle(state, "difficulty", "Heroic")
 
 check("choosing Heroic shows only Heroic",
       shown(state) == ["Ring"], "%r" % shown(state))
 
 # MULTI-SELECT, hers.
-Filters.Toggle(state, "difficulty", "M")
+Filters.Toggle(state, "difficulty", "Mythic")
 
 check("and it is multi-select",
       shown(state) == ["Cloak", "Ring"], "%r" % shown(state))
@@ -208,24 +212,25 @@ lua.execute("""
 sessions = lua.globals().SESSIONS
 
 check("the last raid difficulty is the latest RAID, not the latest session",
-      str(Filters.LastRaidDifficulty(sessions)) == "H",
+      str(Filters.LastRaidDifficulty(sessions)) == "Heroic",
       "got %r" % Filters.LastRaidDifficulty(sessions))
 
 fresh = Filters.CreateState()
 applied = Filters.ApplyDefaultDifficulty(fresh, sessions)
 
 check("a fresh window opens on it",
-      str(applied) == "H" and Filters.IsSelected(fresh, "difficulty", "H"))
+      str(applied) == "Heroic"
+      and Filters.IsSelected(fresh, "difficulty", "Heroic"))
 
 # MUST NOT UNDO A CHOICE. Reopening the window would otherwise silently put
 # the filter back.
 chosen = Filters.CreateState()
-Filters.Toggle(chosen, "difficulty", "M")
+Filters.Toggle(chosen, "difficulty", "Mythic")
 Filters.ApplyDefaultDifficulty(chosen, sessions)
 
 check("but it never overrides a choice already made",
-      Filters.IsSelected(chosen, "difficulty", "M") is True
-      and Filters.IsSelected(chosen, "difficulty", "H") is False)
+      Filters.IsSelected(chosen, "difficulty", "Mythic") is True
+      and Filters.IsSelected(chosen, "difficulty", "Heroic") is False)
 
 check("and with nothing recorded it constrains nothing",
       Filters.ApplyDefaultDifficulty(
@@ -252,6 +257,164 @@ check("gear only is still a button she can turn off",
       "gearOnly" in bar)
 
 check("and so is the content scope", "contentScope" in bar)
+
+
+# --------------------------------------------------------------------------
+# None means none
+# --------------------------------------------------------------------------
+#
+# It called ClearField, an empty selection meant "no constraint", and so None
+# showed EVERYTHING. It had done that for as long as the button existed.
+
+state = Filters.CreateState()
+
+# Before anybody touches it: empty, and everything but Personal shows.
+check("an untouched field shows everything but the defaults-off set",
+      len(shown(state)) == 5, "%r" % shown(state))
+
+# TICK SOMETHING FIRST. Calling None on an already-empty field cannot show
+# that None empties anything -- it is the "I picked three and changed my mind"
+# case that has to work.
+Filters.Toggle(state, "wintype", "Need")
+Filters.Toggle(state, "wintype", "Greed")
+
+check("two ticked", int(Filters.CountSelected(state, "wintype")) == 2)
+
+Filters.SelectNone(state, "wintype")
+
+check("None empties the field",
+      int(Filters.CountSelected(state, "wintype")) == 0,
+      "%d left" % int(Filters.CountSelected(state, "wintype")))
+
+# On its OWN, from a state nothing has been ticked in -- Toggle also marks the
+# field touched, so asserting it after a Toggle proves nothing about None.
+fresh = Filters.CreateState()
+Filters.SelectNone(fresh, "wintype")
+
+check("and marks it touched, which is what makes empty mean empty",
+      fresh.touched["wintype"] is True)
+
+check("so None on an untouched field also shows nothing",
+      shown(fresh) == [], "%r" % shown(fresh))
+
+check("so None shows NOTHING",
+      shown(state) == [], "%r - None still shows things" % shown(state))
+
+check("and every box is drawn clear",
+      Filters.IsShowing(state, "wintype", "Need") is False
+      and Filters.IsShowing(state, "wintype", "Personal") is False)
+
+# Clear is the other one: back to nothing chosen YET, so the defaults return.
+Filters.ClearAll(state)
+
+check("Clear puts it back to the default rather than to nothing",
+      len(shown(state)) == 5, "%r" % shown(state))
+
+check("and the field is untouched again",
+      state.touched["wintype"] is None)
+
+# Toggling one value off a touched-empty field still works.
+Filters.SelectNone(state, "wintype")
+Filters.Toggle(state, "wintype", "Need")
+
+check("ticking one value after None shows only that one",
+      shown(state) == ["Boots", "Key"], "%r" % shown(state))
+
+dropdown = test_load.ROOT.joinpath("UI/FilterDropdown.lua").read_text(
+    encoding="utf-8")
+
+# "4 options · 3 selected" is 103.5 and two 44px buttons plus padding is 104,
+# against a 210px panel. They cannot share a line.
+check("the panel header is two lines, so All and None do not sit on the text",
+      "local PANEL_HEADER = 44" in dropdown)
+
+check("and the panel says which field it is, now that the caret cannot",
+      "panel.titleText:SetText(config.label" in dropdown
+      and 'panel.titleText:SetPoint("TOPLEFT"' in dropdown)
+
+barsrc = test_load.ROOT.joinpath("UI/FilterBar.lua").read_text(
+    encoding="utf-8")
+
+check("the dropdown's None calls SelectNone, not ClearField",
+      "Filters.SelectNone(state, field)" in barsrc)
+
+
+# --------------------------------------------------------------------------
+# Where the filters live now
+# --------------------------------------------------------------------------
+
+cols = test_load.ROOT.joinpath("UI/Columns.lua").read_text(encoding="utf-8")
+
+check("difficulty has a column of its own",
+      'label = "DIFFICULTY"' in cols)
+
+check("and the row is not over the scroll frame's width",
+      True)  # tools/syl_check.py enforces this; asserted there.
+
+header = test_load.ROOT.joinpath("UI/SortHeader.lua").read_text(
+    encoding="utf-8")
+
+check("the headers can carry a filter",
+      "config.makeFilter and column.filterable" in header
+      and "config.makeFilter(column.key, header)" in header)
+
+# TWO TARGETS. The name sorts, the caret filters, and the caret's button is
+# wider than the caret because an 8px target is one people miss.
+check("the caret's button is wider than the caret",
+      "CARET_TARGET = 18" in header)
+
+check("and it sits above the sort button so the click does not sort",
+      "button:GetFrameLevel() + 2" in header)
+
+# Sorted and filtered are different channels, so a column can be both.
+check("filtered colors the NAME",
+      header.count('filtered and "accent" or "textMuted"') == 2)
+
+check("and sorted is its own arrow, not appended to the label",
+      "arrows[column.key]" in header)
+
+main = test_load.ROOT.joinpath("UI/MainWindow.lua").read_text(encoding="utf-8")
+
+check("the list starts higher now the second bar is gone",
+      "local LIST_TOP_INSET = 152" in main)
+
+check("and fits fourteen rows", "local VISIBLE_ROWS = 14" in main)
+
+# Clear opens everything; reopening the window puts the defaults back.
+# COUNTING THE CALLS, not the word -- "local function ApplyDefaults()" holds
+# the word too, so counting it let a deleted call site pass.
+calls = main.count("    ApplyDefaults()")
+
+check("the defaults are applied on all three ways in",
+      calls == 3, "found %d call sites" % calls)
+
+selection = test_load.ROOT.joinpath("UI/SelectionBar.lua").read_text(
+    encoding="utf-8")
+
+check("the actions are on the footer line",
+      "FOOTER_Y" in selection and 'BOTTOMLEFT", 16, FOOTER_Y' in selection)
+
+check("and flow from the left, so they cannot reach the scope group",
+      'control:SetPoint("LEFT", previous, "RIGHT", 6, 0)' in selection)
+
+palettes = test_load.ROOT.joinpath("UI/Palettes.lua").read_text(
+    encoding="utf-8")
+
+# The ALPHA on the window color, which is the fourth number. Reading the file
+# for "0.97" anywhere caught textPrimary and proved nothing.
+alphas = re.findall(r"window = \{[^}]*,\s*([0-9.]+)\s*\}", palettes)
+
+check("all six palettes were found", len(alphas) == 6, "%r" % alphas)
+
+check("and every one of them is solid",
+      all(a == "1" for a in alphas), "%r" % alphas)
+
+theme = test_load.ROOT.joinpath("UI/Theme.lua").read_text(encoding="utf-8")
+
+# The alpha was the only thing saying which window was in front.
+check("and the focus cue moved to the border rather than being lost",
+      "local function FocusBorder" in theme
+      and "SetBackdropBorderColor(unpack(FocusBorder(frame)))" in theme)
 
 
 # --------------------------------------------------------------------------

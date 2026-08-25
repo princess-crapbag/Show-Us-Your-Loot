@@ -39,24 +39,24 @@ Filters.LABELS = {
 -- rungs of a raid ladder. A dungeon drop answers nothing and is therefore
 -- filtered out whenever a raid difficulty is chosen, which is what a control
 -- named Raid Difficulty should do.
+-- SPELLED OUT, NOT INITIALS. Aimee first sketched it as "[] L [] N [] H
+-- [] M" and then, once it had a column of its own with room in it: "i wonder
+-- if we should put Difficulty and spell the raid difficulty out. LFR, Normal,
+-- Heroic, Mythic."
+--
+-- One table, so the column and the filter cannot disagree about what a
+-- difficulty is called.
 Filters.RAID_DIFFICULTY = {
-    [17] = "L",
-    [151] = "L",
-    [14] = "N",
-    [33] = "N",
-    [15] = "H",
-    [16] = "M",
+    [17] = "LFR",
+    [151] = "LFR",
+    [14] = "Normal",
+    [33] = "Normal",
+    [15] = "Heroic",
+    [16] = "Mythic",
 }
 
 -- The order they appear in, which is the ladder rather than the alphabet.
-Filters.RAID_DIFFICULTY_ORDER = { "L", "N", "H", "M" }
-
-Filters.RAID_DIFFICULTY_NAMES = {
-    L = "Looking For Raid",
-    N = "Normal",
-    H = "Heroic",
-    M = "Mythic",
-}
+Filters.RAID_DIFFICULTY_ORDER = { "LFR", "Normal", "Heroic", "Mythic" }
 
 -- HIDDEN UNTIL SOMEBODY ASKS FOR THEM, out of the box.
 --
@@ -94,6 +94,11 @@ end
 function Filters.IsShowing(state, field, value)
     if Filters.CountSelected(state, field) > 0 then
         return Filters.IsSelected(state, field, value)
+    end
+
+    -- Touched and empty: nothing is showing, and every box is drawn clear.
+    if state.touched and state.touched[field] then
+        return false
     end
 
     return not Filters.HiddenByDefault(field, value)
@@ -158,6 +163,17 @@ function Filters.CreateState()
             difficulty = {},
         },
 
+        -- WHETHER ANYBODY HAS TOUCHED THIS FIELD, which is not the same
+        -- question as whether anything is selected in it.
+        --
+        -- An empty selection used to mean one thing -- "no constraint" -- and
+        -- it had to mean two. Before anybody touches a field, empty means
+        -- "everything except what HIDDEN_BY_DEFAULT names". After they press
+        -- None it means "nothing", which is what the button says. Without the
+        -- distinction None cleared the set and the list showed EVERYTHING,
+        -- which it has done since the button was written.
+        touched = {},
+
         dateFrom = nil,
         dateTo = nil,
     }
@@ -179,6 +195,8 @@ function Filters.Toggle(state, field, value)
     if not set then
         return
     end
+
+    state.touched[field] = true
 
     if set[value] then
         set[value] = nil
@@ -209,6 +227,8 @@ function Filters.SelectAll(state, field, values)
         return
     end
 
+    state.touched[field] = true
+
     for _, value in ipairs(values or {}) do
         set[value] = true
     end
@@ -231,8 +251,21 @@ function Filters.SelectShowing(state, field, values)
     end
 end
 
+-- NONE, and it means none.
+--
+-- Empties the field AND marks it touched, so the empty set reads as "chosen
+-- nothing" rather than "nothing chosen yet". The dropdown's None button calls
+-- this; the bar's Clear button calls ClearField, which is the other one.
+function Filters.SelectNone(state, field)
+    state.selected[field] = {}
+    state.touched[field] = true
+end
+
+-- Back to the state a fresh window is in: nothing chosen, and nothing chosen
+-- YET, so the defaults apply again.
 function Filters.ClearField(state, field)
     state.selected[field] = {}
+    state.touched[field] = nil
 end
 
 function Filters.ClearAll(state)
@@ -242,6 +275,7 @@ function Filters.ClearAll(state)
 
     for _, field in ipairs(Filters.FIELDS) do
         state.selected[field] = {}
+        state.touched[field] = nil
     end
 end
 
@@ -254,6 +288,10 @@ end
 -- nothing.
 function Filters.IsActive(state)
     if next(Filters.HIDDEN_BY_DEFAULT) ~= nil then
+        return true
+    end
+
+    if state.touched and next(state.touched) ~= nil then
         return true
     end
 
@@ -372,8 +410,12 @@ local function MatchesSelections(state, fields, record)
             if not value or not Filters.IsSelected(state, field, value) then
                 return false
             end
+        elseif state.touched[field] then
+            -- CHOSEN NOTHING. The field was touched and is now empty, which
+            -- is what None leaves behind, and it means what it says.
+            return false
         elseif Filters.HiddenByDefault(field, value) then
-            -- Nothing chosen in this field, so everything shows except what
+            -- NOTHING CHOSEN YET, so everything shows except what
             -- HIDDEN_BY_DEFAULT names. See the note there.
             return false
         end

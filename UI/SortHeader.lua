@@ -34,7 +34,28 @@ SortHeader.LIST_GAP = 2
 --   columns, offsets  the same tables the rows are laid out from
 --   top               distance from the top of the window to the list
 --   getSort()         returns key, reversed
---   onSort(key, rev)  called when a header is clicked
+--   onSort(key, rev)  called when a header NAME is clicked
+--   onFilter(key)     called when a header CARET is clicked. Optional; a
+--                     header with no onFilter draws no caret at all.
+--   isFiltered(key)   whether that column is currently narrowing the list
+--
+-- TWO JOBS, TWO TARGETS, ONE HEADER.
+--
+-- Aimee, on moving the filter dropdowns into the headers: "all the sort by
+-- filters in the columns, do they allow me to not only sort by but also
+-- filter by?" They do. The NAME sorts, which is what it has always done and
+-- must not stop doing; the CARET opens the filter.
+--
+-- THE CARET'S BUTTON IS WIDER THAN THE CARET. A caret measures about eight
+-- pixels and an eight pixel target is one people miss, so its button is 18
+-- and the full height of the header -- reaching into the gap that already
+-- exists between columns, which costs the column no width.
+--
+-- SORTED AND FILTERED ARE DRAWN ON DIFFERENT CHANNELS, so a column that is
+-- both says both: the arrow after the caret means sorted, the NAME going
+-- accent means filtered. The arrow used to be appended to the label string,
+-- which cannot coexist with a caret sitting in the same place -- so it is its
+-- own region now.
 function SortHeader.Create(parent, config)
     local header = CreateFrame("Frame", nil, parent)
 
@@ -54,6 +75,11 @@ function SortHeader.Create(parent, config)
     separator:SetPoint("BOTTOMRIGHT", 0, 0)
 
     local labels = {}
+    local carets = {}
+    local arrows = {}
+
+    local CARET_GAP = 4
+    local CARET_TARGET = 18
 
     for _, column in ipairs(config.columns) do
         local button = CreateFrame("Button", nil, header)
@@ -68,6 +94,71 @@ function SortHeader.Create(parent, config)
         label:SetText(column.label)
 
         labels[column.key] = label
+
+        -- THE FILTER CARET, and the arrow after it.
+        --
+        -- Positioned off the MEASURED width of the label rather than off the
+        -- column, so it sits against the name whatever the name is. Every
+        -- other width in this addon is measured for the same reason; see
+        -- Theme.MeasureText.
+        if config.makeFilter and column.filterable ~= false
+            and column.sortable ~= false
+        then
+            local nameWidth =
+                Theme.MeasureText(Theme.sizes.columnHeader, column.label)
+
+            local caret =
+                Theme.CreateText(header, Theme.sizes.columnHeader, "textMuted")
+
+            caret:SetPoint(
+                "LEFT", config.offsets[column.key] + nameWidth + CARET_GAP, 0
+            )
+
+            caret:SetText("v")
+
+            carets[column.key] = caret
+
+            -- THE HEADER PLACES IT; THE BAR DECIDES WHAT IT DOES.
+            --
+            -- makeFilter hands back a bare dropdown button -- no background,
+            -- no label, just the click and the panel -- built from the same
+            -- configuration the bar used when these lived on it. So there is
+            -- one definition of what a filter is, and this file only says
+            -- where it goes.
+            local caretButton = config.makeFilter(column.key, header)
+
+            if caretButton then
+                caretButton:SetPoint(
+                    "LEFT",
+                    config.offsets[column.key] + nameWidth + CARET_GAP - 5,
+                    0
+                )
+
+                caretButton:SetSize(CARET_TARGET, HEIGHT)
+
+                -- Above the sort button, so a click on the caret filters
+                -- rather than sorting. Everywhere else on the header sorts.
+                caretButton:SetFrameLevel(button:GetFrameLevel() + 2)
+
+                SYL.Tooltips.Attach(
+                    caretButton,
+                    "Filter by " .. column.label:lower(),
+                    "Click the column NAME to sort by it. This opens the "
+                    .. "filter."
+                )
+            end
+
+            local arrow =
+                Theme.CreateText(header, Theme.sizes.columnHeader, "accent")
+
+            arrow:SetPoint(
+                "LEFT",
+                config.offsets[column.key] + nameWidth + CARET_GAP + 11,
+                0
+            )
+
+            arrows[column.key] = arrow
+        end
 
         -- A column with `sortable = false` is drawn and not clickable.
         --
@@ -100,16 +191,38 @@ function SortHeader.Create(parent, config)
 
         for _, column in ipairs(config.columns) do
             local label = labels[column.key]
+            local caret = carets[column.key]
+            local arrow = arrows[column.key]
 
-            if key == column.key then
-                label:SetText(
-                    column.label .. (reversed and "  ^" or "  v")
+            -- FILTERED IS THE NAME'S COLOR. Not the arrow's: a column can be
+            -- sorted and filtered at once, and one state must not hide the
+            -- other.
+            local filtered = config.isFiltered
+                and config.isFiltered(column.key)
+
+            Theme.SetTextColor(label, filtered and "accent" or "textMuted")
+
+            if caret then
+                Theme.SetTextColor(caret, filtered and "accent" or "textMuted")
+            end
+
+            -- SORTED IS THE ARROW. Its own region rather than appended to the
+            -- label, because the caret is where the appended arrow used to
+            -- go.
+            if arrow then
+                arrow:SetText(
+                    key == column.key and (reversed and "^" or "v") or ""
                 )
+            end
 
+            -- A column with no caret has nowhere to put an arrow, so it says
+            -- so the old way. Only the tickbox and # are in that state, and
+            -- neither can be sorted by.
+            if not arrow and key == column.key then
+                label:SetText(column.label .. (reversed and "  ^" or "  v"))
                 Theme.SetTextColor(label, "accent")
-            else
+            elseif not arrow then
                 label:SetText(column.label)
-                Theme.SetTextColor(label, "textMuted")
             end
         end
     end
