@@ -290,6 +290,10 @@ function Store.RecordSnapshot(snapshot)
                 -- so a first-capture-only hook would miss the wins with the
                 -- most to advise about. TradeAdvisor dedupes on the id.
                 SYL.TradeAdvisor.Consider(existing)
+
+                -- And the other side of the same drop: TradeAdvisor takes
+                -- the wins, LootAsk takes the losses. Both dedupe on the id.
+                SYL.LootAsk.Consider(existing)
             else
                 local record =
                     BuildRecord(recordID, snapshot, drop, season, location)
@@ -308,6 +312,7 @@ function Store.RecordSnapshot(snapshot)
                 AnnounceDrop(record)
 
                 SYL.TradeAdvisor.Consider(record)
+                SYL.LootAsk.Consider(record)
 
                 -- Only on first capture. Re-processing the same drop must
                 -- not rebroadcast it.

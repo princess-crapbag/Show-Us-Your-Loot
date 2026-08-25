@@ -168,6 +168,14 @@ local function InitializeSettings()
         ShowUsYourLootDB.settings.showMinimapButton = true
     end
 
+    -- What the Ask button types. Taken from AskWording rather than repeated
+    -- here, for the same reason the palette comes from Palettes: the module
+    -- that owns the rule owns its default, and the second copy is the one
+    -- that drifts. Aimee wrote the sentence — see Core/AskWording.lua.
+    if ShowUsYourLootDB.settings.askWording == nil then
+        ShowUsYourLootDB.settings.askWording = SYL.AskWording.DEFAULT
+    end
+
     -- Chat window 1 by default, which is wherever the player already reads
     -- chat. Moving output is opt-in.
     if ShowUsYourLootDB.settings.chatFrameIndex == nil then
@@ -192,7 +200,7 @@ local function InitializeSettings()
     end
 
     -- How many nights before the board ranks somebody. Taken from LootScore
-    -- for the same reason the palette is taken from Palettes: the module that
+    -- here, for the same reason the palette comes from Palettes: the module
     -- owns the rule owns its default, and a second copy here is one that
     -- drifts. Zero is a real value, so the test is against nil.
     if ShowUsYourLootDB.settings.minRankNights == nil then

@@ -81,6 +81,15 @@ Features.LIST = {
             .. "rolled on it. Sends nothing to anyone.",
     },
     {
+        key = "lootAsk",
+        short = "Ask for loot",
+        label = "Ask for what you lost",
+        cost = "Opens a small window when somebody else wins something you "
+            .. "rolled on and can still trade. Its button writes a whisper "
+            .. "into your chat box and never sends it. Off unless you turn "
+            .. "it on.",
+    },
+    {
         key = "tradeTracking",
         short = "Follow trades",
         label = "Follow traded loot",
@@ -146,6 +155,15 @@ local DEFAULTS = {
     -- nothing, so the rule it might look like it breaks — the addon does not
     -- talk unless asked — is about chat and is untouched.
     tradeAdvisor = true,
+
+    -- OFF, and it is the only window in this addon that is. The advisor above
+    -- is on because it sends nothing, and the note there says the rule it
+    -- might look like it breaks -- the addon does not talk unless asked -- is
+    -- about chat and is untouched. This one touches chat. It only ever
+    -- prefills, never sends, and a person still presses Enter, but "your
+    -- addon typed something at a stranger for me" is not a sentence anybody
+    -- should be able to say without having switched it on first.
+    lootAsk = false,
 
     -- On, because it is a correctness fix and off is the wrong answer that
     -- shipped until now: a traded item credited the winner, who gave it away,

@@ -253,6 +253,15 @@ SettingsToolsList.GROUPS = {
                 note = "Reopens the advisor for anything still open.",
             },
             {
+                -- The other side of the same two hours. Its window opens by
+                -- itself, so this row is for the one somebody closed and
+                -- then wanted back.
+                label = "Ask for what you lost",
+                run = Command("ask"),
+                note = "Reopens the ask window for anything still inside "
+                    .. "its trade window.",
+            },
+            {
                 -- Left on the chat prefill deliberately: the argument is
                 -- `add|remove NAME URL`, three values, and one name box
                 -- cannot ask for that honestly.

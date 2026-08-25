@@ -172,12 +172,19 @@ SettingsToggles.LIST = {
         -- Measured in the real font, like every other label here. "Put windows
         -- back where they started" says more and comes to 203px against a cell
         -- that takes about 202 — one pixel over, which is the whole reason the
-        -- note on "Announce gear in chat" above exists. This one is 107 and
-        -- has room to spare.
-        label = "Reset window sizes",
+        -- note on "Announce gear in chat" above exists. This one is 186, and
+        -- the longest label that fits — "Record group loot from Loot History"
+        -- — is 191.5, so it has a little room and no more than that.
+        --
+        -- The minimap button is named in it because the button can be dragged
+        -- anywhere on the screen now, so it can be lost the same way a window
+        -- can, and this is the row somebody looks at when something is gone.
+        label = "Reset windows and minimap button",
         tab = "tools",
         action = function()
             local reset = SYL.Widgets.ResetSizes()
+
+            SYL.MinimapButton.ResetPosition()
 
             -- Saved sizes go either way; only windows opened this session can
             -- be moved on the spot. Zero is an ordinary answer rather than a
@@ -187,7 +194,7 @@ SettingsToggles.LIST = {
                 SYL:Print(
                     "Saved window sizes and positions cleared. Every window "
                     .. "will open at its default size, in the middle of the "
-                    .. "screen."
+                    .. "screen. The minimap button is back on the ring."
                 )
 
                 return
@@ -195,8 +202,9 @@ SettingsToggles.LIST = {
 
             SYL:Print(
                 SYL.Utilities.Count(reset, "open window")
-                .. " put back to the default size and centered. Saved sizes "
-                .. "and positions cleared."
+                .. " put back to the default size and centered, and the "
+                .. "minimap button is back on the ring. Saved sizes and "
+                .. "positions cleared."
             )
         end,
     },

@@ -74,6 +74,12 @@ local function OnPlayerLogin()
         ShowUsYourLootDB.settings.showMinimapButton
     )
 
+    -- And the two doors that are not ours: the Data Broker feed and the
+    -- game's addon compartment. Login rather than ADDON_LOADED for a second
+    -- reason -- see UI/Launchers.lua -- which is that the library it looks
+    -- for belongs to somebody else's addon and may not have loaded yet.
+    SYL.Launchers.Register()
+
     SYL.ItemTooltip.Enable()
 
     -- Not registered at all when off, rather than registered and refusing to

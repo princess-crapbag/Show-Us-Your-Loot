@@ -3,6 +3,15 @@
 ## Notes: Loot history, attendance and fairness analytics for group loot.
 ## Author: Aimee
 ## Version: 0.4.1
+## IconTexture: Interface\Icons\INV_Misc_Coin_02
+
+# The game's own addon list, behind the plus sign on the minimap. The three
+# functions are named here as strings and called by name, so they are globals
+# in UI/Launchers.lua rather than members of the addon table.
+## AddonCompartmentFunc: ShowUsYourLoot_OnAddonCompartmentClick
+## AddonCompartmentFuncOnEnter: ShowUsYourLoot_OnAddonCompartmentEnter
+## AddonCompartmentFuncOnLeave: ShowUsYourLoot_OnAddonCompartmentLeave
+
 ## SavedVariables: ShowUsYourLootDB
 ## SavedVariablesPerCharacter: ShowUsYourLootCharDB
 ## OptionalDeps: RaiderIO
@@ -68,6 +77,8 @@ Core\RaidSummary.lua
 Core\NightCalendar.lua
 Core\NightIndex.lua
 Core\TradeAdvisor.lua
+Core\AskWording.lua
+Core\LootAsk.lua
 Core\CreditCandidates.lua
 Core\CouncilLoot.lua
 Core\LootCredit.lua
@@ -141,6 +152,7 @@ UI\ArchiveControls.lua
 UI\AbsenceControls.lua
 UI\NightsPanel.lua
 UI\TradeAdvisorPanel.lua
+UI\LootAskPanel.lua
 UI\TabPanels.lua
 UI\MainWindow.lua
 UI\DropRolls.lua
@@ -150,6 +162,7 @@ UI\CreditPickerRows.lua
 UI\CreditPicker.lua
 UI\CommandMenu.lua
 UI\MinimapButton.lua
+UI\Launchers.lua
 UI\PlayerRows.lua
 UI\PlayerWindow.lua
 UI\PlayerDetailWindow.lua

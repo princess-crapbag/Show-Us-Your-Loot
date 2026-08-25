@@ -70,8 +70,14 @@ Export, Tooltip
 > slot two honest categories needed.
 >
 > Rejected deliberately: Bags & Inventory (the addon records loot after the
-> fact and never touches bags), Data Broker (no LDB feed exists, grepped),
-> Map & Minimap (a launcher button is not what that category is for).
+> fact and never touches bags), Map & Minimap (a launcher button is not what
+> that category is for).
+>
+> **Data Broker is now honest and was not before.** It was rejected here
+> because no LDB feed existed — grepped, and true at the time. `UI/Launchers.lua`
+> publishes a launcher object, so Titan Panel, Bazooka and ChocolateBar can all
+> show this addon. Four categories is the maximum, so taking it means dropping
+> one of the four above; Tooltip is the one already marked as first to go.
 
 **Allow Comments** — On. It is the only bug channel this has.
 

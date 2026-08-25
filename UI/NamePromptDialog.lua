@@ -34,10 +34,24 @@ SYL.NamePromptDialog = NamePromptDialog
 local WINDOW_WIDTH = 440
 local WINDOW_HEIGHT = 218
 
+-- THE OPTIONAL PREVIEW, added for the wording box in UI/LootAskPanel.lua.
+-- That one is a sentence that will be whispered to a stranger with an item
+-- link spliced into it, and the link is about 110 of the 255 characters a
+-- whisper allows -- so what you typed and what will actually arrive are not
+-- the same length or the same text. A dialog that shows one and sends the
+-- other is the shape of thing people only find out about afterwards.
+--
+-- Generic, because it costs one config key: any dialog can hand over a
+-- function and get a live line under the box. Dialogs without one are exactly
+-- as tall as they were.
+local PREVIEW_HEIGHT = 44
+local PREVIEW_BLOCK = PREVIEW_HEIGHT + 12
+
 local frame
 local titleText
 local bodyText
 local nameInput
+local previewText
 local acceptButton
 
 local current = {}
@@ -84,6 +98,33 @@ local function Attempt()
     end
 end
 
+-- Recomputed on every keystroke rather than on accept, which is the whole
+-- point of it. Wrapped in pcall because the function belongs to the caller
+-- and this runs inside a text field: a mistake in it must not make the box
+-- impossible to type in.
+local function UpdatePreview()
+    if not previewText then
+        return
+    end
+
+    if type(current.preview) ~= "function" then
+        previewText:Hide()
+
+        return
+    end
+
+    local ok, text, warn = pcall(current.preview, nameInput:GetText() or "")
+
+    if not ok then
+        text, warn = "", false
+    end
+
+    previewText:SetText(text or "")
+    Theme.SetTextColor(previewText, warn and "warning" or "textMuted")
+    previewText:Show()
+end
+
+
 local function CreateNameInput(parent)
     local edge = Theme.CreateSolidTexture(parent, "border", "BACKGROUND")
     edge:SetPoint("TOPLEFT", 20, -134)
@@ -103,6 +144,7 @@ local function CreateNameInput(parent)
     nameInput:SetTextColor(unpack(Theme.colors.textPrimary))
 
     nameInput:SetScript("OnEnterPressed", Attempt)
+    nameInput:SetScript("OnTextChanged", UpdatePreview)
 
     nameInput:SetScript("OnEscapePressed", function(self)
         self:ClearFocus()
@@ -151,6 +193,15 @@ local function CreateWindow()
 
     CreateNameInput(frame)
 
+    previewText = Theme.CreateText(frame, Theme.sizes.rowSmall, "textMuted")
+    previewText:SetPoint("TOPLEFT", 20, -168)
+    previewText:SetWidth(WINDOW_WIDTH - 40)
+    previewText:SetHeight(PREVIEW_HEIGHT)
+    previewText:SetJustifyH("LEFT")
+    previewText:SetJustifyV("TOP")
+    previewText:SetWordWrap(true)
+    previewText:Hide()
+
     acceptButton = Theme.CreateButton(frame, 120, 26, "OK", Attempt)
     acceptButton:SetPoint("BOTTOMRIGHT", -20, 18)
 
@@ -178,16 +229,27 @@ end
 --   empty     what to say when nothing was typed
 --   prefill   text to start with, selected
 --   onAccept  takes the typed string, returns ok and a message
+--   maxLetters how much the box will hold, 80 by default
+--   preview   optional. Takes what is typed, returns the line to show under
+--             the box and whether to show it as a warning.
 function NamePromptDialog.Show(config)
     current = config or {}
 
     local dialog = CreateWindow()
 
+    -- Only a dialog that asked for a preview pays for the room it takes.
+    frame:SetHeight(
+        current.preview and (WINDOW_HEIGHT + PREVIEW_BLOCK) or WINDOW_HEIGHT
+    )
+
     titleText:SetText(current.title or "")
     bodyText:SetText(current.body or "")
     acceptButton.label:SetText(current.accept or "OK")
 
+    nameInput:SetMaxLetters(current.maxLetters or 80)
     nameInput:SetText(current.prefill or "")
+
+    UpdatePreview()
 
     if current.prefill then
         nameInput:HighlightText()

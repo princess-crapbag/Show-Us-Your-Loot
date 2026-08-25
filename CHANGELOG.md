@@ -3,6 +3,70 @@
 What changed, for the person installing it. The commit history explains why;
 this says what you will notice.
 
+## Unreleased
+
+### Fixed
+
+- **The minimap button was sitting inside the minimap**, on top of the map,
+  instead of on the ring around it. It was placed at a distance that assumed a
+  minimap the game stopped drawing years ago. It reads the real size now, so it
+  lands on the edge whatever size your minimap is — including after Edit Mode
+  has resized it, and on a squared-off one.
+
+### Added
+
+- **Ask for what you lost.** Somebody else wins something you rolled on, a
+  small window opens, and one button writes the message for you: *"Hi there,
+  could I have [item] if you don't need it?"* It puts that in your chat box
+  with the item link and their name already in it. **Nothing is sent until you
+  press Enter**, and you can change any word first.
+
+  It is for LFR and for pug raids — anywhere the standard roll option is in
+  force and you are with people you do not know. It knows who won because it
+  already reads the roll list, and it addresses the whisper properly across
+  realms, which a name off a roll list alone does not do.
+
+  **The wording is yours.** Type your own over it and it is saved and used from
+  then on; the default can be put back at any time. `[item]` becomes the item
+  link and `[player]` becomes their name, and a preview under the box shows the
+  exact line, counted — an item link is about 110 characters of the 255 a
+  whisper allows before you have written a word.
+
+  **Any roll you actually made counts** — Need, offspec, Mog and Greed. LFR
+  will refuse you a Need roll on the wrong armor type and sometimes refuses Mog
+  for no visible reason, so greed is often the only button you were given
+  rather than anything you meant by it. Passing does not count, so a night of
+  passing on everything does not open a window on every drop.
+
+  On a Mog roll it checks the appearance is still missing before it offers,
+  which matters when two of the same item drop in one wing and you won the
+  first.
+
+  Off until you turn it on, under Settings → Features. Asked for by a guildie
+  who remembered one from Remix.
+
+- **The minimap button drags anywhere on the screen.** It used to orbit the
+  minimap and nothing else, so the only choice you had was which point on one
+  circle. Pick it up and put it where you want it, and it stays there between
+  sessions. Drop it on or near the minimap and it snaps back onto the ring.
+
+  It cannot be dragged off the edge of the screen, and **Reset windows and
+  minimap button** on Settings → Tools brings it back to the ring if it ends up
+  somewhere awkward — under the bags, behind another addon's frame, or off in a
+  corner of a screen you have since changed the resolution of.
+
+- **Titan Panel, Bazooka and ChocolateBar can show it.** The addon now
+  publishes a Data Broker launcher, so it appears in the plugin list of
+  whichever of those you use, with the same two clicks: left opens the loot
+  window, right lists every command.
+
+- **It is in the game's own Addons list too** — the compartment behind the plus
+  sign on the minimap, with the same two clicks again.
+
+  Between the three of them, the button on the ring is now a preference rather
+  than the only way in: turn it off in Settings → Display and the addon is
+  still one click away.
+
 ## 0.4.1 — 2026-08-24
 
 ### Added

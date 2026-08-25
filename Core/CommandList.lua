@@ -108,6 +108,11 @@ CommandList.ENTRIES = {
         description = "Kills, pulls and drops for every boss",
     },
     {
+        command = "ask",
+        common = true,
+        description = "Ask whoever won something you rolled on",
+    },
+    {
         command = "sync",
         description = "Sync status — add 'backfill' to ask for missing roll lists",
     },
@@ -122,7 +127,7 @@ CommandList.ENTRIES = {
     },
     {
         command = "resetwindows",
-        description = "Put every window back to its default size and center",
+        description = "Put windows and the minimap button back",
     },
     { command = "capture", description = "Toggle Loot History capture" },
     { developer = true, command = "dev", description = "Open the developer window" },

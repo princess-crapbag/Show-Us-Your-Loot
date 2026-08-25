@@ -186,6 +186,29 @@ COMMANDS["in"] = function(remainder)
     SYL.ScheduleCommands.Back(remainder)
 end
 
+COMMANDS.ask = function()
+    if not SYL.LootAsk.IsEnabled() then
+        SYL:Write(
+            "Asking for what you lost is switched off in Settings, under "
+            .. "Features."
+        )
+
+        return
+    end
+
+    if not SYL.LootAskPanel.HasAnything() then
+        SYL:Write(
+            "Nothing you rolled on is still inside its trade window. This "
+            .. "opens by itself when somebody else wins something you can "
+            .. "still be given."
+        )
+
+        return
+    end
+
+    SYL.LootAskPanel.Show()
+end
+
 COMMANDS.trade = function()
     if not SYL.TradeAdvisor.IsEnabled() then
         SYL:Write("The trade window advisor is switched off in Settings.")
@@ -240,13 +263,21 @@ end
 COMMANDS.resetwindows = function()
     local reset = SYL.Widgets.ResetSizes()
 
+    -- The minimap button comes with them. It can be dragged anywhere on the
+    -- screen now, which means it can be dragged somewhere it cannot be seen
+    -- or clicked, and this is the way back. Nothing else in the addon is a
+    -- more obvious place to look for it than the command that puts things
+    -- back where they started.
+    SYL.MinimapButton.ResetPosition()
+
     -- Saved sizes are cleared either way. Only windows opened this session
     -- can be resized on the spot, so zero is a normal answer rather than a
     -- failure, and saying so stops it reading as one.
     if reset == 0 then
         SYL:Print(
             "Saved window sizes and positions cleared. Every window will open "
-            .. "at its default size, in the middle of the screen."
+            .. "at its default size, in the middle of the screen. The minimap "
+            .. "button is back on the ring."
         )
 
         return
@@ -254,8 +285,8 @@ COMMANDS.resetwindows = function()
 
     SYL:Print(
         SYL.Utilities.Count(reset, "open window")
-        .. " put back to the default size and centered. Saved sizes and "
-        .. "positions cleared."
+        .. " put back to the default size and centered, and the minimap "
+        .. "button is back on the ring. Saved sizes and positions cleared."
     )
 end
 
