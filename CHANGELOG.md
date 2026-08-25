@@ -45,10 +45,15 @@ this says what you will notice.
   Off until you turn it on, under Settings → Features. Asked for by a guildie
   who remembered one from Remix.
 
-- **The minimap button drags anywhere on the screen.** It used to orbit the
-  minimap and nothing else, so the only choice you had was which point on one
-  circle. Pick it up and put it where you want it, and it stays there between
-  sessions. Drop it on or near the minimap and it snaps back onto the ring.
+- **The minimap button drags anywhere on the screen — right-click and drag.**
+  It used to orbit the minimap and nothing else, so the only choice you had was
+  which point on one circle. Put it where you want it and it stays there
+  between sessions. Drop it on or near the minimap and it snaps back onto the
+  ring.
+
+  **Left-click opens the addon and no longer drags**, and right-click no longer
+  lists the commands — the Tools tab in Settings has all of them as buttons
+  now, which is what freed the right button up for the drag.
 
   It cannot be dragged off the edge of the screen, and **Reset windows and
   minimap button** on Settings → Tools brings it back to the ring if it ends up

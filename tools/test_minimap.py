@@ -102,10 +102,13 @@ function MakeFrame(width, height)
         return texture
     end
 
+    function frame:RegisterForClicks(...) self.clicks = { ... } end
+    function frame:RegisterForDrag(...) self.drags = { ... } end
+
     -- Everything else the button calls on itself and never reads back.
     for _, name in ipairs({
-        "SetFrameStrata", "SetFrameLevel", "RegisterForClicks",
-        "RegisterForDrag", "SetMovable", "SetClampedToScreen", "EnableMouse",
+        "SetFrameStrata", "SetFrameLevel", "SetMovable",
+        "SetClampedToScreen", "EnableMouse",
         "SetTexture", "SetTexCoord", "SetOwner", "AddLine",
     }) do
         frame[name] = function() end
@@ -274,14 +277,30 @@ check("and Reset is the way back from there",
       and anchored_to() == "minimap"
       and settings.minimapFreeX is None)
 
-# The clicks themselves, which the drag rewrite runs through.
-before_opened, before_toggled = g.OPENED, g.TOGGLED
+# ONE BUTTON EACH. Right-click used to open the command menu and now drags,
+# which means left-click opens the addon and no longer drags. Aimee: the
+# commands "are all in the settings now", and on losing the left drag, "i
+# think that is reasonable".
+before_opened = g.OPENED
 
 button.scripts.OnClick(button, "LeftButton")
-button.scripts.OnClick(button, "RightButton")
 
-check("left-click still opens the window and right-click still lists commands",
-      g.OPENED == before_opened + 1 and g.TOGGLED == before_toggled + 1)
+check("left-click opens the loot window", g.OPENED == before_opened + 1)
+
+check("and it is the only click the button answers",
+      list(button.clicks.values()) == ["LeftButtonUp"],
+      list(button.clicks.values()))
+
+check("the drag is on the right button, so a left-click cannot become one",
+      list(button.drags.values()) == ["RightButton"],
+      list(button.drags.values()))
+
+# The menu is not merely unbound, it is not reachable from this file at all.
+source = (ROOT / "UI" / "MinimapButton.lua").read_text(encoding="utf-8")
+
+check("and the command menu is gone from the button entirely",
+      "CommandMenu" not in source.split("Both survive a reload.")[-1],
+      "still referenced below the header")
 
 
 # ---------------------------------------------------------------- launchers
@@ -380,7 +399,7 @@ if published:
     published.OnClick(row, "LeftButton")
     published.OnClick(row, "RightButton")
 
-    check("and it opens and lists exactly as the minimap button does",
+    check("and left opens the window while right still lists the commands",
           g.OPENED == before_opened + 1 and g.TOGGLED == before_toggled + 1)
 
     g.TOOLTIP_LINES = 0

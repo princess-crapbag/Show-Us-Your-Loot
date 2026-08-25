@@ -12,9 +12,16 @@
 -- exception for it. Both of these cost nothing to offer, and together they
 -- mean the ring button is a preference rather than the only way in.
 --
--- All three doors do the same two things, because a second door that behaves
--- differently is a second thing to learn: left opens the window, right lists
--- the commands.
+-- Left opens the window and right lists the commands, which is what the
+-- minimap button did when this was written.
+--
+-- IT NO LONGER MATCHES THE MINIMAP BUTTON, and that is deliberate rather than
+-- drift. Aimee took the command menu off the ring button so the right button
+-- could drag it: "they are all in the settings now". Nothing on a Titan bar
+-- or in the compartment needs dragging, so nothing there had to give up its
+-- right-click, and these two are where the menu still lives. If it should go
+-- from here as well, UI/CommandMenu.lua loses its last caller and can go with
+-- it.
 
 local SYL = _G.ShowUsYourLoot
 local CommandMenu = SYL.CommandMenu

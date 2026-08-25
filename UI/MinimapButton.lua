@@ -1,13 +1,23 @@
 -- UI/MinimapButton.lua
 --
--- Left-click opens the loot window, right-click lists every /syl command.
+-- LEFT-CLICK OPENS THE ADDON. RIGHT-CLICK DRAGS IT.
 --
--- Draggable anywhere on the screen. Dropped on or near the minimap it snaps
--- onto the ring and remembers the angle; dropped anywhere else it stays
--- exactly where it was put and remembers the spot. Both survive a reload.
+-- Right-click used to list every /syl command, and Aimee took it off: "they
+-- are all in the settings now" -- the Tools tab draws 25 of them as buttons,
+-- so the menu was a second door to a room that had grown its own. Freeing the
+-- button gave the drag somewhere to live.
+--
+-- WHICH MEANS LEFT-CLICK NO LONGER DRAGS, and she said so before it was
+-- built: "i think that is reasonable". It is the trade every minimap button
+-- makes in one direction or the other, and this way round the click people
+-- press twenty times a night cannot be turned into a drag by a shaky hand.
+--
+-- Dragged with the right button it goes anywhere on the screen. Dropped on or
+-- near the minimap it snaps onto the ring and remembers the angle; dropped
+-- anywhere else it stays exactly where it was put and remembers the spot.
+-- Both survive a reload.
 
 local SYL = _G.ShowUsYourLoot
-local CommandMenu = SYL.CommandMenu
 
 local MinimapButton = {}
 SYL.MinimapButton = MinimapButton
@@ -216,8 +226,12 @@ local function ShowTooltip()
     GameTooltip:AddLine("Show Us Your Loot")
 
     GameTooltip:AddLine("Left-click: open the loot window", 0.8, 0.8, 0.85)
-    GameTooltip:AddLine("Right-click: list all commands", 0.8, 0.8, 0.85)
-    GameTooltip:AddLine("Drag: anywhere on screen", 0.55, 0.55, 0.6)
+    GameTooltip:AddLine(
+        "Right-click and drag: move it anywhere",
+        0.8,
+        0.8,
+        0.85
+    )
     GameTooltip:AddLine(
         "Drop it on the minimap to snap it to the ring",
         0.55,
@@ -236,28 +250,22 @@ function MinimapButton.Create()
     button = CreateFrame("Button", "ShowUsYourLootMinimapButton", Minimap)
 
     button:SetSize(31, 31)
-    button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-    button:RegisterForDrag("LeftButton")
+    -- One button each. A right-click that does not move the mouse does
+    -- nothing at all, which is the correct amount for a menu that no longer
+    -- exists.
+    button:RegisterForClicks("LeftButtonUp")
+    button:RegisterForDrag("RightButton")
     button:SetMovable(true)
     button:SetClampedToScreen(true)
 
     BuildTextures()
     Restore()
 
-    button:SetScript("OnClick", function(self, mouseButton)
-        if mouseButton == "RightButton" then
-            CommandMenu.Toggle(self)
-            return
-        end
-
-        CommandMenu.Close()
-
+    button:SetScript("OnClick", function()
         SYL:OpenMainWindow()
     end)
 
     button:SetScript("OnDragStart", function(self)
-        CommandMenu.Close()
-
         self:SetScript("OnUpdate", OnDragUpdate)
     end)
 
