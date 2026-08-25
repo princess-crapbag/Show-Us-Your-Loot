@@ -401,7 +401,7 @@ end
 
 local function CreateScrollArea(parent)
     view.countText =
-        Theme.CreateText(parent, Theme.sizes.subtitle, "textMuted")
+        Theme.CreateText(parent, Theme.sizes.control, "textMuted")
 
     -- OFF THE RIGHT EDGE, not at a fixed x.
     --

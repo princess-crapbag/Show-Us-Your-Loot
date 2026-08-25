@@ -18,6 +18,7 @@ Widths come from tools/mockup_settings_tabs.measure, which is the same font
 metric UI/Theme.lua's MeasureText uses. The repo rule is that widths are
 measured and never estimated, and every number below is.
 """
+import math
 import re
 import sys
 
@@ -62,12 +63,20 @@ def gap(name, a_end, b_start):
     return clear
 
 
-SMALL = 11        # Theme.sizes.rowSmall
-SUBTITLE = 11     # Theme.sizes.subtitle
-HEADER = 10       # Theme.sizes.columnHeader
-
 MAIN = src("UI/MainWindow.lua")
 BAR = src("UI/FilterBar.lua")
+THEME = src("UI/Theme.lua")
+
+SMALL = 11        # Theme.sizes.rowSmall
+HEADER = 10       # Theme.sizes.columnHeader
+
+# READ, NOT TYPED. The filter bar and the footer both draw at this size, and
+# a test carrying its own copy of it would keep passing while the rows it
+# checks were drawn at something else.
+CONTROL = number(THEME, r"    control = (\d+),",
+                 "Theme.sizes.control")
+
+SUBTITLE = CONTROL   # what the count line is drawn at
 
 WINDOW_WIDTH = number(MAIN, r"local WINDOW_WIDTH = (\d+)", "WINDOW_WIDTH")
 WINDOW_HEIGHT = number(MAIN, r"local WINDOW_HEIGHT = (\d+)", "WINDOW_HEIGHT")
@@ -90,14 +99,14 @@ CLEAR_WIDTH = number(BAR, r'CreateButton\(bar, (\d+), BAR_HEIGHT, "Clear"',
 INPUT_INSET = number(BAR, r"local INPUT_INSET = (\d+)", "INPUT_INSET")
 CARET_ROOM = number(BAR, r"local CARET_ROOM = (\d+)", "CARET_ROOM")
 
-date_width = max(measure("MM-DD-YYYY", SMALL),
-                 measure("0000-00-00", SMALL)) + INPUT_INSET + CARET_ROOM
+date_width = max(measure("MM-DD-YYYY", CONTROL),
+                 measure("0000-00-00", CONTROL)) + INPUT_INSET + CARET_ROOM
 
 x = BAR_INSET + SEARCH_WIDTH
-FROM_START = x + 10 + measure("From", SMALL) + 2 + 4
+FROM_START = x + 10 + measure("From", CONTROL) + 2 + 4
 
 for label in ("From", "To"):
-    x += 10 + measure(label, SMALL) + 2 + 4 + date_width
+    x += 10 + measure(label, CONTROL) + 2 + 4 + date_width
 
 DATES_END = x
 CLEAR_START = WINDOW_WIDTH - BAR_INSET - CLEAR_WIDTH
@@ -116,6 +125,27 @@ COUNT_LEFT = COUNT_RIGHT - WIDEST_COUNT
 
 check("the count hangs off the right edge like Clear does, not off a fixed x",
       'countText:SetPoint("TOPRIGHT"' in MAIN)
+
+# THE WHOLE ROW AT ONE SIZE. Aimee asked for the top row and the button row
+# smaller "so we dont risk issues" -- if one control keeps the old size the
+# clearances below are computed against a string that is not what is drawn.
+check("the search box draws at the control size",
+      "editBox:SetFont(Theme.GetFontPath(), Theme.sizes.control" in BAR)
+
+check("so does its placeholder",
+      "Theme.CreateText(holder, Theme.sizes.control" in BAR)
+
+check("so do the From and To labels",
+      "local label = Theme.CreateText(parent, Theme.sizes.control" in BAR)
+
+check("and the date boxes are measured at the size they are drawn",
+      "Theme.MeasureText(Theme.sizes.control, DATE_PLACEHOLDER)" in BAR)
+
+check("Clear's label comes down with the rest of the row",
+      "Theme.SetTextSize(clearButton.label, Theme.sizes.control)" in BAR)
+
+check("and so does the count line",
+      "Theme.CreateText(parent, Theme.sizes.control" in MAIN)
 
 gap("the count clears the To box even at its widest", DATES_END, COUNT_LEFT)
 gap("and never reaches Clear", COUNT_RIGHT, CLEAR_START)
@@ -209,56 +239,122 @@ FOOTER = src("UI/MainFooter.lua")
 
 CLOSE_WIDTH = number(FOOTER, r"local BUTTON_WIDTH = (\d+)", "Close width")
 
-ACTIONS = [
-    ("Select all", r"bar\.selectAll = Theme\.CreateButton\(parent, (\d+)"),
-    ("Deselect all", r"bar\.deselect = Theme\.CreateButton\(parent, (\d+)"),
-    ("Ignore", r"bar\.ignore = Theme\.CreateButton\(parent, (\d+)"),
-    ("Hide", r"bar\.action = Theme\.CreateButton\(parent, (\d+)"),
-    ("Hide all", r'CreateButton\(parent, (\d+), 20, "Hide all"'),
+# Every label each button can ever hold. Sized to only the opening one, each
+# of these truncates the moment it is pressed.
+ACTION_LABELS = [
+    ("Select all", ("Select all",)),
+    ("Deselect all", ("Deselect all",)),
+    ("Ignore", ("Ignore", "Restore")),
+    ("Hide", ("Hide", "Unhide")),
+    ("Hide all", ("Hide all",)),
 ]
 
-TOGGLES = [
-    ("Show hidden", r'CreateButton\(parent, (\d+), 20, "Show hidden"',
-     ("Show hidden", "Hide hidden")),
-    ("All content", r'CreateButton\(parent, (\d+), 20, "All content"',
-     ("All content", "Raids only", "Dungeons only")),
-    ("Gear only", r'CreateButton\(parent, (\d+), 20, "Gear only"',
-     ("Gear only", "Everything")),
-    ("All seasons", r'CreateButton\(parent, (\d+), 20, "All seasons"',
-     ("All seasons", "This season")),
+TOGGLE_LABELS = [
+    ("Show hidden", ("Show hidden", "Hidden only")),
+    ("All content", ("All content", "Raids only", "Dungeons only")),
+    ("Gear only", ("Gear only", "Everything")),
+    ("All seasons", ("All seasons", "This season")),
 ]
+
+# NO LITERAL WIDTHS LEFT. Every footer button is sized by Theme.SizeToLabels
+# from the labels it can hold, so the test does the same arithmetic the code
+# does rather than reading numbers back out of it.
+PADDING = number(THEME, r"Theme\.BUTTON_PADDING = (\d+)", "BUTTON_PADDING")
+
+
+def sized(labels):
+    return math.ceil(max(measure(one, CONTROL) for one in labels)) + PADDING
+
+
+check("the footer sizes its buttons from their labels rather than from typed "
+      "numbers",
+      "Theme.SizeToLabels(control, labels)" in SEL)
+
+# THE SIZING TABLE ITSELF, not the file. Every one of these labels also
+# appears in the SetText call that swaps it, so searching the whole file
+# proved nothing -- deleting a label from the table left the test passing.
+block = re.search(r"for control, labels in pairs\(\{(.*?)\}\) do", SEL, re.S)
+
+check("the sizing table is where the test thinks it is", block is not None)
+
+# COMMENTS STRIPPED. The table carries a note explaining which label is the
+# real one, and with the note left in, deleting the label from the table still
+# satisfied the search -- a check passing on its own explanation.
+SIZING = " ".join(
+    line.split("--")[0] for line in (block.group(1) if block else "").splitlines())
+
+for name, labels in ACTION_LABELS + TOGGLE_LABELS:
+    for one in labels:
+        check("'" + name + "' declares the label '" + one + "'",
+              '"' + one + '"' in SIZING)
+
+# And the other direction: anything the bar actually puts in a label has to
+# be in that table, or the button was sized without it.
+#
+# Scanned to the matching paren rather than matched as one line, because the
+# interesting ones are inside a conditional -- SetText(x == y and "Unhide" or
+# "Hide") -- and those are exactly the labels a button gets sized without.
+def set_labels(text):
+    found = set()
+
+    for start in [m.end() for m in re.finditer(r"label:SetText\(", text)]:
+        depth, i = 1, start
+
+        while i < len(text) and depth > 0:
+            if text[i] == "(":
+                depth += 1
+            elif text[i] == ")":
+                depth -= 1
+            i += 1
+
+        found.update(re.findall(r'"([^"]+)"', text[start:i]))
+
+    return found
+
+
+# Strings compared against are not labels -- SetText(scope == "raid" and
+# "Raids only" ...) holds both the answer and the thing being asked about.
+compared = set(re.findall(r'== "([^"]+)"', SEL))
+
+spoken = set_labels(SEL) - compared
+
+check("the label scan found the conditional ones too",
+      "Unhide" in spoken and "Restore" in spoken
+      and "Hidden only" in spoken,
+      "found %r" % sorted(spoken))
+
+check("and dropped the values that are only compared against",
+      "raid" not in spoken and "dungeon" not in spoken,
+      "found %r" % sorted(spoken))
+
+for one in sorted(spoken):
+    check("the label '" + one + "' is one the buttons were sized for",
+          '"' + one + '"' in SIZING)
 
 # Left chain: flows right from 16 in 6px steps.
 x = 16
-for name, pattern in ACTIONS:
-    width = number(SEL, pattern, name)
-
-    check("'" + name + "' fits its own button",
-          width >= measure(name, SMALL) + 8,
-          "%d against %.1f" % (width, measure(name, SMALL)))
-
-    x += width + 6
+for name, labels in ACTION_LABELS:
+    x += sized(labels) + 6
 
 LEFT_END = x - 6
 
 # Right chain: flows left from Close.
 r = WINDOW_WIDTH - 16 - CLOSE_WIDTH
 
-for name, pattern, labels in TOGGLES:
-    width = number(SEL, pattern, name)
-    widest = max(measure(one, SMALL) for one in labels)
-
-    check("'" + name + "' fits every label it swaps to",
-          width >= widest + 8, "%d against %.1f" % (width, widest))
-
-    # Slack here is what pushed this group left until Hide all covered it.
-    check("'" + name + "' is not carrying dead width",
-          width <= widest + 20,
-          "%d for a %.1f label" % (width, widest))
-
-    r -= 6 + width
+for name, labels in TOGGLE_LABELS:
+    r -= 6 + sized(labels)
 
 gap("the action group does not reach the toggles", LEFT_END, r)
+
+check("and does so with real headroom, not by a pixel",
+      r - LEFT_END >= 60, "%d px" % (r - LEFT_END))
+
+check("Close's label is the same size as the row it sits on",
+      "Theme.SetTextSize(closeButton.label, Theme.sizes.control)" in FOOTER)
+
+check("and so are the archives bar's buttons",
+      "Theme.SetTextSize(control.label, Theme.sizes.control)"
+      in src("UI/ArchiveControls.lua"))
 
 check("Close outranks the resize grip that sits on its corner",
       "closeButton:SetFrameLevel(parent:GetFrameLevel() + 11)" in FOOTER)

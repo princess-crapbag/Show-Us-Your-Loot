@@ -36,7 +36,11 @@ local function CreateTextInput(parent, width, placeholder)
     editBox:SetPoint("TOPLEFT", 6, 0)
     editBox:SetPoint("BOTTOMRIGHT", -6, 0)
     editBox:SetAutoFocus(false)
-    editBox:SetFont(Theme.GetFontPath(), Theme.sizes.rowSmall, "")
+    -- THE WHOLE ROW IS ONE SIZE SMALLER. See Theme.sizes.control: this bar
+    -- and the button row at the bottom are where a fixed width meets a string
+    -- somebody else chose, and both of the overlaps Aimee reported on this
+    -- window were on one of them.
+    editBox:SetFont(Theme.GetFontPath(), Theme.sizes.control, "")
     editBox:SetTextColor(unpack(Theme.colors.textPrimary))
 
     editBox:SetScript("OnEscapePressed", function(self)
@@ -44,7 +48,7 @@ local function CreateTextInput(parent, width, placeholder)
     end)
 
     holder.placeholder =
-        Theme.CreateText(holder, Theme.sizes.rowSmall, "textMuted")
+        Theme.CreateText(holder, Theme.sizes.control, "textMuted")
 
     holder.placeholder:SetPoint("LEFT", 7, 0)
     holder.placeholder:SetText(placeholder)
@@ -125,7 +129,7 @@ local INPUT_INSET = 12
 local CARET_ROOM = 8
 
 local function CreateDateField(parent, labelText, state, key, endOfDay, onChange, anchorTo)
-    local label = Theme.CreateText(parent, Theme.sizes.rowSmall, "textMuted")
+    local label = Theme.CreateText(parent, Theme.sizes.control, "textMuted")
 
     label:SetText(labelText)
     label:SetWidth(label:GetStringWidth() + 2)
@@ -135,8 +139,8 @@ local function CreateDateField(parent, labelText, state, key, endOfDay, onChange
     -- not the widest digits, so the placeholder is measured alongside a worst
     -- case of real digits.
     local width = math.max(
-        Theme.MeasureText(Theme.sizes.rowSmall, DATE_PLACEHOLDER),
-        Theme.MeasureText(Theme.sizes.rowSmall, "0000-00-00")
+        Theme.MeasureText(Theme.sizes.control, DATE_PLACEHOLDER),
+        Theme.MeasureText(Theme.sizes.control, "0000-00-00")
     ) + INPUT_INSET + CARET_ROOM
 
     local input =
@@ -241,6 +245,11 @@ function FilterBar.Create(parent, config)
         "Empties the search, the dates and every dropdown. It does not "
         .. "change any record."
     )
+
+    -- Its width is left alone -- it is the right-hand root of this row and
+    -- everything else measures back from it -- but its label comes down with
+    -- the rest of the bar.
+    Theme.SetTextSize(clearButton.label, Theme.sizes.control)
 
     clearButton:SetPoint("RIGHT", 0, 0)
 

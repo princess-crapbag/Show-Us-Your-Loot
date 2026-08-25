@@ -178,13 +178,40 @@ function SelectionBar.Create(parent, view, config)
     -- level, took its clicks as well.
     --
     -- The four right-hand toggles were each 24 to 34 pixels wider than the
-    -- widest label they can ever hold. Trimmed to label + 16 they start at
-    -- 430 instead of 342.
+    -- widest label they can ever hold, and the five on the left were worse.
     --
-    -- THE LIVE BUDGET: the left chain ends at 404, the right chain starts at
-    -- 430, and there are 26 pixels between them. Any button added to the loop
-    -- below has to be checked against that number, because nothing here will
-    -- notice on its own.
+    -- SO NOTHING HERE IS A TYPED WIDTH ANY MORE. Every button below is sized
+    -- by Theme.SizeToLabels from every label it can hold, at Theme.sizes
+    -- .control -- Aimee: "make them all a little smaller so we dont risk
+    -- issues." The widths above are what the buttons are created at and are
+    -- immediately replaced; they only decide how big the frame starts.
+    --
+    -- LISTED WITH EVERY LABEL, not just the opening one. Hide becomes Unhide,
+    -- Ignore becomes Restore, All content cycles through two more. A button
+    -- sized to the label it opens with truncates the first time it is pressed.
+    for control, labels in pairs({
+        [bar.selectAll] = { "Select all" },
+        [bar.deselect] = { "Deselect all" },
+        [bar.ignore] = { "Ignore", "Restore" },
+        [bar.action] = { "Hide", "Unhide" },
+        [bar.hideAllCopies] = { "Hide all" },
+
+        -- "Hidden only", not "Hide hidden" -- that second one was
+        -- never a label this button shows.
+        [bar.showHidden] = { "Show hidden", "Hidden only" },
+        [bar.contentScope] = { "All content", "Raids only", "Dungeons only" },
+        [bar.gearOnly] = { "Gear only", "Everything" },
+        [bar.allSeasons] = { "All seasons", "This season" },
+    }) do
+        Theme.SizeToLabels(control, labels)
+    end
+
+    -- THE LIVE BUDGET, measured at Theme.sizes.control: the action group ends
+    -- at 315 and the toggles start at 447, so there are 132 pixels between
+    -- them -- against 26 when the widths were typed and -62 when they were
+    -- not trimmed at all. tools/test_layout.py resolves both chains and
+    -- asserts the gap, so a button added to the loop below cannot quietly
+    -- eat it.
     --
     -- Placed here rather than beside each button because selectAll anchors
     -- the rest and is created last.

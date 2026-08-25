@@ -252,6 +252,20 @@ function ArchiveControls.Create(parent, view, config)
     -- different kind of thing from the three actions before it.
     bar.clearButton:SetPoint("LEFT", bar.unarchiveButton, "RIGHT", 12, 0)
 
+    -- SAME TYPE SIZE AS THE REST OF THE FOOTER LINE, now that Close beside
+    -- them has come down. The widths stay at the measured 84 they already
+    -- carry -- a smaller label in the same frame is simply more padding,
+    -- which is the direction this row is going.
+    --
+    -- Here rather than beside each button because clearButton is created
+    -- last and the list has to be complete.
+    for _, control in ipairs({
+        bar.renameButton, bar.mergeButton, bar.unarchiveButton,
+        bar.clearButton,
+    }) do
+        Theme.SetTextSize(control.label, Theme.sizes.control)
+    end
+
     local Tip = SYL.Tooltips.Attach
 
     Tip(bar.nameInput, "New name",

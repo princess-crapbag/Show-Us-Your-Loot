@@ -113,6 +113,20 @@ Theme.sizes = {
     -- rather than passed as a bare 9, because no other file in UI/ passes a
     -- size that is not one of these and this should not be the first.
     tiny = 9,
+
+    -- THE TWO CROWDED ROWS: the filter bar along the top of the loot window
+    -- and the button row along the bottom of it.
+    --
+    -- Aimee, after the overlap repairs: "can you bring down the font size in
+    -- the top row with the search box and the bottom row with all of the
+    -- buttons? make them all a little smaller so we dont risk issues."
+    --
+    -- Both rows are the places in this addon where a fixed width meets a
+    -- string somebody else chose -- a season name, a scope label that swaps
+    -- when pressed, a count with four clauses in it. A pixel of slack there
+    -- is worth more than a pixel of type size, and every one of the overlaps
+    -- she reported was on one of these two rows.
+    control = 10,
 }
 
 Theme.metrics = {
@@ -383,6 +397,46 @@ function Theme.CreateButton(parent, width, height, text, onClick)
     end
 
     return button
+end
+
+-- The space either side of a button's label. Eight a side is what the rows
+-- that were trimmed by hand already used.
+Theme.BUTTON_PADDING = 16
+
+-- A BUTTON SIZED TO WHAT IT CAN SAY, rather than to a number somebody typed.
+--
+-- `labels` is EVERY label the button can ever hold, not just the one it opens
+-- with -- Hide becomes Unhide, Ignore becomes Restore, All content cycles
+-- through Raids only and Dungeons only. Sized to the current label, each of
+-- those truncates the moment it is pressed.
+--
+-- WHY THIS EXISTS AT ALL. The footer row carried between 24 and 34 pixels of
+-- dead width per button, and that slack is what pushed the right-hand group
+-- left until Hide all was drawn on top of All seasons and took its clicks.
+-- Nothing noticed, because the widths were literals and a literal cannot be
+-- wrong. Measured, they cannot drift: change a label and the button changes
+-- with it.
+function Theme.SizeToLabels(button, labels, size)
+    size = size or Theme.sizes.control
+
+    button.label:SetFont(fontPath, size, "")
+
+    local widest = 0
+
+    for _, text in ipairs(labels) do
+        widest = math.max(widest, Theme.MeasureText(size, text))
+    end
+
+    button:SetWidth(math.ceil(widest) + Theme.BUTTON_PADDING)
+
+    return button:GetWidth()
+end
+
+-- Just the type size, for a control whose width is fixed by something else --
+-- the Close button anchors the whole footer chain, and the search box wants
+-- its room for what gets typed into it rather than for the placeholder.
+function Theme.SetTextSize(fontString, size)
+    fontString:SetFont(fontPath, size or Theme.sizes.control, "")
 end
 
 -- Tabs carry their selected state themselves rather than being disabled, so

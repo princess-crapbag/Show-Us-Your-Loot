@@ -11,6 +11,7 @@ not a sketch of it.
 
 Writes screenshots/overlap-fixes.png.
 """
+import math
 import sys
 
 from PIL import Image
@@ -48,16 +49,17 @@ BAR_H = 22
 WINDOW_WIDTH = 900
 
 
-def button(c, x, y, label, width, height=20, color=T1, fill=BUTTON):
+def button(c, x, y, label, width, height=20, color=T1, fill=BUTTON,
+           size=11):
     c.rect(x, y, width, height, fill)
-    c.text(x + (width - measure(label, 11)) / 2.0, y + (height - 13) / 2.0,
-           label, 11, color)
+    c.text(x + (width - measure(label, size)) / 2.0,
+           y + (height - size - 2) / 2.0, label, size, color)
     return x + width
 
 
-def field(c, x, y, width, placeholder):
+def field(c, x, y, width, placeholder, size=11):
     c.rect(x, y, width, BAR_H, BUTTON)
-    c.text(x + 7, y + 4, placeholder, 11, T3)
+    c.text(x + 7, y + (BAR_H - size - 2) / 2.0, placeholder, size, T3)
     return x + width
 
 
@@ -85,20 +87,29 @@ def loot_top(img, y, fixed):
     c = C(img, MARGIN, y)
     width = WINDOW_WIDTH
 
+    # The AFTER row draws at Theme.sizes.control, so the date boxes -- which
+    # measure themselves from the widest string they can hold -- come out
+    # narrower on their own.
+    size = 10 if fixed else 11
+    ty = 4 + (BAR_H - size - 2) / 2.0
+
+    date_w = int(math.ceil(max(measure("MM-DD-YYYY", size),
+                               measure("0000-00-00", size)))) + 12 + 8
+
     c.rect(0, 0, width, BAR_H + 8, WIN)
 
-    x = field(c, 16, 4, 100, "Search…")
+    x = field(c, 16, 4, 100, "Search…", size)
 
     x += 10
-    c.text(x, 8, "From", 11, T3)
-    x += measure("From", 11) + 2 + 4
+    c.text(x, ty, "From", size, T3)
+    x += measure("From", size) + 2 + 4
     from_start = x
-    x = field(c, x, 4, 94, "MM-DD-YYYY")
+    x = field(c, x, 4, date_w, "MM-DD-YYYY", size)
 
     x += 10
-    c.text(x, 8, "To", 11, T3)
-    x += measure("To", 11) + 2 + 4
-    x = field(c, x, 4, 94, "MM-DD-YYYY")
+    c.text(x, ty, "To", size, T3)
+    x += measure("To", size) + 2 + 4
+    x = field(c, x, 4, date_w, "MM-DD-YYYY", size)
     dates_end = x
 
     count = "128 of 340 items  ·  212 hidden  ·  17 ignored"
@@ -107,15 +118,15 @@ def loot_top(img, y, fixed):
 
     if fixed:
         # Off the right edge, like Clear.
-        cx = width - 80 - measure(count, 11)
-        c.text(cx, 8, count, 11, T2)
+        cx = width - 80 - measure(count, size)
+        c.text(cx, ty, count, size, T2)
     else:
         # At a fixed x 200, straight through both date boxes.
-        collide(c, 200, 4, min(dates_end, 200 + measure(count, 11)) - 200,
+        collide(c, 200, 4, min(dates_end, 200 + measure(count, size)) - 200,
                 BAR_H)
-        c.text(200, 8, count, 11, BAD)
+        c.text(200, ty, count, size, BAD)
 
-    button(c, clear_x, 4, "Clear", 54, BAR_H)
+    button(c, clear_x, 4, "Clear", 54, BAR_H, size=size)
 
     return from_start, dates_end
 
@@ -124,14 +135,18 @@ def loot_top(img, y, fixed):
 # 2. The loot window's footer
 # --------------------------------------------------------------------------
 
-ACTIONS = [("Select all", 68), ("Deselect all", 78), ("Ignore", 74),
-           ("Hide", 70), ("Hide all", 74)]
+# BEFORE: typed widths, every one of them wider than its label needed.
+ACTIONS_BEFORE = [("Select all", 68), ("Deselect all", 78), ("Ignore", 74),
+                  ("Hide", 70), ("Hide all", 74)]
+
+# AFTER: Theme.SizeToLabels, at Theme.sizes.control, from every label each
+# button can hold -- Ignore is sized for "Restore", Hide for "Unhide".
+ACTIONS_AFTER = [("Select all", 61), ("Deselect all", 73), ("Ignore", 54), ("Hide", 51), ("Hide all", 53)]
 
 # Nearest Close first, because the chain is right-rooted and flows leftward.
 TOGGLES_BEFORE = [("Show hidden", 108), ("All content", 110),
                   ("Gear only", 100), ("All seasons", 100)]
-TOGGLES_AFTER = [("Show hidden", 84), ("All content", 96),
-                 ("Gear only", 74), ("All seasons", 76)]
+TOGGLES_AFTER = [("Show hidden", 80), ("All content", 92), ("Gear only", 69), ("All seasons", 72)]
 
 
 def loot_footer(img, y, fixed):
@@ -142,10 +157,12 @@ def loot_footer(img, y, fixed):
     c.rect(16, 6, width - 32, 1, RULE)
 
     toggles = TOGGLES_AFTER if fixed else TOGGLES_BEFORE
+    actions = ACTIONS_AFTER if fixed else ACTIONS_BEFORE
+    size = 10 if fixed else 11
 
     # Right chain, flowing left from Close.
     r = width - 16 - 100
-    button(c, r, 14, "Close", 100, 26)
+    button(c, r, 14, "Close", 100, 26, size=size)
 
     spans = []
     for name, w in toggles:
@@ -154,15 +171,16 @@ def loot_footer(img, y, fixed):
 
     # Left chain, flowing right from 16.
     x = 16
-    for name, w in ACTIONS:
-        x = button(c, x, 17, name, w) + 6
+    for name, w in actions:
+        x = button(c, x, 17, name, w, size=size) + 6
     left_end = x - 6
 
     right_start = min(span[0] for span in spans)
 
     for rx, w, name in spans:
         clash = (not fixed) and rx < left_end
-        button(c, rx, 17, name, w, color=BAD if clash else T1)
+        button(c, rx, 17, name, w, color=BAD if clash else T1,
+               size=size)
         if clash:
             collide(c, rx, 17, min(left_end - rx, w), 20)
 
@@ -334,7 +352,11 @@ if __name__ == "__main__":
         "MM-DD-YYYY placeholders, so \"0 items\" was glyphs on glyphs. It now "
         "hangs off the right edge the way Clear does, so the two keep their "
         "10px gap at any window width and the count grows leftward into the "
-        "empty middle of the bar.")
+        "empty middle of the bar. The whole row is also one type size smaller "
+        "now — Aimee: \"make them all a little smaller so we dont risk "
+        "issues\" — which narrows the date boxes on their own, because they "
+        "measure themselves from the widest string they can hold. 134px of "
+        "clearance, against 91 at the old size.")
     y += 26
 
     # ---- 2. footer
@@ -356,8 +378,13 @@ if __name__ == "__main__":
         "same frame level, took its clicks as well. The four toggles were "
         "each 24 to 34px wider than the widest label they can ever hold; "
         "trimmed to label + 16 they start at 430 instead of 342, and the "
-        "action group ends at 404. 26px of headroom, and that number is now "
-        "asserted by tools/test_layout.py.")
+        "action group ended at 404 — 26px of headroom. Now no width here is "
+        "typed at all: every button is measured from every label it can hold, "
+        "at the smaller size, so Ignore is sized for \"Restore\" and Hide "
+        "for \"Unhide\". The actions end at 332 and the toggles start at "
+        "447 — 115px of clearance, asserted by tools/test_layout.py, which "
+        "also checks that no label the bar can set was left out of the "
+        "sizing table.")
     y += 26
 
     # ---- 3. boss pane

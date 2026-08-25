@@ -79,6 +79,11 @@ function MainFooter.Create(parent, handlers)
         parent, BUTTON_WIDTH, BUTTON_HEIGHT, "Close", handlers.onClose
     )
 
+    -- The width stays: this button is the root the whole scope chain
+    -- measures back from, and it is the one control on the row that should
+    -- not be hunted for. Only the type comes down, with the rest of the row.
+    Theme.SetTextSize(closeButton.label, Theme.sizes.control)
+
     closeButton:SetPoint("BOTTOMRIGHT", -16, 12)
 
     -- OUTRANKS THE RESIZE GRIP, which is 16x16 at BOTTOMRIGHT -4,4 (see
