@@ -14,9 +14,14 @@ of the source, resolves the anchor chains the way the client would, measures
 every string with the real font, and asserts that the rectangles do not
 intersect. Change a constant and the arithmetic moves with it.
 
-Widths come from tools/mockup_settings_tabs.measure, which is the same font
-metric UI/Theme.lua's MeasureText uses. The repo rule is that widths are
-measured and never estimated, and every number below is.
+Widths come from tools/font_metrics.measure, which is the same font metric
+UI/Theme.lua's MeasureText uses. The repo rule is that widths are measured and
+never estimated, and every number below is.
+
+That module measures for real where the game font exists and reads recorded
+widths where it does not -- the release workflow runs this suite on a Linux
+runner with no WoW install, and importing the drawing scripts there crashed at
+the import and would have taken the release with it. See its header.
 """
 import math
 import re
@@ -26,7 +31,7 @@ sys.path.insert(0, "tools")
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 import test_load
-from mockup_settings_tabs import measure
+from font_metrics import measure
 
 FAILURES = []
 

@@ -3,7 +3,7 @@
 What changed, for the person installing it. The commit history explains why;
 this says what you will notice.
 
-## Unreleased
+## 0.4.1 — 2026-08-24
 
 ### Added
 
@@ -67,7 +67,64 @@ this says what you will notice.
   **Export for Discord** has a door. Its only button was inside a window you
   could reach only by typing `/syl players`.
 
+- **Raid lockouts, per character, the way keystones already worked.** Which
+  raids each of your characters is saved to this week, at which difficulty,
+  how many bosses are already dead on each and which ones are still standing.
+  It fills in as you log into them — there is no API for an alt's lockouts —
+  and a character it has never seen says so rather than showing an empty row.
+  It is on the Bosses tab, not in Keys.
+
+- **The raid-night pane says what actually happened.** Clicking a night on the
+  calendar now gives you the bosses by name and difficulty on hover, "11 of 13
+  raiders" with the names of who was out, loot counted by the fairness rules
+  rather than by everything that dropped, and the raid's own boss total — so
+  "5 of 8", not "5 killed". Times are 12-hour with your own time zone.
+
+  It records when the group zoned in and out, and when each pull STARTED, so
+  the evening is the evening rather than the stretch between the first pull
+  and the last. A ten-minute pull begun at 9:10 is no longer filed at 9:20.
+
+  "50% of pulls killed" and "drops per raider" are gone. Neither meant
+  anything on a progression night.
+
+- **Non-guild nights are on the calendar in their own colour**, so guild raids
+  stand out — and nothing on them counts toward fairness, drought or attendance.
+
+- **Match against RCLootCouncil history.** A button that reads its award
+  history and pre-fills the credit picker for you to confirm. It never files
+  anything on its own.
+
+- **Tier tokens show which track they came from.** A token has no track of its
+  own, but the difficulty it dropped at decides it: Veteran from LFR, Champion
+  from Normal, Hero from Heroic, Myth from Mythic.
+
+- **Sort the Raiders board by any column**, and filter the loot list from the
+  column headers — the name sorts, the caret beside it filters, and a column
+  that is both says both.
+
+- **Difficulty is its own column** on the loot list, spelled out: LFR, Normal,
+  Heroic, Mythic. It sorts and filters like anything else.
+
 ### Changed
+
+- **The loot list opens on what you actually want.** Gear only and Raids only
+  are the defaults now, along with the difficulty of the last raid you were
+  in. Clear still opens everything up; reopening the window puts the defaults
+  back.
+
+- **The loot list's second row of filters is gone.** Its dropdowns moved into
+  the column headers they belong to, and Select all, Deselect all, Ignore,
+  Hide, Hide all and Show hidden moved to the bottom of the window. The list
+  gained a row.
+
+- **The top row and the button row are a size smaller**, and every button on
+  the footer is now sized from the widest label it can ever hold rather than
+  from a number somebody typed.
+
+- **Windows are solid again.** The window that has focus is marked by its
+  border rather than by being slightly less transparent than the others.
+
+- **Today is easier to find on the calendar.**
 
 - **Erasing a season is behind four locks now**, and it is not a button in a
   list. It sits at the bottom of the Tools tab under its own warning rule with
@@ -94,6 +151,40 @@ this says what you will notice.
 
 - **The Default order button on the Display tab** could be drawn off the bottom
   of the window in some layouts.
+
+- **Nothing on the loot page is drawn on top of anything else.** The count
+  line was printed straight through the From and To date boxes. "Hide all"
+  covered most of "All seasons" and took its clicks. The fourteenth row of the
+  list was drawn below the frame that clips it, which meant the last record in
+  your list could never be scrolled to.
+
+- **Ticking a box in a filter no longer closes it.** Multi-select was one
+  value per opening, every time. Clicking another column's filter now opens
+  that filter instead of just closing the one you had open.
+
+- **"None" in a filter showed everything.** It had, for as long as the button
+  had existed — an empty selection meant "no constraint". It now means none,
+  while Clear still means "back to the defaults".
+
+- **The Bosses tab's caveat was printed over the last two rows** of the
+  never-dropped list, and the lockouts view's column headings ran up into the
+  button that switches back to the boss list.
+
+- **One person marked out on two of their characters counted as two people
+  missing**, which every attendance figure underneath was built on.
+
+- **A character who changed name kept the old one** on the raid-night pane.
+
+- **The loot list's dates were on a 24-hour clock** and did not say which time
+  zone they were in.
+
+- **An item name that was too long for its column** was being cut off 8 pixels
+  early: the column was budgeted at one type size and drawn at a larger one.
+
+- **The Close button's bottom-right corner belonged to the resize grip**, so
+  clicking there started a resize.
+
+- **The Archives bar had a hairline drawn through it.**
 
 ## 0.4.0 — 2026-08-22
 
