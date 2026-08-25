@@ -216,8 +216,15 @@ function SortHeader.Create(parent, config)
             end
 
             -- A column with no caret has nowhere to put an arrow, so it says
-            -- so the old way. Only the tickbox and # are in that state, and
-            -- neither can be sorted by.
+            -- so the old way -- the label carries it, as it did before the
+            -- carets existed.
+            --
+            -- DATE IS NOW ONE OF THESE, and it is the one that can be sorted
+            -- by: it is the default sort. Its caret was turned off because a
+            -- date filter would have to be a range control and the list-of-
+            -- ticks panel could never hold one (see UI/Columns.lua). So this
+            -- path is live rather than theoretical, and "DATE  v" measures
+            -- 36.5 in a column of 115.
             if not arrow and key == column.key then
                 label:SetText(column.label .. (reversed and "  ^" or "  v"))
                 Theme.SetTextColor(label, "accent")

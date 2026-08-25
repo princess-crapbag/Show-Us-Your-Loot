@@ -71,8 +71,20 @@ function ArchiveControls.Create(parent, view, config)
     local bar = CreateFrame("Frame", nil, parent)
 
     bar:SetHeight(24)
-    bar:SetPoint("BOTTOMLEFT", 16, 26)
-    bar:SetPoint("BOTTOMRIGHT", -16, 26)
+    -- ON THE FOOTER LINE, not four pixels above it.
+    --
+    -- At 26 this bar spanned y 26..50 and the footer's separator rule is a
+    -- 1px line at y 44 -- straight through 506 pixels of the name box and
+    -- four buttons, four rows down from their tops. The controls are
+    -- translucent, so the rule showed THROUGH them rather than being covered:
+    -- a hairline across the whole bar.
+    --
+    -- 13 is UI/SelectionBar.lua's FOOTER_Y, so these buttons share a center
+    -- line with Close and with the action row on the other tabs. The left
+    -- half of the footer is empty here because SelectionBar hides all nine of
+    -- its controls on the archives tab.
+    bar:SetPoint("BOTTOMLEFT", 16, 13)
+    bar:SetPoint("BOTTOMRIGHT", -16, 13)
     bar:Hide()
 
     local function Changed()

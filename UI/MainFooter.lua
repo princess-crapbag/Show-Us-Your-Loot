@@ -81,6 +81,18 @@ function MainFooter.Create(parent, handlers)
 
     closeButton:SetPoint("BOTTOMRIGHT", -16, 12)
 
+    -- OUTRANKS THE RESIZE GRIP, which is 16x16 at BOTTOMRIGHT -4,4 (see
+    -- UI/Widgets.lua) and carries frame level +10. Its rect covers this
+    -- button's bottom-right corner, 4px wide by 8px tall, and a click there
+    -- started a resize instead of closing the window.
+    --
+    -- Raised rather than moved: the footer row has no 8px to give, and
+    -- shifting Close left would drag the whole scope chain with it. The grip
+    -- loses nothing visible -- its three diagonal marks all sit outside that
+    -- corner -- and +11 is far below WindowStack's band ceiling, so nothing
+    -- demotes it again.
+    closeButton:SetFrameLevel(parent:GetFrameLevel() + 11)
+
     SYL.Tooltips.Attach(
         closeButton, "Close", "Escape does the same. Nothing is lost."
     )

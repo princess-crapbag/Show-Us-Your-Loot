@@ -177,7 +177,17 @@ local function UpdateRows()
     UpdateTabs()
     UpdatePanels()
 
-    view.feedHeader:Hide()
+    -- NOT HIDDEN UNCONDITIONALLY HERE ANY MORE.
+    --
+    -- Hiding a frame fires OnHide on its children, and every filter caret
+    -- hooks OnHide to close its panel -- that is what stops a dropdown
+    -- floating over the game when its window shuts. But this line ran on
+    -- EVERY UpdateRows, and ticking a box in a dropdown calls onChange, which
+    -- calls UpdateRows. So the panel closed on the first tick and multi-select
+    -- was impossible: one value per open, every time.
+    --
+    -- It is hidden in the two branches below that actually leave the loot
+    -- list, and shown again at the end of the feed branch.
 
     -- A panel owns the whole body, so every control belonging to the loot
     -- list goes away rather than sitting behind it.
@@ -187,6 +197,7 @@ local function UpdateRows()
     -- dashboard tile — the count in particular lands at -130, right through
     -- the first row of widgets.
     if PANEL_MODES[view.mode] then
+        view.feedHeader:Hide()
         view.filterBar:Hide()
         view.selectionBar:HideAll()
 
@@ -226,6 +237,7 @@ local function UpdateRows()
     -- Nothing on the archive list is filterable, so the bar would only be
     -- misleading there.
     if view.mode == "archives" then
+        view.feedHeader:Hide()
         view.filterBar:Hide()
 
         LootListView.UpdateArchiveRows(view)
@@ -391,7 +403,20 @@ local function CreateScrollArea(parent)
     view.countText =
         Theme.CreateText(parent, Theme.sizes.subtitle, "textMuted")
 
-    view.countText:SetPoint("TOPLEFT", 200, -105)
+    -- OFF THE RIGHT EDGE, not at a fixed x.
+    --
+    -- At 200 this was printed straight through the From box (200..252), the
+    -- To label and the To box (281..375) -- and under those boxes' own
+    -- placeholder text, so "0 items" was glyphs on glyphs. x 200 was free
+    -- space on the two-bar layout and is the middle of the date fields on
+    -- this one.
+    --
+    -- Anchored to the right edge because Clear is too: the two keep their
+    -- 10px gap at any window width, and the count grows leftward into the
+    -- empty middle of the bar instead of rightward into whatever the row
+    -- gains next. The widest string it can hold measures 361 and the To box
+    -- ends at 375, so the worst case still clears by 83px.
+    view.countText:SetPoint("TOPRIGHT", -80, -105)
     view.countText:SetText("0 items")
 
     view.emptyText =
@@ -453,6 +478,11 @@ local function CreateScrollArea(parent)
     SYL.ScrollArea.Create(parent, view, {
         childWidth = WINDOW_WIDTH - 70,
         windowHeight = WINDOW_HEIGHT,
+
+        -- The same two numbers the row count is derived from. They were
+        -- duplicated inside UI/ScrollArea.lua and drifted; see the note there.
+        listTop = LIST_TOP_INSET,
+        footer = LIST_BOTTOM_INSET,
 
         onScrolled = UpdateRows,
 

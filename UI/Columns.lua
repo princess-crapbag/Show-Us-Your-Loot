@@ -42,19 +42,44 @@ local COLUMN_SETS = {
         { key = "number", label = "#", width = 30, gap = 8, sortable = false },
         { key = "player", label = "PLAYER", width = 130, gap = 8 },
 
-        -- ITEM PAID FOR THE DIFFICULTY COLUMN, and it is the column that
-        -- could: the longest real item name in her database, "Skullguard of
-        -- the Risen Sacrifice", measures 166.5 and the icon takes 20, so 214
-        -- still leaves 27 spare. This is the same place FitDateColumn below
-        -- takes its shortfall from, and for the same reason.
+        -- ITEM PAID FOR THE DIFFICULTY COLUMN and was then measured at the
+        -- wrong size. This comment used to read "Skullguard of the Risen
+        -- Sacrifice measures 166.5" -- which is its width at rowSmall (11),
+        -- and UI/Rows.lua draws this cell at Theme.sizes.row (12), where the
+        -- same string is 181. The column was budgeted 8px short of the one
+        -- name it was budgeted from.
+        --
+        -- MEASURED AGAINST HER ACTUAL DATABASE this time, all 454 distinct
+        -- item names, at size 12, with the |A:...|a quality-tier escapes
+        -- stripped -- those render as an icon and only count as text to a
+        -- measuring script:
+        --
+        --   Triumphant Satchel of Champion Dawncrests   254.5  <- the longest
+        --   Tarnished Dawnlit Sentinel's Handguards     232.0
+        --   Venomous Aspirant's Insignia of Alacrity    229.5
+        --
+        -- 240 gives a 199px text box after FitDateColumn and the icon, which
+        -- clips 16 of 454 names -- 3.5%, all of them satchels and enchants
+        -- rather than gear. Fitting the true longest needs 281, and the row
+        -- does not have 41 spare pixels to give: WHERE is already 4.5 short
+        -- of "Liberation of Undermine" and PLAYER is already short of
+        -- "Whitemoonlight-Proudmoore". Hovering any row shows the full item
+        -- tooltip, so the tail is one hover away rather than lost.
+        --
+        -- This is the same place FitDateColumn below takes its shortfall
+        -- from, and for the same reason.
         --
         -- THE BUDGET IS 830, NOT 868. The drawing this was designed from
         -- measured against the window less its 16px insets; the scroll frame
         -- is WINDOW_WIDTH - 70, because the scrollbar takes the rest.
         -- tools/syl_check.py enforces it and caught the 16px overrun.
-        { key = "item", label = "ITEM", width = 214, gap = 10 },
+        { key = "item", label = "ITEM", width = 240, gap = 10 },
 
-        { key = "wintype", label = "TYPE", width = 76, gap = 8 },
+        -- 56, not 76. The widest value this column can hold is "Bonus roll"
+        -- at 52, and the header's own caret and arrow end at 44.5, so the 20
+        -- it gives up were never reachable. Not 52: exactly flush IS the
+        -- truncation boundary.
+        { key = "wintype", label = "TYPE", width = 56, gap = 8 },
 
         -- WHERE NEVER NEEDED 150. "The Tidebound Grotto" is the longest
         -- instance name in her seasons at 116.
@@ -74,7 +99,21 @@ local COLUMN_SETS = {
         -- and filterable from a header of its own.
         { key = "difficulty", label = "DIFFICULTY", width = 72, gap = 10 },
 
-        { key = "date", label = "DATE", width = 96, gap = 10 },
+        -- NO CARET ON THIS ONE, because it could never work. A filter
+        -- dropdown is built from FilterOptions.Derive, which reads the field
+        -- out of UI/ListSources.lua's FEED_FIELDS -- and that table has a
+        -- `timestamp` reader and no `date` reader, so every record answers
+        -- nil and the panel is always empty. Core/Filters.lua's LABELS has no
+        -- `date` key either, so it opened untitled as well.
+        --
+        -- Date narrowing is the From and To boxes on the filter bar, which
+        -- work. A caret here would have to be a RANGE control, not a list of
+        -- ticks, and that is a feature rather than a flag.
+        --
+        -- filterable goes AFTER gap: tools/syl_check.py's column regex reads
+        -- key, label, width, gap in that order and silently stops checking
+        -- the whole set if something is spliced in ahead of it.
+        { key = "date", label = "DATE", width = 96, gap = 10, filterable = false },
     },
 }
 

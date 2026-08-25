@@ -28,6 +28,11 @@ local PANEL_PADDING = 6
 local openPanel
 local catcher
 
+-- EVERY DROPDOWN BUTTON EVER CREATED, so the full-screen catcher can tell
+-- whether the click it just swallowed was aimed at one of them. See its
+-- OnClick.
+local buttons = {}
+
 local function GetCatcher()
     if catcher then
         return catcher
@@ -50,7 +55,35 @@ local function GetCatcher()
     -- right-click in the game.
     catcher:RegisterForClicks("AnyUp")
 
-    catcher:SetScript("OnClick", function()
+    catcher:SetScript("OnClick", function(_, mouseButton)
+        -- HAND THE CLICK ON IF IT WAS AIMED AT ANOTHER CARET.
+        --
+        -- This frame is FULLSCREEN_DIALOG and every caret lives in the main
+        -- window's DIALOG strata, and strata beats frame level -- so with one
+        -- filter open, clicking a different column's caret landed here and
+        -- only closed the first. Switching filters cost two clicks, and the
+        -- toggle-shut branch in the button's own handler could never run.
+        --
+        -- NOT CloseAll() FIRST: that clears openPanel, and the forwarded
+        -- handler reads it to decide whether it is being asked to shut its
+        -- own panel. Closing here would make a caret unable to dismiss the
+        -- panel it opened. The handler closes what is open itself.
+        --
+        -- Left button only. This catcher takes AnyUp so a right-click cannot
+        -- fall through to the world, but the carets are left-click controls
+        -- and a right-click should not open one.
+        if mouseButton == "LeftButton" then
+            for _, other in ipairs(buttons) do
+                if other:IsVisible() and other:IsEnabled()
+                    and other:IsMouseOver()
+                then
+                    other:GetScript("OnClick")(other, mouseButton)
+
+                    return
+                end
+            end
+        end
+
         FilterDropdown.CloseAll()
     end)
 
@@ -167,7 +200,10 @@ local function RefreshRows(panel)
     panel.headerText:SetText(
         total
         .. (total == 1 and " option" or " options")
-        .. ((panel.searchText or "") ~= "" and " matching" or "")
+        -- " matching" measured 49.5 and was what pushed this line out of the
+        -- panel. The number falling as you type already says the list is
+        -- being narrowed.
+
         .. (count > 0 and ("  ·  " .. count .. " selected") or "")
     )
 
@@ -220,8 +256,12 @@ local function CreatePanel(button, config)
         + VISIBLE_OPTIONS * OPTION_HEIGHT + PANEL_PADDING * 2
     )
 
-    panel:SetPoint("TOPLEFT", button, "BOTTOMLEFT", 0, -2)
+    -- NOT ANCHORED HERE. A side chosen at construction is frozen at whatever
+    -- width the window happened to have on the first click, and this panel is
+    -- built once and cached on the button while the window is resizable. The
+    -- OnClick handler picks a side every time it opens.
     panel:SetFrameStrata("FULLSCREEN_DIALOG")
+    panel:SetClampedToScreen(true)
     panel:EnableMouse(true)
     panel:Hide()
 
@@ -236,6 +276,13 @@ local function CreatePanel(button, config)
 
     -- Its own line, under the buttons. See PANEL_HEADER.
     panel.headerText:SetPoint("TOPLEFT", PANEL_PADDING + 4, -26)
+
+    -- BOUNDED, because a FontString with only a left anchor is exactly what
+    -- put "137 options matching  ·  200 selected" -- 184 wide -- four pixels
+    -- outside a 190px panel, across the None button's column and past the
+    -- border. -PANEL_PADDING lines its right edge up with the option rows,
+    -- the None button and the search box rather than stopping short of them.
+    panel.headerText:SetPoint("TOPRIGHT", -PANEL_PADDING, -26)
 
     -- WHICH FIELD THIS IS, now that the dropdown is opened from a caret in a
     -- column header rather than from a button that said so. The panel used to
@@ -396,12 +443,32 @@ function FilterDropdown.Create(parent, config)
         catcherFrame:Show()
 
         self.panel:SetFrameLevel(catcherFrame:GetFrameLevel() + 10)
+
+        -- WHICHEVER SIDE FITS. Hung off the caret's left edge, the DATE
+        -- panel's 190px ran 46px past the right edge of a 900px window --
+        -- and the window is clamped to the screen while the panel was not,
+        -- so dragging the window right pushed None off the monitor.
+        local anchor = self:GetParent():GetParent()
+
+        self.panel:ClearAllPoints()
+
+        if anchor and self:GetRight() and anchor:GetRight()
+            and self:GetRight() + self.panel:GetWidth() > anchor:GetRight()
+        then
+            self.panel:SetPoint("TOPRIGHT", self, "BOTTOMRIGHT", 0, -2)
+        else
+            self.panel:SetPoint("TOPLEFT", self, "BOTTOMLEFT", 0, -2)
+        end
+
         self.panel:Show()
 
         openPanel = self.panel
     end)
 
     button:UpdateLabel()
+
+    -- So the catcher can find it. See GetCatcher's OnClick.
+    table.insert(buttons, button)
 
     return button
 end

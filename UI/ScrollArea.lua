@@ -17,6 +17,15 @@ local ListSources = SYL.ListSources
 local ScrollArea = {}
 SYL.ScrollArea = ScrollArea
 
+-- FALLBACKS, not the truth. The window passes its own numbers in; these are
+-- only what a caller that says nothing gets.
+--
+-- This file kept its own copy of 180 while UI/MainWindow.lua moved its
+-- LIST_TOP_INSET to 152 and sized the row count from that. The rows were
+-- therefore counted against 392px of space and clipped against 364, so the
+-- fourteenth row was drawn 28px below the frame that clips it and the last
+-- record in the list could never be scrolled into view. It was not a 596-only
+-- accident: the frame was always 28px shorter than the count assumed.
 local TOP_INSET = 180
 local BOTTOM_INSET = 52
 
@@ -97,8 +106,11 @@ local function AttachScrollHandlers(view, onScrolled)
 end
 
 function ScrollArea.Create(parent, view, config)
+    local topInset = config.listTop or TOP_INSET
+    local bottomInset = config.footer or BOTTOM_INSET
+
     local availableHeight =
-        config.windowHeight - TOP_INSET - BOTTOM_INSET
+        config.windowHeight - topInset - bottomInset
 
     -- Only as many archive rows as actually fit. Creating a loot row's worth
     -- of them left the last few permanently off-screen.
@@ -112,8 +124,8 @@ function ScrollArea.Create(parent, view, config)
         "UIPanelScrollFrameTemplate"
     )
 
-    view.scrollFrame:SetPoint("TOPLEFT", 16, -TOP_INSET)
-    view.scrollFrame:SetPoint("BOTTOMRIGHT", -34, BOTTOM_INSET)
+    view.scrollFrame:SetPoint("TOPLEFT", 16, -topInset)
+    view.scrollFrame:SetPoint("BOTTOMRIGHT", -34, bottomInset)
 
     view.scrollChild = CreateFrame("Frame", nil, view.scrollFrame)
     view.scrollChild:SetWidth(config.childWidth)

@@ -22,7 +22,7 @@ function SelectionBar.Create(parent, view, config)
     local onChanged = config.onChanged
 
     bar.showHidden =
-        Theme.CreateButton(parent, 108, 20, "Show hidden", function()
+        Theme.CreateButton(parent, 84, 20, "Show hidden", function()
             view.showHidden = not view.showHidden
 
             -- The list is about to change shape underneath the selection.
@@ -64,7 +64,7 @@ function SelectionBar.Create(parent, view, config)
     local SCOPES = { "all", "raid", "dungeon" }
 
     bar.contentScope =
-        Theme.CreateButton(parent, 110, 20, "All content", function()
+        Theme.CreateButton(parent, 96, 20, "All content", function()
             local current = view.contentScope or "all"
             local nextIndex = 1
 
@@ -89,7 +89,7 @@ function SelectionBar.Create(parent, view, config)
     -- with the gear somebody actually received buried in it. This is the
     -- same filter the due list uses, so the list and the math agree.
     bar.gearOnly =
-        Theme.CreateButton(parent, 100, 20, "Gear only", function()
+        Theme.CreateButton(parent, 74, 20, "Gear only", function()
             view.gearOnly = not view.gearOnly
 
             Selection.Clear(view.selection)
@@ -104,7 +104,7 @@ function SelectionBar.Create(parent, view, config)
     -- Not selection, but this is the row of list controls in practice, and
     -- Show hidden already sits here for the same reason.
     bar.allSeasons =
-        Theme.CreateButton(parent, 100, 20, "All seasons", function()
+        Theme.CreateButton(parent, 76, 20, "All seasons", function()
             view.allSeasons = not view.allSeasons
 
             Selection.Clear(view.selection)
@@ -168,10 +168,23 @@ function SelectionBar.Create(parent, view, config)
     --
     -- Chained rather than given fixed offsets, because the buttons are five
     -- different widths -- 68, 78, 74, 70, 74 -- and a hand-added offset is a
-    -- number that goes stale the first time a label changes. It flows from
-    -- the LEFT so the group can grow without ever reaching the scope group on
-    -- the right, which is exactly what Hide all did to the old right-anchored
-    -- chain.
+    -- number that goes stale the first time a label changes.
+    --
+    -- IT FLOWS FROM THE LEFT AND THAT IS NOT ENOUGH ON ITS OWN. This comment
+    -- used to claim the group "can grow without ever reaching the scope group
+    -- on the right"; it had already reached it. The left chain ended at 404
+    -- and the right chain started at 342, so Hide all covered 62 of the 100
+    -- pixels of All seasons -- and, being created later at the same frame
+    -- level, took its clicks as well.
+    --
+    -- The four right-hand toggles were each 24 to 34 pixels wider than the
+    -- widest label they can ever hold. Trimmed to label + 16 they start at
+    -- 430 instead of 342.
+    --
+    -- THE LIVE BUDGET: the left chain ends at 404, the right chain starts at
+    -- 430, and there are 26 pixels between them. Any button added to the loop
+    -- below has to be checked against that number, because nothing here will
+    -- notice on its own.
     --
     -- Placed here rather than beside each button because selectAll anchors
     -- the rest and is created last.

@@ -356,7 +356,15 @@ function BossesPanel.Create(parent)
     frame.pane = SYL.BossLoot.Create(frame, PANE_WIDTH, LIST_TOP - 8)
 
     frame.lockouts = SYL.RaidLockoutsView.Create(frame)
-    frame.lockouts:SetPoint("TOPLEFT", 2, -(LIST_TOP - 12))
+    -- LIST_TOP, the same offset the boss rail's first row uses, because it
+    -- clears the control row by 8px -- and the same number UI/LockoutsGrid.lua
+    -- uses for the identical control on the Keys tab.
+    --
+    -- At LIST_TOP - 12 the view began at 22, and the Bosses/Lockouts button
+    -- ends at 26: the BOSSES DOWN heading was drawn 4px up into it. That
+    -- button is the only way back out of this view, so it cannot be hidden
+    -- here the way the other two are. The view simply starts 12px lower.
+    frame.lockouts:SetPoint("TOPLEFT", 2, -LIST_TOP)
     frame.lockouts:SetPoint("BOTTOMRIGHT", -2, 0)
 
     frame.empty = Theme.CreateText(frame, Theme.sizes.row, "textMuted")

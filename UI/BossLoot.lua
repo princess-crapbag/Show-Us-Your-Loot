@@ -33,7 +33,29 @@ SYL.BossLoot = BossLoot
 local PAD = 10
 local ROW_HEIGHT = 18
 local LIST_TOP = 92
-local MAX_ROWS = 16
+-- THIRTEEN, BECAUSE THE FOOTNOTE IS PINNED INSIDE THIS SPACE.
+--
+-- The list was sized as if it owned the whole pane: 92 + 17*18 = 398 is
+-- exactly the pane's height, so the last rows were drawn underneath the
+-- caveat at the bottom. The caveat is 586 wide and wraps to two lines, and
+-- it starts at 8 from the bottom, so it owns the bottom 36 pixels:
+--
+--    92   LIST_TOP (heading, subheading and status sit above it)
+--  +252   14 rows of 18 -- 13 items and the "+ N more" line
+--  = 344  last row bottom
+--  + 18   clearance
+--  = 362  footnote top
+--  + 28   two wrapped lines of 14
+--  +  8   bottom inset
+--  = 398  the pane, exactly
+--
+-- Fourteen items would end flush at 362 and break the moment the caveat
+-- wraps to a third line. Thirteen still clears that case by 4.
+--
+-- The "dropped" list clears the footnote and could hold sixteen, but the row
+-- count is chosen before the footnote is set, so a mode-aware cap here would
+-- read the PREVIOUS render's text. Three rows is the price of not doing that.
+local MAX_ROWS = 13
 
 function BossLoot.Create(parent, width, top)
     local pane = CreateFrame("Frame", nil, parent)
