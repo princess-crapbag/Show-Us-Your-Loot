@@ -3,7 +3,7 @@
 What changed, for the person installing it. The commit history explains why;
 this says what you will notice.
 
-## Unreleased
+## 0.4.2 — 2026-08-25
 
 ### Fixed
 
