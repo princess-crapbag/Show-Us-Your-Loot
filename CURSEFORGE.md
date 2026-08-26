@@ -73,7 +73,11 @@ Export, Tooltip
 > fact and never touches bags), Map & Minimap (a launcher button is not what
 > that category is for).
 >
-> **Data Broker became honest in 0.4.2, and is still not worth taking.**
+> **Data Broker: decided against, 2026-08-25.** Aimee, on the recommendation
+> below: "okay remove data broker". It is not on the page and is not going on
+> it — the reasoning is kept because the launcher will make somebody ask again.
+>
+> **It became honest in 0.4.2, and is still not worth taking.**
 > `UI/Launchers.lua` publishes a launcher object, so Titan Panel, Bazooka and
 > ChocolateBar can all show this addon — the category would no longer be a
 > lie. It is the wrong category anyway, for exactly the reason Map & Minimap
@@ -81,7 +85,7 @@ Export, Tooltip
 > for a broker display or a real data feed, and what this publishes is a
 > button that opens a window. Taking it would cost one of the four above —
 > Tooltip, which is at least a feature people search for — to buy a slot that
-> answers nobody's search. Recommendation: leave the four alone.
+> answers nobody's search. The four above stand.
 
 **Allow Comments** — On. It is the only bug channel this has.
 

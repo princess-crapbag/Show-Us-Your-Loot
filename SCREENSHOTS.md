@@ -6,6 +6,18 @@ Ten shots for the CurseForge page, in the order they should appear there.
 The first image is the one most people ever look at, so it is the one worth
 retaking until it is right.
 
+**THE LIVE GALLERY IS THE SOURCE OF TRUTH, NOT THIS FILE.** Aimee has shot and
+uploaded a set organised by tab — Dashboard, Loot, Raiders, Calendar, Bosses,
+Keys — and added the Raiders shots to the project by hand on 2026-08-25. The
+files are under `screenshots/`. What is left below is the backlog: the shots
+that have not been taken, and the notes on how to take them.
+
+**A GALLERY IS NOT DOCUMENTATION.** Aimee, turning down a reshoot of the
+settings window after it was rebuilt: "i dont think we need an updated settings
+screenshot. thats not what makes someone download the addon." Every shot has to
+earn its slot by selling the thing. Screens that answer questions people only
+ask after installing belong in the description text, not in the pictures.
+
 ## Taking them
 
 - **Print Screen** saves a shot to
@@ -57,15 +69,16 @@ before shooting so the top row means something.
 Shows the volume being handled — a couple of hundred rows scrolling. Proves
 it is not a toy.
 
-**6 — Settings.** `/syl settings`
+**6 — Settings.** ~~`/syl settings`~~ **Dropped 2026-08-25.** There is a shot
+on the page already and it does not need retaking after the five-tab redesign,
+for the reason at the top of this file: nobody installs an addon because of its
+options screen. The "can I turn things off" question is answered in the
+description text, where it costs no gallery slot.
 
-Quality tracking, the color scheme row, sync toggle, minimap toggle. Answers
-"can I turn things off" before it gets asked in the comments.
-
-**7 — The minimap command menu.** Right-click the minimap button
-
-The full command list. Doubles as documentation, and shows there is no need
-to memorise slash commands.
+**7 — The minimap command menu.** ~~Right-click the minimap button~~
+**Gone with the feature, 2026-08-25.** The menu was deleted — every command is
+a button on Settings → Tools, and the minimap button's right-click drags the
+icon now. Do not shoot this; it does not exist.
 
 ---
 
@@ -101,7 +114,9 @@ and it is meaningless without attendance data behind it.
 
 ## Order on the page
 
-1, 3, 4, 10, 2, 8, 9, 5, 6, 7.
+1, 3, 4, 10, 2, 8, 9, 5.
 
 Lead with what it records, then what it answers, then the interface. Nobody
-scrolls a gallery to the end, so the settings window must not be near the top.
+scrolls a gallery to the end, which is the same reason 6 and 7 are struck out
+above rather than moved to the back: a slot that has to go last is a slot that
+was not worth having.
