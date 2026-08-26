@@ -2,9 +2,16 @@
 --
 -- The catalog of /syl commands, in the order they should be presented.
 --
--- One list feeds both `/syl help` and the minimap menu, so the two can never
--- drift apart. Entries with an `argument` cannot simply be run: clicking them
--- opens the chat box prefilled instead, so the argument can be typed.
+-- One list feeds `/syl help` and the command report in Core/CommandReports.lua,
+-- so the two can never drift apart.
+--
+-- IT USED TO FEED A THIRD THING. UI/CommandMenu.lua drew every entry here as a
+-- clickable row off the minimap button's right-click, and that file is gone --
+-- the Tools tab in Settings draws the same commands as real buttons, with the
+-- three awkward ones fixed on the way, and Aimee took the menu off so the right
+-- button could drag the minimap icon instead: "they are all in the settings
+-- now". What is left here is the catalog, which is still the single source of
+-- what commands exist.
 --
 -- Two flags decide where an entry appears.
 --
@@ -16,8 +23,8 @@
 -- `developer` marks the ones that exist to inspect the addon rather than to
 -- use it: the inspector window, the raw API dump, the debug toggle, the
 -- output window cycle. They keep working when typed and are listed by
--- `/syl help all`, and they are out of the minimap menu, which is somewhere
--- a person browses rather than somewhere they go on purpose.
+-- `/syl help all`, and they are kept off the Tools tab, which is somewhere a
+-- person browses rather than somewhere they go on purpose.
 
 local SYL = _G.ShowUsYourLoot
 
@@ -157,31 +164,19 @@ CommandList.ENTRIES = {
         command = "scope",
         description = "Show the raid team, the guild, or everyone",
     },
-    -- THE ARGUMENT IS THE GUARD. CommandList.Run prefills the chat box for an
-    -- entry that takes one and executes everything else on the press, and this
-    -- is a plain row in the minimap menu the tooltip invites people to browse.
-    -- So it emptied the season on one click, with no confirm and no undo, from
-    -- a list somebody was reading. COMMANDS.clear refuses without the word too,
-    -- because the menu is only one of the two ways in.
+    -- THE ARGUMENT IS THE GUARD, and it outlived the thing it was guarding
+    -- against. A menu of clickable rows once ran anything without an argument
+    -- on the press, so this emptied a season on one click, with no confirm and
+    -- no undo, from a list somebody was browsing. That menu is gone and the
+    -- Tools tab sends `clear` to a dialog that will not act until the season's
+    -- name is typed -- but the word stays required, because COMMANDS.clear
+    -- refuses without it and a typed command is still a way in.
     {
         command = "clear",
         argument = "confirm",
         description = "Clear active-season drops and loot",
     },
 }
-
--- What the minimap menu lists: everything except the developer commands.
-function CommandList.MenuEntries()
-    local entries = {}
-
-    for _, entry in ipairs(CommandList.ENTRIES) do
-        if not entry.developer then
-            table.insert(entries, entry)
-        end
-    end
-
-    return entries
-end
 
 function CommandList.Format(entry)
     local text = "/syl"
@@ -248,20 +243,3 @@ function CommandList.UnknownCommand(command)
     SYL:Write("Type /syl help for the list.")
 end
 
--- Commands that take an argument prefill the chat box rather than running,
--- because there is nothing sensible to run them with.
-function CommandList.Run(entry)
-    if entry.argument then
-        local prefill = "/syl " .. entry.command .. " "
-
-        if ChatFrame_OpenChat then
-            ChatFrame_OpenChat(prefill)
-        else
-            SYL:Print("Type: " .. prefill)
-        end
-
-        return
-    end
-
-    SlashCmdList["SHOWUSYOURLOOT"](entry.command)
-end

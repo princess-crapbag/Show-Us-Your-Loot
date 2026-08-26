@@ -12,19 +12,15 @@
 -- exception for it. Both of these cost nothing to offer, and together they
 -- mean the ring button is a preference rather than the only way in.
 --
--- Left opens the window and right lists the commands, which is what the
--- minimap button did when this was written.
---
--- IT NO LONGER MATCHES THE MINIMAP BUTTON, and that is deliberate rather than
--- drift. Aimee took the command menu off the ring button so the right button
--- could drag it: "they are all in the settings now". Nothing on a Titan bar
--- or in the compartment needs dragging, so nothing there had to give up its
--- right-click, and these two are where the menu still lives. If it should go
--- from here as well, UI/CommandMenu.lua loses its last caller and can go with
--- it.
+-- ANY CLICK OPENS THE LOOT WINDOW, and there is nothing else to learn. These
+-- doors briefly listed every /syl command on a right-click, because the
+-- minimap button did; when Aimee took that off the ring button -- "they are
+-- all in the settings now" -- these were the last two callers of the menu, and
+-- keeping it alive here would have meant a feature reachable only from Titan
+-- Panel and a compartment list. So it went, and UI/CommandMenu.lua went with
+-- it. The Tools tab in Settings is where the commands live.
 
 local SYL = _G.ShowUsYourLoot
-local CommandMenu = SYL.CommandMenu
 
 local Launchers = {}
 SYL.Launchers = Launchers
@@ -34,26 +30,17 @@ local LABEL = "Show Us Your Loot"
 
 local dataObject
 
-local function Activate(frame, mouseButton)
-    if mouseButton == "RightButton" then
-        -- Anchored to whatever was clicked, which for a Titan Panel plugin is
-        -- a bar button at the top of the screen and for the compartment is a
-        -- row in its list. CommandMenu picks the corner that keeps the menu
-        -- on screen from there.
-        CommandMenu.Toggle(frame or Minimap)
-
-        return
-    end
-
-    CommandMenu.Close()
-
+-- The mouse button is read and then ignored, which is deliberate: it costs
+-- nothing here and it means a display addon that only ever sends left clicks
+-- and one that reports both behave identically.
+local function Activate()
     SYL:OpenMainWindow()
 end
 
 local function Describe(tooltip)
     tooltip:AddLine(LABEL)
-    tooltip:AddLine("Left-click: open the loot window", 0.8, 0.8, 0.85)
-    tooltip:AddLine("Right-click: list all commands", 0.8, 0.8, 0.85)
+    tooltip:AddLine("Click: open the loot window", 0.8, 0.8, 0.85)
+    tooltip:AddLine("Commands live on the Tools tab", 0.55, 0.55, 0.6)
 end
 
 -- REGISTERED AT LOGIN, NOT AT LOAD. LibDataBroker is not ours and is not
@@ -116,34 +103,29 @@ end
 -- the game calls them by name, so globals is what they have to be. See the
 -- AddonCompartmentFunc lines in ShowUsYourLoot.toc.
 --
--- The arguments are read by type rather than by position on purpose: the
--- addon name, the mouse button and the button frame have not always been
--- passed in the same order, and a handler that counts arguments is one that
--- needs editing every time that changes.
-local function ArgumentsOf(...)
-    local frame, mouseButton
-
+-- Only the hover needs an argument, and it needs the row's frame to anchor a
+-- tooltip to. Picked out by type rather than by position on purpose: the addon
+-- name, the mouse button and the button frame have not always been passed in
+-- the same order, and a handler that counts arguments is one that needs
+-- editing every time that changes.
+local function FrameIn(...)
     for index = 1, select("#", ...) do
         local value = select(index, ...)
 
         if type(value) == "table" and value.GetCenter then
-            frame = frame or value
-        elseif value == "LeftButton" or value == "RightButton" then
-            mouseButton = mouseButton or value
+            return value
         end
     end
 
-    return frame, mouseButton
+    return nil
 end
 
-function _G.ShowUsYourLoot_OnAddonCompartmentClick(...)
-    local frame, mouseButton = ArgumentsOf(...)
-
-    Activate(frame, mouseButton)
+function _G.ShowUsYourLoot_OnAddonCompartmentClick()
+    Activate()
 end
 
 function _G.ShowUsYourLoot_OnAddonCompartmentEnter(...)
-    local frame = ArgumentsOf(...)
+    local frame = FrameIn(...)
 
     GameTooltip:SetOwner(frame or UIParent, "ANCHOR_LEFT")
     Describe(GameTooltip)

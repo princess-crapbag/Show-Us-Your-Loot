@@ -230,6 +230,19 @@ check("a live item is active", g.ActiveCount() == 1, g.ActiveCount())
 check("dismissing it removes it", SYL.TradeAdvisor.Dismiss("d6") is True)
 check("and it stays gone", g.ActiveCount() == 0, g.ActiveCount())
 
+# THE BUG THIS PAIR EXISTS FOR. Consider is offered the same drop on every
+# resolution pass and skips it only if the store already holds it -- and
+# Dismiss used to take it out of the store, so the next pass put it straight
+# back and the window reopened for an item somebody had already waved away.
+# For the whole two hours.
+SYL.TradeAdvisor.Consider(live)
+
+check("A LATER RESOLUTION PASS DOES NOT BRING IT BACK",
+      g.ActiveCount() == 0, g.ActiveCount())
+
+check("and dismissing something that was never there is not an error",
+      SYL.TradeAdvisor.Dismiss("nothing-by-that-name") is False)
+
 # --- ranking once there IS history ----------------------------------------
 #
 # Selunne has taken a lot per night and Dravok nothing, so Dravok is the more

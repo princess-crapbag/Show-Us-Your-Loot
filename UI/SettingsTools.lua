@@ -3,16 +3,16 @@
 -- The Tools tab: every /syl command as something you click, grouped by what
 -- you came looking for rather than by the alphabet.
 --
--- THIS IS A SECOND DOOR, NOT A NEW ONE, and it is worth building anyway.
--- UI/CommandMenu.lua already draws 30 of the 34 entries off the minimap
--- right-click -- but the minimap button is a checkbox in these very settings,
--- on by default, and turning it off strands about thirteen commands with no
--- click anywhere in the addon. An inventory of all 34 against the whole UI
--- tree found the set reachable by no click at all is exactly {dev, api}, both
--- developer-only, and that holds only while that checkbox is ticked.
+-- IT IS NOW THE ONLY DOOR. It was built as a second one: UI/CommandMenu.lua
+-- drew 30 of the 34 entries off the minimap button's right-click, and the
+-- argument for building this anyway was that the minimap button is a checkbox
+-- in these very settings, so turning it off stranded about thirteen commands
+-- with no click anywhere. That menu has since been deleted outright -- the
+-- right button drags the minimap icon now -- which makes every row below load
+-- bearing rather than a convenience.
 --
 -- FOUR TRAPS THIS TAB HAD TO BE BUILT AROUND. They are why the rows below
--- carry a `run` of their own instead of all going through CommandList.Run:
+-- carry a `run` of their own rather than each being wired to its command name:
 --
 --   /syl bosses does NOT open the Bosses tab -- it opens the standalone
 --   UI/BossWindow.lua. Same for roster, which opens RosterWindow rather than

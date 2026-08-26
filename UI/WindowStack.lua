@@ -56,7 +56,7 @@ local order = {}
 -- raising moves one to the end and re-numbers them all.
 --
 -- THE BAND IS 40 BECAUSE POPUPS LIVE INSIDE IT. A window's own children take
--- its level plus an offset — UI/NameSuggest.lua uses +20, UI/CommandMenu.lua,
+-- its level plus an offset — UI/NameSuggest.lua uses +20, while
 -- UI/FilterDropdown.lua, UI/AbsenceControls.lua and the resize grip use +10 —
 -- so anything less than 40 would let one window's dropdown draw over the
 -- window above it. Re-numbering every time also keeps the levels bounded:

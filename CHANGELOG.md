@@ -3,6 +3,25 @@
 What changed, for the person installing it. The commit history explains why;
 this says what you will notice.
 
+## Unreleased
+
+### Changed
+
+- **The minimap button's right-click menu is gone.** Every command in it is a
+  button on Settings → Tools, which is where they have been since 0.4.1, and
+  the right button now drags the icon instead. The same menu was still on the
+  Titan Panel plugin and the Addons compartment entry — it has gone from those
+  too, so a click anywhere opens the loot window and there is nothing else to
+  learn.
+
+### Fixed
+
+- **The trade advisor came back after you dismissed it.** Dismissing an item
+  took it off the list, but the addon re-reads each drop as its roll list fills
+  in — and the next pass put it straight back, so the window reopened for
+  something you had already waved away, for as long as the two-hour trade
+  window lasted. Dismissed now means dismissed.
+
 ## 0.4.2 — 2026-08-25
 
 ### Fixed

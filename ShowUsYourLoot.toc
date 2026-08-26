@@ -160,7 +160,6 @@ UI\DropCredit.lua
 UI\DropDetailWindow.lua
 UI\CreditPickerRows.lua
 UI\CreditPicker.lua
-UI\CommandMenu.lua
 UI\MinimapButton.lua
 UI\Launchers.lua
 UI\PlayerRows.lua

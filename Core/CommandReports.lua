@@ -332,4 +332,4 @@ function Reports.Bosses(limit)
     end
 end
 
--- Built from Core/CommandList.lua so this and the minimap menu always agree.
+-- Built from Core/CommandList.lua, so this and `/syl help` always agree.

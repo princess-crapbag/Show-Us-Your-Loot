@@ -48,14 +48,9 @@ MINIMAP_CX, MINIMAP_CY = 1740, 900
 lua = LuaRuntime(unpack_returned_tuples=True)
 
 lua.execute("""
-OPENED, TOGGLED, CLOSED = 0, 0, 0
+OPENED = 0
 
-ShowUsYourLoot = {
-    CommandMenu = {
-        Toggle = function(frame) TOGGLED = TOGGLED + 1; TOGGLED_ON = frame end,
-        Close = function() CLOSED = CLOSED + 1 end,
-    },
-}
+ShowUsYourLoot = {}
 
 function ShowUsYourLoot:OpenMainWindow() OPENED = OPENED + 1 end
 function ShowUsYourLoot:DebugPrint(message) DEBUG = message end
@@ -109,7 +104,7 @@ function MakeFrame(width, height)
     for _, name in ipairs({
         "SetFrameStrata", "SetFrameLevel", "SetMovable",
         "SetClampedToScreen", "EnableMouse",
-        "SetTexture", "SetTexCoord", "SetOwner", "AddLine",
+        "SetTexture", "SetTexCoord", "AddLine",
     }) do
         frame[name] = function() end
     end
@@ -146,6 +141,7 @@ end
 
 GameTooltip = MakeFrame()
 function GameTooltip:AddLine(text) TOOLTIP_LINES = (TOOLTIP_LINES or 0) + 1 end
+function GameTooltip:SetOwner(frame) TOOLTIP_OWNER = frame end
 """ % (SCREEN_W, SCREEN_H, MINIMAP, MINIMAP, MINIMAP_CX, MINIMAP_CY))
 
 lua.execute(
@@ -295,12 +291,34 @@ check("the drag is on the right button, so a left-click cannot become one",
       list(button.drags.values()) == ["RightButton"],
       list(button.drags.values()))
 
-# The menu is not merely unbound, it is not reachable from this file at all.
-source = (ROOT / "UI" / "MinimapButton.lua").read_text(encoding="utf-8")
+# THE MENU IS GONE FROM THE ADDON, not merely unbound from this button. Aimee:
+# "delete it, its in the settings". Checked across every shipped file rather
+# than in the one that used to open it, because a deletion that leaves a caller
+# behind is a nil call at somebody's login.
+# Comments are skipped on purpose. Three files explain in prose what the menu
+# was and why it went, which is how this codebase records a decision -- what
+# must not survive is a CALL, because a deletion that leaves one behind is a
+# nil at somebody's login.
+still_there = []
 
-check("and the command menu is gone from the button entirely",
-      "CommandMenu" not in source.split("Both survive a reload.")[-1],
-      "still referenced below the header")
+for path in sorted(list((ROOT / "Core").glob("*.lua"))
+                   + list((ROOT / "UI").glob("*.lua"))):
+    for text in path.read_text(encoding="utf-8").splitlines():
+        if text.strip().startswith("--"):
+            continue
+
+        if "CommandMenu" in text:
+            still_there.append(path.name + ": " + text.strip())
+
+check("nothing in the addon calls the command menu any more",
+      not still_there, " | ".join(still_there))
+
+check("and it is out of the .toc, so nothing tries to load it",
+      "CommandMenu" not in (ROOT / "ShowUsYourLoot.toc")
+      .read_text(encoding="utf-8"))
+
+check("the file itself is gone",
+      not (ROOT / "UI" / "CommandMenu.lua").exists())
 
 
 # ---------------------------------------------------------------- launchers
@@ -345,15 +363,20 @@ g.ShowUsYourLoot_OnAddonCompartmentClick("ShowUsYourLoot", "LeftButton", row)
 check("the compartment entry opens the window",
       g.OPENED == before_opened + 1)
 
-# ARGUMENTS BY TYPE, NOT BY POSITION. The compartment has not always passed
-# these in the same order, so both orders are asked for here.
+# THE COMMAND MENU IS GONE FROM HERE TOO. It was the last thing a right-click
+# did anywhere in the addon, so every button now does the one thing.
 g.ShowUsYourLoot_OnAddonCompartmentClick("RightButton", "ShowUsYourLoot", row)
 
-check("and right-click lists the commands whichever order the game passes",
-      g.TOGGLED == before_toggled + 1)
+check("and so does a right-click, whichever order the game passes its arguments",
+      g.OPENED == before_opened + 2)
 
-check("anchored to the row that was clicked, not to the minimap",
-      g.TOGGLED_ON.tag == "row", g.TOGGLED_ON.tag)
+# ARGUMENTS BY TYPE, NOT BY POSITION: the hover still has to find the row it
+# is anchoring a tooltip to, wherever in the arguments it arrives.
+g.ShowUsYourLoot_OnAddonCompartmentEnter("ShowUsYourLoot", row)
+
+check("the hover anchors to the row it was called on",
+      g.TOOLTIP_OWNER is not None and g.TOOLTIP_OWNER.tag == "row",
+      g.TOOLTIP_OWNER and g.TOOLTIP_OWNER.tag)
 
 # THE DATA BROKER FEED. Titan Panel, Bazooka and ChocolateBar all read this,
 # and none of them could see this addon before it existed.
@@ -394,18 +417,18 @@ if published:
     check("with an icon, since that is all some bars draw",
           isinstance(published.icon, str) and published.icon != "")
 
-    before_opened, before_toggled = g.OPENED, g.TOGGLED
+    before_opened = g.OPENED
 
     published.OnClick(row, "LeftButton")
     published.OnClick(row, "RightButton")
 
-    check("and left opens the window while right still lists the commands",
-          g.OPENED == before_opened + 1 and g.TOGGLED == before_toggled + 1)
+    check("and either button opens the loot window",
+          g.OPENED == before_opened + 2)
 
     g.TOOLTIP_LINES = 0
     published.OnTooltipShow(g.GameTooltip)
 
-    check("its hover says what the two clicks do",
+    check("its hover says what a click does and where the commands went",
           (g.TOOLTIP_LINES or 0) >= 3, g.TOOLTIP_LINES)
 
 # Registering twice is one plugin, not two: PLAYER_LOGIN can fire more than

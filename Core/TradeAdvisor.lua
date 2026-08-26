@@ -194,6 +194,14 @@ function TradeAdvisor.Sweep()
     return dropped
 end
 
+-- MARKED, NOT REMOVED, and that is a fix rather than a preference. Consider
+-- is offered the same drop on every resolution pass and only skips it if the
+-- store already holds it -- so an entry that was taken out of the store came
+-- straight back on the next pass, and the window reopened for an item
+-- somebody had already waved away. Two hours of that.
+--
+-- Sweep still drops it entirely once the trade window closes, so a dismissed
+-- entry does not outlive the thing it was about.
 function TradeAdvisor.Dismiss(id)
     local store = Store()
 
@@ -201,9 +209,9 @@ function TradeAdvisor.Dismiss(id)
         return false
     end
 
-    for index, entry in ipairs(store) do
+    for _, entry in ipairs(store) do
         if entry.id == id then
-            table.remove(store, index)
+            entry.dismissed = true
 
             return true
         end
@@ -221,7 +229,8 @@ function TradeAdvisor.Active()
     local active = {}
 
     for _, entry in ipairs(store or {}) do
-        local record = SYL.LootHistoryStore.GetRecord(entry.id)
+        local record = not entry.dismissed
+            and SYL.LootHistoryStore.GetRecord(entry.id)
 
         if record then
             table.insert(active, {

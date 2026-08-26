@@ -610,8 +610,9 @@ end
 
 -- Refuses without the word. This is the only command in the addon that
 -- destroys a season's worth of recording, it cannot be undone, and it was
--- reachable in one click from the minimap menu — see the entry in
--- Core/CommandList.lua for how that happened. Saying what would go before it
+-- was once reachable in one click from a menu of command rows — see the entry
+-- in Core/CommandList.lua for how that happened, and note that the word is
+-- still required now that the menu is gone. Saying what would go before it
 -- goes is the other half: a count is the only thing that tells somebody
 -- whether they are about to lose a night or a tier.
 COMMANDS.clear = function(argument)
