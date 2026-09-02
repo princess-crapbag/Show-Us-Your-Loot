@@ -525,6 +525,167 @@ check("ticking a box no longer closes the panel",
       and "    view.feedHeader:Hide()\n\n    -- A panel owns" not in MAIN)
 
 
+# ==========================================================================
+# The Raiders tab's button row
+# ==========================================================================
+#
+# RAIDERS, then four buttons chained off each other and off the title, all of
+# them sitting over the board rather than over the detail pane beside it. This
+# row had never been checked, and a fourth button was added to it -- which is
+# the shape every overlap in this file started as: a chain that reads correctly
+# and has never had its right-hand end resolved.
+#
+# The title is measured rather than assumed. RAIDERS is a fixed string, but it
+# is drawn at Theme.sizes.title and the whole chain hangs off its right edge,
+# so a font change moves all four buttons.
+
+print("-- raiders tab, button row " + "-" * 49)
+
+PANEL = src("UI/RaidersPanel.lua")
+
+TITLE = number(THEME, r"    title = (\d+),", "Theme.sizes.title")
+
+DETAIL_WIDTH = number(PANEL, r"local DETAIL_WIDTH = (\d+)", "DETAIL_WIDTH")
+GUTTER = number(PANEL, r"local GUTTER = (\d+)", "GUTTER")
+PANE_WIDTH = number(PANEL, r"local BOARD_WIDTH = (\d+) - DETAIL_WIDTH",
+                    "the pane width")
+
+BOARD_WIDTH = PANE_WIDTH - DETAIL_WIDTH - GUTTER
+
+TITLE_X = 2
+TITLE_END = TITLE_X + measure("RAIDERS", TITLE)
+
+
+def button(pattern, name):
+    """The width and the label of one Theme.CreateButton call."""
+    found = re.search(pattern, PANEL)
+
+    if not found:
+        FAILURES.append("could not read " + name)
+        print("FAIL could not read " + name)
+        return 0, ""
+
+    return int(found.group(1)), found.group(2)
+
+
+# The audience button's label is not the string in the source -- it is
+# relabelled on every refresh from Audience.LABELS -- so the widest of those is
+# what has to fit, not "Raid team".
+AUDIENCE_W, _ = button(
+    r'CreateButton\(frame, (\d+), 20, "(Raid team)"', "audienceButton")
+VIEW_W, _ = button(r'CreateButton\(frame, (\d+), 20, "(Board)"', "viewButton")
+ARCHIVED_W, ARCHIVED_LABEL = button(
+    r'CreateButton\(frame, (\d+), 20, "(Archived)"', "archivedButton")
+ROSTER_W, ROSTER_LABEL = button(
+    r'CreateButton\(frame, (\d+), 20, "(Full roster)"', "rosterButton")
+
+# The anchor chain, resolved the way the client would: each button hangs off
+# the right edge of the one before it, by the offset written in the source.
+x = TITLE_END + 14
+AUDIENCE_END = x + AUDIENCE_W
+
+x = AUDIENCE_END + 10
+VIEW_END = x + VIEW_W
+
+x = VIEW_END + 8
+ARCHIVED_END = x + ARCHIVED_W
+
+x = ARCHIVED_END + 8
+ROSTER_END = x + ROSTER_W
+
+check("the four Raiders buttons fit beside the board",
+      ROSTER_END <= BOARD_WIDTH,
+      "the row ends at %.1f, board is %d wide" % (ROSTER_END, BOARD_WIDTH))
+
+# The stricter half of the same question. Ending inside the board is what
+# keeps the row off the bars; ending inside the pane is what keeps it out from
+# under the detail pane, which is drawn over the top.
+check("and clear of the detail pane",
+      ROSTER_END <= PANE_WIDTH - DETAIL_WIDTH,
+      "%.1f against a pane edge at %d"
+      % (ROSTER_END, PANE_WIDTH - DETAIL_WIDTH))
+
+# Every label inside its own button. A button 110 wide with a label of 112 is
+# not an overlap and still reads as a bug -- the text is simply cut.
+LABEL_PAD = 8
+
+for label, width in (("Raid team", AUDIENCE_W), ("Everyone", AUDIENCE_W),
+                     ("Board", VIEW_W), ("Roster", VIEW_W),
+                     (ARCHIVED_LABEL, ARCHIVED_W),
+                     (ROSTER_LABEL, ROSTER_W)):
+    check('"%s" fits its button' % label,
+          measure(label, SMALL) + LABEL_PAD <= width,
+          "%.1f in %d" % (measure(label, SMALL) + LABEL_PAD, width))
+
+
+# ==========================================================================
+# The roster window's action bar
+# ==========================================================================
+#
+# Eight controls chained left to right along the bottom, and a Close button
+# anchored to the right-hand end of the same line. The chain used to end two
+# pixels short of Close -- six chosen widths carrying 30 to 62 pixels of slack
+# each -- so the bar was one control away from drawing underneath the one
+# button every window has. The widths are measured now; this is the arithmetic
+# that says the whole row still lands clear.
+
+print("-- roster window, action bar " + "-" * 47)
+
+CONTROLS = src("UI/RosterControls.lua")
+ROSTER = src("UI/RosterWindow.lua")
+
+R_WIDTH = number(ROSTER, r"local WINDOW_WIDTH = (\d+)", "roster WINDOW_WIDTH")
+R_INSET = 16
+
+ACTION_PAD = number(CONTROLS, r"local LABEL_PAD = (\d+)", "LABEL_PAD")
+
+CLOSE_W = number(ROSTER, r'CreateButton\(frame, (\d+), 26, "Close"',
+                 "roster Close")
+
+# Read off the source so a renamed or reordered button moves this with it,
+# rather than leaving the test asserting about a bar that no longer exists.
+ACTION_LABELS = re.findall(r'ActionButton\(frame, "([^"]+)"', CONTROLS)
+
+check("the action bar is built from measured buttons",
+      len(ACTION_LABELS) == 7,
+      "found %d: %s" % (len(ACTION_LABELS), ACTION_LABELS))
+
+check("and Archive is one of them",
+      "Archive" in ACTION_LABELS, ACTION_LABELS)
+
+MAIN_INPUT_W = number(CONTROLS, r"SearchBox.Create\(\n?\s*frame, (\d+), \"Alt of whom",
+                      "the alt-of input")
+
+# The chain, in source order, with the gap that precedes each. The two 12s are
+# the deliberate breaks either side of the alt-of input -- it is an argument to
+# the button after it, not another action.
+GAPS = {"Add to team": 0, "Remove": 6, "Archive": 6,
+        "Alt of": 6, "Not an alt": 6, "Same character": 6, "Untick all": 12}
+
+x = R_INSET
+
+for label in ACTION_LABELS:
+    x += GAPS[label]
+    x += measure(label, SMALL) + ACTION_PAD
+
+    # The alt-of input sits between Archive and Alt of, and is the argument to
+    # the button that follows it.
+    if label == "Archive":
+        x += 12 + MAIN_INPUT_W
+
+ACTIONS_END = x
+CLOSE_START = R_WIDTH - R_INSET - CLOSE_W
+
+gap("the roster action bar clears the Close button", ACTIONS_END, CLOSE_START)
+
+# Not just "does not overlap". Two pixels is what it had before and it was one
+# button away from breaking, so this asserts there is somewhere to put the
+# next one.
+check("with room left for another control",
+      CLOSE_START - ACTIONS_END >= 24,
+      "%.1f of clearance" % (CLOSE_START - ACTIONS_END))
+
+
 print()
 print("FAILURES: " + (", ".join(FAILURES) if FAILURES else "none"))
 sys.exit(1 if FAILURES else 0)

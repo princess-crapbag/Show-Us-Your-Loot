@@ -187,6 +187,12 @@ function RaidersRoster.DrawRow(row, entry, isSelected)
 
     if entry.isIncoming then
         note = "joining"
+    -- BEFORE THE ALT TEST AND BEFORE THE RANK. Somebody who has left the guild
+    -- is on this list only because they are still ticked onto the raid team,
+    -- and that is the one thing the row has to say -- otherwise it is a name
+    -- with a tick and no explanation for why it is above the guildies.
+    elseif entry.isFormer then
+        note = "not in the guild any more"
     elseif entry.isAlt then
         note = "alt of " .. tostring(entry.mainName or "?")
     elseif entry.daysOffline and entry.daysOffline >= 30 then

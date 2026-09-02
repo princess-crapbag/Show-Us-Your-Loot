@@ -2,7 +2,7 @@
 ## Title: Show Us Your Loot
 ## Notes: Loot history, attendance and fairness analytics for group loot.
 ## Author: Aimee
-## Version: 0.4.2
+## Version: 0.4.3
 ## IconTexture: Interface\Icons\INV_Misc_Coin_02
 
 # The game's own addon list, behind the plus sign on the minimap. The three
@@ -73,6 +73,7 @@ Core\GearTrack.lua
 Core\LootScore.lua
 Core\Dashboard.lua
 Core\DueList.lua
+Core\ArchivedRaiders.lua
 Core\RaidSummary.lua
 Core\NightCalendar.lua
 Core\NightIndex.lua
@@ -140,6 +141,7 @@ UI\RaidersDetailCards.lua
 UI\RaidersDetailParts.lua
 UI\RaidersDetail.lua
 UI\RaidersSort.lua
+UI\RaidersActions.lua
 UI\RaidersBoard.lua
 UI\RaidersBoardRows.lua
 UI\RaidersPanel.lua

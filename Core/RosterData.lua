@@ -48,6 +48,22 @@ function RosterData.Build()
         return cached
     end
 
+    -- FILLED HERE, BEHIND THE CACHE, rather than by whoever remembers to.
+    --
+    -- Team membership, roles and the archived flag all live on the player
+    -- registry, and a guild member who has never been in a raid is not in it
+    -- -- so marking one silently did nothing at all. The header above says so
+    -- and the fix was a call in UI/RosterWindow.lua, which meant it held for
+    -- the full roster window and for nowhere else: the Raiders tab's roster
+    -- view builds this list too, and ticking TEAM there did nothing for
+    -- anybody the addon had not already seen. Nearly every member of a large
+    -- guild falls into that gap.
+    --
+    -- Behind the cached return, so this is still once per invalidation rather
+    -- than once per keystroke in a search box, which is the cost the header
+    -- warns about. That is a stricter budget than the old call site had.
+    RosterData.EnsureRegistry()
+
     local _, attendance =
         SYL.RaidSession.BuildAttendance(SYL.GetActiveRaids())
 
@@ -133,6 +149,8 @@ function RosterData.Build()
         SYL.SharedRoster and SYL.SharedRoster.Members() or {}
     ) do
         if not known[key] then
+            known[key] = true
+
             table.insert(roster, {
                 key = key,
                 guid = nil,
@@ -151,6 +169,98 @@ function RosterData.Build()
                 nights = 0,
             })
         end
+    end
+
+    -- AND ANYBODY MARKED ON THE RAID TEAM WHO IS NOT IN THE GUILD ANY MORE.
+    --
+    -- Aimee: "razor left guild and he still shows there. i cant seem to remove
+    -- him from the active raid team."
+    --
+    -- She could not, and no screen in the addon could. Team membership lives
+    -- on the player registry, which is account level and outlives everything
+    -- -- Core/RaidTeam.lua keeps it there deliberately, so a team survives
+    -- archiving a season. This list was built from the LIVE GUILD LIST alone.
+    -- So the moment somebody leaves the guild their flag outlives the only row
+    -- that could clear it: they sit on the Raiders board forever, the team
+    -- filter here draws nothing, and the summary above the empty list reads
+    -- "0 on the raid team - 2 marked as raiding" with neither number wrong.
+    --
+    -- A state the addon can enter and cannot leave is the shape of bug this
+    -- roster already grew two appends for -- recruits who have not joined and
+    -- names off somebody else's roster are both here for the same reason. This
+    -- is the third: a flag with no row.
+    --
+    -- NOT DONE WHILE THE GUILD LIST IS STILL LOADING. GetMembers is empty for
+    -- the first seconds after login, and without this guard every raider on
+    -- the team would be listed as having left the guild in the one moment the
+    -- window is most likely to be opened.
+    local guildKnown = not SYL.Guild.IsInGuild()
+        or SYL.Guild.GetMemberCount() > 0
+
+    if guildKnown then
+        for key, player in pairs(SYL.Players.GetRegistry()) do
+            if player.inRaidTeam and not known[key] then
+                known[key] = true
+
+                local mainKey = SYL.Players.ResolveToMain(key)
+                local main = mainKey ~= key and SYL.Players.Get(mainKey) or nil
+                local seen = attendance[mainKey]
+
+                table.insert(roster, {
+                    key = key,
+                    guid = player.guid or key,
+                    mainKey = mainKey,
+                    isAlt = main ~= nil,
+                    mainName = main and (main.name or main.fullName) or nil,
+
+                    -- Read by the rows, so the reason a name is here is on the
+                    -- row rather than only in this comment.
+                    isFormer = true,
+
+                    name = player.name or player.fullName,
+                    class = player.class,
+
+                    -- Said rather than left blank. "N/A" is what a recruit
+                    -- shows and means "not in the guild yet"; this is the
+                    -- opposite direction and the difference is the whole
+                    -- reason the row is here.
+                    rank = "Not in guild",
+
+                    -- Below the recruits, who are at 98, so the people you are
+                    -- most likely to be tidying up sort to the very bottom
+                    -- rather than into the middle of the guild ranks.
+                    rankIndex = 99,
+
+                    nights = seen and seen.nights or 0,
+                })
+            end
+        end
+    end
+
+    -- ARCHIVED CHARACTERS COME OFF, LAST, once every source has had its say.
+    --
+    -- Aimee: "there are a few trials showing on my roster that i want to
+    -- archive." This is the half of archiving she can see -- the flag would be
+    -- a setting nobody could observe if the row stayed.
+    --
+    -- Applied here rather than in each window, because the roster window and
+    -- the Raiders tab draw the same list and hiding somebody on one screen
+    -- while they sit on the other is worse than not hiding them at all.
+    --
+    -- After the appends and not before: the team append above deliberately
+    -- pulls back anyone still ticked onto the team, and archiving clears that
+    -- tick -- so the two cannot fight, and an archived character reaches this
+    -- filter from whichever source claimed them.
+    if SYL.ArchivedRaiders.Count() > 0 then
+        local kept = {}
+
+        for _, entry in ipairs(roster) do
+            if not SYL.ArchivedRaiders.IsArchivedCharacter(entry.key) then
+                table.insert(kept, entry)
+            end
+        end
+
+        roster = kept
     end
 
     if SYL.Features.IsEnabled("raiderIO") then

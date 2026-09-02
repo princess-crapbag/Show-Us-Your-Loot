@@ -159,6 +159,34 @@ local function CreateSummary(frame, handlers)
     frame.search:SetPoint("LEFT", frame.activeButton, "RIGHT", 8, 0)
 end
 
+-- EVERY BUTTON ON THIS BAR IS NOW MEASURED, and it had to be before anything
+-- else could go on it.
+--
+-- The widths were six chosen numbers with between 30 and 62 pixels of slack in
+-- them, and the chain of them ended at x 782. Close is 100 wide at -16, so it
+-- starts at 784: the bar cleared the one button every window has by two
+-- pixels, and any seventh control at all would have been drawn underneath it.
+--
+-- Measured against the label in the font it is drawn in, plus a character of
+-- air each side, which is the same rule UI/RaidersBoard.lua applies to the
+-- board's columns and for the same reason -- too wide is a defect as much as
+-- too narrow when something else needs the room. That buys 44px of clearance
+-- back and fits Archive in the middle of it. tools/test_layout.py resolves the
+-- whole chain now, so the next control to be added finds out here rather than
+-- on Aimee's screen.
+local LABEL_PAD = 26
+local ACTION_HEIGHT = 22
+
+local function ActionButton(frame, text, onClick)
+    return Theme.CreateButton(
+        frame,
+        Theme.MeasureText(Theme.sizes.rowSmall, text) + LABEL_PAD,
+        ACTION_HEIGHT,
+        text,
+        onClick
+    )
+end
+
 local function CreateActions(frame, handlers)
     local function EachSelected(action)
         local entries = handlers.getSelected()
@@ -183,7 +211,7 @@ local function CreateActions(frame, handlers)
     end
 
     frame.addButton =
-        Theme.CreateButton(frame, 116, 22, "Add to team", function()
+        ActionButton(frame, "Add to team", function()
             local count = EachSelected(function(entry)
                 SYL.RaidTeam.SetMember(entry.guid, true)
             end)
@@ -194,7 +222,7 @@ local function CreateActions(frame, handlers)
     frame.addButton:SetPoint("BOTTOMLEFT", 16, 14)
 
     frame.removeButton =
-        Theme.CreateButton(frame, 92, 22, "Remove", function()
+        ActionButton(frame, "Remove", function()
             local count = EachSelected(function(entry)
                 SYL.RaidTeam.SetMember(entry.guid, false)
             end)
@@ -204,6 +232,34 @@ local function CreateActions(frame, handlers)
 
     frame.removeButton:SetPoint("LEFT", frame.addButton, "RIGHT", 6, 0)
 
+    -- NEXT TO REMOVE, WHICH IS ITS SIBLING AND NOT ITS SYNONYM. Remove takes
+    -- somebody off the raid team and leaves them on the roster; this takes
+    -- them off the roster as well. Aimee: "there are a few trials showing on
+    -- my roster that i want to archive" -- the ticked set is what makes that
+    -- one press rather than three.
+    --
+    -- Nothing here reads a guild rank, and nothing on this bar ever has.
+    -- "someone could join the raid in any rank so i need to be able to add and
+    -- remove no matter their rank."
+    frame.archiveButton =
+        ActionButton(frame, "Archive", function()
+            local count = EachSelected(function(entry)
+                SYL.ArchivedRaiders.Archive(entry.guid)
+            end)
+
+            -- Names the undo in the same breath as the action, the way Alt of
+            -- does. Somebody archiving the wrong row notices immediately --
+            -- the name is gone from the list they were looking at -- and this
+            -- is the only sentence they are guaranteed to read.
+            Finish(
+                count .. " archived and taken off the raid team. Their "
+                .. "nights and loot are kept: Raiders tab, Archived, where "
+                .. "picking one offers Bring back."
+            )
+        end)
+
+    frame.archiveButton:SetPoint("LEFT", frame.removeButton, "RIGHT", 6, 0)
+
     -- Bordered, and it says what it is for rather than "Main's name…", which
     -- is what the identical-looking search box above it would have said if it
     -- filtered by main. This one filters nothing: it is the argument to the
@@ -212,7 +268,7 @@ local function CreateActions(frame, handlers)
         frame, 130, "Alt of whom?", function() end, { bordered = true }
     )
 
-    frame.mainInput:SetPoint("LEFT", frame.removeButton, "RIGHT", 12, 0)
+    frame.mainInput:SetPoint("LEFT", frame.archiveButton, "RIGHT", 12, 0)
 
     -- Suggested from the roster this window already holds, unfiltered — the
     -- main you are pointing at may not be one of the rows currently on screen,
@@ -235,7 +291,7 @@ local function CreateActions(frame, handlers)
     })
 
     frame.altButton =
-        Theme.CreateButton(frame, 92, 22, "Alt of", function()
+        ActionButton(frame, "Alt of", function()
             local mainName = frame.mainInput.editBox:GetText() or ""
 
             -- Resolved before anything is written. A mapping onto a name
@@ -291,7 +347,7 @@ local function CreateActions(frame, handlers)
     -- Takes no name, because unmapping does not need one: whoever these
     -- characters point at, they stop pointing at them.
     frame.unaltButton =
-        Theme.CreateButton(frame, 92, 22, "Not an alt", function()
+        ActionButton(frame, "Not an alt", function()
             local cleared, untouched = 0, 0
 
             EachSelected(function(entry)
@@ -331,7 +387,7 @@ local function CreateActions(frame, handlers)
     -- already known, and Core/CharacterMerge.lua decides whether there is one
     -- rather than trusting a person to type it.
     frame.mergeButton =
-        Theme.CreateButton(frame, 110, 22, "Same character", function()
+        ActionButton(frame, "Same character", function()
             local merged, none = 0, 0
 
             EachSelected(function(entry)
@@ -368,7 +424,7 @@ local function CreateActions(frame, handlers)
     frame.mergeButton:SetPoint("LEFT", frame.unaltButton, "RIGHT", 6, 0)
 
     frame.clearButton =
-        Theme.CreateButton(frame, 86, 22, "Untick all", function()
+        ActionButton(frame, "Untick all", function()
             handlers.onClearSelection()
             handlers.onChanged()
         end)
@@ -382,8 +438,14 @@ local function CreateActions(frame, handlers)
         .. "character, because you bring a character rather than a person.")
 
     Tip(frame.removeButton, "Remove",
-        "Takes the ticked characters off the raid team. Nothing about their "
-        .. "loot history changes.")
+        "Takes the ticked characters off the raid team. They stay on this "
+        .. "roster. Nothing about their loot history changes.")
+
+    Tip(frame.archiveButton, "Archive",
+        "Takes the ticked characters off the raid team AND off this roster — "
+        .. "for a trial who came and went. Nothing is deleted: their nights, "
+        .. "items and rolls are under Raiders, Archived, and picking one "
+        .. "there offers Bring back.")
 
     Tip(frame.mainInput, "Whose alt?",
         "Type the main's name, then press Alt of. This box does not filter "

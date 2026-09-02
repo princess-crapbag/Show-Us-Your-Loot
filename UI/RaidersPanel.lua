@@ -56,8 +56,22 @@ local selectedKey
 -- ceiling and used to get one by calling Build() — the whole fairness
 -- computation over every drop and session — once per notch, on top of the one
 -- Refresh does immediately afterwards. Recorded while drawing instead.
-local lastShown = { board = 0, roster = 0 }
+local lastShown = { board = 0, roster = 0, archived = 0 }
 local view = "board"
+
+-- THE ARCHIVED BOARD IS A THIRD STATE AND NOT A THIRD STOP ON THE TOGGLE.
+--
+-- Board and Roster are one button because they are the same people asked two
+-- questions. Adding a third stop to that cycle would have repeated the mistake
+-- Audience.CYCLE was cut back for -- one stray press and getting back takes
+-- two more, on a button whose label has changed underneath. So this is its
+-- own button, and its own flag: whichever of the two views you were in is
+-- still there when you press it again.
+local archived = false
+
+local function CurrentView()
+    return archived and "archived" or view
+end
 
 -- WHICH COLUMN THE BOARD IS SORTED BY, and which way.
 --
@@ -161,6 +175,110 @@ local function HideRows(list)
     end
 end
 
+local function ClampOffset(total)
+    local maxOffset = math.max(0, total - VISIBLE_ROWS)
+
+    if offset > maxOffset then
+        offset = maxOffset
+    end
+end
+
+-- What the bars and the average marker are measured against, worked out once
+-- per draw rather than once per row. Returns the raw average and how many
+-- entries were ranked as well, because the caption underneath has to say
+-- something different when that is none.
+local function Scale(entries)
+    local highest = SYL.LootScore.Highest(entries)
+    local average, ranked = SYL.LootScore.Average(entries)
+
+    -- WHAT EVERY RAID NIGHTS CELL IS COUNTED AGAINST, so it is worked out once
+    -- for the board rather than once per row. Guild nights only and the same
+    -- ones the attendance figures come from -- see RaidSession.NightsOnly --
+    -- because "2 of 2" has to mean two of the same two.
+    --
+    -- Deliberately not narrowed by the audience scope. How many nights the
+    -- guild ran is a fact about the guild, and it would be an odd board where
+    -- widening from the raid team to everyone changed the denominator.
+    local held = SYL.RaidSession.CountNights(
+        SYL.RaidSession.NightsOnly(SYL.GetActiveRaids())
+    )
+
+    local scale = {
+        highest = highest,
+
+        -- The average only means anything once somebody is ranked. Passed as
+        -- zero otherwise, which is what makes the rows leave the marker off
+        -- rather than park it at the left-hand end where it would read as an
+        -- average of none.
+        average = ranked > 0 and average or 0,
+        nightsHeld = held,
+    }
+
+    return scale, average, ranked
+end
+
+-- ONE DRAWING PATH FOR BOTH BOARDS. The board and the archived board are the
+-- same sixteen rows, the same headings and the same detail pane, and the only
+-- thing that differs is which people are in the list -- so the second one is a
+-- caller rather than a copy. Two copies of this is how one board would come to
+-- sort by a column the other does not have.
+--
+-- `scale` is deliberately a parameter and not derived from `entries`: the
+-- archived board measures its rows against the raid team rather than against
+-- each other. See ArchivedRaiders.Build.
+local function DrawBoard(entries, scale)
+    frame.empty:Hide()
+
+    SYL.RaidersBoard.SetHeaderShown(frame.header, true)
+
+    local sortKey, sortReversed = SYL.RaidersSort.Key()
+
+    SYL.RaidersSort.UpdateHeader(frame.header, sortKey, sortReversed)
+
+    entries = SYL.RaidersSort.Entries(entries, sortKey, sortReversed)
+
+    for index = 1, VISIBLE_ROWS do
+        local entry = entries[index + offset]
+        local row = rows[index] or CreateRow(index)
+
+        if entry then
+            SYL.RaidersBoardRows.Draw(
+                row, entry, scale, entry.key == selectedKey
+            )
+        else
+            row:Hide()
+        end
+    end
+
+    -- Handed the same drops the board was built from, so naming a raider's
+    -- items does not sweep the season again on every selection.
+    -- The sessions too, not only the drops: the pane groups a raider's loot
+    -- under the raid night it was taken on, and only a session can say which
+    -- night a timestamp belongs to. Handed over rather than fetched, so
+    -- naming a raider's items does not sweep the season again per selection.
+    SYL.RaidersDetail.SetDrops(
+        frame.detail, SYL.GetActiveDrops(), SYL.GetActiveRaids()
+    )
+
+    SYL.RaidersDetail.Render(
+        frame.detail, selectedKey and FindByKey(entries, selectedKey) or nil
+    )
+end
+
+-- An empty board says which of the two empty states it is and draws nothing
+-- else -- no headings over nothing, which reads as a list that failed to load.
+local function DrawEmptyBoard(message)
+    HideRows(rows)
+
+    SYL.RaidersBoard.SetHeaderShown(frame.header, false)
+
+    frame.empty:SetText(message)
+    frame.empty:Show()
+
+    SYL.RaidersDetail.Render(frame.detail, nil)
+    frame.caption:SetText("")
+end
+
 Refresh = function()
     if not frame then
         return
@@ -176,8 +294,66 @@ Refresh = function()
         scope == "everyone" and "textPrimary" or "accent"
     )
 
+    -- THE SCOPE BUTTON STANDS DOWN ON THE ARCHIVED BOARD, the same way the
+    -- headings do on the roster. Its audience is the rule in
+    -- Core/ArchivedRaiders.lua rather than a choice, and at the scope this
+    -- board opens on -- the raid team -- it would filter the list to nobody by
+    -- definition. Leaving it there to be pressed would be a control that
+    -- silently empties the screen it is sitting on.
+    frame.audienceButton:SetShown(not archived)
+
+    Theme.SetTextColor(
+        frame.archivedButton.label, archived and "accent" or "textPrimary"
+    )
+
+    if archived then
+        HideRows(rosterRows)
+
+        local entries, team, everybody = SYL.ArchivedRaiders.Build()
+
+        lastShown.archived = #entries
+
+        ClampOffset(#entries)
+
+        if #entries == 0 then
+            DrawEmptyBoard(SYL.ArchivedRaiders.ExplainEmpty(everybody))
+            SYL.RaidersActions.Update(frame.actions, nil)
+
+            return
+        end
+
+        -- The team's scale, not this list's. See ArchivedRaiders.Build.
+        local scale, average, ranked = Scale(team)
+
+        DrawBoard(entries, scale)
+
+        frame.caption:SetText(
+            SYL.ArchivedRaiders.Caption(#entries, average, ranked)
+        )
+
+        local selected = selectedKey and FindByKey(entries, selectedKey) or nil
+
+        SYL.RaidersActions.Update(
+            frame.actions,
+            selected and tostring(selected.name or "Unknown") or nil,
+            archived, view, selectedKey
+        )
+
+        return
+    end
+
     if view == "roster" then
         SYL.RaidersBoard.SetHeaderShown(frame.header, false)
+
+        -- Resolved once and used twice: the detail pane draws it, and the
+        -- footer button is named after it.
+        local selected = RosterSelection(selectedKey)
+
+        SYL.RaidersActions.Update(
+            frame.actions,
+            selected and tostring(selected.name or "Unknown") or nil,
+            archived, view, selectedKey
+        )
 
         lastShown.roster = SYL.RaidersRoster.Refresh({
             frame = frame,
@@ -200,7 +376,7 @@ Refresh = function()
             -- and the board does not (most of a 399-member guild) resolved to
             -- nil and drew an empty detail pane. The same wrong-list mistake
             -- as the mouse wheel below, one screen along.
-            selected = RosterSelection(selectedKey),
+            selected = selected,
         })
 
         return
@@ -208,92 +384,27 @@ Refresh = function()
 
     HideRows(rosterRows)
 
+    -- Nothing to archive from the board itself. See RaidersActions.Update.
+    SYL.RaidersActions.Update(frame.actions, nil)
+
     local entries, beforeScope = Build()
 
     lastShown.board = #entries
 
-    local maxOffset = math.max(0, #entries - VISIBLE_ROWS)
-
-    if offset > maxOffset then
-        offset = maxOffset
-    end
+    ClampOffset(#entries)
 
     if #entries == 0 then
-        HideRows(rows)
-
-        SYL.RaidersBoard.SetHeaderShown(frame.header, false)
-
-        frame.empty:SetText(
+        DrawEmptyBoard(
             SYL.Audience.ExplainEmpty(scope, beforeScope)
             or "Nobody to rank yet. This fills in from your next raid night."
         )
-        frame.empty:Show()
-
-        SYL.RaidersDetail.Render(frame.detail, nil)
-        frame.caption:SetText("")
 
         return
     end
 
-    frame.empty:Hide()
+    local scale, average, ranked = Scale(entries)
 
-    SYL.RaidersBoard.SetHeaderShown(frame.header, true)
-    local sortKey, sortReversed = SYL.RaidersSort.Key()
-
-    SYL.RaidersSort.UpdateHeader(frame.header, sortKey, sortReversed)
-
-    entries = SYL.RaidersSort.Entries(entries, sortKey, sortReversed)
-
-    local highest = SYL.LootScore.Highest(entries)
-    local average, ranked = SYL.LootScore.Average(entries)
-
-    -- WHAT EVERY RAID NIGHTS CELL IS COUNTED AGAINST, so it is worked out once
-    -- for the board rather than once per row. Guild nights only and the same
-    -- ones the attendance figures come from -- see RaidSession.NightsOnly --
-    -- because "2 of 2" has to mean two of the same two.
-    --
-    -- Deliberately not narrowed by the audience scope. How many nights the
-    -- guild ran is a fact about the guild, and it would be an odd board where
-    -- widening from the raid team to everyone changed the denominator.
-    local held = SYL.RaidSession.CountNights(
-        SYL.RaidSession.NightsOnly(SYL.GetActiveRaids())
-    )
-
-    -- The average only means anything once somebody is ranked. Passed as zero
-    -- otherwise, which is what makes the rows leave the marker off rather than
-    -- park it at the left-hand end where it would read as an average of none.
-    local view = {
-        highest = highest,
-        average = ranked > 0 and average or 0,
-        nightsHeld = held,
-    }
-
-    for index = 1, VISIBLE_ROWS do
-        local entry = entries[index + offset]
-        local row = rows[index] or CreateRow(index)
-
-        if entry then
-            SYL.RaidersBoardRows.Draw(
-                row, entry, view, entry.key == selectedKey
-            )
-        else
-            row:Hide()
-        end
-    end
-
-    -- Handed the same drops the board was built from, so naming a raider's
-    -- items does not sweep the season again on every selection.
-    -- The sessions too, not only the drops: the pane groups a raider's loot
-    -- under the raid night it was taken on, and only a session can say which
-    -- night a timestamp belongs to. Handed over rather than fetched, so
-    -- naming a raider's items does not sweep the season again per selection.
-    SYL.RaidersDetail.SetDrops(
-        frame.detail, SYL.GetActiveDrops(), SYL.GetActiveRaids()
-    )
-
-    SYL.RaidersDetail.Render(
-        frame.detail, selectedKey and FindByKey(entries, selectedKey) or nil
-    )
+    DrawBoard(entries, scale)
 
     -- "RAID AVERAGE 0.0 PER NIGHT" IS NOT AN AVERAGE, it is the absence of
     -- one, and it was printed as fact for the whole first stretch of a tier.
@@ -328,8 +439,13 @@ end
 
 RaidersPanel.Refresh = Refresh
 
+-- Choosing a view leaves the archived board. Pressing Board or Roster while
+-- it is showing means "put me back on the list of people who raid here", and
+-- landing on the archived board wearing a Board label would be the button
+-- lying about what it did.
 function RaidersPanel.SetView(next)
     view = (next == "roster") and "roster" or "board"
+    archived = false
     offset = 0
 
     Refresh()
@@ -337,6 +453,21 @@ end
 
 function RaidersPanel.ToggleView()
     RaidersPanel.SetView(view == "board" and "roster" or "board")
+end
+
+function RaidersPanel.SetArchived(next)
+    archived = next and true or false
+    offset = 0
+
+    Refresh()
+end
+
+function RaidersPanel.ToggleArchived()
+    RaidersPanel.SetArchived(not archived)
+end
+
+function RaidersPanel.IsArchived()
+    return archived
 end
 
 --------------------------------------------------------------------------
@@ -400,6 +531,32 @@ function RaidersPanel.Create(parent)
         .. "what the scope button beside this reads."
     )
 
+    -- WHERE A RAIDER'S SEASON GOES WHEN THEY COME OFF THE TEAM.
+    --
+    -- Aimee: "when i see the board it should only be active members of the
+    -- raid team. but i dont want to lose the history from this screen either."
+    -- The board already did the first, by being scoped to the team -- so the
+    -- gap was never a filter, it was that nothing showed the people the filter
+    -- had removed. Core/ArchivedRaiders.lua decides who that is.
+    --
+    -- Beside the view toggle rather than on it, for the reason written at the
+    -- top of this file next to the `archived` flag.
+    frame.archivedButton =
+        Theme.CreateButton(frame, 110, 20, "Archived", function()
+            RaidersPanel.ToggleArchived()
+        end)
+
+    frame.archivedButton:SetPoint("LEFT", frame.viewButton, "RIGHT", 8, 0)
+
+    SYL.Tooltips.Attach(
+        frame.archivedButton,
+        "Archived raiders",
+        "Everyone in your guild who has raided this season and is not on the "
+        .. "raid team now. Nothing is deleted when you take somebody off the "
+        .. "team -- their nights, their items and every roll are still here, "
+        .. "they are just not on the board any more."
+    )
+
     -- Searching, buff coverage and adding somebody who has not joined the
     -- guild yet all still live in the full window. None of them belong in a
     -- list whose job is a column of ticks, and removing the last route to
@@ -410,7 +567,7 @@ function RaidersPanel.Create(parent)
         end
     end)
 
-    frame.rosterButton:SetPoint("LEFT", frame.viewButton, "RIGHT", 8, 0)
+    frame.rosterButton:SetPoint("LEFT", frame.archivedButton, "RIGHT", 8, 0)
 
     -- THIS TOOLTIP USED TO SAY SOMETHING UNTRUE.
     --
@@ -468,7 +625,7 @@ function RaidersPanel.Create(parent)
         -- wheel did nothing at all — the roster could not be scrolled past its
         -- first screen. RaidersRoster clamps its own draw, which is why the
         -- rows looked right and only the scrolling was dead.
-        local total = lastShown[view] or 0
+        local total = lastShown[CurrentView()] or 0
         local maxOffset = math.max(0, total - VISIBLE_ROWS)
 
         offset = math.max(0, math.min(maxOffset, offset - delta))
@@ -476,7 +633,36 @@ function RaidersPanel.Create(parent)
         Refresh()
     end)
 
+    -- The footer bar, on the window rather than in the panel -- see
+    -- UI/RaidersActions.lua for why, and for what it offers on each view.
+    frame.actions = SYL.RaidersActions.Create(parent, {
+        getSelectedKey = function()
+            return selectedKey
+        end,
+
+        isArchived = function()
+            return archived
+        end,
+
+        onChanged = function()
+            -- The list this row came from is about to change shape underneath
+            -- the selection, so the selection goes with it.
+            selectedKey = nil
+
+            SYL.RosterData.Invalidate()
+            SYL.RosterSync.OnOwnRosterChanged()
+
+            Refresh()
+        end,
+    })
+
     frame:SetScript("OnShow", Refresh)
+
+    -- The bar lives on the window rather than in the panel, so it has to be
+    -- put away by hand or it would sit under the dashboard.
+    frame:SetScript("OnHide", function()
+        frame.actions:Hide()
+    end)
 
     frame:Hide()
 

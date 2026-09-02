@@ -228,6 +228,7 @@ Refresh = function()
     end
 
     local joining = SYL.IncomingRoster.Count()
+    local archivedCount = SYL.ArchivedRaiders.Count()
 
     frame.summaryText:SetText(
         total
@@ -235,6 +236,12 @@ Refresh = function()
             (total == 1 and " guild member" or " guild members"))
         .. "  ·  " .. SYL.RaidTeam.Count() .. " marked as raiding"
         .. (joining > 0 and ("  ·  " .. joining .. " joining") or "")
+        -- SAYS SO RATHER THAN LETTING THEM VANISH. Archiving takes people off
+        -- this list, and a roster that quietly holds fewer names than the
+        -- guild does is a roster somebody stops trusting. Named on the screen
+        -- the names left, with the count, so the difference is accounted for.
+        .. (archivedCount > 0
+            and ("  ·  " .. archivedCount .. " archived") or "")
         .. (activeOnly
             and ("  ·  seen in the last "
                 .. SYL.RosterData.INACTIVE_DAYS .. " days") or "")
@@ -263,7 +270,24 @@ Refresh = function()
 
     -- An empty team on first use is not an error, and saying so beats an
     -- empty window that looks like the roster failed to load.
-    if total == 0 and teamOnly then
+    if total == 0 and teamOnly and SYL.RaidTeam.Count() > 0 then
+        -- THIS USED TO SAY "NOBODY IS ON THE RAID TEAM YET" WHILE THE LINE
+        -- ABOVE IT SAID TWO PEOPLE WERE, which is what Aimee was reading when
+        -- she could not find the raiders she was trying to remove. They had
+        -- left the guild, and this list was built from the guild alone, so
+        -- there was no row to untick -- see the append in Core/RosterData.lua
+        -- that now puts them here.
+        --
+        -- Kept as a distinct message rather than deleted with the cause. The
+        -- two numbers come from different places and always will, and if they
+        -- ever disagree again this says so instead of printing the sentence
+        -- that sent somebody looking for a first-run problem they did not have.
+        frame.emptyText:SetText(
+            SYL.RaidTeam.Count()
+            .. " are marked as raiding and none of them are on this list. "
+            .. "Press Whole guild to see everybody the addon knows about."
+        )
+    elseif total == 0 and teamOnly then
         frame.emptyText:SetText(
             "Nobody is on the raid team yet. Press Whole guild, tick the "
             .. "people who raid, and Add to team."

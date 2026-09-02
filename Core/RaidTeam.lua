@@ -94,6 +94,21 @@ function RaidTeam.SetMember(key, isMember)
     -- SavedVariables.
     player.inRaidTeam = isMember and true or nil
 
+    -- ADDING SOMEBODY TO THE TEAM UNARCHIVES THEM, and the two flags must
+    -- never both be set. Archived means "not somebody I am going to bring";
+    -- the raid team is who you bring. A character carrying both would be on
+    -- the Raiders board and off the roster at the same time, which is the
+    -- disagreement between two screens that the archived board exists to end.
+    --
+    -- Written here rather than routed through ArchivedRaiders.Restore because
+    -- it is the same record and one field, and because this is the choke point
+    -- every screen already goes through -- Add to team, the roster ticks and
+    -- the shared-roster merge all land here. ArchivedRaiders.Archive clears
+    -- inRaidTeam going the other way.
+    if isMember then
+        player.archived = nil
+    end
+
     return true
 end
 

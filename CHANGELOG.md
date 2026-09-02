@@ -3,7 +3,53 @@
 What changed, for the person installing it. The commit history explains why;
 this says what you will notice.
 
-## Unreleased
+## 0.4.3 — 2026-09-02
+
+### Added
+
+- **Archived raiders.** Taking somebody off the raid team takes them off the
+  Raiders board, which is what the board is for — but it used to take their
+  season with them, and their nights, items and rolls were nowhere on the
+  screen that holds them. There is a fourth button on the Raiders tab now:
+  **Archived** lists everyone in your guild who has raided this season and is
+  not on the raid team any more, on the same board, with the same detail pane.
+  Nothing was ever deleted; there was simply no longer a door.
+
+  Their bars are drawn against the **raid team's** scale rather than against
+  each other, so you can still see where somebody stood next to the people
+  still raiding, and the line underneath says whose average that marker is.
+  Pugs are left out: the addon already records who was in the guild on each
+  night, so a stranger who rolled in one of your raids is not listed as a
+  raider you lost — and somebody who was one of yours on the night is still
+  listed even if they have left the guild since.
+
+- **Archive a raider yourself.** The Archived list fills itself from who raided
+  and who is on the team, which cannot reach a trial who joined, never raided
+  and drifted off — they have no nights to be derived from, so they sat on your
+  roster for good. Now you can file them by hand. On the Raiders tab, pick
+  somebody on the Roster and the footer offers **Archive Misothelioma**; pick
+  them on Archived and it offers **Bring Misothelioma back**. The full roster
+  window has an **Archive** button beside Remove, so a ticked set of three goes
+  in one press.
+
+  Archiving takes somebody off the raid team and off both rosters, and nothing
+  else: their nights, items and every roll are kept, and the roster window says
+  how many are filed away so nobody vanishes without a count. Guild rank plays
+  no part in it, the same as adding and removing — officers who never raid hold
+  the top rank and trials who raid hold the bottom one.
+
+### Fixed
+
+- **A raider who left the guild could not be taken off the raid team.** Team
+  membership is remembered per account, so it survives a season being archived
+  — but the roster was built from your live guild list alone. The moment
+  somebody left the guild their tick outlived the only row that could clear it:
+  they stayed on the Raiders board for good, the roster's Raid team filter drew
+  nothing, and the line above the empty list read *"0 on the raid team · 2
+  marked as raiding"* with neither number wrong. Anyone still ticked onto the
+  team is now listed whether or not they are in the guild, marked **Not in
+  guild** and sorted to the bottom, so there is a box to untick. Untick them and
+  they move to Archived, where their season is kept.
 
 ### Changed
 
