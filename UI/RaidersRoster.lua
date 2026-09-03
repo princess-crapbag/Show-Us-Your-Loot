@@ -257,24 +257,134 @@ local function SharedControl(frame, onChanged)
     return sharedClear
 end
 
+-- THE SEND BUTTON, and it is always there rather than appearing with a state.
+--
+-- Sharing used to be a switch in the settings panel and nothing else, which
+-- put the only way to give somebody your roster three screens away from the
+-- roster. Worse, the switch reads like the way to GET one -- Aimee's officer
+-- read it exactly that way, turned it on, and became a second broadcaster
+-- whose empty team wiped the guild's. Core/RosterSync.lua has the account.
+--
+-- A button on the screen that holds the thing being sent is the fix for both
+-- halves: it is where somebody looks for it, and it cannot be mistaken for a
+-- way to receive, because it says Send.
+--
+-- HELD IN A LOCAL for the reason the block above gives about stub frames.
+local sharedSend
+
+local function SendControl(frame)
+    if sharedSend then
+        return sharedSend
+    end
+
+    sharedSend =
+        Theme.CreateButton(frame, 112, 18, "Send my roster", function()
+            local sent, reason = SYL.RosterSync.SendNow()
+
+            if not sent then
+                SYL:Print("Nothing sent: " .. tostring(reason) .. ".")
+
+                return
+            end
+
+            -- Says what it did and what it did not. Somebody who presses this
+            -- expecting it to keep working needs to know it was one send, and
+            -- where the switch that makes it continuous lives.
+            local message = "Sent your raid team of " .. sent
+                .. " to the guild."
+
+            if not SYL.Features.IsEnabled("rosterSharing") then
+                message = message
+                    .. " That was once. Turn on Share roster in settings to "
+                    .. "keep them up to date as you change it."
+            end
+
+            SYL:Print(message)
+        end)
+
+    return sharedSend
+end
+
+-- THE WAY BACK TO A QUESTION SOMEBODY CLOSED.
+--
+-- UI/SharedRosterPrompt.lua treats Escape as "not now" rather than as no --
+-- dismissing a box is not an answer -- which leaves an offer sitting in the
+-- database with nothing on screen pointing at it. This is that pointer, and
+-- it only exists while there is something to point at.
+local sharedOffer
+
+local function OfferControl(frame)
+    if sharedOffer then
+        return sharedOffer
+    end
+
+    sharedOffer =
+        Theme.CreateButton(frame, 108, 18, "Roster offered", function()
+            SYL.SharedRosterPrompt.Show()
+        end)
+
+    return sharedOffer
+end
+
+-- Right to left, in the order the buttons are listed, skipping the ones that
+-- are not showing. Anchored rather than chained off each other because the
+-- one in the middle is the one that comes and goes, and a chain breaks at
+-- exactly the link that disappears.
+local GAP = 8
+
+local function LayOutButtons(buttons)
+    local offset = 2
+
+    for _, button in ipairs(buttons) do
+        button:ClearAllPoints()
+        button:SetPoint("BOTTOMRIGHT", -offset, 1)
+        button:Show()
+
+        offset = offset + button:GetWidth() + GAP
+    end
+
+    -- What the caption has left. Returned rather than assumed, because a
+    -- caption running under a button is the defect this file has already
+    -- fixed once on the board above it.
+    return offset
+end
+
 -- Two states, and the caption carries the difference: a roster of your own
 -- says how to add to it, a shared one says who it came from. Somebody who does
 -- not know the feature exists has to be able to work out why a list they never
 -- filled in is full.
 local function DrawSharedState(frame, onChanged)
     local source = SYL.SharedRoster.Source()
+    local shared = SYL.SharedRoster.HasShared() and source
+    local offer = SYL.SharedRoster.PendingOffer()
 
-    if not SYL.SharedRoster.HasShared() or not source then
-        if sharedClear then
-            sharedClear:Hide()
-        end
+    -- Send is always here; the other two answer a state. Ordered right to
+    -- left the way they are read: what is on screen now, then what you can
+    -- do about it, then what is waiting.
+    local showing = {}
 
-        return nil
+    if shared then
+        table.insert(showing, SharedControl(frame, onChanged))
+    elseif sharedClear then
+        sharedClear:Hide()
     end
 
-    SharedControl(frame, onChanged):Show()
+    table.insert(showing, SendControl(frame))
 
-    return source
+    if offer then
+        table.insert(showing, OfferControl(frame))
+    elseif sharedOffer then
+        sharedOffer:Hide()
+    end
+
+    -- The caption stops where the buttons start. Too wide is a defect the
+    -- same as too narrow: a caption that runs under a button is unreadable
+    -- in exactly the state that most needs reading.
+    frame.caption:SetWidth(
+        math.max(120, SYL.RaidersPanel.CAPTION_WIDTH - LayOutButtons(showing))
+    )
+
+    return shared or nil, offer
 end
 
 --------------------------------------------------------------------------
@@ -288,7 +398,16 @@ end
 function RaidersRoster.Refresh(ctx)
     local frame = ctx.frame
     local roster = RaidersRoster.Build()
-    local sharedBy = DrawSharedState(frame, ctx.onChanged)
+    local sharedBy, offer = DrawSharedState(frame, ctx.onChanged)
+
+    -- Said in words as well as drawn as a button. Somebody who closed
+    -- the dialog has to be able to find out from the screen that a
+    -- roster is still waiting on them, rather than only from a control
+    -- whose label they have to already understand.
+    local waiting = offer and (
+        SYL.SharedRosterPrompt.ShortName(offer.source)
+        .. " is offering a raid team of " .. #(offer.members or {})
+    ) or nil
 
     local offset = math.min(
         ctx.offset or 0, math.max(0, #roster - ctx.visibleRows)
@@ -323,7 +442,9 @@ function RaidersRoster.Refresh(ctx)
         -- button sitting on an empty screen with no caption beside it is the
         -- one reading that makes no sense.
         frame.caption:SetText(
-            sharedBy and ("shared by " .. sharedBy .. " · nothing to show yet")
+            waiting
+            or (sharedBy
+                and ("shared by " .. sharedBy .. " · nothing to show yet"))
             or ""
         )
 
@@ -355,7 +476,8 @@ function RaidersRoster.Refresh(ctx)
     frame.caption:SetText(
         SYL.Utilities.Count(#roster, "person", "people") .. " on the roster · "
         .. SYL.RaidTeam.Count() .. " marked as raiding · "
-        .. (sharedBy and ("shared by " .. sharedBy)
+        .. (waiting
+            or (sharedBy and ("shared by " .. sharedBy))
             -- Says where the control is. "tick TEAM" named a column heading
             -- that this view does not draw — the tick box here is the one at
             -- the start of the row, and the screen that HAS a TEAM heading is

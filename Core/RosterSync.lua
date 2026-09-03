@@ -244,6 +244,37 @@ function RosterSync.Announce()
     return true
 end
 
+-- THE ANSWER TO A REQUEST, WHICH IS NOT THE SAME AS A BROADCAST.
+--
+-- Announce above sends the empty set when there is nobody on the team, and it
+-- has to: an officer who has unmarked their last raider needs a way to say so.
+-- Answering somebody else's question is different. "I have nothing" is not an
+-- answer worth sending, and sending it was the bug.
+--
+-- What happened on Aimee's guild: an officer with the switch on and an empty
+-- local team -- empty because everything they could see was HER roster, and
+-- Own() deliberately does not include a received one -- answered every login
+-- in the guild with the empty set. Every client that had her roster lost it,
+-- over and over, and the screen did not even go blank: Audience.Default falls
+-- through to "guild" once nobody is marked, so the scope button silently
+-- moved to Guild and the list filled with all fifteen guildies. "Their entire
+-- raid team disappeared", from a client that was only being polite.
+--
+-- SharedRoster now refuses an empty set from anyone but the accepted source,
+-- which is the guard that matters. This is the other half: do not send it.
+-- Nothing to say, so say nothing.
+local function Answer()
+    if not IsSharing() or not CanSend() then
+        return false
+    end
+
+    if #RosterSync.Own() == 0 then
+        return false
+    end
+
+    return RosterSync.Announce()
+end
+
 -- Asked by a client that has just logged in. Answering is gated on sharing;
 -- asking is not, because the asker is the one with nothing.
 function RosterSync.Request()
@@ -264,12 +295,16 @@ end
 -- is above; everything about what a roster is is in SharedRoster. The guard on
 -- the sender stays here, because it is the transport that knows a message
 -- without one is not a message.
+--
+-- OFFERED, NOT WRITTEN, and the difference is the fix. Returns what became of
+-- it -- "applied", "pending" or "ignored" -- which is SharedRoster's decision
+-- to make and this file's only job to carry.
 function RosterSync.Commit(sender, members)
     if not sender then
-        return 0
+        return "ignored"
     end
 
-    return SYL.SharedRoster.Replace(sender, members or {})
+    return SYL.SharedRoster.Offer(sender, members or {})
 end
 
 local function Accumulate(sender, serialID, index, count, member)
@@ -315,8 +350,8 @@ end
 -- what happens *between* the messages of a set — a fragment must never reach
 -- the store — and that is unreachable through an event handler.
 --
--- Returns how many members were committed, or nil while the set is still
--- being assembled.
+-- Returns what became of the set — "applied", "pending" or "ignored" — or nil
+-- while it is still being assembled.
 function RosterSync.Receive(sender, payload)
     -- Our own broadcast comes back to us. The registry is the authority on
     -- what this client marked, so storing our own set would give us a shared
@@ -375,12 +410,25 @@ local function OnMessage(prefix, payload, _, sender)
 
         lastAnswerAt = now
 
-        RosterSync.Announce()
+        Answer()
 
         return
     end
 
-    if RosterSync.Receive(sender, payload) and SYL.RefreshMainWindow then
+    local outcome = RosterSync.Receive(sender, payload)
+
+    if outcome == "pending" then
+        -- The one thing this file does not decide. A roster from a name
+        -- nobody has agreed to is a question, and the question belongs on
+        -- screen rather than in the database.
+        if SYL.SharedRosterPrompt then
+            SYL.SharedRosterPrompt.Show()
+        end
+
+        return
+    end
+
+    if outcome == "applied" and SYL.RefreshMainWindow then
         SYL:RefreshMainWindow()
     end
 end
@@ -429,4 +477,81 @@ function RosterSync.OnOwnRosterChanged()
     end
 
     RosterSync.Announce()
+end
+
+--------------------------------------------------------------------------
+-- Pressing send
+--------------------------------------------------------------------------
+
+-- THE BUTTON, and the reason there is one.
+--
+-- Sharing was a switch and nothing else, labelled "Share your raid team with
+-- the guild". Read at speed by somebody who wants a roster rather than wants
+-- to give one, that is the switch you flip to GET the roster -- which is what
+-- Aimee's officer did, and it made them a broadcaster. A switch you can
+-- misread in the useful direction is a trap.
+--
+-- So sending is a thing you press, and it says what it did. The switch still
+-- exists and still means what it says: it keeps the guild up to date without
+-- you pressing anything. Somebody who has not turned it on can still send
+-- once, deliberately, which is the case the switch could never express.
+--
+-- Returns how many were sent, or nil and a reason. The reason is shown rather
+-- than swallowed: "nothing happened" and "you are not in a guild" look
+-- identical otherwise.
+function RosterSync.SendNow()
+    if not IsInGuild() then
+        return nil, "you are not in a guild"
+    end
+
+    if not CanSend() then
+        return nil, "this client cannot send addon messages right now"
+    end
+
+    local mine = RosterSync.Own()
+
+    if #mine == 0 then
+        return nil, "nobody is marked as being on the raid team yet"
+    end
+
+    serial = serial + 1
+
+    for index, member in ipairs(mine) do
+        Send(RosterSync.Encode(serial, index, #mine, member))
+    end
+
+    return #mine
+end
+
+-- ASKED AGAIN ONCE THE GUILD LIST IS ACTUALLY THERE.
+--
+-- Every arriving roster is dropped unless the sender is in the cached guild
+-- list -- rightly, see FromGuildMember above -- but the request goes out at
+-- PLAYER_LOGIN, before GUILD_ROSTER_UPDATE has filled that cache. An answer
+-- arriving in those first seconds was discarded in silence, the answer
+-- throttle then kept the sender quiet for twenty more, and nothing ever asked
+-- again. The roster simply never appeared, which is indistinguishable from
+-- nobody having shared one.
+--
+-- Called from the guild roster event, and only once, and only by a client
+-- that has nothing: somebody already holding a roster does not need to make
+-- the whole guild answer again.
+local asked = false
+
+function RosterSync.RequestWhenReady()
+    if asked or not IsInGuild() then
+        return false
+    end
+
+    if SYL.Guild.GetMemberCount() == 0 then
+        return false
+    end
+
+    asked = true
+
+    if SYL.SharedRoster.HasShared() or SYL.SharedRoster.PendingOffer() then
+        return false
+    end
+
+    return RosterSync.Request()
 end

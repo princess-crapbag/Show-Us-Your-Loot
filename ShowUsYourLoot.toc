@@ -90,6 +90,8 @@ Core\GuildCalendar.lua
 Core\ScheduleCommands.lua
 Core\AbsenceSync.lua
 Core\SharedRoster.lua
+Core\HistoryPayload.lua
+Core\HistorySync.lua
 Core\RosterSync.lua
 Core\KeystoneRequests.lua
 Core\KeystoneRequestSync.lua
@@ -122,6 +124,9 @@ UI\ArchivePopup.lua
 UI\SeasonRenameDialog.lua
 UI\NamePromptDialog.lua
 UI\ClearSeasonDialog.lua
+UI\SharedRosterPrompt.lua
+UI\HistoryPrompt.lua
+UI\ShareWindow.lua
 UI\FilterDropdown.lua
 UI\FilterBar.lua
 UI\SelectionBar.lua

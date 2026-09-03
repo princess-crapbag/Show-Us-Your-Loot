@@ -31,6 +31,15 @@ SYL.RaidersPanel = RaidersPanel
 local DETAIL_WIDTH = 250
 local GUTTER = 12
 
+-- The caption runs the full width of the list under the board, and stops
+-- short of the buttons under the roster. Named here because both views set
+-- it: the roster view narrows it to whatever LayOutButtons left, and the
+-- board has to put it back, or a caption sized for three buttons stays
+-- wrapped after switching away from the view that had them.
+local CAPTION_WIDTH = 868 - DETAIL_WIDTH - GUTTER
+
+RaidersPanel.CAPTION_WIDTH = CAPTION_WIDTH
+
 -- 868 usable inside the window, less the detail pane and the gutter. Every
 -- column width inside it is measured rather than declared here -- see
 -- UI/RaidersBoard.lua, which owns the layout, and UI/RaidersBoardRows.lua,
@@ -406,6 +415,11 @@ Refresh = function()
 
     DrawBoard(entries, scale)
 
+    -- Put back to full width. The roster view narrows this to make room for
+    -- its buttons, and a caption left narrow under the board wraps onto a
+    -- second line that the window has no room for.
+    frame.caption:SetWidth(CAPTION_WIDTH)
+
     -- "RAID AVERAGE 0.0 PER NIGHT" IS NOT AN AVERAGE, it is the absence of
     -- one, and it was printed as fact for the whole first stretch of a tier.
     -- With a rank floor set, nobody clears it until the guild's third or
@@ -613,7 +627,7 @@ function RaidersPanel.Create(parent)
 
     frame.caption = Theme.CreateText(frame, Theme.sizes.rowSmall, "textMuted")
     frame.caption:SetPoint("BOTTOMLEFT", 2, 2)
-    frame.caption:SetWidth(868 - DETAIL_WIDTH - GUTTER)
+    frame.caption:SetWidth(CAPTION_WIDTH)
     frame.caption:SetJustifyH("LEFT")
 
     frame:EnableMouseWheel(true)

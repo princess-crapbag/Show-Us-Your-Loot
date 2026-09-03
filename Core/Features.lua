@@ -114,12 +114,24 @@ Features.LIST = {
     {
         key = "rosterSharing",
         short = "Share roster",
-        label = "Share your raid team with the guild",
-        cost = "Sends who you have marked onto the raid team, and the roles "
-            .. "you gave them, to your whole guild. Off unless you turn it "
-            .. "on. A roster somebody else shares arrives whether this is on "
-            .. "or off — the switch is about sending — and anything you "
-            .. "receive can be cleared from the roster screen.",
+        label = "Keep the guild's copy of my raid team up to date",
+
+        -- REWORDED, AND THE OLD WORDING IS WHY. It read "Share your raid team
+        -- with the guild", which somebody who WANTS a roster reads as the
+        -- switch that gets them one. Aimee's officer turned it on for that
+        -- reason, became a second broadcaster, and their empty team wiped the
+        -- guild's. Every word here now points one way: this SENDS.
+        --
+        -- It no longer has to carry "you receive either way" either, because
+        -- receiving is now a thing you are asked about rather than a thing
+        -- that silently happens -- and there is a button for sending once,
+        -- which is what somebody reaching for this switch usually wanted.
+        cost = "YOU are the roster your guild sees. Sends who you have marked "
+            .. "onto the raid team, and the roles you gave them, to the whole "
+            .. "guild every time you change it. Off unless you turn it on. To "
+            .. "send once without this, press Send my roster on the Raiders "
+            .. "screen. To GET somebody else's roster you need nothing at "
+            .. "all: it arrives and asks you first.",
     },
     {
         key = "lockouts",

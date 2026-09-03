@@ -143,6 +143,13 @@ local function OnPlayerLogin()
     -- needs an answer, and whoever shares will send theirs.
     SYL.RosterSync.Request()
 
+    -- Also unconditional, and for a stronger reason than the roster's. A loot
+    -- history transfer is addressed to one person and only ever starts with
+    -- them pressing send and you saying yes -- so listening costs nothing and
+    -- a switch would only mean the officer who needs the data is the one who
+    -- cannot receive it. Core/HistorySync.lua sends nothing on its own.
+    SYL.HistorySync.Listen()
+
     if SYL.Features.IsEnabled("rosterSharing") then
         SYL.RosterSync.Announce()
     end
@@ -248,6 +255,15 @@ local function OnGuildRosterUpdate()
 
     -- The roster window builds from this, and caches what it built.
     SYL.RosterData.Invalidate()
+
+    -- ASKED FOR A SHARED ROSTER AGAIN, NOW THAT THE ANSWER CAN BE HEARD.
+    --
+    -- RosterSync drops anything from a sender who is not in the cached guild
+    -- list, and at PLAYER_LOGIN that list is empty -- so the request sent
+    -- there can be answered into a client that throws the answer away. This
+    -- is the first moment the cache exists. Guarded to run once, and only for
+    -- a client that has nothing; see RosterSync.RequestWhenReady.
+    SYL.RosterSync.RequestWhenReady()
 
     if promoted > 0 then
         SYL:Print(

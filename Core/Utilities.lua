@@ -30,6 +30,24 @@ function Utilities.GetPlayerFullName()
     return name
 end
 
+-- The name without the realm, for saying out loud.
+--
+-- A guild channel is all one realm or a connected one, so "Pringlesbop-
+-- Illidan" in a sentence is the same person as "Pringlesbop" with more to
+-- read. Realms stay on keys and on anything compared for identity; this is
+-- for prose and for buttons only.
+--
+-- Written here because three files were each doing the same match by hand --
+-- Core/RosterSync.lua, Core/HistorySync.lua and UI/SharedRosterPrompt.lua --
+-- and a fourth would have been the one that got it subtly different.
+function Utilities.ShortName(fullName)
+    if type(fullName) ~= "string" or fullName == "" then
+        return "Somebody"
+    end
+
+    return (fullName:match("^([^-]+)")) or fullName
+end
+
 -- Strips color codes and trailing punctuation from a name pulled out of a
 -- chat message, which is never guaranteed to be clean.
 function Utilities.NormalizePlayerName(name)

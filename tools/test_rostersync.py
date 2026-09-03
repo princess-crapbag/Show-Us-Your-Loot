@@ -243,16 +243,42 @@ check("under its own prefix", G.SentPrefix(1) == "SYLROST", G.SentPrefix(1))
 # The whole point of the asymmetry. A client that shares nothing still hears.
 SYL.Features.SetEnabled("rosterSharing", False)
 
-SYL.RosterSync.Receive(OFFICER, message(
+outcome = SYL.RosterSync.Receive(OFFICER, message(
     1, 1, 1, key=NASHRI, name="Nashri", inRaidTeam=True, raidRole="DPS",
 ))
 
-check("RECEIVING IS NOT GATED BY THE SWITCH",
-      "Nashri/DPS" in G.SharedNames(), G.SharedNames())
+# --- 5. A ROSTER FROM A NEW NAME WAITS TO BE ASKED ABOUT ------------------
+#
+# The bug this whole model exists for. Aimee and her officer both had the
+# sharing switch on, so both were broadcasting into one slot, and his nine
+# names -- two of them on nobody's team but his -- simply became her roster.
+# Core/SharedRoster.lua carries the account. Nothing lands unasked now.
+check("RECEIVING IS NOT GATED BY THE SWITCH, BUT IT IS NOT SILENT EITHER",
+      outcome == "pending", outcome)
+check("and nothing has reached the roster yet",
+      G.SharedNames() == "", G.SharedNames())
+
+offer = SYL.SharedRoster.PendingOffer()
+
+check("the offer says who it is from and what is in it",
+      offer is not None and offer.source == OFFICER
+      and len(offer.members) == 1,
+      offer and offer.source)
+
+landed, from_whom = SYL.SharedRoster.AcceptOffer()
+
+check("SAYING YES IS WHAT PUTS IT ON THE ROSTER",
+      landed == 1 and from_whom == OFFICER and "Nashri/DPS" in G.SharedNames(),
+      G.SharedNames())
+check("and nothing is left pending afterwards",
+      SYL.SharedRoster.PendingOffer() is None)
 
 source, _ = SYL.SharedRoster.Source()
 
 check("and the sender is recorded", source == OFFICER, source)
+check("who is now the accepted source",
+      SYL.SharedRoster.AcceptedFrom() == OFFICER,
+      SYL.SharedRoster.AcceptedFrom())
 
 # --- 3. nothing received reaches the player registry ----------------------
 #
@@ -366,14 +392,37 @@ after = G.SharedNames()
 check("a newer broadcast supersedes a half-assembled older one",
       after == "Nashri/DPS", after)
 
-# --- the empty set clears -------------------------------------------------
+# --- the empty set clears, but only from the source we accepted -----------
+#
+# THE MESSAGE THAT WIPED A GUILD. An officer whose own team is empty answers
+# every login request with the empty set -- a real message, meaning "I have
+# cleared my roster" -- and it used to land on every client that heard it.
+# Aimee's officer had an empty local team precisely BECAUSE everything they
+# could see was her shared roster, which Own() deliberately excludes. So the
+# guild's roster vanished, repeatedly, and the scope button quietly fell
+# through to Guild so the list refilled with all fifteen guildies rather than
+# going visibly blank.
+#
+# Two guards, and this is the one that matters most: an empty set from
+# somebody unaccepted is not an offer of anything, and is ignored outright.
+check("AN EMPTY SET FROM A STRANGER IS IGNORED",
+      SYL.RosterSync.Receive(OTHER, message(59, 0, 0)) == "ignored")
+check("and it does not touch the roster we are holding",
+      G.SharedNames() == "Nashri/DPS", G.SharedNames())
+check("nor does it leave a question on screen about nothing",
+      SYL.SharedRoster.PendingOffer() is None)
+
+# From the accepted source it is exactly what it says it is.
 SYL.RosterSync.Receive(OFFICER, message(60, 0, 0))
 
-check("AN EMPTY SET CLEARS THE SHARED ROSTER",
+check("AN EMPTY SET FROM THE ACCEPTED SOURCE CLEARS THE SHARED ROSTER",
       G.SharedNames() == "" and SYL.SharedRoster.HasShared() is False,
       G.SharedNames())
 check("and the local marks survive it",
       SYL.RaidTeam.IsMember(TALESTRA) is True)
+check("and they are still the accepted source afterwards",
+      SYL.SharedRoster.AcceptedFrom() == OFFICER,
+      SYL.SharedRoster.AcceptedFrom())
 
 # --- our own broadcast coming back ----------------------------------------
 check("we ignore our own broadcast",
@@ -383,19 +432,87 @@ check("we ignore our own broadcast",
 check("so nothing of ours arrives as somebody else's",
       SYL.SharedRoster.HasShared() is False, G.SharedNames())
 
-# --- a second broadcaster is visible, not silent --------------------------
+# --- a second broadcaster does NOT win --------------------------------
+#
+# This is the assertion that changed, and the old one is the bug written
+# down: "the newest complete set wins". It did, invisibly, and that is how
+# two people nobody had put on a team ended up on Aimee's board.
 SYL.RosterSync.Receive(OFFICER, message(
     80, 1, 1, key=SAEBIE, name="Saebie", inRaidTeam=True, raidRole="TANK",
 ))
-SYL.RosterSync.Receive(OTHER, message(
+
+check("the accepted source still updates without asking",
+      G.SharedNames() == "Saebie/TANK", G.SharedNames())
+
+outcome = SYL.RosterSync.Receive(OTHER, message(
     81, 1, 1, key=NASHRI, name="Nashri", inRaidTeam=True, raidRole="HEALER",
 ))
 
 source, _ = SYL.SharedRoster.Source()
 
-check("the newest complete set wins",
-      G.SharedNames() == "Nashri/HEALER", G.SharedNames())
-check("AND THE SCREEN CAN SAY WHO IT CAME FROM", source == OTHER, source)
+check("A SECOND BROADCASTER CANNOT REPLACE IT INVISIBLY",
+      outcome == "pending" and G.SharedNames() == "Saebie/TANK",
+      G.SharedNames())
+check("AND THE SCREEN STILL SAYS WHO THE ROSTER CAME FROM",
+      source == OFFICER, source)
+
+# Saying no is remembered, or the same box arrives at every login of every
+# person in the guild -- which teaches somebody to click through it unread.
+declined = SYL.SharedRoster.DeclineOffer()
+
+check("declining names who was declined", declined == OTHER, declined)
+check("and they are not asked about again",
+      SYL.RosterSync.Receive(OTHER, message(
+          82, 1, 1, key=NASHRI, name="Nashri", inRaidTeam=True,
+      )) == "ignored")
+check("while the roster on screen is untouched by any of it",
+      G.SharedNames() == "Saebie/TANK", G.SharedNames())
+
+# --- sending on purpose ---------------------------------------------------
+#
+# The button. The switch was the only way to share and reads like the way to
+# receive, which is how Aimee's officer became a broadcaster by accident.
+SYL.Features.SetEnabled("rosterSharing", False)
+G.ClearSent()
+SYL.SendQueue.Reset()
+
+sent = SYL.RosterSync.SendNow()
+flush()
+
+check("SEND WORKS WITH THE SWITCH OFF, because pressing it IS the asking",
+      sent == 2 and G.SentCount() == 2, (sent, G.SentCount()))
+
+# An empty team has nothing to send and says so, rather than broadcasting the
+# empty set at the guild.
+for key in (TALESTRA, SAEBIE, NASHRI):
+    SYL.RaidTeam.SetMember(key, False)
+    SYL.RaidTeam.SetRole(key, None)
+
+G.ClearSent()
+SYL.SendQueue.Reset()
+
+sent, reason = SYL.RosterSync.SendNow()
+flush()
+
+check("AN EMPTY TEAM SENDS NOTHING AND SAYS WHY",
+      sent is None and G.SentCount() == 0 and "nobody" in reason,
+      (sent, reason, G.SentCount()))
+
+# Announce is still allowed to send the empty set: an officer who unmarked
+# their last raider has to be able to say so to the people who accepted them.
+# It is ANSWERING a request with one that was the bug.
+SYL.Features.SetEnabled("rosterSharing", True)
+G.ClearSent()
+SYL.SendQueue.Reset()
+
+SYL.RosterSync.Announce()
+flush()
+
+check("but a deliberate announce still carries the empty set",
+      G.SentCount() == 1, G.SentCount())
+
+SYL.RaidTeam.SetMember(TALESTRA, True)
+SYL.RaidTeam.SetRole(TALESTRA, "HEALER")
 
 # --- clearing -------------------------------------------------------------
 SYL.SharedRoster.Clear()
@@ -438,6 +555,55 @@ for screen, label in (("RaidersRoster", "the Raiders tab"),
     check("a change made from " + label + " is announced",
           "RosterSync.OnOwnRosterChanged" in source,
           "UI/" + screen + ".lua changes the roster and tells nobody")
+
+
+# --- 6. what the prompt actually says -------------------------------------
+#
+# Frame-free on purpose. UI/ClearSeasonDialog.lua's header says why: a dialog
+# that cannot be driven from a test is a dialog that ships doing nothing, and
+# that has happened in this addon before.
+Prompt = SYL.SharedRosterPrompt
+THIRD = "Kotastrophe-Area52"
+
+SYL.RosterSync.Receive(THIRD, message(
+    91, 1, 2, key=SAEBIE, name="Saebie", inRaidTeam=True, raidRole="TANK",
+))
+SYL.RosterSync.Receive(THIRD, message(
+    91, 2, 2, key=NASHRI, name="Nashri", inRaidTeam=True, raidRole="HEALER",
+))
+
+pending = SYL.SharedRoster.PendingOffer()
+
+check("an offer from a third name is waiting to be described",
+      pending is not None and pending.source == THIRD,
+      pending and pending.source)
+
+check("THE TITLE NAMES WHO SENT IT, without the realm",
+      Prompt.Title(pending) == "Kotastrophe sent you a raid team",
+      Prompt.Title(pending))
+
+body = Prompt.Describe(pending)
+
+check("the body says how many people and that nothing has happened yet",
+      "2 people" in body and "Nothing has changed yet" in body, body[:90])
+
+names = Prompt.Names(pending)
+
+check("the names are listed, sorted, with their roles",
+      len(names) == 2 and names[1].name == "Nashri"
+      and names[1].role == "HEALER",
+      [(names[i].name, names[i].role) for i in range(1, len(names) + 1)])
+
+accepted = Prompt.Accept()
+
+check("ACCEPTING THROUGH THE PROMPT IS WHAT LANDS IT",
+      accepted is True
+      and G.SharedNames() == "Nashri/HEALER Saebie/TANK",
+      G.SharedNames())
+
+check("and that name is the accepted source afterwards",
+      SYL.SharedRoster.AcceptedFrom() == THIRD,
+      SYL.SharedRoster.AcceptedFrom())
 
 print()
 print("FAILURES:", failures or "none")

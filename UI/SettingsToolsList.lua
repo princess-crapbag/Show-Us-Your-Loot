@@ -116,6 +116,16 @@ SettingsToolsList.GROUPS = {
                 note = "A copyable raid night or season summary to paste "
                     .. "into Discord.",
             },
+            {
+                -- BESIDE EXPORT, because they are the same wish -- get this
+                -- data to another person -- answered two different ways.
+                -- Export is for a human to read in Discord; this one lands
+                -- in another officer's addon, scored the same as yours.
+                label = "Send loot history",
+                run = Dialog("ShareWindow"),
+                note = "Gives this season's drops, and the credit you set "
+                    .. "by hand, to one officer. They are asked first.",
+            },
         },
     },
 

@@ -3,9 +3,29 @@
 What changed, for the person installing it. The commit history explains why;
 this says what you will notice.
 
-## 0.4.3 — 2026-09-02
+## 0.4.3 — 2026-09-03
 
 ### Added
+
+- **Send my roster.** A button on the Raiders → Raid team screen, next to
+  Clear shared, that sends your raid team to the guild once. It works whether
+  or not the sharing switch is on, because pressing it *is* the asking, and it
+  says afterwards where the switch lives if you want the guild kept up to date
+  automatically.
+
+- **Send loot history.** New on Settings → Tools, beside Export for Discord.
+  Gives one officer this season's drops — who won each item, who rolled, and
+  the credit corrections you set by hand — so their Raiders board scores the
+  same items the same way yours does. An officer who installed the addon
+  mid-tier had no way to get the weeks before they arrived, and their board
+  showed a dash for nearly everyone on it.
+
+  It goes to one person, never the guild, and they are asked first: they see
+  how many drops, from which season, and how long it will take before anything
+  arrives. A season of 130 drops is about four minutes of trickle, with a
+  progress bar and a Stop. Anything they already recorded is kept — where you
+  both hold the same drop, theirs keeps its own roll list and takes your credit
+  mark, because that is the part somebody typed rather than watched.
 
 - **Archived raiders.** Taking somebody off the raid team takes them off the
   Raiders board, which is what the board is for — but it used to take their
@@ -40,6 +60,41 @@ this says what you will notice.
 
 ### Fixed
 
+- **A shared raid team could replace yours without asking.** A roster
+  broadcast over the guild channel used to become yours on the spot, with
+  nothing but a caption underneath naming who sent it. That works while
+  exactly one person in the guild is sharing. The moment a second person turns
+  the switch on, two rosters compete for one slot and the newest one wins
+  silently — so an officer who ticked two names onto their own list put those
+  two names on everybody else's board.
+
+  A roster from a name you have not agreed to now waits and asks, showing the
+  names and roles in it so you can tell at a glance whether it is the list you
+  want. Say yes once and that person's later changes arrive quietly; say no and
+  they are not asked about again. Nobody else can replace what you accepted or
+  empty it. **Clear shared** still removes it, and now also forgets the
+  agreement, so the next offer asks again rather than putting it straight back.
+
+- **An officer with nobody ticked could wipe the guild's roster, repeatedly.**
+  Every client asks the guild for a roster at login, and everyone sharing
+  answers. Somebody sharing with an empty raid team answered with an empty
+  roster — a real message, meaning *"I have cleared my team"* — and every
+  client obeyed it. Their own team was empty precisely because everything they
+  could see belonged to somebody else's shared roster, which is deliberately
+  not rebroadcast. The list did not even go visibly blank: with nobody marked,
+  the scope button quietly fell through to Guild and filled with everyone in
+  the guild instead.
+
+  Nothing is sent now when there is nothing to say, and an empty roster is only
+  obeyed from the person whose roster you accepted.
+
+- **A shared roster could go missing for good at login.** The addon asks the
+  guild for a roster the moment you log in, but only accepts an answer from
+  somebody it can see in the guild list — which has not loaded yet at the
+  moment the question goes out. An answer arriving in those first seconds was
+  thrown away in silence, the sender stayed quiet for twenty more, and nothing
+  ever asked again. It asks a second time now, once the guild list is there.
+
 - **A raider who left the guild could not be taken off the raid team.** Team
   membership is remembered per account, so it survives a season being archived
   — but the roster was built from your live guild list alone. The moment
@@ -52,6 +107,13 @@ this says what you will notice.
   they move to Archived, where their season is kept.
 
 ### Changed
+
+- **The roster sharing switch is worded so it cannot be read backwards.** It
+  said *"Share your raid team with the guild"*, which somebody who wants a
+  roster reads as the switch that gets them one — and turning it on for that
+  reason is what caused the trouble above. It now says **"Keep the guild's copy
+  of my raid team up to date"**, and says plainly that you need nothing at all
+  switched on to receive somebody else's.
 
 - **The minimap button's right-click menu is gone.** Every command in it is a
   button on Settings → Tools, which is where they have been since 0.4.1, and
