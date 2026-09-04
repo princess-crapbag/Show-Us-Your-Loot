@@ -143,10 +143,16 @@ function SharedRosterPrompt.Accept()
         return false
     end
 
+    -- Tells them, which is the whole of the answer to "how do I know if
+    -- the other people received my roster?". One whisper, once, naming how
+    -- many we actually took -- see Core/RosterReceipts.lua.
+    SYL.RosterSync.ConfirmUse(source, count)
+
     SYL:Print(
         "Using " .. SharedRosterPrompt.ShortName(source) .. "'s raid team of "
         .. count .. ". Anyone you marked yourself is untouched, and you can "
-        .. "clear it from the roster screen."
+        .. "clear it from the roster screen. "
+        .. SharedRosterPrompt.ShortName(source) .. " has been told."
     )
 
     if SYL.RefreshMainWindow then

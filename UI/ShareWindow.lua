@@ -35,7 +35,20 @@ local ShareWindow = {}
 SYL.ShareWindow = ShareWindow
 
 local WINDOW_WIDTH = 460
-local WINDOW_HEIGHT = 372
+-- MEASURED, NOT CHOSEN. The body is seven wrapped lines in its longest
+-- state -- idle, which carries all three paragraphs including the one about
+-- closing the window -- at 15 pixels a line from a 420-wide column. The
+-- blocks below are anchored off that rather than off numbers that happened to
+-- look right, because the sentence Aimee asked for is two lines long and
+-- would have pushed WHAT GOES straight through the season name.
+local BODY_TOP = 60
+local BODY_HEIGHT = 7 * 15
+local FACTS_TOP = BODY_TOP + BODY_HEIGHT + 22
+local FACTS_HEIGHT = 4 * 15
+local TARGET_TOP = FACTS_TOP + 18 + FACTS_HEIGHT + 14
+local BAR_TOP = TARGET_TOP + 18 + 20 + 30
+
+local WINDOW_HEIGHT = BAR_TOP + 14 + 60
 local PAD = 20
 local CONTENT = WINDOW_WIDTH - PAD * 2
 
@@ -98,12 +111,42 @@ end
 -- What it says
 --------------------------------------------------------------------------
 
+-- TWO STATES, and the sentence Aimee asked for by name is in both.
+--
+-- Four minutes is long enough that somebody watching a bar will wonder
+-- whether they are stuck holding this window open, and the honest answer --
+-- no, go and play -- is not a thing anybody should have to discover by
+-- risking it. A window that LOOKS like it must stay open is one people sit in
+-- front of; and the person who closes it anyway is then not sure whether they
+-- broke the transfer. Neither of them should have to guess.
+--
+-- Said on the idle screen too, before the press, so it is read once when
+-- nothing is happening rather than only while something is.
+ShareWindow.KEEP_PLAYING =
+    "Once the bar starts moving you can close this window and keep playing "
+    .. "-- it keeps going. Stop cancels it."
+
 function ShareWindow.Describe()
+    if SYL.HistorySync.IsSending() then
+        local sent = SYL.HistorySync.Progress()
+
+        if sent > 0 then
+            return "Going out now, four messages a second -- the pace the "
+                .. "client allows without throwing them away.\n\n"
+                .. ShareWindow.KEEP_PLAYING
+        end
+
+        return "Waiting for them to answer. Nothing is sent until they say "
+            .. "yes, and they are free to say no.\n\n"
+            .. ShareWindow.KEEP_PLAYING
+    end
+
     return "Sends this season's drops to one person, with the credit you set "
         .. "by hand on them. Their board then scores the same items the same "
         .. "way yours does.\n\n"
         .. "It goes to them and to nobody else, and they are asked before "
-        .. "any of it arrives."
+        .. "any of it arrives.\n\n"
+        .. ShareWindow.KEEP_PLAYING
 end
 
 -- Three lines, and every number in them counted rather than guessed.
@@ -182,6 +225,11 @@ local function UpdateProgress()
     stopButton:Show()
     barFill:Show()
 
+    -- Redrawn here rather than only on open: the window is usually
+    -- already open when the answer lands, and the sentence that
+    -- matters is the one for the state it is actually in.
+    bodyText:SetText(ShareWindow.Describe())
+
     local fraction = math.min(1, sent / total)
 
     -- A zero-width texture is an error in the client, so the bar starts at one
@@ -251,25 +299,25 @@ local function CreateWindow()
     separator:SetPoint("TOPRIGHT", -16, -48)
 
     bodyText = Theme.CreateText(frame, Theme.sizes.rowSmall, "textSecondary")
-    bodyText:SetPoint("TOPLEFT", PAD, -60)
+    bodyText:SetPoint("TOPLEFT", PAD, -BODY_TOP)
     bodyText:SetWidth(CONTENT)
     bodyText:SetJustifyH("LEFT")
     bodyText:SetWordWrap(true)
 
     local goesHeading =
         Theme.CreateText(frame, Theme.sizes.columnHeader, "textMuted")
-    goesHeading:SetPoint("TOPLEFT", PAD, -136)
+    goesHeading:SetPoint("TOPLEFT", PAD, -FACTS_TOP)
     goesHeading:SetText("WHAT GOES")
 
     factsText = Theme.CreateText(frame, Theme.sizes.rowSmall, "textSecondary")
-    factsText:SetPoint("TOPLEFT", PAD, -154)
+    factsText:SetPoint("TOPLEFT", PAD, -(FACTS_TOP + 18))
     factsText:SetWidth(CONTENT)
     factsText:SetJustifyH("LEFT")
     factsText:SetWordWrap(true)
 
     local toHeading =
         Theme.CreateText(frame, Theme.sizes.columnHeader, "textMuted")
-    toHeading:SetPoint("TOPLEFT", PAD, -226)
+    toHeading:SetPoint("TOPLEFT", PAD, -TARGET_TOP)
     toHeading:SetText("SEND TO")
 
     targetButton = Theme.CreateButton(frame, 200, 20, "-", function()
@@ -278,12 +326,12 @@ local function CreateWindow()
         ShareWindow.Refresh()
     end)
 
-    targetButton:SetPoint("TOPLEFT", PAD, -242)
+    targetButton:SetPoint("TOPLEFT", PAD, -(TARGET_TOP + 16))
 
     targetNote = Theme.CreateText(frame, Theme.sizes.columnHeader, "textMuted")
-    targetNote:SetPoint("TOPLEFT", PAD, -268)
+    targetNote:SetPoint("TOPLEFT", PAD, -(TARGET_TOP + 42))
 
-    CreateBar(frame, -292)
+    CreateBar(frame, -BAR_TOP)
 
     local footer = Theme.CreateSeparator(frame)
     footer:SetPoint("BOTTOMLEFT", 16, 42)

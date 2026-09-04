@@ -95,8 +95,20 @@ STRIP = [
     ("Kotastrophe", "PALADIN", "--", "2 of 3", "Alt", False),
 ]
 
-CAPTION = ("15 people on the roster  ·  7 marked as raiding  ·  "
-           "shared by " + SHARER)
+CAPTION = ("15 people on the roster  ·  11 marked as raiding  ·  "
+           "used by 3 people")
+
+# The hover on Send my roster. The caption can only carry a number, and the
+# number is the thing Aimee would quote in Discord -- so the names, and each
+# person's own count, are one hover away. A count that disagrees with ours is
+# not hidden: it means they are looking at an older roster than this screen.
+TOOLTIP = [
+    ("Send my roster", None),
+    ("Using your roster:", None),
+    ("Nychar - 11", None),
+    ("Pringlesbop - 9", "(yours has 11 now)"),
+    ("Saebie - 11", None),
+]
 
 SEND = "Send my roster"
 CLEAR = "Clear shared"
@@ -197,11 +209,39 @@ def draw_strip(c):
 
     y += 34
 
-    c.text(2, y, "And what the sender is told, in chat:", 11, TEXT_3)
+    # THE HOVER, drawn where it appears: over the button it belongs to.
+    tip_w = 210
+    tip_x = PANEL_W - 2 - tip_w
+    tip_h = 14 + len(TOOLTIP) * 15
+
+    c.rect(tip_x, y, tip_w, tip_h, WINDOW)
+    c.rect(tip_x, y, tip_w, 1, SEP)
+    c.rect(tip_x, y + tip_h - 1, tip_w, 1, SEP)
+
+    ty = y + 7
+
+    for index, (text, note) in enumerate(TOOLTIP):
+        color = TEXT_1 if index == 0 else TEXT_2
+        c.text(tip_x + 8, ty, text, 11, color)
+
+        if note:
+            c.right(tip_x + tip_w - 8, ty, note, 10, TEXT_3)
+
+        check("tooltip line", measure(text, 11)
+              + (measure(note, 10) + 10 if note else 0), tip_w - 16)
+
+        ty += 15
+
+    c.text(2, y + 4, "hovering Send my roster:", 11, TEXT_3)
+
+    y += tip_h + 22
+
+    c.text(2, y, "And what arrives in chat the moment somebody accepts:",
+           11, TEXT_3)
     y += 18
     c.text(2, y, "Show Us Your Loot:", 11, ACCENT)
     c.text(2 + measure("Show Us Your Loot: ", 11), y,
-           "Sent your raid team of 7 to the guild.", 11, TEXT_2)
+           "Nychar is using your raid team (11 raiders).", 11, TEXT_2)
 
     return y + 20
 

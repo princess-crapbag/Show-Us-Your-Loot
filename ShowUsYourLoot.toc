@@ -90,6 +90,7 @@ Core\GuildCalendar.lua
 Core\ScheduleCommands.lua
 Core\AbsenceSync.lua
 Core\SharedRoster.lua
+Core\RosterReceipts.lua
 Core\HistoryPayload.lua
 Core\HistorySync.lua
 Core\RosterSync.lua

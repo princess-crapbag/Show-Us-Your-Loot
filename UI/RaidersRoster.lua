@@ -240,7 +240,11 @@ local function SharedControl(frame, onChanged)
 
     sharedClear =
         Theme.CreateButton(frame, 104, 18, "Clear shared", function()
-            SYL.SharedRoster.Clear()
+            -- Goes through RosterSync rather than straight to the store, so
+            -- the person whose roster this was stops being told that we are
+            -- using it. Clear takes the accepted source with it, so reading
+            -- it afterwards is too late -- see RosterSync.StopUsing.
+            SYL.RosterSync.StopUsing()
 
             -- Says what it did *not* touch. Clearing a list of ticks that
             -- includes your own would be the obvious fear, and the answer is
@@ -301,6 +305,23 @@ local function SendControl(frame)
 
             SYL:Print(message)
         end)
+
+    -- WHO HAS IT, on hover. The caption below can only carry a number, and
+    -- the number is the thing somebody will quote -- so the names, and each
+    -- person's own count, are one hover away. A count of theirs that differs
+    -- from ours is not a discrepancy to hide: it means they are looking at an
+    -- older roster than the one on this screen, which is worth knowing.
+    SYL.Tooltips.Attach(sharedSend, "Send my roster", function()
+        local lines = SYL.RosterReceipts.DescribeEach()
+
+        if #lines == 0 then
+            return "Sends your raid team to the guild once. Nobody has "
+                .. "confirmed using it yet — they are asked before it lands, "
+                .. "and their answer shows up here."
+        end
+
+        return "Using your roster:\n" .. table.concat(lines, "\n")
+    end)
 
     return sharedSend
 end
@@ -478,6 +499,10 @@ function RaidersRoster.Refresh(ctx)
         .. SYL.RaidTeam.Count() .. " marked as raiding · "
         .. (waiting
             or (sharedBy and ("shared by " .. sharedBy))
+            -- Only when somebody has actually confirmed. "used by 0 people"
+            -- on a client that has never sent anything reads as a failure
+            -- report rather than as an absence of news.
+            or SYL.RosterReceipts.Describe()
             -- Says where the control is. "tick TEAM" named a column heading
             -- that this view does not draw — the tick box here is the one at
             -- the start of the row, and the screen that HAS a TEAM heading is

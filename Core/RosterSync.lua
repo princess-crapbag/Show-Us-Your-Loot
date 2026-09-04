@@ -54,6 +54,21 @@ local VERSION = "1"
 
 local REQUEST = "?"
 
+-- THE RECEIPT, and the reason a roster broadcast now gets an answer at all.
+--
+-- Aimee: "how do i know if the other people received my roster?" She could
+-- not. Send printed that the messages had left this client and nothing ever
+-- came back, so a roster that never arrived and one that landed on nine
+-- screens looked identical from the sender's side. Core/RosterReceipts.lua
+-- carries the full argument.
+--
+-- Two characters, and a client sends one of each in its life per source: when
+-- it starts using somebody's roster, and when it stops. Never per broadcast --
+-- that would turn one officer ticking a box into a whisper from every guildie
+-- who runs the addon, every time.
+local USING = "+"
+local STOPPED = "-"
+
 local frame
 local listening = false
 
@@ -234,6 +249,11 @@ function RosterSync.Announce()
     if #mine == 0 then
         Send(RosterSync.Encode(serial, 0, 0, nil))
 
+        -- Nobody can be using a roster that no longer exists, and the other
+        -- clients have nothing new to report -- they will drop it silently.
+        -- Left standing, the count would be a number about nothing.
+        SYL.RosterReceipts.Clear()
+
         return true
     end
 
@@ -285,6 +305,44 @@ function RosterSync.Request()
     Send(REQUEST)
 
     return true
+end
+
+--------------------------------------------------------------------------
+-- Telling somebody you are using theirs
+--------------------------------------------------------------------------
+
+-- Whispered rather than broadcast: it is one person's answer to one person,
+-- and it names a choice about somebody else's roster. Queued like everything
+-- else so a login's worth of these cannot burst.
+local function Confirm(target, kind, count)
+    if not target or target == Author() or not CanSend() then
+        return false
+    end
+
+    return SYL.SendQueue.Queue(
+        PREFIX, kind .. tostring(count or 0), "WHISPER", target, CanSend
+    )
+end
+
+-- Called when this client accepts somebody's roster. The count is what WE
+-- took, not what they think they sent, so a disagreement between the two is
+-- visible on their screen rather than averaged away.
+function RosterSync.ConfirmUse(source, count)
+    return Confirm(source, USING, count)
+end
+
+-- The undo, and the reason the sender's number does not just climb forever.
+-- Reads the accepted source BEFORE clearing, because Clear takes it with it.
+function RosterSync.StopUsing()
+    local source = SYL.SharedRoster.AcceptedFrom()
+
+    SYL.SharedRoster.Clear()
+
+    if source then
+        Confirm(source, STOPPED)
+    end
+
+    return source
 end
 
 --------------------------------------------------------------------------
@@ -415,6 +473,18 @@ local function OnMessage(prefix, payload, _, sender)
         return
     end
 
+    -- A receipt: somebody saying they have started or stopped using ours.
+    -- Handled before Decode, which would read either as a malformed roster
+    -- and answer nil -- correct, and silent, which is the whole problem this
+    -- pair of messages exists to end.
+    local kind, count = payload:match("^([%+%-])(%d*)$")
+
+    if kind then
+        RosterSync.ReceiveReceipt(sender, kind, tonumber(count))
+
+        return
+    end
+
     local outcome = RosterSync.Receive(sender, payload)
 
     if outcome == "pending" then
@@ -431,6 +501,46 @@ local function OnMessage(prefix, payload, _, sender)
     if outcome == "applied" and SYL.RefreshMainWindow then
         SYL:RefreshMainWindow()
     end
+end
+
+-- Somebody has told us what they did with our roster. Exported for the same
+-- reason Receive is: the interesting behavior is what the sender's screen
+-- says afterwards, and that is unreachable through an event handler.
+--
+-- Printed as well as recorded. The count on the roster screen is what you
+-- look at later; the line in chat is what tells you the press you just made
+-- actually reached somebody, which is the question that started this.
+function RosterSync.ReceiveReceipt(sender, kind, count)
+    if not sender or sender == Author() then
+        return false
+    end
+
+    local who = SYL.Utilities.ShortName(sender)
+
+    if kind == "+" then
+        SYL.RosterReceipts.Record(sender, count)
+
+        SYL:Print(
+            who .. " is using your raid team ("
+            .. SYL.Utilities.Count(count or 0, "raider") .. ")."
+        )
+    elseif kind == "-" then
+        if not SYL.RosterReceipts.Get(sender) then
+            return false
+        end
+
+        SYL.RosterReceipts.Remove(sender)
+
+        SYL:Print(who .. " has stopped using your raid team.")
+    else
+        return false
+    end
+
+    if SYL.RefreshMainWindow then
+        SYL:RefreshMainWindow()
+    end
+
+    return true
 end
 
 --------------------------------------------------------------------------

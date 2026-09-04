@@ -7,6 +7,20 @@ this says what you will notice.
 
 ### Added
 
+- **You can see who actually took your roster.** Pressing Send used to print
+  that it had gone and nothing ever came back, so a roster that landed on nine
+  screens and one that landed on none looked exactly the same from your side —
+  which is how a broken share ran for a whole raid week without anyone
+  noticing. When somebody accepts, their client tells yours: a line in chat
+  (*"Nychar is using your raid team (11 raiders)"*), a count under the roster
+  list (*"used by 3 people"*), and the names on hovering **Send my roster**.
+
+  Each person's own count is shown beside their name, so somebody sitting on
+  an older roster than the one on your screen is visible rather than averaged
+  away. They speak up twice and only twice — when they start using it and when
+  they clear it — so the count can go down as well as up, and one officer
+  ticking a box does not produce a whisper from every guildie in range.
+
 - **Send my roster.** A button on the Raiders → Raid team screen, next to
   Clear shared, that sends your raid team to the guild once. It works whether
   or not the sharing switch is on, because pressing it *is* the asking, and it
@@ -65,6 +79,11 @@ this says what you will notice.
   ever asked again. It asks a second time now, once the guild list is there.
 
 ### Changed
+
+- **The loot history window says you can walk away from it.** Four minutes is
+  long enough to wonder whether you are stuck holding the window open. It now
+  says, before the press and while it runs: *once the bar starts moving you can
+  close this window and keep playing — it keeps going. Stop cancels it.*
 
 - **The roster sharing switch is worded so it cannot be read backwards.** It
   said *"Share your raid team with the guild"*, which somebody who wants a

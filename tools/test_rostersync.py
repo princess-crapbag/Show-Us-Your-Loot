@@ -79,15 +79,21 @@ lua.execute(
 
     SENT = {}
 
-    C_ChatInfo.SendAddonMessage = function(prefix, payload, channel)
+    -- The target is captured too, which it was not: the roster broadcast has
+    -- no target, but a receipt is whispered to one person and "did it reach
+    -- the right person" is the whole of what it guarantees.
+    C_ChatInfo.SendAddonMessage = function(prefix, payload, channel, target)
         table.insert(SENT, {
-            prefix = prefix, payload = payload, channel = channel,
+            prefix = prefix, payload = payload,
+            channel = channel, target = target,
         })
     end
 
     function ClearSent() SENT = {} end
     function SentCount() return #SENT end
     function SentChannel(i) return SENT[i] and SENT[i].channel end
+    function SentPayload(i) return SENT[i] and SENT[i].payload end
+    function SentTarget(i) return SENT[i] and SENT[i].target end
     function SentPrefix(i) return SENT[i] and SENT[i].prefix end
 
     -- The shared roster as a sorted string, so an assertion can name exactly
@@ -537,9 +543,15 @@ check("and the person who was only shared is gone",
 roster_screen = (Path(__file__).resolve().parent.parent
                  / "UI" / "RaidersRoster.lua").read_text(encoding="utf-8")
 
+# Routed through RosterSync.StopUsing rather than straight to the store, so
+# the person whose roster it was stops being told we are using it -- Clear
+# takes the accepted source with it, so reading it afterwards is too late.
 check("THE ROSTER SCREEN CAN CLEAR A ROSTER IT DID NOT MAKE",
-      "SharedRoster.Clear" in roster_screen,
+      "RosterSync.StopUsing" in roster_screen,
       "UI/RaidersRoster.lua shows a shared roster with no way to dismiss it")
+check("AND SENDING MY ROSTER IS ON THE SAME SCREEN",
+      "RosterSync.SendNow" in roster_screen,
+      "the only way to share is a switch three screens away")
 check("and says on screen where it came from",
       "shared by " in roster_screen,
       "nothing tells the reader these ticks are somebody else's")
@@ -604,6 +616,126 @@ check("ACCEPTING THROUGH THE PROMPT IS WHAT LANDS IT",
 check("and that name is the accepted source afterwards",
       SYL.SharedRoster.AcceptedFrom() == THIRD,
       SYL.SharedRoster.AcceptedFrom())
+
+
+# --- 7. the receipt -------------------------------------------------------
+#
+# Aimee: "how do i know if the other people received my roster?" She could
+# not. Send said the messages had left this client and nothing ever came
+# back, so a roster that landed on nine screens and one that landed on none
+# looked identical from her side -- which is exactly how a broken share ran
+# for a raid week. Core/RosterReceipts.lua carries the argument.
+SYL.RosterReceipts.Clear()
+G.ClearSent()
+SYL.SendQueue.Reset()
+
+check("nothing is claimed before anybody has confirmed",
+      SYL.RosterReceipts.Count() == 0
+      and SYL.RosterReceipts.Describe() is None,
+      SYL.RosterReceipts.Describe())
+
+# Accepting somebody's roster tells them so, and the press is what does it --
+# not a separate step somebody has to know about.
+FOURTH = "Nychar-Area52"
+
+SYL.RosterSync.Receive(FOURTH, message(
+    95, 1, 1, key=SAEBIE, name="Saebie", inRaidTeam=True, raidRole="TANK",
+))
+
+G.ClearSent()
+SYL.SendQueue.Reset()
+
+SYL.SharedRosterPrompt.Accept()
+flush()
+
+check("ACCEPTING THROUGH THE PROMPT IS WHAT WHISPERS BACK",
+      G.SentCount() == 1 and G.SentTarget(1) == FOURTH
+      and G.SentPayload(1) == "+1",
+      (G.SentCount(), G.SentTarget(1), G.SentPayload(1)))
+
+# And clearing tells them we have stopped, or their count only ever climbs.
+G.ClearSent()
+SYL.SendQueue.Reset()
+
+SYL.RosterSync.StopUsing()
+flush()
+
+check("AND CLEARING TELLS THEM WE HAVE STOPPED",
+      G.SentCount() == 1 and G.SentTarget(1) == FOURTH
+      and G.SentPayload(1) == "-0",
+      (G.SentCount(), G.SentTarget(1), G.SentPayload(1)))
+
+G.ClearSent()
+SYL.SendQueue.Reset()
+
+SYL.RosterSync.ConfirmUse(OFFICER, 11)
+flush()
+
+check("the confirmation is a whisper, to that one person",
+      G.SentCount() == 1 and G.SentChannel(1) == "WHISPER",
+      (G.SentCount(), G.SentChannel(1)))
+check("and it carries how many we actually took",
+      G.SentPayload(1) == "+11", G.SentPayload(1))
+
+# The other side of the same wire.
+SYL.RosterSync.ReceiveReceipt(OFFICER, "+", 11)
+
+check("A CONFIRMATION IS RECORDED, so the sender can look later",
+      SYL.RosterReceipts.Count() == 1
+      and SYL.RosterReceipts.Get(OFFICER).count == 11,
+      SYL.RosterReceipts.Count())
+check("and the roster screen has words for it",
+      SYL.RosterReceipts.Describe() == "used by 1 person",
+      SYL.RosterReceipts.Describe())
+
+SYL.RosterSync.ReceiveReceipt(OTHER, "+", 9)
+
+check("two people using it is two people",
+      SYL.RosterReceipts.Describe() == "used by 2 people",
+      SYL.RosterReceipts.Describe())
+
+listed = SYL.RosterReceipts.DescribeEach()
+
+check("THE NAMES ARE AVAILABLE, not just the number",
+      len(listed) == 2, [listed[i] for i in range(1, len(listed) + 1)])
+check("and a count of theirs that disagrees with ours says so",
+      any("yours has" in listed[i] for i in range(1, len(listed) + 1)),
+      [listed[i] for i in range(1, len(listed) + 1)])
+
+# The number has to be able to go down, or it becomes a claim about people
+# who stopped using it a month ago.
+SYL.RosterSync.ReceiveReceipt(OTHER, "-")
+
+check("STOPPING IS REPORTED TOO, so the count cannot only climb",
+      SYL.RosterReceipts.Count() == 1
+      and SYL.RosterReceipts.Get(OTHER) is None,
+      SYL.RosterReceipts.Count())
+
+check("a stop from somebody who never confirmed changes nothing",
+      SYL.RosterSync.ReceiveReceipt("Nobody-Area52", "-") is False
+      and SYL.RosterReceipts.Count() == 1)
+check("and our own receipt coming back is ignored",
+      SYL.RosterSync.ReceiveReceipt(AIMEE, "+", 4) is False,
+      SYL.RosterReceipts.Count())
+
+# A receipt must never be mistaken for a roster, or the reply to a broadcast
+# would decode as a malformed one and be dropped in silence -- which is the
+# failure this whole pair of messages exists to end.
+check("A RECEIPT IS NOT PARSED AS A ROSTER",
+      SYL.RosterSync.Decode("+11") is None
+      and SYL.RosterSync.Decode("-") is None)
+
+# Unmarking your last raider makes every receipt a claim about nothing.
+SYL.Features.SetEnabled("rosterSharing", True)
+
+for key in (TALESTRA, SAEBIE, NASHRI):
+    SYL.RaidTeam.SetMember(key, False)
+    SYL.RaidTeam.SetRole(key, None)
+
+SYL.RosterSync.Announce()
+
+check("SENDING AN EMPTY ROSTER FORGETS WHO WAS USING IT",
+      SYL.RosterReceipts.Count() == 0, SYL.RosterReceipts.Count())
 
 print()
 print("FAILURES:", failures or "none")
