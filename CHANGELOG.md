@@ -7,7 +7,8 @@ this says what you will notice.
 
 ### Added
 
-- **A clickable calendar on the date filters.** A small month opens beside
+- **A clickable calendar on the date filters.** (Fixed before release: the
+  first version of this broke every tab in the main window — see below.) A small month opens beside
   each date box on the loot list — pick a day, or press Today or Clear. The
   boxes still take a typed MM-DD-YYYY if you would rather, and a picked date
   goes in through exactly the same door a typed one does.

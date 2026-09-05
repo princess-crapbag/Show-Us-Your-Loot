@@ -186,7 +186,16 @@ local function CreateDateField(parent, labelText, state, key, endOfDay, onChange
         .. DATE_PLACEHOLDER .. " if you would rather."
     )
 
-    return input.calendar
+    -- BOTH, and returning only the button broke every tab in the window.
+    --
+    -- The caller needs the INPUT -- Clear empties its edit box and Refresh
+    -- calls UpdatePlaceholder on it -- and it needs the BUTTON, because the
+    -- next field anchors after it rather than after the box. Returning the
+    -- button alone meant filterBar:Refresh() called UpdatePlaceholder on a
+    -- Button, which throws; and SetMode calls that Refresh on every tab
+    -- switch, so the error came out of the click handler and the tabs simply
+    -- stopped changing anything.
+    return input, input.calendar
 end
 
 --------------------------------------------------------------------------
@@ -238,12 +247,14 @@ function FilterBar.Create(parent, config)
 
     local previous = search
 
-    local fromInput = CreateDateField(
+    local fromInput, fromCalendar = CreateDateField(
         bar, "From", state, "dateFrom", false, onChange, previous
     )
 
+    -- Anchored after the From field's calendar button, not after its box, or
+    -- the To label lands on top of it.
     local toInput = CreateDateField(
-        bar, "To", state, "dateTo", true, onChange, fromInput
+        bar, "To", state, "dateTo", true, onChange, fromCalendar
     )
 
     -- Anchored to the right edge rather than flowed from the left, so nothing
