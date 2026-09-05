@@ -27,6 +27,11 @@ SYL.LootTable = LootTable
 -- "journalEncounterID:difficultyID" -> list of items, or false for a read
 -- that failed. false rather than nil so a failure is remembered instead of
 -- being retried on every hover.
+-- CLEARED WHENEVER THE FILTERS CHANGE UNDERNEATH IT, which now includes the
+-- fix above. A list read while the journal was filtered to one class is
+-- wrong, and the cache would have gone on answering with it for the rest of
+-- the session -- so a build that changes what "unfiltered" means has to
+-- start again. Session-lived, so a reload is the whole of it.
 local lootCache = {}
 
 -- The journal shows one difficulty at a time and its loot changes with it,
@@ -113,6 +118,29 @@ local function GetItems(dungeonEncounterID, difficultyID, mayWalk)
             EJ_SetLootFilter(0, 0)
         end
 
+        -- THE SLOT FILTER TOO, which is the journal's other dropdown and
+        -- sticks exactly the same way. Somebody who looked up trinkets last
+        -- week would otherwise get a boss's whole loot table read as "one
+        -- trinket", and every other item on it counted as never dropped.
+        --
+        -- Aimee: "make sure it defaults to all loot that boss can drop for
+        -- all classes and specs." Class, spec and slot are the three things
+        -- that can narrow it, so all three are cleared.
+        local previousSlot
+
+        if C_EncounterJournal and C_EncounterJournal.GetSlotFilter then
+            previousSlot = C_EncounterJournal.GetSlotFilter()
+        end
+
+        if C_EncounterJournal and C_EncounterJournal.SetSlotFilter then
+            C_EncounterJournal.SetSlotFilter(
+                (Enum and Enum.ItemSlotFilterType
+                    and Enum.ItemSlotFilterType.NoFilter) or 0
+            )
+        elseif EJ_SetSlotFilter then
+            EJ_SetSlotFilter(0)
+        end
+
         EJ_SelectInstance(entry.journalInstanceID)
 
         if difficultyID and EJ_SetDifficulty then
@@ -133,6 +161,12 @@ local function GetItems(dungeonEncounterID, difficultyID, mayWalk)
 
         if EJ_SetLootFilter and previousClass then
             EJ_SetLootFilter(previousClass, previousSpec or 0)
+        end
+
+        if previousSlot and C_EncounterJournal
+            and C_EncounterJournal.SetSlotFilter
+        then
+            C_EncounterJournal.SetSlotFilter(previousSlot)
         end
     end)
 

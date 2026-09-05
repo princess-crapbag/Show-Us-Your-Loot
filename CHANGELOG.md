@@ -23,8 +23,8 @@ this says what you will notice.
   logged in — there is no offline delivery in the game at all — so the honest
   promise is the next time you are both online, and the button says so.
 
-- **The Bosses tab shows both lists at once.** What a boss has given you and
-  what it has not are two halves of one thought, so they are two columns
+- **The Bosses tab shows both lists at once.** What you have seen from a boss and
+  what you have not are two halves of one thought, so they are two columns
   rather than one list behind a toggle. Every item on both carries its real
   tooltip and its rarity color.
 
@@ -89,14 +89,24 @@ this says what you will notice.
 
 ### Fixed
 
+- **"Pick a boss on the left" stayed on screen after you picked one.** It was
+  cleared at the end of the render, and the branch for an unread Adventure
+  Guide returned before reaching that line — so the sentence survived into the
+  boss view and sat on top of the item rows. Reading the guide appeared to fix
+  a layout problem because it took a different branch.
+
 - **The Adventure Guide list was filtered to your own class, silently.** The
-  journal answers with whatever class filter the player last set in Blizzard's
-  own Adventure Guide window — and the addon never cleared it. So *"6 of 8
-  never dropped"* really meant *"of the items my class can wear"*, while the
-  caveat underneath claimed the exact opposite: that it lists what a boss can
-  drop for any specialization. A number that is wrong and explained wrongly is
-  worse than either. The filter is cleared for the read and put back
-  afterwards, like the instance and difficulty around it.
+  journal answers with whatever filters the player last set in Blizzard's own
+  Adventure Guide window — and the addon never cleared them. So *"6 of 8 never
+  dropped"* really meant *"of the items my class can wear"*, while the caveat
+  underneath claimed the exact opposite: that it lists what a boss can drop
+  for any specialization. A number that is wrong and explained wrongly is
+  worse than either.
+
+  Class, spec **and slot** are cleared for the read and put back afterwards,
+  like the instance and difficulty around them — the slot dropdown sticks the
+  same way, and somebody who looked up trinkets last week would have had a
+  boss's whole loot table read as one trinket.
 
   If you had read the guide before this, reload once — the cached list is
   from before the fix.

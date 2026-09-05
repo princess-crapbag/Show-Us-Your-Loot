@@ -376,6 +376,43 @@ check("and put back afterwards, like the instance and the difficulty",
       and "EJ_SetLootFilter(previousClass" in loot_table,
       "this is the player's own window and must look how they left it")
 
+# The journal has a second dropdown that sticks the same way. Somebody who
+# looked up trinkets last week would otherwise read a boss's whole table as
+# "one trinket", with everything else counted as never dropped.
+check("THE SLOT FILTER IS CLEARED TOO, not just the class one",
+      "SetSlotFilter" in loot_table
+      and "NoFilter" in loot_table,
+      "class, spec and slot are the three things that can narrow the list")
+
+check("and the slot filter is restored as well",
+      "C_EncounterJournal.SetSlotFilter(previousSlot)" in loot_table)
+
+# --- the no-boss line cannot outlive having a boss ------------------------
+#
+# Aimee: "when i first opened the bosses page the text overlapped around the
+# boss name. after i scanned the adventure guide it fixed it."
+#
+# "Pick a boss on the left" was written when nothing was selected, and the
+# unread-journal branch returned before reaching the line that emptied it --
+# so it survived into the boss view and sat on the rows. Scanning the guide
+# took a different branch, which is why reading it looked like a layout fix.
+heading_at = boss_loot.index("pane.heading:SetText(tostring(boss.name))")
+first_return = boss_loot.index("        return", heading_at)
+cleared_at = boss_loot.index('pane.status:SetText("")', heading_at)
+
+check("THE NO-BOSS LINE IS CLEARED BEFORE ANY EARLY RETURN",
+      cleared_at < first_return,
+      "clearing it after a return means it survives into the boss view")
+
+check("the columns use her words",
+      'pane.givenHeading:SetText("YOU HAVE SEEN")' in boss_loot
+      and 'pane.missingHeading:SetText("YOU HAVE NOT SEEN")' in boss_loot,
+      "IT HAS GIVEN YOU / IT HAS NOT GIVEN YOU are gone")
+
+check("and the caveat says the list covers all classes and specs",
+      "for all classes and specs" in boss_loot,
+      "the sentence has to match what the journal read actually does")
+
 print()
 print("FAILURES:", failures or "none")
 sys.exit(1 if failures else 0)

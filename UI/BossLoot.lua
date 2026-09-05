@@ -342,6 +342,20 @@ function BossLoot.Render(pane, boss, _, journalRead)
 
     pane.heading:SetText(tostring(boss.name))
 
+    -- CLEARED HERE, NOT AT THE END. Aimee: "when i first opened the bosses
+    -- page the text overlapped around the boss name. after i scanned the
+    -- adventure guide it fixed it."
+    --
+    -- Exactly that: "Pick a boss on the left" is written when nothing is
+    -- selected, and the branch below for an unread journal returns before
+    -- reaching the line that emptied it -- so the sentence survived into the
+    -- boss view and sat on the rows. Scanning the guide took a different
+    -- branch, which is why reading it appeared to fix a layout problem.
+    --
+    -- A message about having no boss cannot outlive having one, so it goes
+    -- the moment there is one.
+    pane.status:SetText("")
+
     -- PLAIN WORDS. Aimee: "can you also make sure the text in this section is
     -- very clear and not confusing to other users?" This read
     -- "3 pulls, 2 kills, 5 drops" as a comma list of three different units,
@@ -360,7 +374,7 @@ function BossLoot.Render(pane, boss, _, journalRead)
 
     local items = boss.items or {}
 
-    pane.givenHeading:SetText("IT HAS GIVEN YOU")
+    pane.givenHeading:SetText("YOU HAVE SEEN")
     pane.givenCount:SetText(#items > 0 and (#items .. " different") or "")
 
     if #items == 0 then
@@ -387,7 +401,7 @@ function BossLoot.Render(pane, boss, _, journalRead)
         missing, total, seen = SYL.LootTable.GetMissingIfKnown(boss)
     end
 
-    pane.missingHeading:SetText("IT HAS NOT GIVEN YOU")
+    pane.missingHeading:SetText("YOU HAVE NOT SEEN")
 
     if not missing then
         pane.missingCount:SetText("")
@@ -450,9 +464,9 @@ function BossLoot.Render(pane, boss, _, journalRead)
     -- about the raid until you know that.
     pane.footnote:SetText(
         "Both lists are " .. tostring(boss.difficultyName or "this difficulty")
-        .. " only. \"Has not given you\" comes from the Adventure Guide, "
-        .. "which lists every item a boss can drop for any class -- so some "
-        .. "of them are for nobody in your raid. It is what has not dropped, "
-        .. "not what you are owed."
+        .. " only. \"You have not seen\" is every item the Adventure Guide "
+        .. "says this boss can drop, for all classes and specs, minus the "
+        .. "ones it has given you -- so some of them are for nobody in your "
+        .. "raid. It is what has not dropped, not what you are owed."
     )
 end
