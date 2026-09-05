@@ -83,6 +83,16 @@ lua.execute(
 
     ShowUsYourLoot.Keystone.CharacterKey = function() return 'Me-Realm' end
 
+    -- Somebody logging in or out, which is what GUILD_ROSTER_UPDATE reports
+    -- and what a held key request is waiting for.
+    function SetOnline(name, value)
+        ONLINE[name] = value or nil
+    end
+
+    function ClearSent()
+        SENT = {}
+    end
+
     function Reset()
         SENT, PREFIXES = {}, {}
         ONLINE = { ['Dravok'] = true, ['Selunne'] = true }
@@ -160,7 +170,7 @@ check(
 # --- asking ----------------------------------------------------------------
 g.Reset()
 
-check("asking an online guildie works", R.Ask("Dravok", "TANK") is True)
+check("asking an online guildie works", R.Ask("Dravok", "TANK")[0] is True)
 
 # Queued rather than sent, like everything else that talks. A whisper shares
 # the client's rate limit with the guild broadcasts, and a request thrown away
@@ -186,10 +196,54 @@ ok, reason = R.Ask("Dravok", "DPS")
 check("asking twice while waiting is refused", ok is False)
 check("and says they have not answered", "not answered" in reason, reason)
 
-ok, reason = R.Ask("Nobody", "DPS")
+# --- somebody who is offline ----------------------------------------------
+#
+# Aimee: "i still want to be able to request keys from other players who are
+# not online and they see the message when they log in."
+#
+# Held rather than refused, and held rather than SENT: nothing in the game can
+# put a message in front of a character who is not logged in, so the request
+# waits and goes out the moment they appear. What must not happen is the
+# request looking sent when it is not -- "pending" and "not asked yet" are
+# different things to be waiting on.
+g.ClearSent()
+SYL.SendQueue.Reset()
 
-check("asking somebody offline is refused", ok is False)
-check("and says so", reason == "They are offline.", reason)
+ok, note = R.Ask("Nobody", "DPS")
+
+while SYL.SendQueue.Drain():
+    pass
+
+check("ASKING SOMEBODY OFFLINE IS ACCEPTED", ok is True, note)
+check("and nothing is sent, because there is nobody to send it to",
+      len(list(g.SENT.values())) == 0, list(g.SENT.values()))
+
+held = R.GetOutgoing("Nobody")
+
+check("the request is held, marked as not yet sent",
+      held is not None and held.queued is True,
+      held and held.queued)
+check("and it counts as one waiting to go", R.QueuedCount() == 1,
+      R.QueuedCount())
+
+check("flushing while they are still offline sends nothing",
+      R.FlushQueued() == 0 and R.GetOutgoing("Nobody").queued is True)
+
+# They log in. GUILD_ROSTER_UPDATE drives this in game.
+g.SetOnline("Nobody", True)
+
+check("ONCE THEY ARE ONLINE IT GOES OUT ON ITS OWN", R.FlushQueued() == 1)
+
+while SYL.SendQueue.Drain():
+    pass
+
+check("and the message actually left this time",
+      len(list(g.SENT.values())) == 1, list(g.SENT.values()))
+check("and it is no longer marked as waiting",
+      R.GetOutgoing("Nobody").queued is None and R.QueuedCount() == 0)
+
+R.Dismiss("Nobody")
+g.ClearSent()
 
 ok, reason = R.Ask("Me-Realm", "DPS")
 

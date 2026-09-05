@@ -7,6 +7,37 @@ this says what you will notice.
 
 ### Added
 
+- **A clickable calendar on the date filters.** A small month opens beside
+  each date box on the loot list — pick a day, or press Today or Clear. The
+  boxes still take a typed MM-DD-YYYY if you would rather, and a picked date
+  goes in through exactly the same door a typed one does.
+
+- **Key requests reach people who are offline.** Asking somebody who is not
+  logged in used to be refused outright. The request is held now and sent the
+  moment they appear, with nobody pressing anything. It reads *"Waiting for
+  them to log in"* until it goes, because that is a different thing from
+  waiting for an answer.
+
+  What no addon can do is put a message in front of a character who is not
+  logged in — there is no offline delivery in the game at all — so the honest
+  promise is the next time you are both online, and the button says so.
+
+- **The Bosses tab shows both lists at once.** What a boss has given you and
+  what it has not are two halves of one thought, so they are two columns
+  rather than one list behind a toggle. Every item on both carries its real
+  tooltip and its rarity color.
+
+  There is a **difficulty filter** too: a boss is recorded once per
+  difficulty — Heroic and Normal are different loot tables and different luck
+  — so the rail was listing every boss three or four times. It shares the
+  difficulty with the dashboard's tier progress, so both screens mean the same
+  thing by Heroic.
+
+  The wording is plainer throughout. *"3 pulls, 2 kills, 5 drops"* is now
+  *"killed 3 times · 5 items from it so far"*, and the caveat under the lists
+  says which difficulty they are for — *"6 of 8 never dropped"* reads as a
+  fact about the raid until you know it is about Heroic only.
+
 - **Send my raid team, with a choice of who.** The button on the Raiders
   screen now opens a small window instead of broadcasting on the press: one
   player, the whole raid team **and their alts**, or the whole guild. Each row

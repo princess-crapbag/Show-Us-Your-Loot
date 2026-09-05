@@ -210,8 +210,15 @@ function KeyRows.DrawAsk(row, entry, config)
         row.ask:Hide()
 
         -- In the response column at full width, not appended to the level.
+        --
+        -- WAITING TO SEND IS NOT THE SAME AS WAITING FOR AN ANSWER, and both
+        -- were drawn as "Pending". A request made while somebody was offline
+        -- has not reached them yet -- it goes the moment they log in -- and
+        -- somebody looking at this column deserves to know which of the two
+        -- they are waiting on. See KeystoneRequests.FlushQueued.
         row.cells.response:SetText(
-            SYL.KeystoneRequests.STATUS_LABELS[existing.status] or ""
+            existing.queued and "Waiting for them to log in"
+            or (SYL.KeystoneRequests.STATUS_LABELS[existing.status] or "")
         )
 
         -- Waiting is a state, not an answer, so it reads quieter than one.
@@ -234,13 +241,25 @@ function KeyRows.DrawAsk(row, entry, config)
     -- the reason rather than doing nothing.
     Theme.SetTextColor(row.ask.label, allowed and "textPrimary" or "textMuted")
 
+    local offline = not SYL.KeystoneRequests.IsOnline(entry.name)
+
     SYL.Tooltips.Attach(
         row.ask,
-        allowed and "Ask for this key" or "Cannot ask",
+        allowed and (offline and "Ask when they log in" or "Ask for this key")
+            or "Cannot ask",
         allowed
             and ("Sends a request to " .. entry.name .. " as "
-                .. (SYL.KeystoneRequests.ROLE_LABELS[config.getRole()] or config.getRole())
-                .. ". Only they see it.")
+                .. (SYL.KeystoneRequests.ROLE_LABELS[config.getRole()]
+                    or config.getRole())
+                .. ". Only they see it."
+                -- SAYS WHAT IT CAN AND CANNOT PROMISE. Nothing in the game
+                -- can put a message in front of somebody who is not logged
+                -- in, so "they see it when they log in" is true only while
+                -- you are online too. Better said here than assumed.
+                .. (offline
+                    and (" They are offline, so this is held and sent the "
+                        .. "next time you are both online.")
+                    or ""))
             or (reason or "")
     )
 end

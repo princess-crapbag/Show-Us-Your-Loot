@@ -276,6 +276,13 @@ local function OnGuildRosterUpdate()
     -- a client that has nothing; see RosterSync.RequestWhenReady.
     SYL.RosterSync.RequestWhenReady()
 
+    -- A key request made while somebody was offline goes out the moment they
+    -- appear, and this event is what tells us they have. It fires on every
+    -- guild login and logout, which is exactly the signal wanted -- see
+    -- KeystoneRequests.FlushQueued, which is cheap and does nothing when
+    -- there is nothing waiting.
+    SYL.KeystoneRequests.FlushQueued()
+
     if promoted > 0 then
         SYL:Print(
             promoted

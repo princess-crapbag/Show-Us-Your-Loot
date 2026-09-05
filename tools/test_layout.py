@@ -397,25 +397,61 @@ PANE_HEIGHT = PANEL_HEIGHT - (B_LIST_TOP - 8) - 20
 
 L_TOP = number(BOSSLOOT, r"local LIST_TOP = (\d+)", "pane LIST_TOP")
 L_ROW = number(BOSSLOOT, r"local ROW_HEIGHT = (\d+)", "pane ROW_HEIGHT")
-MAX_ROWS = number(BOSSLOOT, r"local MAX_ROWS = (\d+)", "MAX_ROWS")
+# The row cap is SOLVED now rather than typed -- the caveat grew a line when
+# it started naming the difficulty, and a hardcoded count is how the last row
+# ended up underneath it the first time. So the test checks the solver.
+FOOTNOTE_SPACE = number(BOSSLOOT, r"local FOOTNOTE_SPACE = (\d+)",
+                        "footnote space")
 
-# The caveat is pinned 8 from the bottom and wraps to two lines of 14 in the
-# 586px it is given. Rows are capped so they stop above it.
-FOOTNOTE_HEIGHT = 2 * 14
+MAX_ROWS = max(1, (PANE_HEIGHT - L_TOP - FOOTNOTE_SPACE) // L_ROW)
 
-rows_bottom = L_TOP + (MAX_ROWS + 1) * L_ROW    # +1 for the "+ N more" line
+# The caveat now runs to three lines: it names the difficulty as well as
+# explaining where "has not given you" comes from.
+FOOTNOTE_HEIGHT = 3 * 14
+
+rows_bottom = L_TOP + (MAX_ROWS + 1) * L_ROW    # +1 for the "and N more" line
 footnote_top = PANE_HEIGHT - 8 - FOOTNOTE_HEIGHT
 
 gap("the boss loot list stops above its own caveat", rows_bottom, footnote_top)
 
-check("with room for the caveat to wrap to a third line",
-      rows_bottom <= footnote_top - 14,
-      "%d against %d" % (rows_bottom, footnote_top - 14))
+check("the reserve holds three wrapped lines and the rule above them",
+      FOOTNOTE_SPACE >= FOOTNOTE_HEIGHT + 14,
+      "%d against %d" % (FOOTNOTE_SPACE, FOOTNOTE_HEIGHT + 14))
+
+# Two columns, which is what replaced the toggle.
+COLUMN_GAP = number(BOSSLOOT, r"local COLUMN_GAP = (\d+)", "column gap")
+B_PAD = number(BOSSLOOT, r"local PAD = (\d+)", "pane pad")
+
+RAIL_WIDTH = number(BOSSES, r"local RAIL_WIDTH = (\d+)", "rail width")
+B_GUTTER = number(BOSSES, r"local GUTTER = (\d+)", "bosses gutter")
+
+PANE_WIDTH = 868 - RAIL_WIDTH - B_GUTTER
+COLUMN = (PANE_WIDTH - B_PAD * 2 - COLUMN_GAP) / 2
+
+check("the two loot columns fit the pane side by side",
+      COLUMN * 2 + COLUMN_GAP + B_PAD * 2 <= PANE_WIDTH,
+      "%.1f in %d" % (COLUMN * 2 + COLUMN_GAP + B_PAD * 2, PANE_WIDTH))
+
+# The longest item name this tier, off her own database, plus the icon and
+# the count that sit either side of it.
+for name in ("Vexhul's Everflowing Gland", "Sentinel's Vitriolic Chain",
+             "Idol of the Howling Nexus"):
+    room = COLUMN - 3 - 14 - 5 - 6 - measure("x12", 11) - 3
+
+    check("the item name %r fits its column" % name[:20],
+          measure(name, 11) <= room,
+          "%.1f in %.1f" % (measure(name, 11), room))
+
+for heading in ("IT HAS GIVEN YOU", "IT HAS NOT GIVEN YOU"):
+    check("the heading %r fits above its column" % heading,
+          measure(heading, 10) + measure("6 of 8", 10) + 10 <= COLUMN,
+          "%.1f in %.1f" % (
+              measure(heading, 10) + measure("6 of 8", 10) + 10, COLUMN))
 
 # The control row, and the lockouts view that was drawn up into it.
 bx = 2 + measure("BOSSES", 15) + 14
 
-for label, width in (("Not dropped", 110),
+for label, width in (("Heroic", 78),
                      ("Read the Adventure Guide", 190),
                      ("Lockouts", 100)):
     check("'" + label + "' fits its button",
@@ -822,6 +858,70 @@ for text in ("raid · 12 out", "12 out", "raid"):
 check("the calendar detail never wraps either",
       "cell.detail:SetWordWrap(false)" in nights_src,
       "anchored to the bottom of the cell, a second line covers the day")
+
+
+# --- the date pickers on the filter bar ------------------------------------
+#
+# Aimee: "also add a clickable calendar on the date picker." Two more controls
+# on a row that has collided before -- five dropdowns plus two date fields
+# once put Clear underneath the To field -- so the row is measured with them
+# on it rather than trusted.
+filter_src = src("UI/FilterBar.lua")
+
+CALENDAR_BUTTON = number(filter_src, r"local CALENDAR_BUTTON = (\d+)",
+                         "calendar button")
+INPUT_INSET = number(filter_src, r"local INPUT_INSET = (\d+)", "input inset")
+CARET_ROOM = number(filter_src, r"local CARET_ROOM = (\d+)", "caret room")
+
+CONTROL = 11
+DATE_WIDTH = max(measure("MM-DD-YYYY", CONTROL),
+                 measure("0000-00-00", CONTROL)) + INPUT_INSET + CARET_ROOM
+
+row = 100                                   # the search box
+
+for label in ("From", "To"):
+    row += 10                               # gap before the label
+    row += measure(label, CONTROL) + 2      # label, sized to its own string
+    row += 4                                # gap to the box
+    row += DATE_WIDTH
+    row += 3 + CALENDAR_BUTTON              # gap, then the month button
+
+CLEAR_WIDTH = 54
+BAR_WIDTH = 868
+
+check("the filter row still clears the Clear button with both pickers on it",
+      row <= BAR_WIDTH - CLEAR_WIDTH - 8,
+      "row ends %.1f, Clear starts %.1f" % (row, BAR_WIDTH - CLEAR_WIDTH - 8))
+
+check("the month button is beside the date box, not inside it",
+      'input.calendar:SetPoint("LEFT", input, "RIGHT"' in filter_src,
+      "a control inside the box covers the last digit of the date")
+
+check("and the picker writes through the box rather than past it",
+      "ApplyDate(input, state, key, endOfDay, onChange)" in filter_src
+      and "input.editBox:SetText(picked" in filter_src,
+      "a picked date must take the same route a typed one does")
+
+# The popup itself: seven columns of day cells inside its own width.
+picker_src = src("UI/DatePicker.lua")
+
+P_COLUMNS = number(picker_src, r"local COLUMNS = (\d+)", "picker columns")
+P_CELL = number(picker_src, r"local CELL = (\d+)", "picker cell")
+P_GAP = number(picker_src, r"local CELL_GAP = (\d+)", "picker cell gap")
+P_PAD = number(picker_src, r"local PAD = (\d+)", "picker pad")
+
+picker_width = P_PAD * 2 + P_COLUMNS * P_CELL + (P_COLUMNS - 1) * P_GAP
+
+check("the day grid fits the picker it is drawn in",
+      picker_width <= 220, picker_width)
+
+check("a two-digit day fits its cell",
+      measure("31", 11) <= P_CELL - 4,
+      "%.1f in %d" % (measure("31", 11), P_CELL - 4))
+
+check("and the two footer buttons fit side by side under the grid",
+      56 * 2 + P_PAD * 2 + 8 <= picker_width + 8,
+      picker_width)
 
 print()
 print("FAILURES: " + (", ".join(FAILURES) if FAILURES else "none"))

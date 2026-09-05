@@ -111,9 +111,19 @@ function KeystoneRequests.CanAsk(name)
         return false, "That is your own key."
     end
 
-    if not KeystoneRequests.IsOnline(name) then
-        return false, "They are offline."
-    end
+    -- OFFLINE IS NO LONGER A REFUSAL. Aimee: "i still want to be able to
+    -- request keys from other players who are not online and they see the
+    -- message when they log in."
+    --
+    -- The request is held here and sent the moment that character is seen
+    -- online -- see FlushQueued, which the guild roster event drives. What an
+    -- addon CANNOT do is put anything in front of somebody who is not logged
+    -- in: there is no offline delivery in the API at all. Mail would reach
+    -- them and needs a mailbox and postage, which is not a thing to do to
+    -- somebody's character for a keystone.
+    --
+    -- So the honest promise is "the next time you are both online", and the
+    -- button says exactly that rather than implying it has been sent.
 
     local existing = KeystoneRequests.GetOutgoing(name)
 
@@ -157,7 +167,9 @@ function KeystoneRequests.Ask(name, role)
         role = "DPS"
     end
 
-    if not SYL.KeystoneRequestSync.SendAsk(name, role) then
+    local online = KeystoneRequests.IsOnline(name)
+
+    if online and not SYL.KeystoneRequestSync.SendAsk(name, role) then
         return false, "Could not send that."
     end
 
@@ -166,9 +178,75 @@ function KeystoneRequests.Ask(name, role)
         role = role,
         status = KeystoneRequests.STATUS.PENDING,
         at = time(),
+
+        -- Held rather than sent. Cleared by FlushQueued when they appear, and
+        -- it is the difference between "they have not answered" and "they
+        -- have not been asked yet" -- two states that read identically on a
+        -- screen that only knows PENDING.
+        queued = (not online) or nil,
     }
 
-    return true
+    return true, online and nil or "queued"
+end
+
+--------------------------------------------------------------------------
+-- Sending what was held
+--------------------------------------------------------------------------
+
+-- Every request waiting on somebody who was offline when it was made, sent
+-- now that they are not. Returns how many went.
+--
+-- Driven by GUILD_ROSTER_UPDATE, which fires whenever anybody in the guild
+-- logs in or out -- so a request made on Tuesday afternoon goes out the
+-- moment they come online on Tuesday evening, with nobody pressing anything.
+--
+-- A request whose target is still offline is left exactly where it is. The
+-- sweep at the weekly reset clears it if it never got there, in the same pass
+-- that drops the key it was about.
+function KeystoneRequests.FlushQueued()
+    local store = Store()
+
+    if not store or not enabled then
+        return 0
+    end
+
+    local sent = 0
+
+    for name, request in pairs(store.outgoing) do
+        if request.queued
+            and request.status == KeystoneRequests.STATUS.PENDING
+            and KeystoneRequests.IsOnline(name)
+        then
+            if SYL.KeystoneRequestSync.SendAsk(name, request.role) then
+                request.queued = nil
+                request.at = time()
+                sent = sent + 1
+            end
+        end
+    end
+
+    if sent > 0 then
+        SYL:Print(
+            "Sent " .. SYL.Utilities.Count(sent, "key request")
+            .. " that had been waiting for somebody to come online."
+        )
+    end
+
+    return sent
+end
+
+-- How many are still waiting to go out, for a screen that wants to say so.
+function KeystoneRequests.QueuedCount()
+    local store = Store()
+    local total = 0
+
+    for _, request in pairs((store and store.outgoing) or {}) do
+        if request.queued then
+            total = total + 1
+        end
+    end
+
+    return total
 end
 
 function KeystoneRequests.GetOutgoing(name)

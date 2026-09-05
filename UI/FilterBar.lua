@@ -128,6 +128,11 @@ local DATE_PLACEHOLDER = "MM-DD-YYYY"
 local INPUT_INSET = 12
 local CARET_ROOM = 8
 
+-- The little month button beside each date box. Square-ish and narrow: it
+-- sits between two fields on a row that UI/SelectionBar.lua has already had
+-- to rescue once, and every pixel it does not need belongs to them.
+local CALENDAR_BUTTON = 22
+
 local function CreateDateField(parent, labelText, state, key, endOfDay, onChange, anchorTo)
     local label = Theme.CreateText(parent, Theme.sizes.control, "textMuted")
 
@@ -148,7 +153,40 @@ local function CreateDateField(parent, labelText, state, key, endOfDay, onChange
 
     input:SetPoint("LEFT", label, "RIGHT", 4, 0)
 
-    return input
+    -- THE CLICKABLE MONTH. Aimee: "also add a clickable calendar on the date
+    -- picker." Typing MM-DD-YYYY is fine once you know the format and a guess
+    -- before then -- the placeholder is the only thing that says so and it
+    -- vanishes as soon as anybody types.
+    --
+    -- Beside the box rather than inside it: the box is measured to hold
+    -- exactly the widest date plus its caret, so a control in there would
+    -- either cover the last digit or make every date field wider for the
+    -- sake of a button that is not always wanted.
+    --
+    -- The picker hands back the same string a person would type and it goes
+    -- in through the same door -- SetText then ApplyDate -- so a picked date
+    -- and a typed one cannot behave differently.
+    input.calendar = Theme.CreateButton(parent, CALENDAR_BUTTON, 20, "31",
+        function()
+            SYL.DatePicker.Toggle(input, input.editBox:GetText(),
+                function(picked)
+                    input.editBox:SetText(picked or "")
+                    input:UpdatePlaceholder()
+
+                    ApplyDate(input, state, key, endOfDay, onChange)
+                end)
+        end)
+
+    input.calendar:SetPoint("LEFT", input, "RIGHT", 3, 0)
+
+    SYL.Tooltips.Attach(
+        input.calendar,
+        "Pick a date",
+        "Opens a month to click. The box still takes a typed date in "
+        .. DATE_PLACEHOLDER .. " if you would rather."
+    )
+
+    return input.calendar
 end
 
 --------------------------------------------------------------------------

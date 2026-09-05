@@ -54,6 +54,7 @@ local function NewBoss(key, name, instanceName, difficultyName, difficultyID,
         lastDropAt = nil,
 
         itemCounts = {},
+        itemLinks = {},
         items = {},
     }
 end
@@ -154,6 +155,21 @@ local function CountDrops(byKey, order, drops)
                 end
 
                 boss.itemCounts[itemName] = boss.itemCounts[itemName] + 1
+
+                -- THE LINK, kept beside the count so the Bosses tab can show
+                -- the item's own tooltip. Aimee: "can the items on both lists
+                -- show the actual tooltip for the item like we have in other
+                -- places?" -- and a name alone cannot: GameTooltip wants a
+                -- link, and rebuilding one from the name is not possible.
+                --
+                -- The first link seen wins. Two drops of the same item can
+                -- differ in bonus ids, and either is a truthful tooltip for
+                -- "this is what that item is".
+                boss.itemLinks = boss.itemLinks or {}
+
+                if not boss.itemLinks[itemName] and drop.itemLink then
+                    boss.itemLinks[itemName] = drop.itemLink
+                end
             end
 
             -- Counted from the winning roll rather than from the drop, since

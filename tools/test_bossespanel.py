@@ -198,11 +198,24 @@ check(
     f"GetMissingIfKnown called {g.CHEAP_READS} times",
 )
 
-# Switching view is free and must stay free.
+# Switching difficulty is free and must stay free.
+#
+# The dropped / not-dropped toggle is gone -- the pane shows both lists side
+# by side now, so there is no half to choose between. What the button chooses
+# is the difficulty, which filters the rail: a boss is recorded once per
+# difficulty, so without it the list holds every boss three or four times.
 lua.execute("WALKS = 0")
-SYL.BossesPanel.SetMode("dropped")
-SYL.BossesPanel.SetMode("missing")
-check("switching modes never walks it either", g.WALKS == 0, g.WALKS)
+SYL.BossesPanel.SetDifficulty(14)
+SYL.BossesPanel.SetDifficulty(15)
+check("switching difficulty never walks the journal", g.WALKS == 0, g.WALKS)
+
+SYL.BossesPanel.SetDifficulty("all")
+SYL.BossesPanel.CycleDifficulty()
+
+check("and cycling lands on a real difficulty rather than nothing",
+      g.WALKS == 0, g.WALKS)
+
+SYL.BossesPanel.SetDifficulty(15)
 
 # And the button does what the button is for.
 SYL.BossesPanel.ReadJournal()

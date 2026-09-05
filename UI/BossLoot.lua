@@ -32,30 +32,42 @@ SYL.BossLoot = BossLoot
 
 local PAD = 10
 local ROW_HEIGHT = 18
-local LIST_TOP = 92
--- THIRTEEN, BECAUSE THE FOOTNOTE IS PINNED INSIDE THIS SPACE.
+local LIST_TOP = 74
+
+-- TWO COLUMNS, NOT A TOGGLE. Aimee: "do we need a button that says dropped
+-- and not dropped? couldnt it just show 2 lists of dropped and not dropped?"
 --
--- The list was sized as if it owned the whole pane: 92 + 17*18 = 398 is
--- exactly the pane's height, so the last rows were drawn underneath the
--- caveat at the bottom. The caveat is 586 wide and wraps to two lines, and
--- it starts at 8 from the bottom, so it owns the bottom 36 pixels:
+-- No, and yes. The toggle was answering "which half of the answer do you want
+-- to see", which is not a question anybody has -- what a boss has given you
+-- and what it has not are two halves of one thought, and the pane is 606
+-- wide, which is two columns and a gutter with room to spare.
+local COLUMN_GAP = 12
+-- HOW MANY ROWS FIT ABOVE THE FOOTNOTE, which is pinned inside this pane.
 --
---    92   LIST_TOP (heading, subheading and status sit above it)
---  +252   14 rows of 18 -- 13 items and the "+ N more" line
---  = 344  last row bottom
---  + 18   clearance
---  = 362  footnote top
---  + 28   two wrapped lines of 14
+--    74   LIST_TOP -- heading, subheading and the column headings above it
+--  +N*18  the rows
+--  + 14   clearance
+--  + 40   three wrapped lines of the caveat at 12 plus its rule
 --  +  8   bottom inset
---  = 398  the pane, exactly
+--  = 398  the pane
 --
--- Fourteen items would end flush at 362 and break the moment the caveat
--- wraps to a third line. Thirteen still clears that case by 4.
---
--- The "dropped" list clears the footnote and could hold sixteen, but the row
--- count is chosen before the footnote is set, so a mode-aware cap here would
--- read the PREVIOUS render's text. Three rows is the price of not doing that.
-local MAX_ROWS = 13
+-- Solved rather than typed, because the caveat is the thing that grows: it
+-- was two lines, it is three now that it says which difficulty the lists are
+-- for, and a hardcoded row count is how the last row ended up underneath it
+-- the first time.
+local FOOTNOTE_SPACE = 62
+
+local function MaxRows(pane)
+    local height = (pane and pane:GetHeight()) or 398
+
+    if height <= 1 then
+        height = 398
+    end
+
+    return math.max(1, math.floor(
+        (height - LIST_TOP - FOOTNOTE_SPACE) / ROW_HEIGHT
+    ))
+end
 
 function BossLoot.Create(parent, width, top)
     local pane = CreateFrame("Frame", nil, parent)
@@ -68,7 +80,9 @@ function BossLoot.Create(parent, width, top)
     back:SetAllPoints()
 
     pane.width = width
-    pane.rows = {}
+
+    -- One pool per column; see Row.
+    pane.rows = { given = {}, missing = {} }
 
     pane.heading = Theme.CreateText(pane, Theme.sizes.row, "textPrimary")
     pane.heading:SetPoint("TOPLEFT", PAD, -12)
@@ -79,6 +93,42 @@ function BossLoot.Create(parent, width, top)
     pane.subheading:SetPoint("TOPLEFT", PAD, -34)
     pane.subheading:SetWidth(width - (PAD * 2))
     pane.subheading:SetJustifyH("LEFT")
+
+    -- The two column headings, which is where "which list am I looking at"
+    -- is answered now that there are two of them and no toggle.
+    local column = (width - PAD * 2 - COLUMN_GAP) / 2
+
+    pane.givenHeading =
+        Theme.CreateText(pane, Theme.sizes.columnHeader, "textMuted")
+    pane.givenHeading:SetPoint("TOPLEFT", PAD, -(LIST_TOP - 16))
+
+    pane.givenCount =
+        Theme.CreateText(pane, Theme.sizes.columnHeader, "textMuted")
+    pane.givenCount:SetPoint("TOPLEFT", PAD, -(LIST_TOP - 16))
+    pane.givenCount:SetWidth(column)
+    pane.givenCount:SetJustifyH("RIGHT")
+
+    pane.missingHeading =
+        Theme.CreateText(pane, Theme.sizes.columnHeader, "textMuted")
+    pane.missingHeading:SetPoint(
+        "TOPLEFT", PAD + column + COLUMN_GAP, -(LIST_TOP - 16)
+    )
+
+    pane.missingCount =
+        Theme.CreateText(pane, Theme.sizes.columnHeader, "textMuted")
+    pane.missingCount:SetPoint(
+        "TOPLEFT", PAD + column + COLUMN_GAP, -(LIST_TOP - 16)
+    )
+    pane.missingCount:SetWidth(column)
+    pane.missingCount:SetJustifyH("RIGHT")
+
+    -- The rule between them, so two lists read as two rather than as one
+    -- list with a wide gap in it.
+    pane.divider = Theme.CreateSolidTexture(pane, "separator", "ARTWORK")
+    pane.divider:SetPoint("TOPLEFT", PAD + column + COLUMN_GAP / 2 - 1,
+        -(LIST_TOP - 20))
+    pane.divider:SetWidth(1)
+    pane.divider:SetPoint("BOTTOM", pane, "BOTTOM", 0, 56)
 
     pane.status = Theme.CreateText(pane, Theme.sizes.rowSmall, "textMuted")
     pane.status:SetPoint("TOPLEFT", PAD, -54)
@@ -98,63 +148,122 @@ function BossLoot.Create(parent, width, top)
     return pane
 end
 
-local function Row(pane, index)
-    local row = pane.rows[index]
+-- One row in one column. `side` is "given" or "missing", so the two lists
+-- keep separate pools -- shared rows would mean the left list's leftovers
+-- showing up on the right when one is longer than the other.
+local function Row(pane, side, index)
+    pane.rows[side] = pane.rows[side] or {}
 
-    if not row then
-        row = CreateFrame("Frame", nil, pane)
+    local row = pane.rows[side][index]
 
-        row:SetHeight(ROW_HEIGHT)
-        row:SetPoint("TOPLEFT", PAD, -(LIST_TOP + (index - 1) * ROW_HEIGHT))
-        row:SetPoint("TOPRIGHT", -PAD, -(LIST_TOP + (index - 1) * ROW_HEIGHT))
-
-        row.count = Theme.CreateText(row, Theme.sizes.rowSmall, "textSecondary")
-        row.count:SetPoint("RIGHT", -3, 0)
-        row.count:SetJustifyH("RIGHT")
-
-        row.name = Theme.CreateText(row, Theme.sizes.rowSmall, "textPrimary")
-        row.name:SetPoint("LEFT", 3, 0)
-        row.name:SetPoint("RIGHT", row.count, "LEFT", -6, 0)
-        row.name:SetJustifyH("LEFT")
-        row.name:SetWordWrap(false)
-
-        pane.rows[index] = row
+    if row then
+        return row
     end
+
+    local column = (pane.width - PAD * 2 - COLUMN_GAP) / 2
+    local left = PAD + (side == "missing" and (column + COLUMN_GAP) or 0)
+
+    row = CreateFrame("Frame", nil, pane)
+
+    row:SetHeight(ROW_HEIGHT)
+    row:SetWidth(column)
+    row:SetPoint("TOPLEFT", left, -(LIST_TOP + (index - 1) * ROW_HEIGHT))
+
+    -- THE ITEM'S OWN TOOLTIP, which this screen never had. Aimee: "can the
+    -- items on both lists show the actual tooltip for the item like we have
+    -- in other places?"
+    --
+    -- Read on hover rather than captured, because rows are pooled and reused
+    -- as the list changes -- the same rule every other list in this addon
+    -- follows. The link is what the Adventure Guide or the drop record
+    -- carried; without one there is nothing to show and the hover stays
+    -- quiet rather than opening an empty tooltip.
+    row.hover = SYL.Widgets.MakeItemHoverable(row, function()
+        return row.itemLink
+    end)
+
+    row.hover:SetAllPoints()
+
+    row.icon = row:CreateTexture(nil, "ARTWORK")
+    row.icon:SetSize(14, 14)
+    row.icon:SetPoint("LEFT", 3, 0)
+
+    row.count = Theme.CreateText(row, Theme.sizes.rowSmall, "textSecondary")
+    row.count:SetPoint("RIGHT", -3, 0)
+    row.count:SetJustifyH("RIGHT")
+
+    row.name = Theme.CreateText(row, Theme.sizes.rowSmall, "textPrimary")
+    row.name:SetPoint("LEFT", row.icon, "RIGHT", 5, 0)
+    row.name:SetPoint("RIGHT", row.count, "LEFT", -6, 0)
+    row.name:SetJustifyH("LEFT")
+    row.name:SetWordWrap(false)
+
+    pane.rows[side][index] = row
 
     return row
 end
 
-local function HideRowsFrom(pane, index)
-    for position = index, #pane.rows do
-        pane.rows[position]:Hide()
+local function HideRowsFrom(pane, side, index)
+    for position = index, #(pane.rows[side] or {}) do
+        pane.rows[side][position]:Hide()
     end
 end
 
--- Drawn rows, then the honest tail. A list that stops at sixteen without
--- saying so reads as "that is all of them", which is the one thing it is not.
-local function DrawList(pane, items, describe)
-    local shown = math.min(MAX_ROWS, #items)
+local function HideAllRows(pane)
+    for _, side in ipairs({ "given", "missing" }) do
+        HideRowsFrom(pane, side, 1)
+    end
+end
+
+-- Drawn rows, then the honest tail. A list that stops without saying so reads
+-- as "that is all of them", which is the one thing it is not.
+local function DrawList(pane, side, items, describe)
+    local maximum = MaxRows(pane)
+    local shown = math.min(maximum, #items)
 
     for index = 1, shown do
-        local row = Row(pane, index)
-        local name, count = describe(items[index])
+        local row = Row(pane, side, index)
+        local name, count, link, quality = describe(items[index])
 
+        row.itemLink = link
         row.name:SetText(name)
         row.count:SetText(count or "")
+
+        local icon = link and Theme.GetItemIcon(link)
+
+        if icon then
+            row.icon:SetTexture(icon)
+            row.icon:Show()
+        else
+            row.icon:Hide()
+        end
+
+        -- Colored by rarity, the way every other item in this addon is, so a
+        -- list of names reads as a list of items.
+        local color = link and Theme.GetItemQualityColor(link)
+
+        if color then
+            row.name:SetTextColor(color.r, color.g, color.b)
+        else
+            Theme.SetTextColor(row.name, "textPrimary")
+        end
+
         row:Show()
     end
 
     if #items > shown then
-        local row = Row(pane, shown + 1)
+        local row = Row(pane, side, shown + 1)
 
-        row.name:SetText("+ " .. (#items - shown) .. " more")
+        row.itemLink = nil
+        row.icon:Hide()
+        row.name:SetText("and " .. (#items - shown) .. " more")
         Theme.SetTextColor(row.name, "textMuted")
         row.count:SetText("")
         row:Show()
 
-        HideRowsFrom(pane, shown + 2)
+        HideRowsFrom(pane, side, shown + 2)
     else
-        HideRowsFrom(pane, shown + 1)
+        HideRowsFrom(pane, side, shown + 1)
     end
 end
 
@@ -170,7 +279,7 @@ function BossLoot.Hide(pane)
         return
     end
 
-    HideRowsFrom(pane, 1)
+    HideAllRows(pane)
 
     -- THE FRAME, NOT ITS PARTS. The first version cleared the four font
     -- strings and hid a `pane.background` that does not exist -- the
@@ -182,7 +291,8 @@ function BossLoot.Hide(pane)
     pane:Hide()
 end
 
-function BossLoot.Render(pane, boss, mode, journalRead)
+-- Both lists, always. `mode` is gone -- see COLUMN_GAP above.
+function BossLoot.Render(pane, boss, _, journalRead)
     -- Shown here rather than in each branch: a pane with no boss selected is
     -- still a pane, and it is Hide that takes it off screen.
     pane:Show()
@@ -190,51 +300,57 @@ function BossLoot.Render(pane, boss, mode, journalRead)
     if not boss then
         pane.heading:SetText("No boss selected")
         pane.subheading:SetText("")
+        pane.givenHeading:SetText("")
+        pane.givenCount:SetText("")
+        pane.missingHeading:SetText("")
+        pane.missingCount:SetText("")
         pane.status:SetText("Pick a boss on the left.")
         pane.footnote:SetText("")
 
-        HideRowsFrom(pane, 1)
+        HideAllRows(pane)
 
         return
     end
 
     pane.heading:SetText(tostring(boss.name))
 
+    -- PLAIN WORDS. Aimee: "can you also make sure the text in this section is
+    -- very clear and not confusing to other users?" This read
+    -- "3 pulls, 2 kills, 5 drops" as a comma list of three different units,
+    -- which needs a moment even when you wrote it.
     pane.subheading:SetText(string.format(
-        "%s · %s · %s, %s, %s",
+        "%s · %s · killed %s · %s from it so far",
         tostring(boss.instanceName or "Unknown"),
         tostring(boss.difficultyName or "?"),
-        Count(boss.pulls or 0, "pull"),
-        Count(boss.kills or 0, "kill"),
-        Count(boss.drops or 0, "drop")
+        Count(boss.kills or 0, "time"),
+        Count(boss.drops or 0, "item")
     ))
 
-    if mode == "dropped" then
-        pane.footnote:SetText("")
+    --------------------------------------------------------------------
+    -- What it has given
+    --------------------------------------------------------------------
 
-        local items = boss.items or {}
+    local items = boss.items or {}
 
-        if #items == 0 then
-            pane.status:SetText(
-                "Nothing recorded from this boss yet. History starts when the "
-                .. "addon is installed and cannot be backfilled."
-            )
+    pane.givenHeading:SetText("IT HAS GIVEN YOU")
+    pane.givenCount:SetText(#items > 0 and (#items .. " different") or "")
 
-            HideRowsFrom(pane, 1)
+    if #items == 0 then
+        HideRowsFrom(pane, "given", 1)
+    else
+        DrawList(pane, "given", items, function(name)
+            local count = (boss.itemCounts or {})[name] or 0
 
-            return
-        end
-
-        pane.status:SetText(#items .. " items seen, most dropped first")
-
-        DrawList(pane, items, function(name)
-            return name, tostring((boss.itemCounts or {})[name] or 0)
+            return name,
+                count > 1 and ("x" .. count) or "",
+                (boss.itemLinks or {})[name]
         end)
-
-        return
     end
 
-    -- Not dropped. Never walks the journal on its own; see the file header.
+    --------------------------------------------------------------------
+    -- What it has not
+    --------------------------------------------------------------------
+
     local missing, total, seen
 
     if journalRead then
@@ -243,46 +359,69 @@ function BossLoot.Render(pane, boss, mode, journalRead)
         missing, total, seen = SYL.LootTable.GetMissingIfKnown(boss)
     end
 
+    pane.missingHeading:SetText("IT HAS NOT GIVEN YOU")
+
     if not missing then
-        pane.footnote:SetText("")
+        pane.missingCount:SetText("")
+        HideRowsFrom(pane, "missing", 1)
+
+        -- The status line carries this rather than the missing column,
+        -- because it is about the whole screen and not about one list.
         pane.status:SetText(
             journalRead
-                and ("The Adventure Guide has no loot table for this boss. "
-                    .. "Dungeon bosses are never in it — it reads raid "
-                    .. "instances only.")
-                or ("Not read yet. Press \"Read the Adventure Guide\" above. "
-                    .. "It walks every raid tier, so it is a button rather "
-                    .. "than something that happens when you open the tab.")
+                and ("The Adventure Guide has no loot table for this boss, so "
+                    .. "the second list cannot be filled in. Dungeon bosses "
+                    .. "are never in it -- it covers raids only.")
+                or ("Press \"Read the Adventure Guide\" above to fill in the "
+                    .. "second list. It reads every raid tier once, which is "
+                    .. "why it is a button rather than something that happens "
+                    .. "when you open this tab.")
         )
 
-        HideRowsFrom(pane, 1)
+        pane.footnote:SetText("")
 
         return
     end
 
-    pane.footnote:SetText(
-        "The Adventure Guide lists what this boss can drop for any "
-        .. "specialization, so this includes items nobody in your raid can "
-        .. "use. It is what the boss has never given you, not what you are owed."
+    pane.status:SetText("")
+
+    pane.missingCount:SetText(
+        (total or 0) > 0 and (#missing .. " of " .. (total or 0)) or ""
     )
 
     if #missing == 0 then
-        pane.status:SetText(
-            "Every one of the " .. (total or 0) .. " items in the journal has "
-            .. "dropped at least once."
-        )
+        HideRowsFrom(pane, "missing", 1)
 
-        HideRowsFrom(pane, 1)
+        local row = Row(pane, "missing", 1)
 
-        return
+        row.itemLink = nil
+        row.icon:Hide()
+        row.name:SetText("Nothing -- it has given you all " .. (total or 0))
+        Theme.SetTextColor(row.name, "textMuted")
+        row.count:SetText("")
+        row:Show()
+
+        HideRowsFrom(pane, "missing", 2)
+    else
+        DrawList(pane, "missing", missing, function(item)
+            return tostring(item.name or "Unknown"),
+                item.slot or "",
+                item.link
+        end)
     end
 
-    pane.status:SetText(string.format(
-        "%d of %d never dropped · %d seen",
-        #missing, total or 0, seen or 0
-    ))
+    --------------------------------------------------------------------
+    -- The caveat, which changes what the right-hand number means
+    --------------------------------------------------------------------
 
-    DrawList(pane, missing, function(item)
-        return tostring(item.name or "Unknown"), item.slot or ""
-    end)
+    -- SAYS WHICH DIFFICULTY, which it never did. Both lists are about one
+    -- difficulty of one boss, and "6 of 8 never dropped" reads as a fact
+    -- about the raid until you know that.
+    pane.footnote:SetText(
+        "Both lists are " .. tostring(boss.difficultyName or "this difficulty")
+        .. " only. \"Has not given you\" comes from the Adventure Guide, "
+        .. "which lists every item a boss can drop for any class -- so some "
+        .. "of them are for nobody in your raid. It is what has not dropped, "
+        .. "not what you are owed."
+    )
 end

@@ -133,6 +133,7 @@ UI\HistoryPrompt.lua
 UI\ShareWindow.lua
 UI\CouncilMatchWindow.lua
 UI\FilterDropdown.lua
+UI\DatePicker.lua
 UI\FilterBar.lua
 UI\SelectionBar.lua
 UI\LootListView.lua

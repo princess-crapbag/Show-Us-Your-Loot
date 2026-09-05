@@ -38,7 +38,9 @@ local frame
 local rows = {}
 local offset = 0
 local selectedKey
-local mode = "missing"
+-- The mode toggle is gone: the pane shows both lists now, so there is no
+-- half to choose between. See UI/BossLoot.lua.
+local difficulty
 
 -- "bosses" or "lockouts". The tab draws one or the other, the way the Keys
 -- tab already swaps between keystones and dungeon lockouts -- same control in
@@ -55,6 +57,21 @@ local Refresh
 -- Data
 --------------------------------------------------------------------------
 
+-- ONE DIFFICULTY AT A TIME. Aimee: "can we have a filter there so we dont see
+-- all difficulties at once?"
+--
+-- A boss is keyed per difficulty -- Core/BossStats.lua does that deliberately,
+-- since Heroic and Normal are different loot tables and different luck -- so
+-- the rail listed her eight Heroic bosses beside the same eight on Normal and
+-- six more on LFR. Twenty-two rows for a raid with eight bosses in it.
+--
+-- The difficulty is the one saved in Core/TierProgress.lua, shared with the
+-- dashboard tile rather than kept again here: "which difficulty are we
+-- talking about" should be one answer everywhere in the addon, not one per
+-- screen.
+--
+-- ALL is a real choice and is kept, because a guild that raids two
+-- difficulties in a week genuinely wants to compare them.
 local function Build()
     local bosses = SYL.BossStats.Build(
         SYL.GetActiveDrops(), SYL.GetActiveRaids()
@@ -62,7 +79,45 @@ local function Build()
 
     SYL.BossStats.SortByRecent(bosses)
 
-    return bosses
+    if difficulty == "all" then
+        return bosses
+    end
+
+    local kept = {}
+
+    for _, boss in ipairs(bosses) do
+        if boss.difficultyID == difficulty then
+            table.insert(kept, boss)
+        end
+    end
+
+    return kept
+end
+
+-- The chooser walks the four difficulties and then ALL, so every state is one
+-- press away and nothing is unreachable.
+local function NextDifficulty(current)
+    if current == "all" then
+        return SYL.TierProgress.DIFFICULTIES[1].id
+    end
+
+    for index, entry in ipairs(SYL.TierProgress.DIFFICULTIES) do
+        if entry.id == current then
+            local following = SYL.TierProgress.DIFFICULTIES[index + 1]
+
+            return following and following.id or "all"
+        end
+    end
+
+    return "all"
+end
+
+local function DifficultyLabel(current)
+    if current == "all" then
+        return "All"
+    end
+
+    return SYL.TierProgress.Label(current)
 end
 
 local function FindByKey(bosses, key)
@@ -184,10 +239,12 @@ Refresh = function()
 
     local bosses = Build()
 
-    frame.modeButton.label:SetText(mode == "missing" and "Not dropped" or "Dropped")
+    difficulty = difficulty or SYL.TierProgress.GetDifficulty()
+
+    frame.modeButton.label:SetText(DifficultyLabel(difficulty))
     Theme.SetTextColor(
         frame.modeButton.label,
-        mode == "missing" and "accent" or "textPrimary"
+        difficulty == "all" and "textPrimary" or "accent"
     )
 
     local maxOffset = math.max(0, #bosses - VISIBLE_ROWS)
@@ -208,7 +265,7 @@ Refresh = function()
         )
         frame.empty:Show()
 
-        SYL.BossLoot.Render(frame.pane, nil, mode, journalRead)
+        SYL.BossLoot.Render(frame.pane, nil, nil, journalRead)
         frame.caption:SetText("")
 
         return
@@ -234,7 +291,9 @@ Refresh = function()
         end
     end
 
-    SYL.BossLoot.Render(frame.pane, FindByKey(bosses, selectedKey), mode, journalRead)
+    SYL.BossLoot.Render(
+        frame.pane, FindByKey(bosses, selectedKey), nil, journalRead
+    )
 
     frame.caption:SetText(
         Count(#bosses, "boss", "bosses")
@@ -247,14 +306,25 @@ BossesPanel.Refresh = Refresh
 -- The controls go through these rather than closing over the locals, so what
 -- a button does has a name and can be driven without a click. The journal walk
 -- in particular is worth being able to assert has NOT happened.
-function BossesPanel.SetMode(next)
-    mode = (next == "dropped") and "dropped" or "missing"
+function BossesPanel.SetDifficulty(next)
+    difficulty = next
+
+    -- The chosen difficulty is shared with the dashboard, so picking Heroic
+    -- here is picking it there. ALL is this screen's own and is not saved
+    -- into that setting -- the tile has no sensible "all" to show.
+    if next ~= "all" then
+        SYL.TierProgress.SetDifficulty(next)
+    end
+
+    -- A boss selected on another difficulty is not on this list any more.
+    selectedKey = nil
+    offset = 0
 
     Refresh()
 end
 
-function BossesPanel.ToggleMode()
-    BossesPanel.SetMode(mode == "missing" and "dropped" or "missing")
+function BossesPanel.CycleDifficulty()
+    BossesPanel.SetDifficulty(NextDifficulty(difficulty))
 end
 
 -- ALSO WHAT FILLS THE NIGHT PANE'S BOSS TOTAL.
@@ -304,18 +374,20 @@ function BossesPanel.Create(parent)
     title:SetText("BOSSES")
 
     frame.modeButton =
-        Theme.CreateButton(frame, 110, 20, "Not dropped", function()
-            BossesPanel.ToggleMode()
+        Theme.CreateButton(frame, 78, 20, "Heroic", function()
+            BossesPanel.CycleDifficulty()
         end)
 
     frame.modeButton:SetPoint("TOPLEFT", title, "TOPRIGHT", 14, -2)
 
     SYL.Tooltips.Attach(
         frame.modeButton,
-        "Not dropped / Dropped",
-        "Not dropped lists what the Adventure Guide says this boss can give "
-        .. "and never has. Dropped lists what it actually gave you, most "
-        .. "frequent first."
+        "Which difficulty",
+        "A boss is recorded once per difficulty, because Heroic and Normal "
+        .. "are different loot tables and different luck -- so without this "
+        .. "the list holds every boss three or four times. Shared with the "
+        .. "dashboard's tier progress, so both screens mean the same thing "
+        .. "by Heroic."
     )
 
     -- Separate from the mode toggle on purpose. Switching the view is free;
