@@ -51,6 +51,16 @@ def _measurer():
     if _real is not None:
         return _real or None
 
+    # THE CI RUNNER HAS NO GAME FONT, and that is the whole reason
+    # font_widths.json exists. A width this machine can measure for real and
+    # the table has never recorded passes here and fails there -- which is
+    # how v0.4.5 was tagged and stopped at the test step with the packaging
+    # never reached. tools/test_fontwidths.py sets this to run every suite
+    # the way the runner will.
+    if os.environ.get("SYL_NO_GAME_FONT"):
+        _real = False
+        return None
+
     try:
         from mockup_settings_tabs import measure
     except Exception:
