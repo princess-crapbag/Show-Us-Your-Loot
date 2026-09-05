@@ -161,14 +161,47 @@ local function Encode(serial, index, count, data)
     )
 end
 
+-- SPLIT ON CHARACTER BOUNDARIES, NOT ON BYTES.
+--
+-- A guild is full of names like Meumermao, Uberion and Razortongue with real
+-- accents in them, and in UTF-8 each of those letters is two bytes. Cutting
+-- at byte 200 regardless lands inside one of those pairs roughly once per
+-- five hundred messages, and the two halves go out as separate addon
+-- messages, each holding half a character.
+--
+-- The reassembly at the other end concatenates the bytes back and is fine
+-- with that. The chat system in between is not: it carries UTF-8 text, and a
+-- message that is not valid UTF-8 on its own is not something to hand it and
+-- hope. The drop that record belonged to is the one that silently does not
+-- arrive -- and a missing drop looks like nothing at all, because nothing on
+-- either screen counts what should have been there.
+--
+-- Measured on Aimee's own season: 120 of her 135 drops carry a non-ASCII
+-- name, and two of the 1013 messages split a character. Small, and silent,
+-- which is the combination worth removing rather than living with.
+--
+-- A continuation byte is 0x80-0xBF; a chunk may not end immediately before
+-- one. Backing off costs at most three bytes of a two-hundred byte message.
 local function Chunk(text)
     local chunks = {}
     local position = 1
 
     while position <= #text do
-        table.insert(chunks, text:sub(position, position + CHUNK_SIZE - 1))
+        local last = math.min(position + CHUNK_SIZE - 1, #text)
 
-        position = position + CHUNK_SIZE
+        while last > position do
+            local following = text:byte(last + 1)
+
+            if not following or following < 0x80 or following > 0xBF then
+                break
+            end
+
+            last = last - 1
+        end
+
+        table.insert(chunks, text:sub(position, last))
+
+        position = last + 1
     end
 
     if #chunks == 0 then

@@ -597,6 +597,92 @@ for index in range(1, G.SentCount() + 1):
 check("THE BAR COUNTS WHAT WENT, not what was popped off a list",
       sent == on_wire and sent == total, (sent, on_wire, total))
 
+# --- 11. a name with an accent in it ---------------------------------------
+#
+# THE GUILD IS NOT ASCII. Aimee's own season carries Meumermao, Uberion and
+# Razortongue with real accents -- 120 of her 135 drops hold a non-ASCII name
+# somewhere -- and in UTF-8 each of those letters is two bytes.
+#
+# Chunking at byte 200 regardless split one of those pairs twice in her 1013
+# messages: two addon messages each holding half a character, neither valid
+# UTF-8 on its own. The reassembly is happy to glue the bytes back; the chat
+# system carrying them is not something to hand a broken sequence and hope.
+#
+# Driven with a name built to land a character exactly on the boundary, so
+# this fails the moment the chunker goes back to counting bytes.
+
+G.ClearSent()
+SYL.SendQueue.Reset()
+lua.execute("ShowUsYourLootDB = nil")
+SYL.DatabaseInitialize()
+
+accented = SYL.GetActiveSeason()
+
+# FOUR RECORDS, EACH ONE BYTE LONGER THAN THE LAST, and an item name that is
+# nothing but two-byte letters. A 200-byte boundary falling in a run of those
+# is inside a character for every other starting offset, so shifting the
+# payload through four consecutive offsets makes at least two of the four
+# split under a chunker that counts bytes. Without the shift the test passes
+# on both -- which is what the first version of it did.
+for index in range(1, 5):
+    record = drop("a" * index, item=181000 + index)
+    record["itemName"] = "ã" * 260
+    record["winnerName"] = "Códició-Area52"
+    accented.drops[index] = record
+
+SYL.HistorySync.Offer(OFFICER, accented)
+flush()
+G.ClearSent()
+SYL.SendQueue.Reset()
+SYL.HistorySync.Begin(OFFICER)
+drain_history()
+
+# READ AS BYTES, NEVER AS A STRING. G.SentPayload hands the payload to Python,
+# which decodes it as UTF-8 -- so on a payload that is cut through a character
+# the harness itself raises before the assertion below can say anything, and
+# the suite dies with a traceback instead of naming the bug. These two stay on
+# the Lua side and answer one byte at a time.
+sent_length = lua.eval("function(i) return #SENT[i].payload end")
+sent_byte = lua.eval(
+    "function(i, k) return string.byte(SENT[i].payload, k) end")
+
+broken = 0
+
+for index in range(1, G.SentCount() + 1):
+    raw = bytes(sent_byte(index, k)
+                for k in range(1, sent_length(index) + 1))
+
+    try:
+        raw.decode("utf-8")
+    except UnicodeDecodeError:
+        broken += 1
+
+check("no message is cut through the middle of a character",
+      broken == 0,
+      "%d of %d messages are not valid UTF-8 on their own"
+      % (broken, G.SentCount()))
+
+# And it all still arrives, which is the point of not breaking it.
+lua.execute("ShowUsYourLootDB = nil")
+SYL.DatabaseInitialize()
+
+SYL.HistorySync.OnMessage(
+    "SYLHIST", "1	O	Accents	4	0	12", "WHISPER", OFFICER)
+SYL.HistorySync.AcceptOffer()
+
+# Replayed inside Lua for the same reason: the bytes must reach OnMessage
+# exactly as they went out.
+lua.execute("""
+    for _, entry in ipairs(SENT) do
+        ShowUsYourLoot.HistorySync.OnMessage(
+            "SYLHIST", entry.payload, "WHISPER", "Pringlesbop-Illidan")
+    end
+""")
+
+landed = len(SYL.GetActiveSeason().drops or [])
+
+check("and all four accented drops land intact", landed == 4, landed)
+
 print("")
 print("FAILURES: " + (str(failures) if failures else "none"))
 
