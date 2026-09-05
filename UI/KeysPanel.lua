@@ -310,7 +310,10 @@ end
 function KeysPanel.Create(parent)
     -- Before anything is anchored: rows and headings both read column.x and
     -- column.width, and neither exists until this has run.
-    SYL.KeyRows.Measure()
+    -- Bounded by the list this table sits in, so a longer
+    -- dungeon name than any shipped so far shrinks that column
+    -- rather than running under the request pane.
+    SYL.KeyRows.Measure(LIST_WIDTH)
 
     frame = CreateFrame("Frame", nil, parent)
 

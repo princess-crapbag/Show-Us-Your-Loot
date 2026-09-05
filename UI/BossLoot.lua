@@ -30,6 +30,12 @@ local Count = SYL.Utilities.Count
 local BossLoot = {}
 SYL.BossLoot = BossLoot
 
+-- Set while drawing, read at the end of Render: true when some row on screen
+-- has an item the client cannot describe yet. See Core/ItemCacheWatch.lua --
+-- a boss's loot table is mostly items this character has never seen, so the
+-- first look at a boss is a column of blank squares that never filled in.
+local waitingOnCache = false
+
 local PAD = 10
 local ROW_HEIGHT = 18
 local LIST_TOP = 74
@@ -253,6 +259,13 @@ local function DrawList(pane, side, items, describe)
             row.icon:Show()
         else
             row.icon:Hide()
+
+            -- A LINK WITH NO ICON IS AN ANSWER THAT HAS NOT ARRIVED, as
+            -- against no link at all, which is an item there is nothing to
+            -- ask about. Only the first is worth waiting for.
+            if link then
+                waitingOnCache = true
+            end
         end
 
         -- Colored by rarity, the way every other item in this addon is, so a
@@ -316,10 +329,13 @@ function BossLoot.Hide(pane)
     -- what turned an invented field into an error rather than a silent
     -- nothing.
     pane:Hide()
+
+    -- Nothing off screen is waiting for anything.
+    waitingOnCache = false
+    SYL.ItemCacheWatch.Set("bossLoot", false)
 end
 
--- Both lists, always. `mode` is gone -- see COLUMN_GAP above.
-function BossLoot.Render(pane, boss, _, journalRead)
+local function Draw(pane, boss, journalRead)
     -- Shown here rather than in each branch: a pane with no boss selected is
     -- still a pane, and it is Hide that takes it off screen.
     pane:Show()
@@ -469,4 +485,19 @@ function BossLoot.Render(pane, boss, _, journalRead)
         .. "ones it has given you -- so some of them are for nobody in your "
         .. "raid. It is what has not dropped, not what you are owed."
     )
+end
+
+-- Both lists, always. `mode` is gone -- see COLUMN_GAP above.
+--
+-- WRAPPED, so the wait is reported once however the draw ended. Draw has
+-- three returns in it -- no boss, no loot table, and the bottom -- and the
+-- version that reported at the bottom only left the watcher registered
+-- forever after a boss with no journal entry, redrawing the window on every
+-- item the client cached for the rest of the session.
+function BossLoot.Render(pane, boss, _, journalRead)
+    waitingOnCache = false
+
+    Draw(pane, boss, journalRead)
+
+    SYL.ItemCacheWatch.Set("bossLoot", waitingOnCache)
 end

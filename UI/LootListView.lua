@@ -47,48 +47,12 @@ SYL.LootListView = LootListView
 -- This used to re-draw the whole list every 0.6 seconds until everything
 -- resolved, which is a poll for an answer the client volunteers. Two things
 -- were wrong with it: a full season's list was rebuilt twice a second while
--- the window sat open, and an item the server never answers for — a removed
--- id, a failed request — kept it going forever.
+-- the window sat open, and an item the server never answers for -- a removed
+-- id, a failed request -- kept it going forever.
 --
--- GET_ITEM_INFO_RECEIVED fires when the cache fills. Registered only while
--- something on screen is actually waiting, and dropped again the moment
--- nothing is, so an idle window listens to nothing.
-local BURST_SECONDS = 0.1
-
-local cacheWatcher
-local refreshPending = false
-
-local function StopWatchingItemCache()
-    if cacheWatcher then
-        cacheWatcher:UnregisterAllEvents()
-    end
-end
-
-local function WatchItemCache()
-    if not cacheWatcher then
-        cacheWatcher = CreateFrame("Frame")
-
-        cacheWatcher:SetScript("OnEvent", function()
-            -- A boss's worth of items resolve in one burst, and each would
-            -- otherwise redraw the list on its own.
-            if refreshPending then
-                return
-            end
-
-            refreshPending = true
-
-            C_Timer.After(BURST_SECONDS, function()
-                refreshPending = false
-
-                if SYL.RefreshMainWindow then
-                    SYL:RefreshMainWindow()
-                end
-            end)
-        end)
-    end
-
-    cacheWatcher:RegisterEvent("GET_ITEM_INFO_RECEIVED")
-end
+-- The listener itself now lives in Core/ItemCacheWatch.lua, because the
+-- Bosses tab waits on the same event and this file used to unregister it
+-- outright when its own rows were done.
 
 --------------------------------------------------------------------------
 -- Shared helpers
@@ -341,9 +305,9 @@ function LootListView.UpdateFeedRows(view)
     end
 
     if allCached then
-        StopWatchingItemCache()
+        SYL.ItemCacheWatch.Set("lootList", false)
     else
-        WatchItemCache()
+        SYL.ItemCacheWatch.Set("lootList", true)
     end
 
     UpdateScrollRange(view, maxOffset, total)

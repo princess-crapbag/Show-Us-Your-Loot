@@ -41,8 +41,17 @@ local offset = 0
 -- is "Vexhul's Everflowing Gland" at 146, and 196 still holds it.
 local COLUMNS = {
     { key = "date", label = "DATE", width = 110, gap = 6 },
-    { key = "item", label = "ITEM", width = 196, gap = 6 },
-    { key = "boss", label = "BOSS", width = 132, gap = 6 },
+    { key = "item", label = "ITEM", width = 172, gap = 6 },
+    -- 156, FOR THE NAMES BLIZZARD ACTUALLY SHIPS. 132 held this tier's
+    -- bosses -- the longest, "Nek'zali the Soulcoiler", is 117.5 -- and
+    -- nothing else. "Dimensius, the All-Devouring" is 153, "Sikran, Captain
+    -- of the Sureki" 145, "Mug'Zee, Heads of Security" 140.5: three of the
+    -- last two tiers' bosses would have clipped, and the first sign of it
+    -- would have been somebody reading a truncated name months from now.
+    --
+    -- Taken out of ITEM, which held 208 for a longest name of 146 -- and the
+    -- row is 630, not the 648 a first pass assumed. syl_check caught that.
+    { key = "boss", label = "BOSS", width = 156, gap = 6 },
     { key = "chose", label = "CHOSE", width = 74, gap = 6 },
     { key = "roll", label = "ROLL", width = 40, gap = 6 },
     { key = "won", label = "", width = 36, gap = 6 },

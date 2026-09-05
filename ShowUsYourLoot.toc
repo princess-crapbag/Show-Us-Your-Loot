@@ -31,6 +31,7 @@ Core\Serializer.lua
 Core\Guild.lua
 Core\ItemQuality.lua
 Core\ItemTypes.lua
+Core\ItemCacheWatch.lua
 Core\Features.lua
 Core\Migrations.lua
 Core\Database.lua

@@ -61,8 +61,14 @@ KeyRows.COLUMNS = {
     -- The longest Mythic+ dungeon name in recent seasons. Worth re-checking
     -- when a season's pool changes: it is the one value here that Blizzard
     -- gets to move.
+    -- THE WIDEST NAME BLIZZARD HAS SHIPPED, not the widest in this season's
+    -- pool. "Priory of the Sacred Flame" measures 135.5 against a 136 budget
+    -- -- half a pixel of margin, and only while that dungeon is the longest
+    -- in rotation. The pool rotates twice a year and has held "Operation:
+    -- Mechagon - Workshop" (178.5) and "Tazavesh: Streets of Wonder" (148.5),
+    -- either of which would have clipped silently the week they came back.
     { key = "dungeon", label = "DUNGEON", justify = "LEFT",
-      widest = "Priory of the Sacred Flame" },
+      widest = "Operation: Mechagon - Workshop", flexible = true },
 
     -- Two digits covers every key level anybody has ever pushed, and the
     -- heading is wider than the number anyway.
@@ -95,8 +101,11 @@ local COLUMN_START = 4
 -- Runs once, from Create, because Theme.MeasureText needs a live client to
 -- measure against — the same reason UI/Columns.lua measures inside a function
 -- rather than at file scope.
-function KeyRows.Measure()
-    local x = COLUMN_START
+-- `available` is what the table has to fit inside. Optional, because the one
+-- caller knows it and the tests do not.
+function KeyRows.Measure(available)
+    local total = COLUMN_START
+    local flexible
 
     for _, column in ipairs(KeyRows.COLUMNS) do
         local content = Theme.MeasureText(Theme.sizes.rowSmall, column.widest)
@@ -105,12 +114,38 @@ function KeyRows.Measure()
         -- The heading can be the wider of the two — LVL holds "30" and is
         -- titled "LVL" — and a clipped heading is worse than a loose column.
         column.width = math.max(content, heading) + COLUMN_PADDING
-        column.x = x
 
+        if column.flexible then
+            flexible = column
+        end
+
+        total = total + column.width
+    end
+
+    -- AND IF THAT DOES NOT FIT, THE FLEXIBLE ONE GIVES WAY. Widening for the
+    -- longest name Blizzard has shipped is right until they ship a longer
+    -- one -- and this table sits beside the request pane, so a column that
+    -- grows past the list draws underneath it rather than being cut.
+    --
+    -- Taking it off the dungeon name is the least-bad answer: a truncated
+    -- dungeon is still recognizable from its first words, where a truncated
+    -- player name is not, and the level and response are too short to give
+    -- anything up.
+    if available and flexible and total > available then
+        local over = total - available
+
+        flexible.width = math.max(60, flexible.width - over)
+        total = available
+    end
+
+    local x = COLUMN_START
+
+    for _, column in ipairs(KeyRows.COLUMNS) do
+        column.x = x
         x = x + column.width
     end
 
-    return x - COLUMN_START
+    return total - COLUMN_START
 end
 
 -- The response column by name rather than by index. It was COLUMNS[4], which

@@ -81,8 +81,30 @@ local function BuildFairness(page, top)
         page, top, "scoring", "FAIRNESS", { columns = 1, extraRows = 1 }
     )
 
+    -- NIL WHEN NO TOGGLE CLAIMS THIS TAB, which is one edit to
+    -- UI/SettingsToggles.lua away and takes the whole Scoring tab down with
+    -- it -- container.heading on a nil throws before anything is drawn.
+    --
+    -- The guild threshold below is not a toggle and does not depend on there
+    -- being any, so the section is built plainly instead and the row still
+    -- appears. Its own heading, its own height: 18 for the heading and one
+    -- ROW_HEIGHT of 20 for the row that goes in it.
+    if not container then
+        local heading
+
+        container, heading = SYL.SettingsRows.AddSection(page, "FAIRNESS", top)
+
+        Track(heading)
+
+        container:SetHeight(20)
+
+        height = 18 + 20
+        count = 0
+    else
+        Track(container.heading)
+    end
+
     Track(container)
-    Track(container.heading)
 
     SYL.SettingsNumberRow.Create(container, (count or 0) + 1, {
         label = "Count a night as the guild's at",

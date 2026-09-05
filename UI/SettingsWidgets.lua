@@ -33,10 +33,22 @@ local HEADING_HEIGHT = 26
 
 local rows = {}
 
+-- Clearance under the last row of the grid, which the Default order button
+-- sits in.
+local TAIL = 26
+
+-- ONE NUMBER, ARRIVED AT ONCE. This said 24 while Build below said 26, so the
+-- scroll range the settings tab reserves was two pixels short of the section
+-- it was reserving for -- invisible at seven widgets and a clipped button as
+-- soon as an eighth pushed the grid to a fourth line.
+local function ContainerHeight(lines)
+    return lines * ROW_HEIGHT + TAIL
+end
+
 function SettingsWidgets.SectionHeight()
-    return HEADING_HEIGHT
-        + SYL.SettingsRows.GridRows(#SYL.Dashboard.WIDGETS, COLUMNS) * ROW_HEIGHT
-        + 24
+    return HEADING_HEIGHT + ContainerHeight(
+        SYL.SettingsRows.GridRows(#SYL.Dashboard.WIDGETS, COLUMNS)
+    )
 end
 
 local function CreateRow(parent, index, widget, onChanged)
@@ -113,7 +125,7 @@ function SettingsWidgets.Build(parent, top, addSection)
     -- the section went three across.
     local lines = SYL.SettingsRows.GridRows(#SYL.Dashboard.WIDGETS, COLUMNS)
 
-    container:SetHeight(lines * ROW_HEIGHT + 26)
+    container:SetHeight(ContainerHeight(lines))
 
     rows = {}
 
@@ -158,7 +170,7 @@ function SettingsWidgets.Build(parent, top, addSection)
 
     -- The height as well, so a tab can stack whatever comes next under it.
     -- The button is inside the container, so it is inside this number.
-    return container, HEADING_HEIGHT + lines * ROW_HEIGHT + 26
+    return container, HEADING_HEIGHT + ContainerHeight(lines)
 end
 
 -- Tears the section down and builds it again, which is how a reorder shows.

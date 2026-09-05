@@ -26,6 +26,28 @@ local PAD = 10
 -- its height before a layout pass answers something else entirely.
 Parts.HEIGHT = 398
 
+-- WHAT THE PANE IS ACTUALLY TALL, which is not always the number above.
+--
+-- The comment beside HEIGHT said "declared rather than measured because the
+-- window does not resize". The window does resize: UI/MainWindow.lua makes it
+-- resizable and restores a saved size at login, and this pane is anchored
+-- TOPRIGHT/BOTTOM inside a panel that stretches with it. So on any window
+-- that is not exactly 596 tall, every card was laid out against a floor that
+-- did not exist -- too low on a small window, and leaving empty ground on a
+-- large one.
+--
+-- The constant stays as the fallback for the first draw, before the frame has
+-- been through a layout pass and answers zero.
+function Parts.PaneHeight(detail)
+    local height = detail and detail.GetHeight and detail:GetHeight() or 0
+
+    if not height or height <= 1 then
+        return Parts.HEIGHT
+    end
+
+    return height
+end
+
 -- What the tail needs: a rule, the sum, and the closing sentence.
 --
 -- MEASURED AGAINST THE SENTENCE THAT ACTUALLY WRAPS. This was 46, which is a
@@ -342,7 +364,8 @@ function Parts.MaxOffset(detail, groups, y, reserve)
     local total = #flat
 
     local step = Cards().HEIGHT + Cards().GAP
-    local floor = Parts.HEIGHT - (reserve or Parts.RESERVED) - SCROLL_LINE
+    local floor = Parts.PaneHeight(detail)
+        - (reserve or Parts.RESERVED) - SCROLL_LINE
 
     -- Flattened once and measured per step, rather than rebuilding the list
     -- inside the drawer on every one -- a sixty-item raider was allocating
@@ -387,7 +410,7 @@ function Parts.DrawGroups(detail, groups, y, reserve, offset, measureOnly)
     -- line that says the list is cut short -- so on the runs where it landed
     -- past 398 the pane read as the whole list, which is the exact failure
     -- the line exists to prevent.
-    local full = Parts.HEIGHT - (reserve or Parts.RESERVED)
+    local full = Parts.PaneHeight(detail) - (reserve or Parts.RESERVED)
 
     local flat = Parts.Flatten(groups)
 
