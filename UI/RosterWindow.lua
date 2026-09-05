@@ -245,6 +245,16 @@ Refresh = function()
         .. (activeOnly
             and ("  ·  seen in the last "
                 .. SYL.RosterData.INACTIVE_DAYS .. " days") or "")
+        -- SAYS WHEN THE GUILD LIST ITSELF IS SHORT. Reported to Aimee: "you
+        -- can not see all of the guild members in the roster section." The
+        -- client filters offline members out of its roster unless asked not
+        -- to -- Core/Guild.lua now asks -- but the list also arrives in
+        -- pieces, so a window opened a second after login is legitimately
+        -- short. Without this the two cases look identical, and both look
+        -- like the addon losing people.
+        .. ((not teamOnly and not SYL.Guild.IsComplete())
+            and ("  ·  " .. SYL.Guild.GetMemberCount() .. " of "
+                .. SYL.Guild.GetClientTotal() .. " loaded") or "")
         .. (selectedCount > 0
             and ("  ·  " .. selectedCount .. " ticked") or "")
     )

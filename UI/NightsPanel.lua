@@ -76,8 +76,86 @@ end
 -- Cells
 --------------------------------------------------------------------------
 
+-- HOW TALL A MONTH CELL CAN ACTUALLY BE, solved rather than declared.
+--
+-- Aimee: "on the calendar for the word out. this place has overlapped
+-- before." It had, and the number was wrong by construction: six rows of 38
+-- plus the gaps and GRID_TOP come to 296, and the stats panel below is
+-- anchored to the bottom with a height of 152 -- so in a 444-tall panel it
+-- starts at 274 and the last week of the month was drawn twenty pixels
+-- INSIDE it. Every "raid · 3 out" on the bottom row sat behind the stats.
+--
+-- Worse, 444 is not a constant. This panel stretches with the main window,
+-- which is resizable, so any fixed cell height is right at exactly one size
+-- and wrong at every other. It is computed from the room there is now.
+--
+-- MIN_MONTH_CELL is what two lines of rowSmall need: the day number at the
+-- top and "raid · 3 out" at the bottom, four pixels of padding each, which
+-- is 38. Below that the detail drops to the smaller font rather than
+-- overlapping -- see DetailSize -- and below MIN it simply stops shrinking
+-- and the last row is clipped by the panel instead of drawn over the stats.
+local MIN_MONTH_CELL = 30
+local MAX_MONTH_CELL = 48
+
+local function PanelHeight()
+    local height = frame and frame:GetHeight() or 0
+
+    if not height or height <= 1 then
+        return 444
+    end
+
+    return height
+end
+
+-- THE GRID GETS THE ROOM FIRST, and the stats panel takes what is left.
+--
+-- The main window can be dragged down to about 316 tall, which leaves this
+-- panel 164 -- and six rows of calendar plus a 152 stats block cannot both
+-- fit in that at any cell size. Something has to give, and it is not the
+-- calendar: this is the calendar screen, and the figures underneath are a
+-- summary of whichever night is selected.
+--
+-- Below MIN_STATS there is not enough left to say anything useful, so it is
+-- hidden outright rather than drawn as a sliver of clipped rows.
+local MIN_STATS = 96
+
+local function StatsHeight()
+    local room = PanelHeight() - GRID_TOP - 18 - 6
+        - MONTH_ROWS * (MIN_MONTH_CELL + CELL_GAP)
+
+    if room < MIN_STATS then
+        return 0
+    end
+
+    return math.min(STATS_HEIGHT, room)
+end
+
+local function GridSpace()
+    -- The stats panel is anchored 18 up from the bottom, and a gap so the
+    -- grid does not sit flush against it.
+    return PanelHeight() - GRID_TOP - StatsHeight() - 18 - 6
+end
+
+local function MonthCellHeight()
+    local space = GridSpace() - CELL_GAP * (MONTH_ROWS - 1)
+    local cell = math.floor(space / MONTH_ROWS)
+
+    return math.max(MIN_MONTH_CELL, math.min(MAX_MONTH_CELL, cell))
+end
+
 local function CellHeight()
-    return view == "week" and WEEK_CELL_HEIGHT or MONTH_CELL_HEIGHT
+    return view == "week" and WEEK_CELL_HEIGHT or MonthCellHeight()
+end
+
+-- The day number and the detail line both have to fit inside a cell. At 38
+-- and up they are the ordinary row font; under that the detail shrinks so
+-- the two never meet in the middle.
+local function DetailSize()
+    if view == "week" or MonthCellHeight() >= 38 then
+        return Theme.sizes.rowSmall
+    end
+
+    return Theme.sizes.tiny
 end
 
 local function CreateCell(index)
@@ -129,6 +207,12 @@ local function CreateCell(index)
     cell.detail = Theme.CreateText(cell, Theme.sizes.rowSmall, "textSecondary")
     cell.detail:SetPoint("BOTTOMLEFT", 5, 4)
     cell.detail:SetPoint("BOTTOMRIGHT", -5, 4)
+
+    -- Never wraps. Anchored to the BOTTOM of the cell, a second line grows
+    -- UP -- straight through the day number. The strings here are short by
+    -- design ("raid · 12 out" is 63 of the 112 available) and one that is
+    -- not should be cut rather than climb.
+    cell.detail:SetWordWrap(false)
     cell.detail:SetJustifyH("LEFT")
     cell.detail:SetWordWrap(false)
 
@@ -155,6 +239,12 @@ local function PositionCell(cell, index)
     )
 
     cell:SetSize(CELL_WIDTH, CellHeight())
+
+    -- Re-sized here rather than at creation, because the cell height is
+    -- solved from the panel's height and the panel stretches with the
+    -- window. A font chosen once at creation is the right font at one
+    -- window size and too tall at every smaller one.
+    Theme.SetTextSize(cell.detail, DetailSize())
 end
 
 -- A day outside the month keeps its cell so the grid does not reflow; it just
@@ -299,6 +389,18 @@ Refresh = function()
 
     frame.monthLabel:SetText((MONTHS[month] or "?") .. " " .. year)
     frame.viewButton.label:SetText(view == "month" and "Month" or "Week")
+
+    -- Resized every draw, because the panel stretches with the window and the
+    -- grid above it is solved from whatever is left. Hidden outright when
+    -- there is not enough room to say anything -- see StatsHeight.
+    local stats = StatsHeight()
+
+    if stats > 0 then
+        frame.stats:SetHeight(stats)
+        frame.stats:Show()
+    else
+        frame.stats:Hide()
+    end
 
     local daysInMonth = SYL.NightCalendar.DaysInMonth(year, month)
     local firstWeekday = SYL.NightCalendar.FirstWeekday(year, month)

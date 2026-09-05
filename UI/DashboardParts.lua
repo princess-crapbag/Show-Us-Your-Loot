@@ -128,7 +128,21 @@ function DashboardParts.Caption(tile, text, colorKey)
     caption:SetPoint("BOTTOMLEFT", 2, 1)
     caption:SetPoint("BOTTOMRIGHT", -2, 1)
     caption:SetJustifyH("LEFT")
-    caption:SetWordWrap(true)
+
+    -- ONE LINE, AND IT CANNOT GROW UPWARD.
+    --
+    -- This wrapped, and a caption pinned to the BOTTOM of a tile that wraps
+    -- grows UP -- straight over the rows above it. RowCapacity holds back
+    -- CAPTION_SPACE, which is one line, so a two- or three-line caption
+    -- overlapped whatever was drawn last. Aimee found it on the due list:
+    -- "only players marked as being on the raid team" is fifty characters in
+    -- a tile 263 wide, so it took three lines and covered two raiders.
+    --
+    -- Wrapping off means a caption too long is cut rather than climbing.
+    -- Neither is good and cut is far less bad -- it loses the tail of a
+    -- sentence instead of hiding data behind it -- but the real defense is
+    -- that every caption here is now measured in tools/test_layout.py.
+    caption:SetWordWrap(false)
     caption:SetText(text)
 
     tile.caption = caption

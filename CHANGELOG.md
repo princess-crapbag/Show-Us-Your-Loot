@@ -57,6 +57,30 @@ this says what you will notice.
 
 ### Fixed
 
+- **Text overlapped in three places, and one of them was hiding a third of
+  your guild.**
+
+  *The due list caption* ended with the full scope sentence — "only players
+  marked as being on the raid team" — which took three lines in a 263-wide
+  tile and grew upward over two raiders, because a caption pinned to the
+  bottom of a tile wraps upward. It now uses the short scope, and no dashboard
+  caption can wrap at all.
+
+  *The calendar's last week of the month* was drawn twenty pixels inside the
+  stats panel below it. Six rows of 38 plus the gaps came to more than the
+  space above a panel anchored to the bottom — and that space is not even
+  fixed, since the window resizes. The month cell height is solved from the
+  room there actually is now, and the summary below gives way before the
+  calendar does.
+
+  *The guild roster was missing everybody who was offline.* The client keeps a
+  filtered roster and only includes offline members when asked — a checkbox in
+  Blizzard's own guild window, off for plenty of people — and the addon never
+  asked. So "everyone" showed whoever happened to be logged in, and the people
+  missing were exactly the ones not there to notice. It asks now. The roster
+  line also says *"N of M loaded"* while the client is still sending the list,
+  so a genuinely slow load no longer looks like the same bug.
+
 - **The loot feed stopped at the bottom of the tile without saying so.** The
   caption named a total the list did not contain, so a night of thirteen drops
   read as a night of however many happened to fit. It now says how many are

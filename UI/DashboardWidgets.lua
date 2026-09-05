@@ -136,10 +136,12 @@ DashboardWidgets.RENDERERS.lastNight = function(tile)
     -- that is not.
     local hidden = total - shown
 
+    -- Measured to one line at the tile's width, including the day the list
+    -- is cut short: the long form ran to two lines and climbed the rows.
     DashboardParts.Caption(tile,
-        total .. " drops · " .. SYL.Utilities.FormatDateOnly(latest.startedAt)
-        .. (hidden > 0 and (" · " .. hidden .. " not shown") or "")
-        .. " · " .. emptyHanded .. " went home with nothing")
+        total .. " drops · " .. date("%m/%d", latest.startedAt)
+        .. (hidden > 0 and (" · " .. hidden .. " more") or "")
+        .. " · " .. emptyHanded .. " with nothing")
 end
 
 -- Who is due --------------------------------------------------------------
@@ -176,10 +178,14 @@ DashboardWidgets.RENDERERS.due = function(tile)
 
     local average = SYL.LootScore.Average(entries)
 
+    -- THE SHORT SCOPE, not the sentence. Audience.Note is written for a
+    -- footer under a full-width list -- "only players marked as being on the
+    -- raid team" -- and in a 263-wide tile it took three lines and climbed
+    -- over two raiders. Label says the same thing in two words.
     DashboardParts.Caption(tile,
-        #entries .. " shown · raid average "
+        #entries .. " shown · "
         .. string.format("%.1f", average)
-        .. " per night · " .. SYL.Audience.Note())
+        .. " per night · " .. SYL.Audience.Label())
 end
 
 -- Readiness ---------------------------------------------------------------

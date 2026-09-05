@@ -686,6 +686,143 @@ check("with room left for another control",
       "%.1f of clearance" % (CLOSE_START - ACTIONS_END))
 
 
+
+# --- the dashboard tiles ---------------------------------------------------
+#
+# Aimee, 2026-09-05: "i'm noticing some overlapping places again... i see it on
+# the dashboard for the bottom text of who is due."
+#
+# A caption pinned to the BOTTOM of a tile that wraps grows UPWARD, straight
+# over the rows above it -- and RowCapacity only ever held back one line for
+# it. The due list ended with Audience.Note(), fifty characters written for a
+# footer under a full-width list, which took three lines in a 263-wide tile
+# and covered two raiders.
+parts_src = src("UI/DashboardParts.lua")
+tab_src = src("UI/DashboardTab.lua")
+widgets_src = src("UI/DashboardWidgets.lua")
+
+TILE_COLUMNS = number(tab_src, r"local COLUMNS = (\d+)", "dashboard columns")
+TILE_GAP = number(tab_src, r"local GAP = (\d+)", "dashboard gap")
+CAPTION_SPACE = number(parts_src, r"local CAPTION_SPACE = (\d+)",
+                       "caption space")
+DASH_ROW = number(parts_src, r"local ROW_HEIGHT = (\d+)", "dashboard row")
+
+# The window is fixed at 900 wide and the frame insets 16 each side.
+TILE_WIDTH = (900 - 32 - TILE_GAP * (TILE_COLUMNS - 1)) / TILE_COLUMNS
+CAPTION_ROOM = TILE_WIDTH - 20 - 4          # body inset, then the caption's
+
+# The reserve has to be at least a line of the font the caption is drawn in,
+# or the last row is drawn under it even when it does not wrap.
+check("the tile holds back enough room for the caption it reserves for",
+      CAPTION_SPACE >= 14,
+      "%d is less than one line of the row font" % CAPTION_SPACE)
+check("and a row is taller than the caption's reserve, so one row is the "
+      "most a caption can ever cost",
+      DASH_ROW > CAPTION_SPACE, (DASH_ROW, CAPTION_SPACE))
+
+check("the caption never wraps, so it cannot climb over the rows",
+      "caption:SetWordWrap(false)" in parts_src,
+      "a wrapping caption anchored to the bottom grows upward")
+
+# Every caption a tile can draw, at its longest realistic value. Written out
+# rather than read from source because they are built from live data -- but
+# the WIDTHS are measured, which is the half that was wrong.
+CAPTIONS = [
+    ("last raid night", "13 drops · 09/03 · 4 more · 11 with nothing"),
+    ("who is due", "199 shown · 100.0 per night · Everyone"),
+    ("tier progress", "1 more on Bosses · 8 bosses killed on Heroic"),
+    ("readiness", "2 tanks · 2 healers · 9 dps · 8 of 9 buffs"),
+    ("who is out", "for 09/08/2026 · and later"),
+    ("next raid night", "09/08/2026 · your usual raid days"),
+]
+
+for name, text in CAPTIONS:
+    width = measure(text, 11)
+
+    check("the %s caption fits its tile on one line" % name,
+          width <= CAPTION_ROOM,
+          "%.1f in %.1f" % (width, CAPTION_ROOM))
+
+check("the due caption uses the short scope, not the sentence",
+      "SYL.Audience.Label()" in widgets_src
+      and "shown · raid average" not in widgets_src,
+      "Audience.Note() is a footer sentence and takes three lines here")
+
+# --- the calendar ----------------------------------------------------------
+#
+# Aimee: "and on the calendar for the word out. this place has overlapped
+# before."
+#
+# It had, and by construction: six rows of 38 plus gaps and GRID_TOP come to
+# 296, while the stats panel is anchored to the bottom with a height of 152 --
+# so in a 444-tall panel it began at 274 and the last week of the month was
+# drawn twenty pixels inside it.
+nights_src = src("UI/NightsPanel.lua")
+
+GRID_TOP = number(nights_src, r"local GRID_TOP = (\d+)", "grid top")
+MONTH_ROWS = number(nights_src, r"local MONTH_ROWS = (\d+)", "month rows")
+CELL_GAP = number(nights_src, r"local CELL_GAP = (\d+)", "cell gap")
+STATS_HEIGHT = number(nights_src, r"local STATS_HEIGHT = (\d+)", "stats")
+MIN_CELL = number(nights_src, r"local MIN_MONTH_CELL = (\d+)", "min cell")
+MAX_CELL = number(nights_src, r"local MAX_MONTH_CELL = (\d+)", "max cell")
+MIN_STATS = number(nights_src, r"local MIN_STATS = (\d+)", "min stats")
+
+STATS_INSET = 18
+GRID_CLEARANCE = 6
+
+
+def calendar_layout(panel_height):
+    """The arithmetic UI/NightsPanel.lua now does, mirrored."""
+    room = (panel_height - GRID_TOP - STATS_INSET - GRID_CLEARANCE
+            - MONTH_ROWS * (MIN_CELL + CELL_GAP))
+
+    stats = 0 if room < MIN_STATS else min(STATS_HEIGHT, room)
+
+    space = (panel_height - GRID_TOP - stats - STATS_INSET - GRID_CLEARANCE
+             - CELL_GAP * (MONTH_ROWS - 1))
+
+    cell = max(MIN_CELL, min(MAX_CELL, math.floor(space / MONTH_ROWS)))
+
+    grid_bottom = GRID_TOP + MONTH_ROWS * (cell + CELL_GAP)
+    stats_top = panel_height - STATS_INSET - stats if stats else panel_height
+
+    return cell, grid_bottom, stats_top, stats
+
+
+check("the month cell height is solved, not declared",
+      "local function MonthCellHeight" in nights_src
+      and "MONTH_CELL_HEIGHT or" not in nights_src,
+      "a fixed cell height is right at one window size and wrong at the rest")
+
+# The panel stretches with the main window, so every size it can be dragged
+# to has to clear. 444 is the default; 500 and up are a dragged window.
+for panel_height in (400, 444, 500, 560, 640):
+    cell, grid_bottom, stats_top, stats = calendar_layout(panel_height)
+
+    check("the calendar grid clears the stats panel at %d" % panel_height,
+          grid_bottom <= stats_top,
+          "grid ends %d, stats start %d" % (grid_bottom, stats_top))
+
+    check("and a month cell at %d still holds two lines" % panel_height,
+          cell >= 30, cell)
+
+check("the stats panel gives way before the calendar does",
+      calendar_layout(400)[3] < STATS_HEIGHT,
+      "a small window must shrink the summary, not overdraw the month")
+
+# The cell's own two lines: the day number at the top, the detail at the
+# bottom, both at the row font.
+CELL_WIDTH = number(nights_src, r"local CELL_WIDTH = (\d+)", "cell width")
+
+for text in ("raid · 12 out", "12 out", "raid"):
+    check("the calendar cell fits %r on one line" % text,
+          measure(text, 11) <= CELL_WIDTH - 10,
+          "%.1f in %d" % (measure(text, 11), CELL_WIDTH - 10))
+
+check("the calendar detail never wraps either",
+      "cell.detail:SetWordWrap(false)" in nights_src,
+      "anchored to the bottom of the cell, a second line covers the day")
+
 print()
 print("FAILURES: " + (", ".join(FAILURES) if FAILURES else "none"))
 sys.exit(1 if FAILURES else 0)

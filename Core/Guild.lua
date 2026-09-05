@@ -61,6 +61,10 @@ local byName = {}
 local guildName
 local lastRefresh = 0
 
+-- What the client last said the guild holds, against what Refresh managed to
+-- read. See Guild.IsComplete.
+local lastTotal = 0
+
 local function ShortName(fullName)
     if type(fullName) ~= "string" then
         return nil
@@ -88,8 +92,22 @@ function Guild.Refresh()
 
     guildName = GetGuildInfo("player")
 
-    local total = GetNumGuildMembers() or 0
+    -- GetNumGuildMembers answers three numbers: total, online, and online
+    -- including mobile. The FIRST is what the roster is indexed by when
+    -- offline members are shown -- which is what Request now asks for -- and
+    -- taking it alone was never the bug. The bug was that the list being
+    -- indexed had been filtered down to the online ones before we got here.
+    --
+    -- Counted anyway, so the debug line can say when the two disagree: a
+    -- total of 399 with 12 readable rows is a client that has not finished
+    -- sending the roster, and it looks exactly like a small guild.
+    local total, online = GetNumGuildMembers()
+
+    total = total or 0
+
     local added = 0
+
+    lastTotal = total
 
     for index = 1, total do
         local info = { GetGuildRosterInfo(index) }
@@ -150,6 +168,17 @@ function Guild.Refresh()
     end
 
     lastRefresh = time()
+
+    -- Said out loud when the roster came back short. The client sends the
+    -- guild list in pieces and a refresh landing mid-send is normal, but a
+    -- gap that never closes is the difference between "the addon is slow"
+    -- and "the addon is wrong about who is in your guild".
+    if total > 0 and added < total then
+        SYL:DebugPrint(
+            "Guild roster: read " .. added .. " of " .. total
+            .. " members (" .. tostring(online or "?") .. " online)."
+        )
+    end
 
     return added
 end
@@ -239,16 +268,60 @@ function Guild.GetMemberCount()
     return count
 end
 
+-- What the CLIENT says the guild holds, against what this cache actually
+-- read. The two agreeing is the whole answer to "am I seeing everybody".
+--
+-- Kept as a number rather than a boolean so a screen can print both. See
+-- Refresh: they disagree while the roster is still arriving, and used to
+-- disagree permanently when offline members were filtered out of it.
+function Guild.GetClientTotal()
+    return lastTotal
+end
+
+function Guild.IsComplete()
+    return lastTotal == 0 or Guild.GetMemberCount() >= lastTotal
+end
+
 function Guild.GetLastRefresh()
     return lastRefresh
 end
 
 -- Asks the server for a fresh roster. The reply arrives as
 -- GUILD_ROSTER_UPDATE, which is where Refresh actually runs.
+-- OFFLINE MEMBERS HAVE TO BE ASKED FOR, and this never asked.
+--
+-- Reported to Aimee: "you can not see all of the guild members in the roster
+-- section when you change it to whole guild and everyone." True, and this is
+-- why. The client keeps a FILTERED roster: with "show offline" unchecked --
+-- which is a per-character setting in Blizzard's own guild frame, and off for
+-- plenty of people -- GetGuildRosterInfo enumerates only the members who are
+-- logged in right now. Refresh below walks that list and caches what it
+-- finds, so a 399-member guild came back as however many happened to be
+-- online, and a roster of "everyone" showed a fraction of everyone.
+--
+-- Nothing about it looked wrong. The names present were real, the count under
+-- the list was honest about what it had, and the members missing were exactly
+-- the ones not there to notice.
+--
+-- SETTING IT IS FAIR. It is a checkbox in the player's own guild window and
+-- flipping it is something they could do themselves in two clicks -- and this
+-- addon's whole job is the people who are NOT online, which is every raider
+-- on a Tuesday afternoon. It is set before asking, so the answer that comes
+-- back is the whole guild.
+local function AskForOfflineMembers()
+    if C_GuildInfo and C_GuildInfo.SetGuildRosterShowOffline then
+        pcall(C_GuildInfo.SetGuildRosterShowOffline, true)
+    elseif _G.SetGuildRosterShowOffline then
+        pcall(_G.SetGuildRosterShowOffline, true)
+    end
+end
+
 function Guild.Request()
     if not Guild.IsInGuild() then
         return
     end
+
+    AskForOfflineMembers()
 
     if C_GuildInfo and C_GuildInfo.GuildRoster then
         C_GuildInfo.GuildRoster()
