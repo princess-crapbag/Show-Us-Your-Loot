@@ -76,6 +76,14 @@ def member(name, rank=None):
     return lua.table_from(fields)
 
 
+# One id per boss name, stable for the whole file. 555 is deliberately not in
+# here -- it is the id of the boss the Encounter Journal has never read, and
+# the point of that assertion is that it stays unknown.
+ENCOUNTER_IDS = {}
+
+RESERVED_UNKNOWN = 555
+
+
 def session(sid, at, guilded, pugs, difficulty, encounters):
     """A raid session shaped like one of hers."""
     roster = {
@@ -90,9 +98,32 @@ def session(sid, at, guilded, pugs, difficulty, encounters):
 
     # An encounter id per boss, because that is the only bridge between a
     # night's records and the Encounter Journal's boss count.
+    #
+    # HANDED OUT IN ORDER, NOT HASHED. This was
+    # `abs(hash(row["name"])) % 9000 + 100`, and Python randomizes str hashing
+    # per process -- so every run drew five different ids out of a range of
+    # 9000, and the test held only as long as none of them landed on 555, the
+    # one id written down below as the boss the journal does NOT know.
+    #
+    # It landed there on the runner during the v0.4.5 release, three commits
+    # after the tag: the unknown instance became known, the night got a
+    # denominator of 16, and the release stopped at the test step. Nothing was
+    # wrong with the addon. A test that fails once in a few hundred runs is
+    # worse than one that fails every time, because it teaches you to shrug.
+    #
+    # Sequential from 1000 keeps every id distinct and every one of them clear
+    # of RESERVED_UNKNOWN.
     def withID(pull):
         row = dict(pull)
-        row.setdefault("encounterID", abs(hash(row["name"])) % 9000 + 100)
+
+        if "encounterID" not in row:
+            name = row["name"]
+
+            if name not in ENCOUNTER_IDS:
+                ENCOUNTER_IDS[name] = 1000 + len(ENCOUNTER_IDS)
+
+            row["encounterID"] = ENCOUNTER_IDS[name]
+
         return lua.table_from(row)
 
     pulls = lua.table_from([withID(pull) for pull in encounters])
@@ -456,7 +487,8 @@ check("and the hover no longer says the total is unknown",
 # TWO INSTANCES, ONE OF THEM UNKNOWN. Her 08-20 is exactly this shape.
 GROTTO = session("grotto", RAID_AT + 20000, 11, 0, 14, [
     {"name": "Nymrissa Wavecaller", "difficultyID": 14,
-     "at": RAID_AT + 20100, "killed": True, "encounterID": 555},
+     "at": RAID_AT + 20100, "killed": True,
+     "encounterID": RESERVED_UNKNOWN},
 ])
 
 # A DIFFERENT INSTANCE, which is the whole point: the total is one number per
