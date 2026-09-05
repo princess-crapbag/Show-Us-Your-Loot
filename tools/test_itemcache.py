@@ -201,6 +201,33 @@ check("the widget height is arrived at in one place",
       widgets.count("ContainerHeight(") == 4,
       "a second literal is how the two numbers drifted apart")
 
+# --------------------------------------------------------------------------
+# The palette repaint list
+# --------------------------------------------------------------------------
+#
+# UI/ClassColor.lua writes the rule down: SetCustomTextColor DEREGISTERS a
+# font string from the repaint list, so the branch that does NOT set a custom
+# color has to put it back with SetTextColor. Two score columns took it off
+# and never put it back. Invisible because the cell is empty on that branch,
+# and a rule with two silent exceptions is not a rule.
+for path in ("UI/PlayerRows.lua", "UI/RosterRows.lua"):
+    text = source(path)
+
+    wanted = (
+        'cells.score:SetText("")' + chr(10)
+        + '        Theme.SetTextColor(cells.score, "textPrimary")'
+    )
+
+    check("%s puts the score cell back on the repaint list" % path,
+          wanted in text,
+          "SetCustomTextColor in the other branch took it off")
+
+credit = source("UI/DropCredit.lua")
+
+check("a hidden credit block keeps no suggestion from the last record",
+      "frame.suggested = nil" in credit,
+      "the tooltip reads it on hover and the button is hidden, not destroyed")
+
 print("")
 print("FAILURES: " + (str(failures) if failures else "none"))
 

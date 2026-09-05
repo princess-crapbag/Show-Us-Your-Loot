@@ -175,6 +175,13 @@ function RosterRows.Fill(row, entry, isSelected, position)
             cells.score, SYL.RaiderIO.GetScoreColor(entry.mplusScore)
         )
     else
+        -- BACK ON THE REPAINT LIST, which SetCustomTextColor above takes it
+        -- off -- see UI/ClassColor.lua, which writes the rule down. A row
+        -- that has ever shown a score has a score cell the palette no longer
+        -- owns, and rows are reused: the empty string hides that today, and
+        -- the first cell to hold palette-colored text in this column would
+        -- wear last season's Mythic+ color through a theme change.
         cells.score:SetText("")
+        Theme.SetTextColor(cells.score, "textPrimary")
     end
 end

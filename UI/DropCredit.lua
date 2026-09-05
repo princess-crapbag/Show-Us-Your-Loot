@@ -196,6 +196,14 @@ function DropCredit.Update(frame, record)
     if not credit or not SYL.LootCredit.CanCorrect(record) then
         HideBlock(frame)
 
+        -- CLEARED ON THE WAY OUT, or it is the previous record's suggestion.
+        -- The tooltip below reads frame.suggested on hover, and the button it
+        -- belongs to is hidden here rather than destroyed -- so a stale value
+        -- is a live answer about an item that is no longer on screen. Nothing
+        -- reads it on this path today only because DropDetailWindow's onMatch
+        -- asks CouncilLoot again instead of trusting it.
+        frame.suggested = nil
+
         return false
     end
 
