@@ -32,8 +32,26 @@ local COLUMNS = 3
 local GAP = 10
 local STRIP_HEIGHT = 54
 
--- Aimee's number: the top row is 30% taller than the bottom one.
-local TALL_RATIO = 1.3
+-- EVERY ROW THE SAME HEIGHT. Aimee: "i think we could make the second row of
+-- main boxes on the dashboard the same size box as the first row which would
+-- provide more space for progress."
+--
+-- It was 1.3 -- her own number, back when the top row held the things worth
+-- looking at longest and the bottom row held summaries. That stopped being
+-- true once tier progress grew a list of first kills: the tile with the most
+-- to say was in the short row, and the tall row above it was mostly empty
+-- ground under five drops.
+--
+-- WHAT IT COSTS, measured rather than assumed: the top row goes 209 to 185
+-- and the bottom 160 to 185, so the loot feed drops from nine rows to seven
+-- and tier progress gains one. Tier gains more than that from its own layout
+-- changing -- the difficulty and the raid totals moved up onto the header
+-- line -- and the feed now says when it is not showing everything.
+--
+-- Kept as a named constant rather than deleted, because the arithmetic below
+-- solves for a ratio and 1 is a ratio. A future row that should be taller
+-- than the rest changes one number.
+local TALL_RATIO = 1
 
 -- Only used before the frame has been laid out once, which is the very first
 -- draw. Proportioned the same way so the first frame is not visibly different.
@@ -277,6 +295,36 @@ function DashboardTab.Create(parent, config)
             self.tiles[index]:Hide()
         end
     end
+
+    -- RE-LAID OUT WHEN THE WINDOW IS DRAGGED, which it never was.
+    --
+    -- Every tile height here is solved from the frame's height, and the row
+    -- counts inside them from the tile height -- so a taller window is the
+    -- real answer to "can I see all ten drops". It just never arrived: the
+    -- heights were computed in Refresh and Refresh only ran on a redraw, so
+    -- dragging the window bigger left the tiles exactly the size they were
+    -- and the extra space empty until something else happened to redraw.
+    --
+    -- Guarded on a real change, because OnSizeChanged fires continuously
+    -- while a corner is being dragged and each pass rebuilds seven tiles.
+    local lastHeight, lastWidth
+
+    dashboard:SetScript("OnSizeChanged", function(self, width, height)
+        if not self:IsShown() then
+            return
+        end
+
+        width = math.floor(width or 0)
+        height = math.floor(height or 0)
+
+        if width == lastWidth and height == lastHeight then
+            return
+        end
+
+        lastWidth, lastHeight = width, height
+
+        self:Refresh()
+    end)
 
     dashboard:Hide()
 

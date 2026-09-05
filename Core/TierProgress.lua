@@ -258,6 +258,20 @@ function TierProgress.Build(sessions, difficultyID)
                         end
                     end
                 end
+
+                -- PULLS, counted whether or not the boss died. Aimee: "could
+                -- the pull count for the boss also show there?"
+                --
+                -- A date says when a boss died; the pull count says what it
+                -- cost, which is the half of a progression story people
+                -- actually retell. Counted per difficulty, because eleven
+                -- Normal pulls say nothing about a Heroic kill.
+                if name and (encounter.difficultyID or session.difficultyID)
+                    == difficultyID
+                then
+                    entry.pulls = entry.pulls or {}
+                    entry.pulls[name] = (entry.pulls[name] or 0) + 1
+                end
             end
         end
     end
@@ -268,7 +282,11 @@ function TierProgress.Build(sessions, difficultyID)
         local killed = {}
 
         for _, name in ipairs(entry.killOrder) do
-            table.insert(killed, entry.kills[name])
+            local kill = entry.kills[name]
+
+            kill.pulls = entry.pulls and entry.pulls[name] or nil
+
+            table.insert(killed, kill)
         end
 
         -- Oldest first, which is the order a progression list is read in.
@@ -316,6 +334,7 @@ function TierProgress.Recent(instances)
                 name = kill.name,
                 at = kill.at,
                 week = kill.week,
+                pulls = kill.pulls,
                 instanceName = instance.name,
             })
         end
@@ -326,6 +345,50 @@ function TierProgress.Recent(instances)
     end)
 
     return all
+end
+
+-- THE RAID'S INITIALS, for the header line where the full name will not go.
+--
+-- Aimee's edit of her own screenshot puts both raids on one line beside the
+-- difficulty -- "TG 1/1  VA 6/8" -- which is how she says it out loud anyway,
+-- and it buys back the two body rows the full names were taking.
+--
+-- Built from the name rather than kept in a table, because a table would need
+-- an entry for every raid Blizzard ever ships and would be wrong for the one
+-- released after this was written. The little words are dropped: nobody
+-- abbreviates The Venomous Abyss as TVA.
+local SKIP = { ["the"] = true, ["of"] = true, ["a"] = true, ["and"] = true }
+
+function TierProgress.Initials(name)
+    if type(name) ~= "string" or name == "" then
+        return "?"
+    end
+
+    local letters = {}
+
+    for word in name:gmatch("%a+") do
+        if not SKIP[word:lower()] then
+            table.insert(letters, word:sub(1, 1):upper())
+        end
+    end
+
+    if #letters == 0 then
+        return name:sub(1, 2):upper()
+    end
+
+    return table.concat(letters)
+end
+
+-- Both raids on one line: "TG 1/1  ·  VA 6/8".
+function TierProgress.Headline(instances)
+    local parts = {}
+
+    for _, instance in ipairs(instances or {}) do
+        table.insert(parts, TierProgress.Initials(instance.name)
+            .. " " .. TierProgress.Describe(instance))
+    end
+
+    return table.concat(parts, "  ·  ")
 end
 
 -- "6 of 8 seen" rather than "6 of 8". See the header: the total is a floor

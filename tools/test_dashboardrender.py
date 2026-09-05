@@ -50,8 +50,37 @@ def check(label, ok, detail=""):
 # rows table. The stub frame answers anything, so this is the same shape.
 lua.execute(
     """
+    -- THE TILE ITSELF IS A FRAME, not a bare table, and it was not.
+    --
+    -- In game CreateTile builds a real Frame and hangs title, more and body
+    -- off it, so a renderer can put a control on the HEADER line -- which the
+    -- tier tile now does: the difficulty button and the raid totals sit beside
+    -- "Bosses" rather than eating two of the six body rows.
+    --
+    -- BUT IT CANNOT BE A PLAIN StubFrame EITHER, and that mistake cost a
+    -- confusing failure inside DashboardParts.Row. A stub answers every key
+    -- with a function, so `tile.rowTop or 0` is a FUNCTION rather than nil and
+    -- the next line does arithmetic on it. UI/RaidersRoster.lua's header warns
+    -- about exactly this trap. So the tile is a real table -- unknown fields
+    -- are honestly nil -- carrying only the frame methods a renderer calls on
+    -- it.
     function MakeTile()
-        return { body = StubFrame(), rows = {}, title = StubFrame() }
+        local tile = {
+            body = StubFrame(),
+            title = StubFrame(),
+            more = StubFrame(),
+            rows = {},
+        }
+
+        for _, method in ipairs({
+            "CreateFontString", "CreateTexture", "SetPoint", "SetSize",
+            "SetWidth", "SetHeight", "Show", "Hide", "SetScript",
+            "HookScript", "EnableMouse", "GetWidth", "GetHeight",
+        }) do
+            tile[method] = function() return StubFrame() end
+        end
+
+        return tile
     end
     """
 )

@@ -84,12 +84,24 @@ DashboardWidgets.RENDERERS.lastNight = function(tile)
             if shown < DashboardParts.RowCapacity(tile) then
                 shown = shown + 1
 
+                -- SHORT NAMES AND NO RESPONSE. Aimee: "the dashboard feed
+                -- looks a little busy there. maybe we remove the need/greed
+                -- words from that view alone. you could also just show the
+                -- character names on that without server to make it fewer
+                -- letters."
+                --
+                -- The response still does its work -- it is what corrects the
+                -- count of who went home with nothing below -- it is just not
+                -- drawn. A glance at a night wants who and what; which button
+                -- they pressed is a question for the drop itself, one click
+                -- away on the Feed tab this tile links to.
                 DashboardParts.PlayerRow(
                     tile, shown,
-                    SYL.Utilities.NormalizePlayerName(name or "?"),
+                    SYL.Utilities.ShortName(
+                        SYL.Utilities.NormalizePlayerName(name or "?")
+                    ),
                     (credit and credit.class) or drop.winnerClass,
-                    drop.itemName or "?",
-                    SYL.LootScore.LABELS[state]
+                    drop.itemName or "?"
                 )
             end
         end
@@ -112,8 +124,21 @@ DashboardWidgets.RENDERERS.lastNight = function(tile)
 
     local emptyHanded = math.max(0, roster - upgrades)
 
+    -- SAYS WHEN IT IS NOT SHOWING EVERYTHING. Aimee: "also want to confirm
+    -- that if 10 items drop we will see them all? 11+ would probably not show
+    -- given the space available."
+    --
+    -- She is right, and it depended on the tile height -- which she can change
+    -- by dragging the window. What it must never do is stop at the bottom
+    -- without saying so: the caption named a total the list did not contain,
+    -- so a night of thirteen drops read as a night of however many happened
+    -- to fit. Now the number that is missing is on screen beside the number
+    -- that is not.
+    local hidden = total - shown
+
     DashboardParts.Caption(tile,
         total .. " drops · " .. SYL.Utilities.FormatDateOnly(latest.startedAt)
+        .. (hidden > 0 and (" · " .. hidden .. " not shown") or "")
         .. " · " .. emptyHanded .. " went home with nothing")
 end
 
@@ -215,18 +240,27 @@ end
 --
 -- ONE DIFFICULTY AT A TIME. This tile used to count every boss on every
 -- difficulty into a single number, so Aimee's guild read "22 of 23 killed"
--- while being 6/8 Heroic in one raid and 1/1 Heroic in the other -- her 22 is
--- eight Normal plus six Heroic plus six LFR plus two more in the second raid.
--- The tile's own note in Core/Dashboard.lua has always claimed "kills per
--- boss, kept separate by difficulty", which is exactly what it did not do.
+-- while being 6/8 Heroic in one raid and 1/1 Heroic in the other.
 --
--- The chooser is a button rather than a menu, the same as every other chooser
--- here, and what it picks is SAVED -- so the tile stays on Heroic and any
--- other screen that needs to ask "which difficulty" reads the same answer.
+-- THE TOP LINE IS THE HEADER LINE, which is Aimee's own edit of her
+-- screenshot: "TG 1/1   VA 6/8   [Heroic]" beside the Bosses link, rather
+-- than two body rows and a button below them. That is how she says it out
+-- loud, and it buys back three rows -- two for the raids and one for the
+-- chooser -- in a tile that only has six. The whole body is first kills now.
 local function DifficultyButton(tile, onChanged)
     if not tile.tierDifficulty then
+        -- Sized to the widest label it will ever hold, so cycling does not
+        -- make the button jump: LFR, Normal, Heroic, Mythic.
+        local widest = 0
+
+        for _, entry in ipairs(SYL.TierProgress.DIFFICULTIES) do
+            widest = math.max(widest, SYL.Theme.MeasureText(
+                SYL.Theme.sizes.columnHeader, entry.short
+            ))
+        end
+
         tile.tierDifficulty = SYL.Theme.CreateButton(
-            tile.body, 62, 16, "", function()
+            tile, math.ceil(widest) + 16, 15, "", function()
                 SYL.TierProgress.SetDifficulty(
                     SYL.TierProgress.NextDifficulty()
                 )
@@ -235,7 +269,11 @@ local function DifficultyButton(tile, onChanged)
             end
         )
 
-        tile.tierDifficulty:SetPoint("TOPRIGHT", 0, 0)
+        -- On the tile rather than in the body: the body is the list now, and
+        -- the header is where a control that describes the whole tile
+        -- belongs. Anchored off `more` so it sits beside "Bosses ›" however
+        -- wide that happens to be.
+        tile.tierDifficulty:SetPoint("RIGHT", tile.more, "LEFT", -8, 0)
 
         SYL.Tooltips.Attach(
             tile.tierDifficulty,
@@ -252,6 +290,72 @@ local function DifficultyButton(tile, onChanged)
     return tile.tierDifficulty
 end
 
+-- The raids on the header line, left of the difficulty button.
+--
+-- MEASURED AGAINST THE ROOM THERE ACTUALLY IS, and drawn with as many raids
+-- as fit. Two is what Aimee's tier has and two is what fits: the title, both
+-- totals, the chooser and the Bosses link come to almost exactly the 263 a
+-- tile has to give. A third raid does not fit at any size worth reading, and
+-- a tier with three will happen -- so the ones that do not fit are dropped
+-- here and counted in the caption rather than drawn under the link.
+--
+-- This is the rule UI/Columns.lua wrote down after the DATE column shipped
+-- truncated twice: measure against the widest thing it can hold.
+local function HeadlineText(tile, instances)
+    if not tile.tierHeadline then
+        tile.tierHeadline = SYL.Theme.CreateText(
+            tile, SYL.Theme.sizes.tiny, "textSecondary"
+        )
+
+        tile.tierHeadline:SetJustifyH("RIGHT")
+        tile.tierHeadline:SetWordWrap(false)
+    end
+
+    tile.tierHeadline:ClearAllPoints()
+    tile.tierHeadline:SetPoint(
+        "RIGHT", tile.tierDifficulty or tile.more, "LEFT", -8, 0
+    )
+
+    local size = SYL.Theme.sizes.tiny
+
+    -- What is left after the title on one side and the chooser and the link
+    -- on the other, all of which are already placed. The link is measured off
+    -- the font string itself rather than rebuilt from its text, because the
+    -- arrow in it is not a character worth spelling twice.
+    local linkWidth = 40
+
+    if tile.more and tile.more.GetStringWidth then
+        linkWidth = tile.more:GetStringWidth() or linkWidth
+    end
+
+    local room = (tile.body and tile.body:GetWidth() or 263)
+        - SYL.Theme.MeasureText(SYL.Theme.sizes.columnHeader, "TIER PROGRESS")
+        - (tile.tierDifficulty and tile.tierDifficulty:GetWidth() or 48)
+        - linkWidth
+        - 24
+
+    local parts = {}
+    local shown = 0
+
+    for _, instance in ipairs(instances or {}) do
+        table.insert(parts, SYL.TierProgress.Initials(instance.name)
+            .. " " .. SYL.TierProgress.Describe(instance))
+
+        if SYL.Theme.MeasureText(size, table.concat(parts, "  ")) > room then
+            table.remove(parts)
+
+            break
+        end
+
+        shown = shown + 1
+    end
+
+    tile.tierHeadline:SetText(table.concat(parts, "  "))
+    tile.tierHeadline:Show()
+
+    return shown
+end
+
 DashboardWidgets.RENDERERS.tier = function(tile)
     local difficulty = SYL.TierProgress.GetDifficulty()
 
@@ -261,78 +365,63 @@ DashboardWidgets.RENDERERS.tier = function(tile)
         end
     end)
 
-    -- Rows clear the button's line, which is drawn in the body rather than
-    -- the header because the header belongs to the tile's own click.
-    tile.rowTop = 20
-
     local instances = SYL.TierProgress.Build(SYL.GetActiveRaids(), difficulty)
+
+    local headlined = HeadlineText(tile, instances)
 
     if #instances == 0 then
         DashboardParts.Empty(tile,
             "Nothing killed on " .. SYL.TierProgress.Label(difficulty)
-            .. " yet. Press the button to look at another difficulty.")
+            .. " yet. Press the button beside the heading to look at another "
+            .. "difficulty.")
 
         return
     end
 
-    local index = 0
-
-    for _, instance in ipairs(instances) do
-        index = index + 1
-
-        DashboardParts.Row(tile, index,
-            instance.name,
-            SYL.TierProgress.Describe(instance),
-            "textSecondary",
-            instance.killed < instance.seen and "textPrimary" or "textMuted")
-    end
-
-    -- FIRST KILLS, NEWEST FIRST, and the week rather than only the date.
-    -- Aimee: "i think it would be nice to see later what week we first killed
-    -- which boss." A date says when; the week says how long it took, which is
-    -- the question anybody asks about a tier afterwards.
+    -- FIRST KILLS, NEWEST FIRST, with the week and what it cost. Aimee: "i
+    -- think it would be nice to see later what week we first killed which
+    -- boss", and then "could the pull count for the boss also show there?"
+    --
+    -- A date says when; the week says how long it took, and the pulls say
+    -- what it cost. Those last two are the parts anybody retells.
     local recent = SYL.TierProgress.Recent(instances)
-    local room = DashboardParts.RowCapacity(tile) - index
+    local capacity = DashboardParts.RowCapacity(tile)
 
-    if room > 1 and #recent > 0 then
-        index = index + 1
+    DashboardParts.Row(tile, 1, "FIRST KILLED", "newest first",
+        "textMuted", "textMuted")
 
-        DashboardParts.Row(tile, index, "FIRST KILLED", "newest first",
-            "textMuted", "textMuted")
+    local shown = 0
 
-        local shown = 0
-
-        for _, kill in ipairs(recent) do
-            if index >= DashboardParts.RowCapacity(tile) then
-                break
-            end
-
-            index = index + 1
-            shown = shown + 1
-
-            DashboardParts.Row(tile, index,
-                kill.name,
-                date("%m/%d", kill.at)
-                    .. (kill.week and (" · wk " .. kill.week) or ""),
-                "textSecondary", "textMuted")
+    for _, kill in ipairs(recent) do
+        if shown + 1 >= capacity then
+            break
         end
 
-        local left = #recent - shown
+        shown = shown + 1
 
-        if left > 0 then
-            DashboardParts.Caption(tile,
-                left .. " more on Bosses · "
-                .. SYL.TierProgress.Label(difficulty))
-
-            return
-        end
+        DashboardParts.Row(tile, shown + 1,
+            kill.name,
+            date("%m/%d", kill.at)
+                .. (kill.week and (" · wk " .. kill.week) or ""),
+            "textSecondary", "textMuted",
+            kill.pulls and (kill.pulls
+                .. (kill.pulls == 1 and " pull" or " pulls")) or nil)
     end
 
-    local killed, seen = SYL.TierProgress.Totals(instances)
+    local left = #recent - shown
+
+    -- Any raid that would not fit on the header line is named here rather
+    -- than being silently missing from the totals.
+    local unlisted = #instances - headlined
 
     DashboardParts.Caption(tile,
-        killed .. " of " .. seen .. " killed on "
-        .. SYL.TierProgress.Label(difficulty))
+        (left > 0 and (left .. " more on Bosses · ") or "")
+        .. SYL.Utilities.Count(#recent, "boss", "bosses") .. " killed on "
+        .. SYL.TierProgress.Label(difficulty)
+        .. (unlisted > 0
+            and (" · " .. unlisted .. " more raid"
+                .. (unlisted == 1 and "" or "s"))
+            or ""))
 end
 
 -- Recording ---------------------------------------------------------------

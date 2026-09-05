@@ -45,12 +45,12 @@ from mockup_settings_tabs import (
 
 # (900 - 32 - 10 * 2) / 3, and the tall ratio, from UI/DashboardTab.lua.
 TILE_W = 283
-TILE_H = 208
+TILE_H = 185
 PAD = 10
 INNER = TILE_W - PAD * 2
 
 ROW = 17
-KILL_ROW = 14
+KILL_ROW = 17
 
 CLASS = {
     "ROGUE": (255, 244, 104),
@@ -76,28 +76,37 @@ DROPS = [
 RAIDS = [("The Venomous Abyss", 6, 8), ("The Tidebound Grotto", 1, 1)]
 
 # Heroic first kills, computed from raids[*].encounters.
+# Dates, weeks and pull counts all computed from her raid nights.
 FIRST_KILLS = [
-    ("The Twin Fangs", "09/03", 3),
-    ("Sszorak", "09/03", 3),
-    ("Vashnik the Malignant", "09/01", 3),
-    ("Entombed Sentinels", "09/01", 3),
-    ("Nymrissa Wavecaller", "08/27", 2),
-    ("The Lost Explorers", "08/27", 2),
-    ("Nek'zali the Soulcoiler", "08/25", 2),
+    ("The Twin Fangs", "09/03", 3, 5),
+    ("Sszorak", "09/03", 3, 15),
+    ("Vashnik the Malignant", "09/01", 3, 2),
+    ("Entombed Sentinels", "09/01", 3, 6),
+    ("Nymrissa Wavecaller", "08/27", 2, 6),
+    ("The Lost Explorers", "08/27", 2, 16),
+    ("Nek'zali the Soulcoiler", "08/25", 2, 5),
 ]
 
 
-def head(c, title, link, chip=None):
+def head(c, title, link, chip=None, headline=None):
     c.text(PAD, 8, title, 9, TEXT_3)
 
     x = TILE_W - PAD
     c.right(x, 8, link + " ›", 9, ACCENT)
-    x -= measure(link + " ›", 9) + 12
+    x -= measure(link + " ›", 9) + 10
 
     if chip:
         width = measure(chip, 9) + 16
         c.rect(x - width, 5, width, 15, BUTTON)
         c.text(x - width + 8, 7, chip, 9, TEXT_1)
+        x -= width + 8
+
+    if headline:
+        c.right(x, 8, headline, 9, TEXT_2)
+        check("tier header line",
+              measure(title, 9) + measure(headline, 9)
+              + measure(chip or "", 9) + 16 + measure(link + " ›", 9) + 24,
+              INNER)
 
     c.rect(PAD, 24, INNER, 1, SEP)
 
@@ -145,8 +154,8 @@ def draw_feed_now(c):
 def draw_feed_after(c):
     y = head(c, "LAST RAID NIGHT", "Feed")
 
-    for index, (_, _, credited, cclass, item, response) in enumerate(DROPS):
-        y = feed_row(c, y, index, credited, cclass, item, response)
+    for index, (_, _, credited, cclass, item, _) in enumerate(DROPS):
+        y = feed_row(c, y, index, credited, cclass, item)
 
     caption(c, "5 drops · 09/03/2026 · 8 went home with nothing")
 
@@ -167,46 +176,34 @@ def draw_tier_now(c):
 
 
 def draw_tier_after(c):
-    y = head(c, "TIER PROGRESS", "Bosses", chip="Heroic")
+    # Her own edit: both raids and the difficulty up on the header line.
+    y = head(c, "TIER PROGRESS", "Bosses", chip="Heroic",
+             headline="VA 6/8  TG 1/1")
 
-    for name, killed, total in RAIDS:
-        c.text(PAD, y, name, 11, TEXT_2)
-
-        progress = "%d/%d" % (killed, total)
-        c.right(TILE_W - PAD, y, progress, 11,
-                TEXT_1 if killed < total else TEXT_3)
-
-        # The bar, so two raids at different stages read at a glance.
-        bar_y = y + 13
-        c.rect(PAD, bar_y, INNER, 2, ROW_ALT)
-        c.rect(PAD, bar_y, int(INNER * killed / total), 2, ACCENT_DIM)
-
-        check("raid line '%s'" % name,
-              measure(name, 11) + measure(progress, 11) + 10, INNER)
-
-        y += ROW + 4
-
-    y += 2
     c.text(PAD, y, "FIRST KILLED", 9, TEXT_3)
     c.right(TILE_W - PAD, y, "newest first", 9, TEXT_3)
-    y += 13
+    y += ROW
 
     # Only what fits above the caption rule. A row drawn through the rule is
     # the defect this drawing existed to catch, and it caught it.
     floor = TILE_H - 30
     shown = 0
 
-    for name, date, week in FIRST_KILLS:
+    for name, date, week, pulls in FIRST_KILLS:
         if y + KILL_ROW > floor:
             break
 
         c.text(PAD, y, name, 9, TEXT_2)
 
         stamp = "%s · wk %d" % (date, week)
-        c.right(TILE_W - PAD, y, stamp, 9, TEXT_3)
+        pull_text = "%d pulls" % pulls
+
+        c.right(TILE_W - PAD, y, pull_text, 9, TEXT_3)
+        c.right(TILE_W - PAD - measure(pull_text, 9) - 8, y, stamp, 9, TEXT_3)
 
         check("kill line '%s'" % name[:16],
-              measure(name, 9) + measure(stamp, 9) + 10, INNER)
+              measure(name, 9) + measure(stamp, 9)
+              + measure(pull_text, 9) + 16, INNER)
 
         y += KILL_ROW
         shown += 1
@@ -238,7 +235,7 @@ page_h = MARGIN * 2 + (TILE_H + 34) * 2 + 20
 img = Image.new("RGB", (int(page_w * SCALE), int(page_h * SCALE)), GROUND)
 
 top = C(img, 0, 0)
-top.text(MARGIN, 8, "Two dashboard tiles at their real 283 × 208", 11, TEXT_3)
+top.text(MARGIN, 8, "Two dashboard tiles at their real 283 × 185, rows equalised", 11, TEXT_3)
 
 for index, (draw, note) in enumerate(PANELS):
     column = index % 2

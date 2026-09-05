@@ -30,7 +30,43 @@ this says what you will notice.
   kills with the date and the week of the season, counting from Tuesday, so
   "what week did we kill that" is answerable a tier later.
 
+### Changed
+
+- **Every dashboard row is now the same height.** The top row was 30% taller
+  than the bottom one, which stopped making sense once tier progress grew a
+  list: the tile with the most to say was in the short row and the tall row
+  above it was mostly empty ground under five drops. Both rows are 185 now.
+  The loot feed gives up two rows for it and says so when a night does not
+  fit; tier progress gains three, two of them from its own layout.
+
+- **The dashboard re-lays out when you drag the window.** Every tile height is
+  worked out from the window's, and the row counts from the tile's — but that
+  only ever ran on a redraw, so a bigger window left the tiles the size they
+  were and the new space empty. Dragging the window taller is now the way to
+  see more of any list on it.
+
+- **The loot feed reads more quietly.** Names without the realm, and no
+  Need/Greed column. The response still does its work — it is what corrects
+  the count of who went home with nothing — it is just not drawn; which button
+  somebody pressed is a question for the drop itself, one click away.
+
+- **Tier progress puts both raids on its heading line.** `VA 6/8  TG 1/1`
+  beside the difficulty, rather than two rows and a button below it, which
+  gives the whole body over to first kills. Each one now shows what it cost as
+  well as when it happened — *The Lost Explorers · 08/27 · wk 2 · 16 pulls*.
+
 ### Fixed
+
+- **The loot feed stopped at the bottom of the tile without saying so.** The
+  caption named a total the list did not contain, so a night of thirteen drops
+  read as a night of however many happened to fit. It now says how many are
+  not shown.
+
+- **Who is out only ever looked at one night.** An absence typed three weeks
+  ahead — the sort most worth typing early — left the tile reading *"Nobody
+  has said they are out"* until the week it mattered, with the absence sitting
+  in the database the whole time. Upcoming absences are listed under a LATER
+  heading with the date each one starts.
 
 - **The dashboard's last raid night showed the master looter on every item.**
   It read the recorded winner and never the credit you set afterwards, so

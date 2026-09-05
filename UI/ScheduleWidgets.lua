@@ -93,7 +93,20 @@ SYL.DashboardWidgets.RENDERERS.whoIsOut = function(tile)
     local dayKey = SYL.RaidSchedule.NextNight(today) or today
     local out = SYL.Absences.WhoIsOut(dayKey)
 
-    if #out == 0 then
+    -- AND WHOEVER IS OUT AFTER THAT. Aimee: "can you show the next people who
+    -- are marked as out even if its not the current week? so it would show
+    -- syzzlac is out on xx date currently."
+    --
+    -- WhoIsOut answers about one night, which is right for the calendar and
+    -- wrong here: an absence typed three weeks ahead -- the sort most worth
+    -- typing early -- left this tile reading "Nobody has said they are out"
+    -- until the week it mattered, with the absence sitting in the database
+    -- the whole time. The one screen that exists to show it was the one
+    -- screen not showing it.
+    local capacity = DashboardParts.RowCapacity(tile)
+    local later = SYL.Absences.Upcoming(dayKey, capacity)
+
+    if #out == 0 and #later == 0 then
         DashboardParts.Empty(tile,
             "Nobody has said they are out.\n\nAdd one with "
             .. "/syl out <name> <days> — an addon cannot read your Discord, "
@@ -102,10 +115,19 @@ SYL.DashboardWidgets.RENDERERS.whoIsOut = function(tile)
         return
     end
 
-    DashboardParts.Headline(tile, #out, #out == 1 and "player out" or "players out")
+    -- The headline counts TONIGHT, because that is the number an officer is
+    -- deciding on. Somebody out in three weeks is not a hole in this raid.
+    if #out > 0 then
+        DashboardParts.Headline(tile, #out,
+            #out == 1 and "player out" or "players out")
+    else
+        DashboardParts.Headline(tile, 0, "out for the next night")
+    end
 
-    for index = 1, math.min(DashboardParts.RowCapacity(tile), #out) do
-        local absence = out[index]
+    local index = 0
+
+    local function Row(absence, when)
+        index = index + 1
 
         -- PlayerRow, not Row. The two tiles either side of this one -- last
         -- night's winners and who is due -- both name players in class color
@@ -119,16 +141,43 @@ SYL.DashboardWidgets.RENDERERS.whoIsOut = function(tile)
         DashboardParts.PlayerRow(tile, index,
             absence.name,
             (SYL.Players.Get(absence.key) or {}).class,
-            absence.multiDay
-                and ("to " .. SYL.Utilities.FormatDateOnly(
-                    SYL.RaidSchedule.TimestampOf(absence.to)))
-                or (absence.reason or "out"),
+            when,
             nil,
             "textMuted")
+    end
+
+    for position = 1, math.min(capacity, #out) do
+        local absence = out[position]
+
+        Row(absence, absence.multiDay
+            and ("to " .. SYL.Utilities.FormatDateOnly(
+                SYL.RaidSchedule.TimestampOf(absence.to)))
+            or (absence.reason or "out"))
+    end
+
+    -- A heading between the two, so "out tonight" and "out later" are not
+    -- read as one list. Skipped when there is nothing above it to separate.
+    if #out > 0 and #later > 0 and index < capacity then
+        index = index + 1
+
+        DashboardParts.Row(tile, index, "LATER", "", "textMuted", "textMuted")
+    end
+
+    for _, absence in ipairs(later) do
+        if index >= capacity then
+            break
+        end
+
+        -- THE DATE, which is the whole point of showing these at all:
+        -- "Syzzlac is out" is not actionable, "Syzzlac is out on 09/22" is.
+        Row(absence, SYL.Utilities.FormatDateOnly(
+            SYL.RaidSchedule.TimestampOf(absence.from)
+        ))
     end
 
     DashboardParts.Caption(tile,
         "for " .. SYL.Utilities.FormatDateOnly(
             SYL.RaidSchedule.TimestampOf(dayKey)
-        ))
+        )
+        .. (#later > 0 and " · and later" or ""))
 end

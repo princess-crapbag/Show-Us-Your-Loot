@@ -336,6 +336,68 @@ function Absences.WhoIsOut(dayKey)
     return out
 end
 
+-- WHO IS OUT LATER, when nobody is out for the night being asked about.
+--
+-- Aimee: "for who is out, can you show the next people who are marked as out
+-- even if its not the current week? so it would show syzzlac is out on xx
+-- date currently."
+--
+-- WhoIsOut answers about ONE day, which is right for the calendar and wrong
+-- for a dashboard tile: an absence typed three weeks ahead -- exactly the sort
+-- worth typing early -- made the tile read "Nobody has said they are out"
+-- right up until the week it mattered. The one absence in the database was
+-- invisible on the one screen that exists to show it.
+--
+-- Sorted by when the absence STARTS, so the next person to go missing leads.
+-- One entry per person, the same fold WhoIsOut makes and for the same reason:
+-- two of somebody's characters is one person who is not coming.
+function Absences.Upcoming(afterKey, limit)
+    local store = Store()
+    local out = {}
+
+    if not store or not afterKey then
+        return out
+    end
+
+    local seen = {}
+    local sorted = {}
+
+    for _, absence in ipairs(store.absences) do
+        -- Strictly after the day already asked about, so somebody the caller
+        -- has just listed as out tonight is not listed again as out later.
+        if absence.to and absence.to > afterKey then
+            table.insert(sorted, absence)
+        end
+    end
+
+    table.sort(sorted, function(left, right)
+        if left.from ~= right.from then
+            return (left.from or "") < (right.from or "")
+        end
+
+        return tostring(left.name) < tostring(right.name)
+    end)
+
+    for _, absence in ipairs(sorted) do
+        local person = absence.key
+            and SYL.Players.ResolveToMain(absence.key)
+            or absence.key
+            or absence.name
+
+        if not seen[person] then
+            seen[person] = true
+
+            table.insert(out, absence)
+
+            if limit and #out >= limit then
+                break
+            end
+        end
+    end
+
+    return out
+end
+
 function Absences.AllAbsences()
     local store = Store()
 
