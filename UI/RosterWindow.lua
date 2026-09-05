@@ -50,6 +50,17 @@ local COLUMNS = {
     -- Not sortable: it is a tickbox, it has no label to click, and there is
     -- nothing to order a roster by.
     { key = "select", label = "", width = 20, gap = 10, sortable = false },
+    -- THE POSITION IN THE LIST, so a long one can be checked at a glance.
+    --
+    -- Aimee: "add a number in the roster section when looking at guild / all
+    -- so a user can see if it gets to 400ish." The guild list arrives in
+    -- pieces and used to arrive filtered -- see Core/Guild.lua -- so "is this
+    -- everybody" is a real question, and scrolling to the bottom and reading
+    -- the last number answers it without trusting a summary.
+    --
+    -- Not sortable: it IS the order, so ordering by it would mean nothing.
+    -- 26 holds "399" at the row font with room to spare.
+    { key = "number", label = "#", width = 26, gap = 8, sortable = false },
     { key = "name", label = "NAME", width = 140, gap = 8 },
     { key = "class", label = "CLASS", width = 110, gap = 8 },
     { key = "role", label = "ROLE", width = 74, gap = 8 },
@@ -267,7 +278,12 @@ Refresh = function()
         rows[index] = row
 
         if entry then
-            SYL.RosterRows.Fill(row, entry, selected[entry.guid])
+            -- The position in the whole filtered list, not in the visible
+            -- window, so scrolling reads 1..400 rather than 1..16 over and
+            -- over.
+            SYL.RosterRows.Fill(
+                row, entry, selected[entry.guid], index + offset
+            )
             row:Show()
         else
             row:Hide()

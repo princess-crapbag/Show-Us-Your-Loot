@@ -106,8 +106,17 @@ function RosterRows.Create(parent, index, config)
     return row
 end
 
-function RosterRows.Fill(row, entry, isSelected)
+function RosterRows.Fill(row, entry, isSelected, position)
     local cells = row.cells
+
+    -- Quiet, because it is a landmark rather than information about the
+    -- person -- the eye should find a name first and a number only when it
+    -- is looking for one.
+    if cells.number then
+        cells.number:SetText(position and tostring(position) or "")
+        cells.number:SetJustifyH("RIGHT")
+        Theme.SetTextColor(cells.number, "textMuted")
+    end
 
     -- Read by the hit areas and the checkbox, which outlive any one entry.
     row.entry = entry

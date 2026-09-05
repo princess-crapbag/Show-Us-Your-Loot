@@ -420,8 +420,13 @@ DashboardWidgets.RENDERERS.tier = function(tile)
     -- than being silently missing from the totals.
     local unlisted = #instances - headlined
 
+    -- SAYS THERE ARE MORE, NOT WHERE TO FIND THEM. This read "N more on
+    -- Bosses", which was a signpost to a first-kill list that the Bosses tab
+    -- does not have -- Aimee looked at the six shown and said that was fine,
+    -- so the list was never built and the caption went on pointing at it.
+    -- A promise nothing keeps is worse than no promise.
     DashboardParts.Caption(tile,
-        (left > 0 and (left .. " more on Bosses · ") or "")
+        (left > 0 and (left .. " older · ") or "")
         .. SYL.Utilities.Count(#recent, "boss", "bosses") .. " killed on "
         .. SYL.TierProgress.Label(difficulty)
         .. (unlisted > 0

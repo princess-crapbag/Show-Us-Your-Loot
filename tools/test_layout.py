@@ -766,7 +766,7 @@ check("the caption never wraps, so it cannot climb over the rows",
 CAPTIONS = [
     ("last raid night", "13 drops · 09/03 · 4 more · 11 with nothing"),
     ("who is due", "199 shown · 100.0 per night · Everyone"),
-    ("tier progress", "1 more on Bosses · 8 bosses killed on Heroic"),
+    ("tier progress", "12 older · 20 bosses killed on Normal"),
     ("readiness", "2 tanks · 2 healers · 9 dps · 8 of 9 buffs"),
     ("who is out", "for 09/08/2026 · and later"),
     ("next raid night", "09/08/2026 · your usual raid days"),
