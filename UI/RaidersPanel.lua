@@ -607,6 +607,13 @@ function RaidersPanel.Create(parent)
     -- as the window changing shape under you.
     frame.detail = SYL.RaidersDetail.Create(frame, DETAIL_WIDTH, LIST_TOP - 8)
 
+    -- The pane redraws itself where it sits, without rebuilding the board or
+    -- the roster beside it. Scrolling a list of somebody's items is not a
+    -- reason to re-sort four hundred guild members.
+    frame.detail.onScroll = function()
+        SYL.RaidersDetail.Render(frame.detail, frame.detail.entry)
+    end
+
     -- Measured before anything is anchored against it, and only now because
     -- Theme.MeasureText needs a live client to measure with.
     SYL.RaidersBoard.Measure(BOARD_WIDTH)

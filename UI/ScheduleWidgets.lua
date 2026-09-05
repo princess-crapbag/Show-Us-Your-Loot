@@ -123,6 +123,7 @@ SYL.DashboardWidgets.RENDERERS.whoIsOut = function(tile)
                 and ("to " .. SYL.Utilities.FormatDateOnly(
                     SYL.RaidSchedule.TimestampOf(absence.to)))
                 or (absence.reason or "out"),
+            nil,
             "textMuted")
     end
 

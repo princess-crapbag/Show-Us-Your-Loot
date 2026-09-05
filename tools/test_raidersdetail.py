@@ -197,6 +197,74 @@ check("the sum names only what scored, and adds up",
       and str(summed).endswith("= 200"),
       str(summed))
 
+
+# --- the item list scrolls, and reaches the last item --------------------
+#
+# Aimee: "i can only see 5 items. so for rakahasa, it shows 5 items 'and 6
+# more' i want to be able to see what those 6 more are, probably all season
+# long."
+#
+# The cap was never a count. Parts.DrawGroups stopped when the next card would
+# cross HEIGHT minus RESERVED, and RESERVED was 56 pixels held back for the
+# points breakdown pinned UNDER the list -- so the footer cost the list three
+# or four cards, and nothing could scroll because the thing at the bottom had
+# to stay at the bottom. The breakdown moved above the list; both were needed.
+Parts = SYL.RaidersDetailParts
+
+lua.execute("SCROLLDETAIL = { sessions = {}, drops = {} }")
+pane = lua.globals().SCROLLDETAIL
+
+
+def spread(count, per_night=4):
+    """`count` items across several nights, newest first the way ItemsFor
+    sorts them, so the groups and their headings are real."""
+    items = []
+
+    for index in range(count):
+        items.append(lua.table_from({
+            "at": 1788400000 - (index // per_night) * 86400 - index,
+            "weight": 100,
+            "name": "Item %d" % index,
+            "link": "|cffa335ee|Hitem:1::::::::80:::::|h[Item]|h|r",
+        }))
+
+    return lua.table_from(items)
+
+
+LIST_TOP = 92
+
+for count in (2, 6, 11, 14, 40):
+    groups = Parts.Groups(pane, spread(count))
+
+    fits = Parts.DrawGroups(pane, groups, LIST_TOP, 0, 0, True)
+    ceiling = Parts.MaxOffset(pane, groups, LIST_TOP, 0)
+
+    reached = fits
+
+    for offset in range(1, ceiling + 1):
+        shown = Parts.DrawGroups(pane, groups, LIST_TOP, 0, offset, True)
+        reached = max(reached, offset + shown)
+
+    check("EVERY ONE OF %d ITEMS IS REACHABLE BY SCROLLING" % count,
+          reached == count, (reached, count, ceiling))
+
+    if count <= fits:
+        check("and %d items, which all fit, cannot be scrolled" % count,
+              ceiling == 0, ceiling)
+
+# A short list has nothing below it to announce.
+short = Parts.Groups(pane, spread(2))
+
+check("A RAIDER WHOSE ITEMS ALL FIT HAS NO SCROLL AT ALL",
+      Parts.MaxOffset(pane, short, LIST_TOP, 0) == 0)
+
+# The offset cannot run past the end.
+long_groups = Parts.Groups(pane, spread(40))
+ceiling = Parts.MaxOffset(pane, long_groups, LIST_TOP, 0)
+
+check("scrolling past the end still draws a full pane",
+      Parts.DrawGroups(pane, long_groups, LIST_TOP, 0, ceiling, True) > 0)
+
 print()
 print("FAILURES: %s" % (failures or "none"))
 sys.exit(1 if failures else 0)

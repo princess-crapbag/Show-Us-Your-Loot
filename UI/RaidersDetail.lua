@@ -55,6 +55,38 @@ function RaidersDetail.Create(parent, width, top)
     back:SetAllPoints()
 
     detail.width = width
+    detail.itemOffset = 0
+    detail.maxOffset = 0
+
+    -- THE WHEEL, over the pane itself. The list under a raider now runs past
+    -- the bottom of the pane on anybody with a real season, so there has to be
+    -- a way to reach the rest -- Aimee: "i want to be able to see what those 6
+    -- more are, probably all season long."
+    --
+    -- Counted in ITEMS rather than pixels, because a night heading is a
+    -- different height from a card and scrolling by pixels would leave a
+    -- heading half off the top.
+    detail:EnableMouseWheel(true)
+    detail:SetScript("OnMouseWheel", function(self, delta)
+        if (self.maxOffset or 0) <= 0 then
+            return
+        end
+
+        local wanted = (self.itemOffset or 0) - delta
+
+        wanted = math.max(0, math.min(self.maxOffset, wanted))
+
+        if wanted == self.itemOffset then
+            return
+        end
+
+        self.itemOffset = wanted
+
+        if self.onScroll then
+            self.onScroll()
+        end
+    end)
+
     detail.lines = {}
     detail.nights = {}
     detail.cards = {}
@@ -271,6 +303,10 @@ end
 function RaidersDetail.Render(detail, entry)
     Parts.Reset(detail)
 
+    -- Kept so the wheel can redraw this same raider without the panel having
+    -- to rebuild the board beside it. See RaidersPanel's onScroll.
+    detail.entry = entry
+
     detail.mergeProposal = nil
     detail.mergeButton:Hide()
 
@@ -282,6 +318,14 @@ function RaidersDetail.Render(detail, entry)
         return
     end
 
+    -- A NEW RAIDER STARTS AT THE TOP OF THEIR OWN LIST. Keeping the offset
+    -- across a selection would open somebody with four drops scrolled past
+    -- all of them, which reads as an empty pane.
+    if detail.scrolledKey ~= entry.key then
+        detail.scrolledKey = entry.key
+        detail.itemOffset = 0
+    end
+
     local y = Header(detail, entry)
 
     local items = SYL.LootScore.ItemsFor(entry.key, detail.drops)
@@ -291,20 +335,39 @@ function RaidersDetail.Render(detail, entry)
     -- Asking afterwards is how a button ends up below the bottom of a pane.
     local proposal = SYL.CharacterMerge and SYL.CharacterMerge.For(entry.key)
 
-    local reserve = Parts.RESERVED
+    -- THE ARITHMETIC MOVED ABOVE THE LIST, and that is what makes the list
+    -- scrollable. Aimee: "the info below the characters name that breaks down
+    -- the needs and greeds and points could maybe go at the top ... so that
+    -- the individual loot history can scroll."
+    --
+    -- It was pinned to the bottom, so 56 pixels were held back from the cards
+    -- on every raider -- three or four items she could not see -- and nothing
+    -- could scroll, because the thing at the bottom had to stay there. Above
+    -- the list it costs the same pixels once and frees the bottom edge.
+    --
+    -- It also reads better there: it explains the POINTS number in the stat
+    -- row directly above it, rather than a list of items in between.
+    y = Tail(detail, entry, y)
+
+    local reserve = 0
 
     if proposal then
-        reserve = reserve + Parts.MERGE_RESERVE
+        reserve = Parts.MERGE_RESERVE
     end
 
     if #items == 0 then
         y = Parts.Line(detail, "Nothing has counted for them yet.",
                  "textSecondary", y)
-    else
-        y = Parts.DrawGroups(detail, Parts.Groups(detail, items), y, reserve)
-    end
 
-    y = Tail(detail, entry, y)
+        detail.maxOffset = 0
+    else
+        local groups = Parts.Groups(detail, items)
+
+        detail.maxOffset = Parts.MaxOffset(detail, groups, y, reserve)
+        detail.itemOffset = math.min(detail.itemOffset or 0, detail.maxOffset)
+
+        y = Parts.DrawGroups(detail, groups, y, reserve, detail.itemOffset)
+    end
 
     -- Offered last, under the arithmetic it would change. Somebody reading a
     -- number that looks wrong should see why before being offered the fix.

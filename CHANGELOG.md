@@ -3,6 +3,79 @@
 What changed, for the person installing it. The commit history explains why;
 this says what you will notice.
 
+## 0.4.5 — 2026-09-05
+
+### Added
+
+- **Send my raid team, with a choice of who.** The button on the Raiders
+  screen now opens a small window instead of broadcasting on the press: one
+  player, the whole raid team **and their alts**, or the whole guild. Each row
+  says what it costs before you press it — the guild is one message per
+  raider, a whisper is one per raider per person — because eleven raiders to
+  eleven teammates is 121 messages and about half a minute of trickle.
+
+- **Match to RCLootCouncil.** New on Settings → Tools. Credits every drop this
+  season to whoever RCLootCouncil awarded it to, and corrects the **response**
+  as well as the name — under a council the recorded winner is the master
+  looter on every item and the recorded response is their roll, not the
+  recipient's answer. It shows the whole list first and changes nothing until
+  you press Apply, because matching moves points between real people on a
+  board those people read.
+
+  A response this addon cannot place — a button your guild renamed — moves the
+  name and leaves the weight alone, and says *name only* on that row rather
+  than inventing a value for it.
+
+- **The season week each boss first died.** Tier progress now lists first
+  kills with the date and the week of the season, counting from Tuesday, so
+  "what week did we kill that" is answerable a tier later.
+
+### Fixed
+
+- **The dashboard's last raid night showed the master looter on every item.**
+  It read the recorded winner and never the credit you set afterwards, so
+  under a loot council it was your own name five times over. It now names who
+  you credited, with what they asked for. The *"went home with nothing"* count
+  was wrong for the same reason and is now counted off the corrected response.
+
+- **Tier progress added every difficulty together.** LFR, Normal, Heroic and
+  Mythic kills were counted into one number, so a guild 6/8 Heroic in one raid
+  and 1/1 Heroic in another read *"22 of 23 killed"*. There is a difficulty
+  button on the tile now and it is saved, not per-session — the tile's own
+  description has claimed "kept separate by difficulty" the whole time.
+  Progress is listed per raid, so 6/8 and 1/1 are two numbers again.
+
+- **A raider's item list stopped at five and could not be scrolled.** The cap
+  was never a count: the points breakdown was pinned under the list and held
+  back 56 pixels, which cost three or four items on everybody. The breakdown
+  has moved above the list, where it explains the POINTS figure directly above
+  it, and the list scrolls with the mouse wheel — every item, all season.
+
+- **The roster went out on its own at login.** Three separate automatic
+  broadcasts: at your login, in answer to everyone else's login, and again on
+  every tick and role change. Nothing is sent automatically any more unless
+  you turn on Share roster, which is off by default and means exactly what it
+  says.
+
+- **The loot history transfer could never start for most of your guild.** The
+  accept was matched against the name spelling from the guild roster, which
+  omits the realm for anybody on your own realm and keeps the space in one
+  like "Aerie Peak" — while the reply arrives fully qualified with the space
+  stripped. Compared as text those were different people, so the transfer sat
+  on *"waiting for them to answer"* forever with nothing printed anywhere.
+  Only exact cross-realm spellings ever worked.
+
+- **An unanswered transfer waited forever**, so pressing Send again was
+  refused with "a transfer is already going out". It now gives up after a
+  minute and names all three reasons it could have gone quiet.
+
+- **The progress bar counted messages it never sent.**
+
+- **Two columns in the drop detail were too narrow to read.** The last one
+  says **GOT IT** — it marks who received the item — and had one pixel of
+  slack for a word that needs 37. ILVL showed RCLootCouncil's raw average,
+  `317.3125`, in a column sized for four characters; it reads `317` now.
+
 ## 0.4.4 — 2026-09-03
 
 ### Added

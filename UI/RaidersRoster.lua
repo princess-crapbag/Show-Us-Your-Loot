@@ -283,45 +283,12 @@ local function SendControl(frame)
 
     sharedSend =
         Theme.CreateButton(frame, 112, 18, "Send my roster", function()
-            local sent, reason = SYL.RosterSync.SendNow()
-
-            if not sent then
-                SYL:Print("Nothing sent: " .. tostring(reason) .. ".")
-
-                return
-            end
-
-            -- Says what it did and what it did not. Somebody who presses this
-            -- expecting it to keep working needs to know it was one send, and
-            -- where the switch that makes it continuous lives.
-            local message = "Sent your raid team of " .. sent
-                .. " to the guild."
-
-            if not SYL.Features.IsEnabled("rosterSharing") then
-                message = message
-                    .. " That was once. Turn on Share roster in settings to "
-                    .. "keep them up to date as you change it."
-            end
-
-            SYL:Print(message)
+            -- OPENS THE CHOOSER rather than broadcasting on the press. One
+            -- player, the raid team and their alts, or the whole guild --
+            -- see UI/RosterSendWindow.lua, and Core/Events.lua for the three
+            -- automatic broadcasts this replaced.
+            SYL.RosterSendWindow.Show()
         end)
-
-    -- WHO HAS IT, on hover. The caption below can only carry a number, and
-    -- the number is the thing somebody will quote -- so the names, and each
-    -- person's own count, are one hover away. A count of theirs that differs
-    -- from ours is not a discrepancy to hide: it means they are looking at an
-    -- older roster than the one on this screen, which is worth knowing.
-    SYL.Tooltips.Attach(sharedSend, "Send my roster", function()
-        local lines = SYL.RosterReceipts.DescribeEach()
-
-        if #lines == 0 then
-            return "Sends your raid team to the guild once. Nobody has "
-                .. "confirmed using it yet — they are asked before it lands, "
-                .. "and their answer shows up here."
-        end
-
-        return "Using your roster:\n" .. table.concat(lines, "\n")
-    end)
 
     return sharedSend
 end

@@ -150,9 +150,20 @@ local function OnPlayerLogin()
     -- cannot receive it. Core/HistorySync.lua sends nothing on its own.
     SYL.HistorySync.Listen()
 
-    if SYL.Features.IsEnabled("rosterSharing") then
-        SYL.RosterSync.Announce()
-    end
+    -- NO ROSTER GOES OUT AT LOGIN ANY MORE.
+    --
+    -- Aimee: "is it sending the roster sync anytime anyone in guild who has
+    -- the addon logs in or logs onto another character? it seems to be so.
+    -- let it be a button we press to send it rather than always happening on
+    -- login."
+    --
+    -- It was. This announced the whole roster on every login of hers, every
+    -- client with the switch on answered every OTHER login, and any tick or
+    -- role change announced again -- three automatic broadcasts for a thing
+    -- she never asked to send. Sending is now RosterSync.SendNow and a press,
+    -- with a choice of who. Answering a request and re-announcing on a change
+    -- are still there and still behind the switch, which is off by default
+    -- and now means exactly what it says: keep the guild's copy up to date.
 end
 
 -- The three ways a key changes: a run finishes and awards the next one, the

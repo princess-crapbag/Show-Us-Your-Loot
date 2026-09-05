@@ -2,7 +2,7 @@
 ## Title: Show Us Your Loot
 ## Notes: Loot history, attendance and fairness analytics for group loot.
 ## Author: Aimee
-## Version: 0.4.4
+## Version: 0.4.5
 ## IconTexture: Interface\Icons\INV_Misc_Coin_02
 
 # The game's own addon list, behind the plus sign on the minimap. The three
@@ -66,6 +66,7 @@ Core\Audience.lua
 Core\RosterData.lua
 Core\RaidBuffs.lua
 Core\BossStats.lua
+Core\TierProgress.lua
 Core\PersonalLoot.lua
 Core\LootFeed.lua
 Core\Links.lua
@@ -83,6 +84,7 @@ Core\LootAsk.lua
 Core\CreditCandidates.lua
 Core\CouncilLoot.lua
 Core\LootCredit.lua
+Core\CouncilMatch.lua
 Core\TradeTracker.lua
 Core\RaidSchedule.lua
 Core\Absences.lua
@@ -126,8 +128,10 @@ UI\SeasonRenameDialog.lua
 UI\NamePromptDialog.lua
 UI\ClearSeasonDialog.lua
 UI\SharedRosterPrompt.lua
+UI\RosterSendWindow.lua
 UI\HistoryPrompt.lua
 UI\ShareWindow.lua
+UI\CouncilMatchWindow.lua
 UI\FilterDropdown.lua
 UI\FilterBar.lua
 UI\SelectionBar.lua

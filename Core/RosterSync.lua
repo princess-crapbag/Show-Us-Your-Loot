@@ -609,7 +609,95 @@ end
 -- Returns how many were sent, or nil and a reason. The reason is shown rather
 -- than swallowed: "nothing happened" and "you are not in a guild" look
 -- identical otherwise.
-function RosterSync.SendNow()
+-- WHO TO SEND TO, and the reason there is a choice at all.
+--
+-- Aimee: "is it sending the roster sync anytime anyone in guild who has the
+-- addon logs in or logs onto another character? it seems to be so. lets
+-- change this to have a button to share it with individual players, all raid
+-- roster players (and their alts), or all guild."
+--
+-- It was, three ways over: at her own login, in answer to everybody else's
+-- login, and again on every tick and role change. The login broadcast is
+-- gone; what is left is this, and it only ever runs from a press.
+--
+-- THE WHOLE GUILD GOES OVER THE GUILD CHANNEL, one message per raider, which
+-- is what that channel is for. The other two are whispers, one message per
+-- raider PER PERSON -- eleven raiders to eleven teammates is 121 messages,
+-- about half a minute through the queue. Worth saying out loud rather than
+-- discovering, which is why Count exists below and the window prints it.
+RosterSync.SCOPES = { "player", "team", "guild" }
+
+-- Everybody on the raid team, and their alts, as names to whisper.
+--
+-- The alts matter and are not decoration: a roster is per character, so
+-- somebody logged onto their alt is a client that will never hear a whisper
+-- addressed to their main. "and their alts" was Aimee's own parenthesis.
+--
+-- Only characters this client can see as online, because a whisper to
+-- somebody offline is not delivered and there is nothing to say about it
+-- afterwards.
+function RosterSync.TeamTargets()
+    local names = {}
+    local seen = {}
+    local me = SYL.Utilities.GetPlayerFullName()
+
+    local function Add(name)
+        if not name or seen[name] then
+            return
+        end
+
+        local member = SYL.Guild.GetMember(nil, name)
+
+        if not member or not member.isOnline then
+            return
+        end
+
+        if SYL.Utilities.SameCharacter(member.name, me) then
+            return
+        end
+
+        seen[member.name] = true
+
+        table.insert(names, member.name)
+    end
+
+    for key, player in pairs(SYL.Players.GetRegistry()) do
+        if player.inRaidTeam then
+            Add(player.fullName or player.name)
+
+            for _, alt in ipairs(SYL.Players.GetAlts(key) or {}) do
+                Add(alt.fullName or alt.name)
+            end
+        end
+    end
+
+    table.sort(names)
+
+    return names
+end
+
+-- How many messages a scope actually costs, so the window can say so before
+-- anybody presses it rather than after.
+function RosterSync.Count(scope, target)
+    local mine = #RosterSync.Own()
+
+    if scope == "guild" then
+        return mine
+    end
+
+    if scope == "player" then
+        return target and mine or 0
+    end
+
+    return mine * #RosterSync.TeamTargets()
+end
+
+-- Returns how many raiders were sent and to how many people, or nil and a
+-- reason. The reason is shown rather than swallowed: "nothing happened" and
+-- "nobody on your team is online" look identical otherwise.
+function RosterSync.SendNow(scope, target)
+    scope = scope or "guild"
+
     if not IsInGuild() then
         return nil, "you are not in a guild"
     end
@@ -624,13 +712,42 @@ function RosterSync.SendNow()
         return nil, "nobody is marked as being on the raid team yet"
     end
 
-    serial = serial + 1
+    local targets
 
-    for index, member in ipairs(mine) do
-        Send(RosterSync.Encode(serial, index, #mine, member))
+    if scope == "player" then
+        if not target then
+            return nil, "pick somebody to send to first"
+        end
+
+        targets = { target }
+    elseif scope == "team" then
+        targets = RosterSync.TeamTargets()
+
+        if #targets == 0 then
+            return nil, "nobody on your raid team is online right now"
+        end
     end
 
-    return #mine
+    serial = serial + 1
+
+    if not targets then
+        for index, member in ipairs(mine) do
+            Send(RosterSync.Encode(serial, index, #mine, member))
+        end
+
+        return #mine, nil, 0
+    end
+
+    for _, name in ipairs(targets) do
+        for index, member in ipairs(mine) do
+            SYL.SendQueue.Queue(
+                PREFIX, RosterSync.Encode(serial, index, #mine, member),
+                "WHISPER", name, CanSend
+            )
+        end
+    end
+
+    return #mine, nil, #targets
 end
 
 -- ASKED AGAIN ONCE THE GUILD LIST IS ACTUALLY THERE.

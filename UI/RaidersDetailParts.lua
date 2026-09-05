@@ -263,60 +263,143 @@ function Parts.Groups(detail, items)
     return order
 end
 
-function Parts.DrawGroups(detail, groups, y, reserve)
-    local step = Cards().HEIGHT + Cards().GAP
-    local left = 0
+-- Every item as a flat list, each carrying the group it belongs to. Scrolling
+-- is what needs this: an offset counted in ITEMS has to be able to start
+-- part-way through a night, and a loop nested by group cannot start in the
+-- middle of one without repeating the heading logic in two places.
+function Parts.Flatten(groups)
+    local flat = {}
 
+    for _, group in ipairs(groups or {}) do
+        for _, item in ipairs(group.items) do
+            table.insert(flat, { group = group, item = item })
+        end
+    end
+
+    return flat
+end
+
+-- HOW MANY ITEMS CAN BE SCROLLED PAST. Zero when everything fits, which is
+-- what stops the wheel doing anything on a raider with three drops.
+--
+-- SEARCHED, NOT SUBTRACTED, and the version that subtracted left the last
+-- item unreachable. total minus "how many fit at the top" assumes the number
+-- that fits never changes -- but scrolling into the middle of a night draws
+-- that night's heading at the top of the pane, and the heading costs a card's
+-- worth of room. Rakahasa's eleven items showed seven, so it offered four
+-- scroll steps, and at the fourth only six fit: ten reachable, the eleventh
+-- one row below the bottom edge with nothing to say so.
+--
+-- So the answer is the first offset whose own visible run reaches the end.
+-- One walk per step, and a season of items is small enough that this is
+-- cheaper than being wrong.
+function Parts.MaxOffset(detail, groups, y, reserve)
+    local total = #Parts.Flatten(groups)
+
+    for offset = 0, math.max(0, total - 1) do
+        local shown = Parts.DrawGroups(detail, groups, y, reserve, offset, true)
+
+        if offset + shown >= total then
+            return offset
+        end
+    end
+
+    return math.max(0, total - 1)
+end
+
+-- Draws from `offset` items in, and returns how many it drew.
+--
+-- SCROLLS NOW, and the reason it could not before was not the cards. Aimee:
+-- "i can only see 5 items ... i want to be able to see what those 6 more are,
+-- probably all season long."
+--
+-- The cap was never a count. This stopped when the next card would cross
+-- HEIGHT minus RESERVED, and RESERVED was 56 pixels held back for the points
+-- breakdown and the ranking sentence PINNED UNDER THE LIST. So the footer
+-- cost the list three or four cards, and nothing could scroll because the
+-- thing at the bottom had to stay at the bottom. Moving that block above the
+-- list -- see UI/RaidersDetail.lua -- buys the pixels back and frees the
+-- bottom edge, and both were needed.
+--
+-- `measureOnly` walks the same arithmetic without drawing, so MaxOffset above
+-- cannot drift from what is actually on screen: one loop, asked twice.
+function Parts.DrawGroups(detail, groups, y, reserve, offset, measureOnly)
+    local step = Cards().HEIGHT + Cards().GAP
     local floor = Parts.HEIGHT - (reserve or Parts.RESERVED)
 
-    for index, group in ipairs(groups) do
-        -- A heading with no room for even one card under it is worse than no
-        -- heading: it names a night and then shows nothing from it.
-        if y + Parts.NIGHT_HEAD + Parts.NIGHT_RULE + step > floor then
-            for rest = index, #groups do
-                left = left + #groups[rest].items
-            end
+    local flat = Parts.Flatten(groups)
 
+    offset = math.max(0, math.min(offset or 0, #flat))
+
+    local drawn = 0
+    local currentGroup
+
+    for index = offset + 1, #flat do
+        local entry = flat[index]
+
+        -- A heading whenever the night changes, including for the night a
+        -- scroll has landed in the middle of -- otherwise the top of the pane
+        -- is a row of items belonging to nothing.
+        local needsHeading = entry.group ~= currentGroup
+        local headingCost = needsHeading
+            and (Parts.NIGHT_HEAD + Parts.NIGHT_RULE
+                + (currentGroup and Parts.NIGHT_GAP or 0))
+            or 0
+
+        if y + headingCost + step > floor then
             break
         end
 
-        y = Parts.NightHeading(
-            detail,
-            Parts.NightLabel(group.at),
-            string.format("%d points", group.points),
-            y
-        )
-
-        local stopped = false
-
-        for position, item in ipairs(group.items) do
-            if y + step > floor then
-                left = left + (#group.items - position + 1)
-
-                for rest = index + 1, #groups do
-                    left = left + #groups[rest].items
-                end
-
-                stopped = true
-
-                break
+        if needsHeading then
+            if currentGroup then
+                y = y + Parts.NIGHT_GAP
             end
 
-            y = Parts.Card(detail, item, y)
+            if not measureOnly then
+                y = Parts.NightHeading(
+                    detail,
+                    Parts.NightLabel(entry.group.at),
+                    string.format("%d points", entry.group.points),
+                    y
+                )
+            else
+                y = y + Parts.NIGHT_HEAD + Parts.NIGHT_RULE
+            end
+
+            currentGroup = entry.group
         end
 
-        if stopped then
-            break
+        if measureOnly then
+            y = y + step
+        else
+            y = Parts.Card(detail, entry.item, y)
         end
 
-        y = y + Parts.NIGHT_GAP
+        drawn = drawn + 1
     end
 
-    -- Counted, never dropped silently. A list that stops without saying so
-    -- reads as the whole list.
-    if left > 0 then
-        y = Parts.Line(detail, string.format("and %d more", left), "textMuted", y)
+    if measureOnly then
+        return drawn
     end
 
-    return y
+    -- Counted, never dropped silently, and now it says which end. A list that
+    -- stops without saying so reads as the whole list.
+    local above = offset
+    local below = #flat - offset - drawn
+
+    if above > 0 or below > 0 then
+        local text
+
+        if above > 0 and below > 0 then
+            text = string.format("%d above · %d below · scroll", above, below)
+        elseif above > 0 then
+            text = string.format("%d above · scroll up", above)
+        else
+            text = string.format("%d more · scroll down", below)
+        end
+
+        y = Parts.Line(detail, text, "textMuted", y)
+    end
+
+    return y, drawn
 end

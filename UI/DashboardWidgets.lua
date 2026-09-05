@@ -54,11 +54,30 @@ DashboardWidgets.RENDERERS.lastNight = function(tile)
     local since = latest.startedAt or 0
     local shown, upgrades, total = 0, 0, 0
 
+    -- WHO IT WENT TO, NOT WHO ROLLED FOR IT. Aimee: "it only ever shows me
+    -- because im masterlooter. maybe it doesnt show names?"
+    --
+    -- The names were never the problem. Under a loot council everybody passes
+    -- and the master looter takes the item, so drop.winnerName is her on every
+    -- line -- and this tile read that field and nothing else, ignoring the
+    -- credit she types afterwards. Her 09/03 night held Hawt, Pringlescat,
+    -- Rakahasa, Pringlescat and Arcangila all along; the tile had the answer
+    -- and was not looking at it.
+    --
+    -- LootCredit.Describe is the same choke point the board and the due list
+    -- already use, so all three now name the same person for the same item.
+    -- It also carries the corrected RESPONSE, which matters twice over: three
+    -- of those five were recorded Greed and credited Need, so the count of
+    -- who went home with nothing was wrong as well as the names.
     for _, drop in ipairs(SYL.GetActiveDrops()) do
         if not drop.excludedFromAnalytics and (drop.timestamp or 0) >= since then
             total = total + 1
 
-            if SYL.LootHistoryAPI.IsUpgradeState(drop.winnerState) then
+            local credit = SYL.LootCredit.Describe(drop)
+            local name = (credit and credit.name) or drop.winnerName
+            local state = credit and credit.state or drop.winnerState
+
+            if SYL.LootHistoryAPI.IsUpgradeState(state) then
                 upgrades = upgrades + 1
             end
 
@@ -67,9 +86,10 @@ DashboardWidgets.RENDERERS.lastNight = function(tile)
 
                 DashboardParts.PlayerRow(
                     tile, shown,
-                    SYL.Utilities.NormalizePlayerName(drop.winnerName or "?"),
-                    drop.winnerClass,
-                    drop.itemName or "?"
+                    SYL.Utilities.NormalizePlayerName(name or "?"),
+                    (credit and credit.class) or drop.winnerClass,
+                    drop.itemName or "?",
+                    SYL.LootScore.LABELS[state]
                 )
             end
         end
@@ -124,6 +144,7 @@ DashboardWidgets.RENDERERS.due = function(tile)
             entry.name or "Unknown",
             entry.class,
             SYL.LootScore.Describe(entry),
+            nil,
             (entry.ranked and index <= 2) and "warning" or "textSecondary"
         )
     end
@@ -191,44 +212,127 @@ DashboardWidgets.RENDERERS.readiness = function(tile)
 end
 
 -- Tier progress -----------------------------------------------------------
-DashboardWidgets.RENDERERS.tier = function(tile)
-    local bosses = SYL.BossStats.Build(
-        SYL.GetActiveDrops(), SYL.GetActiveRaids()
-    )
+--
+-- ONE DIFFICULTY AT A TIME. This tile used to count every boss on every
+-- difficulty into a single number, so Aimee's guild read "22 of 23 killed"
+-- while being 6/8 Heroic in one raid and 1/1 Heroic in the other -- her 22 is
+-- eight Normal plus six Heroic plus six LFR plus two more in the second raid.
+-- The tile's own note in Core/Dashboard.lua has always claimed "kills per
+-- boss, kept separate by difficulty", which is exactly what it did not do.
+--
+-- The chooser is a button rather than a menu, the same as every other chooser
+-- here, and what it picks is SAVED -- so the tile stays on Heroic and any
+-- other screen that needs to ask "which difficulty" reads the same answer.
+local function DifficultyButton(tile, onChanged)
+    if not tile.tierDifficulty then
+        tile.tierDifficulty = SYL.Theme.CreateButton(
+            tile.body, 62, 16, "", function()
+                SYL.TierProgress.SetDifficulty(
+                    SYL.TierProgress.NextDifficulty()
+                )
 
-    if #bosses == 0 then
+                onChanged()
+            end
+        )
+
+        tile.tierDifficulty:SetPoint("TOPRIGHT", 0, 0)
+
+        SYL.Tooltips.Attach(
+            tile.tierDifficulty,
+            "Which difficulty this counts",
+            "LFR, Normal, Heroic, Mythic. Guilds progress at different rates "
+            .. "on each, so adding them together describes nothing. Saved, "
+            .. "not per-session."
+        )
+    end
+
+    tile.tierDifficulty.label:SetText(SYL.TierProgress.Label())
+    tile.tierDifficulty:Show()
+
+    return tile.tierDifficulty
+end
+
+DashboardWidgets.RENDERERS.tier = function(tile)
+    local difficulty = SYL.TierProgress.GetDifficulty()
+
+    DifficultyButton(tile, function()
+        if SYL.RefreshMainWindow then
+            SYL:RefreshMainWindow()
+        end
+    end)
+
+    -- Rows clear the button's line, which is drawn in the body rather than
+    -- the header because the header belongs to the tile's own click.
+    tile.rowTop = 20
+
+    local instances = SYL.TierProgress.Build(SYL.GetActiveRaids(), difficulty)
+
+    if #instances == 0 then
         DashboardParts.Empty(tile,
-            "No bosses recorded yet. They are counted from the pulls this "
-            .. "addon sees.")
+            "Nothing killed on " .. SYL.TierProgress.Label(difficulty)
+            .. " yet. Press the button to look at another difficulty.")
 
         return
     end
 
-    local killed, pulled, unkilled = 0, 0, {}
+    local index = 0
 
-    for _, boss in ipairs(bosses) do
-        pulled = pulled + 1
+    for _, instance in ipairs(instances) do
+        index = index + 1
 
-        if (boss.kills or 0) > 0 then
-            killed = killed + 1
-        else
-            table.insert(unkilled, boss)
+        DashboardParts.Row(tile, index,
+            instance.name,
+            SYL.TierProgress.Describe(instance),
+            "textSecondary",
+            instance.killed < instance.seen and "textPrimary" or "textMuted")
+    end
+
+    -- FIRST KILLS, NEWEST FIRST, and the week rather than only the date.
+    -- Aimee: "i think it would be nice to see later what week we first killed
+    -- which boss." A date says when; the week says how long it took, which is
+    -- the question anybody asks about a tier afterwards.
+    local recent = SYL.TierProgress.Recent(instances)
+    local room = DashboardParts.RowCapacity(tile) - index
+
+    if room > 1 and #recent > 0 then
+        index = index + 1
+
+        DashboardParts.Row(tile, index, "FIRST KILLED", "newest first",
+            "textMuted", "textMuted")
+
+        local shown = 0
+
+        for _, kill in ipairs(recent) do
+            if index >= DashboardParts.RowCapacity(tile) then
+                break
+            end
+
+            index = index + 1
+            shown = shown + 1
+
+            DashboardParts.Row(tile, index,
+                kill.name,
+                date("%m/%d", kill.at)
+                    .. (kill.week and (" · wk " .. kill.week) or ""),
+                "textSecondary", "textMuted")
+        end
+
+        local left = #recent - shown
+
+        if left > 0 then
+            DashboardParts.Caption(tile,
+                left .. " more on Bosses · "
+                .. SYL.TierProgress.Label(difficulty))
+
+            return
         end
     end
 
-    DashboardParts.Headline(tile, killed, "of " .. pulled .. " killed")
+    local killed, seen = SYL.TierProgress.Totals(instances)
 
-    for index = 1, math.min(2, #unkilled) do
-        local boss = unkilled[index]
-
-        DashboardParts.Row(tile, index,
-            boss.name or "Unknown",
-            (boss.pulls or 0) .. " pulls, no kill",
-            "textPrimary", "warning")
-    end
-
-    DashboardParts.Caption(tile, #SYL.GetActiveDrops()
-        .. " drops recorded across " .. pulled .. " bosses.")
+    DashboardParts.Caption(tile,
+        killed .. " of " .. seen .. " killed on "
+        .. SYL.TierProgress.Label(difficulty))
 end
 
 -- Recording ---------------------------------------------------------------

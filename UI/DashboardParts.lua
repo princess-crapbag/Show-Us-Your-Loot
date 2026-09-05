@@ -22,7 +22,13 @@ local ROW_HEIGHT = 17
 
 -- A line of "label ......... value". Returns the frame so a caller can color
 -- either half without reaching back through the tile.
-function DashboardParts.Row(tile, index, leftText, rightText, leftColor, rightColor)
+-- `noteText` is an optional third column, hard against the right edge, with
+-- the value column giving way to it. Added for the loot feed, which needs to
+-- say what somebody asked for as well as what they got -- three of five drops
+-- on Aimee's 09/03 night were recorded Greed and credited Need, and a feed
+-- that shows the item without the response cannot show that at all.
+function DashboardParts.Row(tile, index, leftText, rightText, leftColor,
+                            rightColor, noteText)
     local row = CreateFrame("Frame", nil, tile.body)
 
     row:SetHeight(ROW_HEIGHT)
@@ -40,9 +46,25 @@ function DashboardParts.Row(tile, index, leftText, rightText, leftColor, rightCo
         stripe:SetAllPoints()
     end
 
+    local note
+
+    if noteText and noteText ~= "" then
+        note = Theme.CreateText(row, Theme.sizes.tiny, "textMuted")
+        note:SetPoint("RIGHT", -3, 0)
+        note:SetJustifyH("RIGHT")
+        note:SetText(tostring(noteText))
+    end
+
     local right = Theme.CreateText(row, Theme.sizes.rowSmall, rightColor or "textSecondary")
-    right:SetPoint("RIGHT", -3, 0)
+
+    if note then
+        right:SetPoint("RIGHT", note, "LEFT", -6, 0)
+    else
+        right:SetPoint("RIGHT", -3, 0)
+    end
+
     right:SetJustifyH("RIGHT")
+    right:SetWordWrap(false)
     right:SetText(tostring(rightText or ""))
 
     local left = Theme.CreateText(row, Theme.sizes.rowSmall, leftColor or "textPrimary")
@@ -54,12 +76,15 @@ function DashboardParts.Row(tile, index, leftText, rightText, leftColor, rightCo
 
     table.insert(tile.rows, row)
 
-    return row, left, right
+    return row, left, right, note
 end
 
 -- The class-colored version, for anything that names a player.
-function DashboardParts.PlayerRow(tile, index, name, class, valueText, valueColor)
-    local row, left = DashboardParts.Row(tile, index, name, valueText, "textPrimary", valueColor)
+function DashboardParts.PlayerRow(tile, index, name, class, valueText,
+                                 noteText, valueColor)
+    local row, left = DashboardParts.Row(
+        tile, index, name, valueText, "textPrimary", valueColor, noteText
+    )
 
     -- THE ONE SITE WITH ITS OWN FALLBACK. Row above has already painted the
     -- name "textPrimary", so an unknown class must leave that standing rather

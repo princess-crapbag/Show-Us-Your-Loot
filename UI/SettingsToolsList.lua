@@ -126,6 +126,16 @@ SettingsToolsList.GROUPS = {
                 note = "Gives this season's drops, and the credit you set "
                     .. "by hand, to one officer. They are asked first.",
             },
+            {
+                -- The end-of-raid sweep. One press instead of opening every
+                -- drop and correcting it by hand, which is what Aimee was
+                -- doing after every night.
+                label = "Match to RCLootCouncil",
+                run = Dialog("CouncilMatchWindow"),
+                note = "Credits this season's drops to whoever "
+                    .. "RCLootCouncil awarded them to, with their response. "
+                    .. "Shows the list before it changes anything.",
+            },
         },
     },
 

@@ -482,11 +482,29 @@ SYL.Features.SetEnabled("rosterSharing", False)
 G.ClearSent()
 SYL.SendQueue.Reset()
 
-sent = SYL.RosterSync.SendNow()
+sent, _, _ = SYL.RosterSync.SendNow("guild")
 flush()
 
 check("SEND WORKS WITH THE SWITCH OFF, because pressing it IS the asking",
       sent == 2 and G.SentCount() == 2, (sent, G.SentCount()))
+check("and the whole guild goes over the guild channel, one per raider",
+      G.SentChannel(1) == "GUILD" and G.SentTarget(1) is None,
+      (G.SentChannel(1), G.SentTarget(1)))
+
+# One player is a whisper, one message per raider, to that person only.
+G.ClearSent()
+SYL.SendQueue.Reset()
+
+sent, _, people = SYL.RosterSync.SendNow("player", OFFICER)
+flush()
+
+check("ONE PLAYER IS WHISPERED, one message per raider",
+      sent == 2 and people == 1 and G.SentCount() == 2
+      and G.SentChannel(1) == "WHISPER" and G.SentTarget(1) == OFFICER,
+      (sent, people, G.SentCount(), G.SentTarget(1)))
+
+check("and sending to one player with nobody picked is refused",
+      SYL.RosterSync.SendNow("player", None)[0] is None)
 
 # An empty team has nothing to send and says so, rather than broadcasting the
 # empty set at the guild.
@@ -497,7 +515,7 @@ for key in (TALESTRA, SAEBIE, NASHRI):
 G.ClearSent()
 SYL.SendQueue.Reset()
 
-sent, reason = SYL.RosterSync.SendNow()
+sent, reason = SYL.RosterSync.SendNow("guild")
 flush()
 
 check("AN EMPTY TEAM SENDS NOTHING AND SAYS WHY",
@@ -549,9 +567,29 @@ roster_screen = (Path(__file__).resolve().parent.parent
 check("THE ROSTER SCREEN CAN CLEAR A ROSTER IT DID NOT MAKE",
       "RosterSync.StopUsing" in roster_screen,
       "UI/RaidersRoster.lua shows a shared roster with no way to dismiss it")
+# The button is on the roster screen; what it opens is the chooser, because
+# "who does this go to" is a question the press has to be able to answer.
+# Aimee: "lets change this to have a button to share it with individual
+# players, all raid roster players (and their alts), or all guild."
 check("AND SENDING MY ROSTER IS ON THE SAME SCREEN",
-      "RosterSync.SendNow" in roster_screen,
+      "RosterSendWindow.Show" in roster_screen,
       "the only way to share is a switch three screens away")
+
+send_window = (Path(__file__).resolve().parent.parent
+               / "UI" / "RosterSendWindow.lua").read_text(encoding="utf-8")
+
+for scope in ("player", "team", "guild"):
+    check("the chooser offers " + scope,
+          '"' + scope + '"' in send_window,
+          "UI/RosterSendWindow.lua has no " + scope + " choice")
+
+# The login broadcast is what she asked to be rid of.
+events = (Path(__file__).resolve().parent.parent
+          / "Core" / "Events.lua").read_text(encoding="utf-8")
+
+check("NO ROSTER IS BROADCAST AT LOGIN ANY MORE",
+      "RosterSync.Announce" not in events,
+      "Core/Events.lua still announces the roster on login")
 check("and says on screen where it came from",
       "shared by " in roster_screen,
       "nothing tells the reader these ticks are somebody else's")
