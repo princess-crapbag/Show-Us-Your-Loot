@@ -275,8 +275,14 @@ local function CreateWindow()
         end,
     })
 
+    -- BOUNDED AND WRAPPED. This had no width and Theme.CreateText leaves
+    -- wrapping off, so it drew at its natural 852 from x 18 -- past the right
+    -- edge of an 840-wide window and onto whatever was behind it.
     local hint = Theme.CreateText(frame, Theme.sizes.rowSmall, "textMuted")
     hint:SetPoint("TOPLEFT", 18, -74)
+    hint:SetPoint("TOPRIGHT", -18, -74)
+    hint:SetJustifyH("LEFT")
+    hint:SetWordWrap(true)
     hint:SetText(
         "Upgrades counts Need and offspec wins only. A dash means pulls were "
         .. "not being recorded yet. ITEMS is how much of the journal's loot "

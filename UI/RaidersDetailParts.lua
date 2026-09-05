@@ -33,13 +33,24 @@ Parts.HEIGHT = 398
 -- this width and the not-ranked one to two as well, so the last line of the
 -- pane fell past its own bottom edge and simply was not drawn.
 --
---   rule 9 + sum 15 + two wrapped lines 28 = 52, and 4 to spare.
-Parts.RESERVED = 56
+--   rule 9 + sum 15 + THREE wrapped lines 40.5 = 64.5, and 5 to spare.
+--
+-- Measured at the real width rather than assumed: "Ranked on points per
+-- night, lowest first — turning up more makes you more due, not less." is
+-- 434.5 at size 10 in the 230 this pane gives it, which is three lines and
+-- not the two this number was written for. Dead code today, since Render
+-- always passes its own reserve -- but it is the documented default and was
+-- wrong by 14 pixels for whatever used it next.
+Parts.RESERVED = 70
 
 -- A merge proposal adds a wrapped warning and a button under everything else,
 -- and it is rare enough that holding this back on every raider would cost
 -- three cards for nothing. Added to the reserve only when there is one.
 Parts.MERGE_RESERVE = 90
+
+-- The "N above · N below · scroll" line, which is drawn AFTER the card loop
+-- and therefore has to be budgeted for inside it.
+local SCROLL_LINE = 17
 
 Parts.NIGHT_HEAD = 13
 Parts.NIGHT_RULE = 6
@@ -279,6 +290,39 @@ function Parts.Flatten(groups)
     return flat
 end
 
+-- How many of `flat` fit below `y` before `floor`, without drawing. Split out
+-- of DrawGroups so the floor can be decided before anything is committed to
+-- the screen, and so MaxOffset can ask the same question without rebuilding
+-- the flattened list on every step.
+function Parts.Fits(detail, flat, y, floor, step, offset)
+    local drawn = 0
+    local currentGroup
+
+    for index = (offset or 0) + 1, #flat do
+        local entry = flat[index]
+
+        local needsHeading = entry.group ~= currentGroup
+        local cost = needsHeading
+            and (Parts.NIGHT_HEAD + Parts.NIGHT_RULE
+                + (currentGroup and Parts.NIGHT_GAP or 0))
+            or 0
+
+        if y + cost + step > floor then
+            break
+        end
+
+        if needsHeading then
+            y = y + cost
+            currentGroup = entry.group
+        end
+
+        y = y + step
+        drawn = drawn + 1
+    end
+
+    return drawn
+end
+
 -- HOW MANY ITEMS CAN BE SCROLLED PAST. Zero when everything fits, which is
 -- what stops the wheel doing anything on a raider with three drops.
 --
@@ -294,12 +338,18 @@ end
 -- One walk per step, and a season of items is small enough that this is
 -- cheaper than being wrong.
 function Parts.MaxOffset(detail, groups, y, reserve)
-    local total = #Parts.Flatten(groups)
+    local flat = Parts.Flatten(groups)
+    local total = #flat
 
+    local step = Cards().HEIGHT + Cards().GAP
+    local floor = Parts.HEIGHT - (reserve or Parts.RESERVED) - SCROLL_LINE
+
+    -- Flattened once and measured per step, rather than rebuilding the list
+    -- inside the drawer on every one -- a sixty-item raider was allocating
+    -- sixty tables per render, including on every wheel tick.
     for offset = 0, math.max(0, total - 1) do
-        local shown = Parts.DrawGroups(detail, groups, y, reserve, offset, true)
-
-        if offset + shown >= total then
+        if offset + Parts.Fits(detail, flat, y, floor, step, offset) >= total
+        then
             return offset
         end
     end
@@ -325,9 +375,32 @@ end
 -- cannot drift from what is actually on screen: one loop, asked twice.
 function Parts.DrawGroups(detail, groups, y, reserve, offset, measureOnly)
     local step = Cards().HEIGHT + Cards().GAP
-    local floor = Parts.HEIGHT - (reserve or Parts.RESERVED)
+
+    -- ZERO IS TRUTHY IN LUA, which is the whole of a bug worth writing down.
+    -- Render passes reserve = 0 for every raider without a merge proposal, so
+    -- `reserve or Parts.RESERVED` answered 0 rather than falling through to
+    -- the default -- correct as it happens, but it left the floor at exactly
+    -- the pane's bottom edge.
+    --
+    -- The loop only ever guarantees the last CARD fits. The scroll indicator
+    -- is drawn after it, at whatever y the loop stopped at, and it is the one
+    -- line that says the list is cut short -- so on the runs where it landed
+    -- past 398 the pane read as the whole list, which is the exact failure
+    -- the line exists to prevent.
+    local full = Parts.HEIGHT - (reserve or Parts.RESERVED)
 
     local flat = Parts.Flatten(groups)
+
+    -- Room is held back for that line only when it will actually be drawn:
+    -- a raider whose items all fit needs none, and taking a card off them for
+    -- a line that never appears is a worse trade. One extra walk decides it.
+    local floor = full
+
+    if offset > 0
+        or Parts.Fits(detail, flat, y, full, step, offset) < #flat - offset
+    then
+        floor = full - SCROLL_LINE
+    end
 
     offset = math.max(0, math.min(offset or 0, #flat))
 

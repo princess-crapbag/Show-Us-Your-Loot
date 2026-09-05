@@ -315,6 +315,15 @@ function RaidersDetail.Render(detail, entry)
         Parts.Line(detail, "Pick a raider to see where their number came from.",
              "textMuted", 12)
 
+        -- The wheel state belongs to whoever was selected, and this branch
+        -- used to return before touching it: an empty pane kept a maxOffset
+        -- of 4 from the last raider, so the wheel still fired a redraw on
+        -- nothing, and picking that raider again reopened part-way down
+        -- their list.
+        detail.maxOffset = 0
+        detail.itemOffset = 0
+        detail.scrolledKey = nil
+
         return
     end
 

@@ -184,7 +184,10 @@ local function CreateFilters(parent)
             Refresh()
         end)
 
-    frame.audienceButton:SetPoint("TOPLEFT", 18, -108)
+    -- 104, not 108. SortHeader anchors itself at top - HEIGHT - LIST_GAP =
+    -- 150 - 22 - 2 = 126, and its background is created after these buttons,
+    -- so at -108 their bottom two pixels were painted over by it.
+    frame.audienceButton:SetPoint("TOPLEFT", 18, -104)
 
     SYL.Tooltips.Attach(
         frame.audienceButton,

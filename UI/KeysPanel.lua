@@ -170,6 +170,13 @@ Refresh = function()
 
         local columns, characters = SYL.LockoutsGrid.Refresh()
 
+        -- THE CAPTION GETS THE WHOLE WIDTH HERE. It is sized to the key
+        -- list, 436, because that is what the keys view leaves beside the
+        -- request pane -- but the lockouts view hides that pane, so the full
+        -- 868 is free. At 436 this sentence measured 649 and lost its second
+        -- half, which is the half that says why an alt is missing.
+        frame.caption:SetWidth(868)
+
         frame.caption:SetText(
             characters == 0
                 and ("No character has been seen yet. Each one appears the "

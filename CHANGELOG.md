@@ -89,6 +89,37 @@ this says what you will notice.
 
 ### Fixed
 
+- **A sweep of every screen found fourteen more overlaps, and fixed them.**
+  Four passes over the screens that had no geometry checks at all. The ones
+  you would have hit:
+
+  *The Export window's "Full data" button was underneath "Close"* — and Close
+  is created last, so it drew on top and took the clicks. Pressing the words
+  "Full data" closed the window. All six buttons are sized from their labels
+  now.
+
+  *The Who is due window* stacked a hint, two filter buttons and the column
+  header in a space sized for one line and no header — the header painted over
+  two thirds of the buttons, and the hint lost the sentence saying rows are
+  clickable.
+
+  *Every date in the player detail window was cut off* — the column was 92
+  pixels for a stamp that is never narrower than 97.
+
+  *The drop detail's "Turn on Send Session Responses" button* covered the two
+  lines of text explaining why it was there. *The Bosses window hint* ran 30
+  pixels outside the window. *The lockouts caption* lost the half that says an
+  alt's lockouts cannot be read. *A key request to somebody offline* read
+  "Waiting fo…" — it says "Not sent yet" now.
+
+  Three buttons were also stacking a fresh tooltip handler on every redraw,
+  forever, each one holding a previous row's text.
+
+- **The Raiders detail pane could hide the line saying the list was cut
+  short.** The scroll indicator is drawn after the cards and nothing reserved
+  room for it, so on about a third of raiders it landed past the bottom edge —
+  and that line is the only thing telling you there is more to scroll to.
+
 - **"Pick a boss on the left" stayed on screen after you picked one.** It was
   cleared at the end of the render, and the branch for an unread Adventure
   Guide returned before reaching that line — so the sentence survived into the

@@ -35,7 +35,11 @@ local CONTENT = WINDOW_WIDTH - PAD * 2
 
 local HEADER = 52
 local BODY_LINE = 15
-local CHOICE_HEIGHT = 34
+-- 38, NOT 34. The label is size 11 from the top at 5 (ending 19.85) and the
+-- note is size 9 from the bottom at 5 (starting H - 17.15). They need
+-- H >= 37 not to intersect; at 34 they overlapped by three pixels in every
+-- row of the window.
+local CHOICE_HEIGHT = 38
 local CHOICE_GAP = 6
 local FOOTER = 46
 
@@ -280,7 +284,41 @@ function RosterSendWindow.Refresh()
         Theme.SetTextColor(row.label,
             choice.enabled and "textPrimary" or "textMuted")
 
-        row:SetScript("OnClick", function()
+        -- BOTH BUTTONS IN ONE HANDLER, and the version with two was a way to
+        -- broadcast the roster by accident.
+        --
+        -- A Button registered for RightButtonUp fires OnMouseUp AND THEN
+        -- OnClick. So right-clicking to change the name ran the cycle, set a
+        -- target, and then fell straight through the "no target yet" guard in
+        -- OnClick into Send -- sending the roster to whoever the cycle had
+        -- just landed on, which is the opposite of what the control said it
+        -- did. UI/Widgets.lua's row helper registers LeftButtonUp only, for
+        -- exactly this reason.
+        row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+        row:SetScript("OnMouseUp", nil)
+
+        row:SetScript("OnClick", function(_, button)
+            -- Right-click moves to the next name and stops there, so a wrong
+            -- name is not something you have to send your way out of.
+            if button == "RightButton" then
+                if choice.scope == "player" then
+                    target = RosterSendWindow.NextTarget(target)
+
+                    RosterSendWindow.Refresh()
+                end
+
+                return
+            end
+
+            -- A choice that cannot do anything says so rather than being a
+            -- button that swallows the press. Greyed and silent is how
+            -- somebody decides the window is broken.
+            if not choice.enabled then
+                SYL:Print("Nothing sent: " .. choice.note .. ".")
+
+                return
+            end
+
             -- ONE PLAYER CYCLES BEFORE IT SENDS. The row is both the chooser
             -- and the trigger, so the first press picks a name and the press
             -- on a name that is already chosen is the one that sends. A
@@ -303,17 +341,6 @@ function RosterSendWindow.Refresh()
             RosterSendWindow.Refresh()
         end)
 
-        -- Right-click moves to the next name without sending, so a wrong
-        -- name is not a thing you have to send your way out of.
-        row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-
-        row:SetScript("OnMouseUp", function(_, button)
-            if button == "RightButton" and choice.scope == "player" then
-                target = RosterSendWindow.NextTarget(target)
-
-                RosterSendWindow.Refresh()
-            end
-        end)
     end
 end
 

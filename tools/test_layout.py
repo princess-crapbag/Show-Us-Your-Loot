@@ -923,6 +923,113 @@ check("and the two footer buttons fit side by side under the grid",
       56 * 2 + P_PAD * 2 + 8 <= picker_width + 8,
       picker_width)
 
+
+# --- the four-agent sweep, 2026-09-05 --------------------------------------
+#
+# Aimee: "also do the full sweep for overlapping things." Everything below is
+# a defect that sweep found and this file could not have caught, because none
+# of these screens were in it.
+
+# The due window stacked a wrapping hint, two buttons and a column header in
+# a space sized for one line and no header.
+due = src("UI/DueWindow.lua")
+DUE_LIST_TOP = number(due, r"local LIST_TOP = (\d+)", "due LIST_TOP")
+
+HINT = ("Dry nights counts raid nights attended since their last Need or "
+        "offspec win. Transmog and greed do not reset it. Click a row for "
+        "that raider's whole history.")
+
+hint_lines = math.ceil(measure(HINT, 11) / (660 - 18 - 16))
+
+check("the due hint wraps rather than losing its last sentence",
+      "hint:SetWordWrap(true)" in due,
+      "%.1f in %d needs two lines" % (measure(HINT, 11), 660 - 34))
+
+due_button_top = number(due, r'recentButton:SetPoint\("TOPLEFT", 18, -(\d+)\)',
+                        "due button top")
+
+gap("the due hint clears its filter buttons",
+    84 + hint_lines * 15, due_button_top)
+gap("and the buttons clear the column header",
+    due_button_top + 20, DUE_LIST_TOP - 24)
+
+# Every value FormatDateCompact can produce, against the column that holds it.
+detail = src("UI/PlayerDetailWindow.lua")
+DATE_WIDTH = number(detail, r'key = "date", label = "DATE", width = (\d+)',
+                    "player detail DATE")
+
+for stamp in ("09/30/25 10:59 AM", "11/11/25 1:11 PM", "12/31/25 12:00 PM"):
+    check("the player detail DATE column holds %r" % stamp,
+          measure(stamp, 11) <= DATE_WIDTH - 2,
+          "%.1f in %d" % (measure(stamp, 11), DATE_WIDTH))
+
+# The export footer chained typed widths into the Close button, which drew on
+# top and took the clicks.
+export = src("UI/ExportWindow.lua")
+
+check("the export footer sizes its buttons from their labels",
+      "Theme.SizeToLabels(button" in export,
+      "typed widths put Full data underneath Close, which took its clicks")
+
+BUTTON_PADDING = number(src("UI/Theme.lua"),
+                        r"Theme.BUTTON_PADDING = (\d+)", "button padding")
+
+x = 18
+
+for label in ("Latest night", "Season", "Players", "No upgrade", "Full data"):
+    x += math.ceil(measure(label, 11)) + BUTTON_PADDING + 6
+
+close_left = 620 - 18 - (math.ceil(measure("Close", 11)) + BUTTON_PADDING)
+
+gap("and the row clears Close", x - 6, close_left)
+
+# The key request column could not hold the offline state it was given.
+keyrows = src("UI/KeyRows.lua")
+
+# The declaration spans lines and puts `widest` before `label`, so the scan
+# is anchored on the key and allowed to run past newlines.
+found = re.search(r'key = "response".*?widest = "([^"]+)"', keyrows, re.S)
+
+if not found:
+    FAILURES.append("could not read the RESPONSE column's widest string")
+    print("FAIL could not read the RESPONSE column's widest string")
+    widest = "Ask again"
+else:
+    widest = found.group(1)
+
+response_width = math.ceil(max(measure(widest, 11),
+                               measure("RESPONSE", 10))) + 12
+
+for value in ("Not sent yet", "Ask again", "Waiting", "Approved"):
+    check("the key RESPONSE column holds %r" % value,
+          measure(value, 11) <= response_width,
+          "%.1f in %d" % (measure(value, 11), response_width))
+
+# Matched on the assignment, not on the file: the comment above it quotes the
+# old string on purpose, to record what went wrong and why it was shortened.
+check("and the offline state is one of the strings it was measured against",
+      'existing.queued and "Not sent yet"' in keyrows,
+      "the long form measured 134.5 in a column of 64")
+
+# Tooltips.Attach uses HookScript, so calling it from a refresh path stacks a
+# closure per draw. Three sites did.
+for path, name in (("UI/KeyRows.lua", "the key row ask button"),
+                   ("UI/DropCredit.lua", "the credit match button")):
+    text = src(path)
+
+    check("%s attaches its tooltip once" % name,
+          "Tooltip = true" in text,
+          "Attach hooks rather than replaces, so a refresh path stacks them")
+
+# The scroll indicator is drawn after the card loop and has to be budgeted
+# for inside it -- reserve = 0 is truthy in Lua, so the floor was the pane's
+# exact bottom edge.
+parts = src("UI/RaidersDetailParts.lua")
+
+check("the detail pane holds back room for its own scroll line",
+      "local SCROLL_LINE" in parts and "full - SCROLL_LINE" in parts,
+      "the line that says the list is cut short was drawn past the bottom")
+
 print()
 print("FAILURES: " + (", ".join(FAILURES) if FAILURES else "none"))
 sys.exit(1 if FAILURES else 0)

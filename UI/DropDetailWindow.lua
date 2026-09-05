@@ -101,16 +101,26 @@ local function LayoutList(listTop)
     local top = listTop
 
     if view.notice then
+        -- THE GUTTER COMES FROM THE BUTTON, not from a number typed once.
+        --
+        -- It was a flat 140 while the button is MEASURED from its label --
+        -- "Turn on Send Session Responses" comes to 195 -- so the button
+        -- overhung the text's right edge by 55 and covered the first two
+        -- lines of the sentence explaining why it is there.
+        frame.noticeButton.label:SetText(view.notice.button)
+
+        local buttonWidth =
+            Theme.MeasureText(Theme.sizes.rowSmall, view.notice.button) + 26
+
+        frame.noticeButton:SetWidth(buttonWidth)
+
         frame.noticeText:ClearAllPoints()
         frame.noticeText:SetPoint("TOPLEFT", 18, -(top + 2))
-        frame.noticeText:SetPoint("TOPRIGHT", -140, -(top + 2))
+        frame.noticeText:SetPoint(
+            "TOPRIGHT", -(buttonWidth + 32), -(top + 2)
+        )
         frame.noticeText:SetText(view.notice.text)
         frame.noticeText:Show()
-
-        frame.noticeButton.label:SetText(view.notice.button)
-        frame.noticeButton:SetWidth(
-            Theme.MeasureText(Theme.sizes.rowSmall, view.notice.button) + 26
-        )
         frame.noticeButton:ClearAllPoints()
         frame.noticeButton:SetPoint("TOPRIGHT", -16, -(top + 4))
         frame.noticeButton:Show()

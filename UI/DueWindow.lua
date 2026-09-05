@@ -36,7 +36,19 @@ local MAX_ROWS = 40
 local FOOTER_HEIGHT = 56
 
 local visibleRows = DEFAULT_ROWS
-local LIST_TOP = 140
+-- 164, NOT 140, and the twenty-four is what the buttons and the hint need.
+--
+-- DueRows.CreateHeader anchors the column header at -(LIST_TOP - 24) with a
+-- height of 22, so at 140 it spanned y 116..138 -- straight through the
+-- filter buttons at y 110..130. The header's background is created after the
+-- buttons, so it painted over the bottom two thirds of "Recent raiders" and
+-- the scope button beside it.
+--
+-- The hint above them needed the room too: it measures 796.5 in the 626 it
+-- is given, so it has to wrap to two lines, and two lines from y 84 reach
+-- 114. Buttons at 118 clear that, the header at 140 clears the buttons, and
+-- the list starts at 164.
+local LIST_TOP = 164
 
 -- The same three nights `/syl due` uses, so the window and the command never
 -- disagree about who is on the list.
@@ -203,6 +215,12 @@ local function CreateWindow()
     hint:SetPoint("TOPLEFT", 18, -84)
     hint:SetPoint("TOPRIGHT", -16, -84)
     hint:SetJustifyH("LEFT")
+
+    -- WRAPS, because it does not fit. Theme.CreateText leaves wrapping off
+    -- and this measures 796.5 in 626, so the last sentence -- the only thing
+    -- on screen saying a row can be clicked -- was cut off the end.
+    hint:SetWordWrap(true)
+
     hint:SetText(
         "Dry nights counts raid nights attended since their last Need or "
         .. "offspec win. Transmog and greed do not reset it. Click a row for "
@@ -217,7 +235,7 @@ local function CreateWindow()
             Refresh()
         end)
 
-    frame.recentButton:SetPoint("TOPLEFT", 18, -110)
+    frame.recentButton:SetPoint("TOPLEFT", 18, -118)
 
     SYL.Tooltips.Attach(
         frame.recentButton,

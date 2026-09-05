@@ -63,6 +63,14 @@ function DropCredit.Build(frame, handlers)
     )
     frame.creditName:SetPoint("TOPLEFT", 18, -DropCredit.NAME_TOP)
 
+    -- BOUNDED, because the buttons beside it are anchored to the right edge
+    -- and this is not. Credit names come straight from the roll list, so a
+    -- cross-realm raider arrives as "Duhmptruhk-Nordrassil" -- 122 at this
+    -- size, and with the weight after it the pair reached 237 against a
+    -- button group whose left edge is 234 once Match is showing.
+    frame.creditName:SetWordWrap(false)
+    frame.creditName:SetWidth(150)
+
     frame.creditWeight = Part(
         Theme.CreateText(frame, Theme.sizes.rowSmall, "textSecondary")
     )
@@ -201,17 +209,36 @@ function DropCredit.Update(frame, record)
 
     frame.matchButton:SetShown(frame.suggested ~= nil)
 
-    if frame.suggested then
+    -- ATTACHED ONCE, RESOLVED ON HOVER. Tooltips.Attach uses HookScript,
+    -- which ADDS a handler rather than replacing one -- and Update runs on
+    -- every refresh of the drop detail window, including every mouse-wheel
+    -- notch. Attaching here stacked a fresh closure on the button each time,
+    -- every one of them holding a previous record's name and all of them
+    -- firing on every hover.
+    --
+    -- The body is a function so a single attachment still describes the drop
+    -- on screen now rather than the one that was there when it was made.
+    if not frame.matchTooltip then
+        frame.matchTooltip = true
+
         SYL.Tooltips.Attach(
             frame.matchButton,
             "Match to RCLootCouncil",
-            "RCLootCouncil awarded this to "
-            .. tostring(frame.suggested.name)
-            .. (frame.suggested.response
-                and (" as \"" .. tostring(frame.suggested.response) .. "\"")
-                or "")
-            .. ". This opens the picker with that name chosen -- nothing "
-            .. "changes until you confirm it."
+            function()
+                local suggested = frame.suggested
+
+                if not suggested then
+                    return nil
+                end
+
+                return "RCLootCouncil awarded this to "
+                    .. tostring(suggested.name)
+                    .. (suggested.response
+                        and (" as \"" .. tostring(suggested.response) .. "\"")
+                        or "")
+                    .. ". This opens the picker with that name chosen -- "
+                    .. "nothing changes until you confirm it."
+            end
         )
     end
 

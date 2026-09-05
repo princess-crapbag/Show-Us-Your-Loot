@@ -40,6 +40,15 @@ local WINDOW_WIDTH = 460
 local PAD = 20
 
 local HEADER_HEIGHT = 56
+
+-- ONLY THE MINIMUM. The body's real height is read off the font string after
+-- the text is set -- see Show -- because it wraps to nine or ten lines and
+-- this constant said seven. At 104 the body was drawn straight through
+-- "THEIR TEAM" and the first two names, which are the whole reason this is a
+-- window and not a one-line popup.
+--
+-- GetStringHeight is the only honest answer here: the text is built from a
+-- count and a name, so its length is not knowable when the frame is made.
 local BODY_HEIGHT = 104
 local LIST_HEADING = 18
 local NAME_ROW = 18
@@ -201,6 +210,12 @@ local function CreateNameRow(parent, index)
         "TOPLEFT", PAD + column * half, -(line * NAME_ROW)
     )
 
+    -- Bounded, because a roster carries whatever RosterSync decoded and that
+    -- can be Name-Realm. "Quickadin-AeriePeak" fits; a longer one would have
+    -- run through the role beside it.
+    row.name:SetWidth(half - 62)
+    row.name:SetWordWrap(false)
+
     row.role = Theme.CreateText(parent, Theme.sizes.rowSmall, "textMuted")
     row.role:SetPoint(
         "TOPLEFT", PAD + column * half + half - 60, -(line * NAME_ROW)
@@ -285,6 +300,13 @@ local function CreateWindow()
 
     frame.footer = Theme.CreateSeparator(frame)
 
+    -- THE CORNER X, which the header claimed existed and did not. Escape was
+    -- the only non-committal way out of a window whose two buttons both do
+    -- something -- and closing without answering is a real choice: the offer
+    -- stays pending and the roster screen keeps a button for it.
+    local corner = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
+    corner:SetPoint("TOPRIGHT", -6, -6)
+
     frame:Hide()
 
     return frame
@@ -350,18 +372,42 @@ function SharedRosterPrompt.Show()
 
     local shown, hidden = DrawNames(offer)
 
+    -- MEASURED, NOT RESERVED. The body is built from a count and a name, so
+    -- how many lines it wraps to is not knowable when the frame is made --
+    -- and the constant guessed seven where it takes ten. Everything below it
+    -- was drawn 44 pixels too high, which put the body straight over "THEIR
+    -- TEAM" and the first two names.
+    --
+    -- GetStringHeight is the font string's own answer after SetText, which is
+    -- the only thing that knows. The reserve is kept as a floor so a short
+    -- body still leaves the block where the eye expects it.
+    local bodyHeight = math.max(
+        BODY_HEIGHT, math.ceil(bodyText:GetStringHeight() or 0) + 12
+    )
+
+    listHeading:ClearAllPoints()
+    listHeading:SetPoint("TOPLEFT", PAD, -(HEADER_HEIGHT + bodyHeight))
+
+    dialog.list:ClearAllPoints()
+    dialog.list:SetPoint(
+        "TOPLEFT", 0, -(HEADER_HEIGHT + bodyHeight + LIST_HEADING)
+    )
+
     -- The window is exactly as tall as what is in it. A fixed height would
     -- either clip a full roster or leave a field of empty ground under a
     -- short one, and the empty ground reads as something failing to load.
     local listHeight = ListHeight(shown) + (hidden > 0 and NAME_ROW or 0)
-    local height = HEADER_HEIGHT + BODY_HEIGHT + listHeight + FOOTER_HEIGHT
+    local height = HEADER_HEIGHT + bodyHeight + listHeight + FOOTER_HEIGHT
 
     dialog:SetHeight(height)
 
-    dialog.footer:SetPoint("BOTTOMLEFT", 16, FOOTER_HEIGHT - 18)
-    dialog.footer:SetPoint("BOTTOMRIGHT", -16, FOOTER_HEIGHT - 18)
+    -- 42 and 14, the same as every other window here -- ShareWindow,
+    -- HistoryPrompt and CouncilMatchWindow all use it. This was 34 against
+    -- buttons spanning 16..38, so the rule was drawn through both of them.
+    dialog.footer:SetPoint("BOTTOMLEFT", 16, 42)
+    dialog.footer:SetPoint("BOTTOMRIGHT", -16, 42)
 
-    dialog.decline:SetPoint("BOTTOMRIGHT", -PAD, PAD - 4)
+    dialog.decline:SetPoint("BOTTOMRIGHT", -PAD, 14)
     dialog.accept:SetPoint("RIGHT", dialog.decline, "LEFT", -8, 0)
 
     SYL.WindowStack.ShowWindow(dialog)
@@ -369,7 +415,8 @@ function SharedRosterPrompt.Show()
     return dialog
 end
 
--- Closed without an answer -- Escape, or the corner X. The offer stays
+-- Closed without an answer -- Escape, or the corner X in the top corner.
+-- The offer stays
 -- pending rather than being treated as a no: dismissing a box is not
 -- declining, and the roster screen has a line saying one is waiting.
 function SharedRosterPrompt.IsShown()

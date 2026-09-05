@@ -74,10 +74,17 @@ KeyRows.COLUMNS = {
     -- justified." A column of two-digit numbers lines up either way.
     { key = "level", label = "LVL", justify = "LEFT", widest = "30" },
 
-    -- Every string this column can hold: Waiting, Yes, Maybe, No, Ask, and
-    -- "Ask again". The last is the widest.
+    -- Every string this column can hold: Waiting, Yes, Maybe, No, Ask,
+    -- "Ask again" and "Not sent yet". The last is the widest.
+    --
+    -- THE OFFLINE STATE HAD TO GET SHORTER, not the column wider. It read
+    -- "Waiting for them to log in", which measures 134.5 against a column
+    -- sized 64 from "Ask again" -- so it drew as "Waiting fo...", the exact
+    -- failure this file's own header was written about. Widening instead
+    -- would push the table to 459 in a 436 list and put it under the request
+    -- pane, so the words gave way.
     { key = "response", label = "RESPONSE", justify = "CENTER",
-      widest = "Ask again", sortable = false },
+      widest = "Not sent yet", sortable = false },
 }
 
 -- Breathing room either side of the widest string. One number, so no column
@@ -217,7 +224,7 @@ function KeyRows.DrawAsk(row, entry, config)
         -- somebody looking at this column deserves to know which of the two
         -- they are waiting on. See KeystoneRequests.FlushQueued.
         row.cells.response:SetText(
-            existing.queued and "Waiting for them to log in"
+            existing.queued and "Not sent yet"
             or (SYL.KeystoneRequests.STATUS_LABELS[existing.status] or "")
         )
 
@@ -243,23 +250,76 @@ function KeyRows.DrawAsk(row, entry, config)
 
     local offline = not SYL.KeystoneRequests.IsOnline(entry.name)
 
-    SYL.Tooltips.Attach(
-        row.ask,
-        allowed and (offline and "Ask when they log in" or "Ask for this key")
-            or "Cannot ask",
-        allowed
-            and ("Sends a request to " .. entry.name .. " as "
-                .. (SYL.KeystoneRequests.ROLE_LABELS[config.getRole()]
-                    or config.getRole())
-                .. ". Only they see it."
+    -- ATTACHED ONCE, RESOLVED ON HOVER. Tooltips.Attach uses HookScript,
+    -- which ADDS a handler rather than replacing one -- and this runs on
+    -- every draw, so a minute of scrolling left hundreds of live OnEnter
+    -- closures on one button, every one of them firing on every hover.
+    -- Attach takes functions for exactly this reason; its own header says so.
+    -- ATTACHED ONCE, RESOLVED ON HOVER, and both halves matter.
+    --
+    -- Tooltips.Attach uses HookScript, which ADDS a handler rather than
+    -- replacing one -- and this runs on every draw, so a minute of scrolling
+    -- left hundreds of live OnEnter closures on one button, all firing on
+    -- every hover. So it is attached once.
+    --
+    -- But attaching once means the closure cannot capture THIS entry: rows
+    -- are pooled and reused as the list scrolls, so a captured name would
+    -- describe whoever happened to be in that slot when the window opened.
+    -- Attach takes functions for exactly this reason, and they read what the
+    -- row is holding right now.
+    row.askEntry = entry
+    row.askConfig = config
+
+    if not row.askTooltip then
+        row.askTooltip = true
+
+        SYL.Tooltips.Attach(
+            row.ask,
+            function()
+                local held = row.askEntry
+
+                if not held then
+                    return nil
+                end
+
+                if not SYL.KeystoneRequests.CanAsk(held.name) then
+                    return "Cannot ask"
+                end
+
+                return SYL.KeystoneRequests.IsOnline(held.name)
+                    and "Ask for this key"
+                    or "Ask when they log in"
+            end,
+            function()
+                local held = row.askEntry
+
+                if not held then
+                    return nil
+                end
+
+                local canAsk, why = SYL.KeystoneRequests.CanAsk(held.name)
+
+                if not canAsk then
+                    return why or ""
+                end
+
+                local role = row.askConfig and row.askConfig.getRole()
+
+                local text = "Sends a request to " .. held.name .. " as "
+                    .. (SYL.KeystoneRequests.ROLE_LABELS[role] or tostring(role))
+                    .. ". Only they see it."
+
                 -- SAYS WHAT IT CAN AND CANNOT PROMISE. Nothing in the game
                 -- can put a message in front of somebody who is not logged
                 -- in, so "they see it when they log in" is true only while
                 -- you are online too. Better said here than assumed.
-                .. (offline
-                    and (" They are offline, so this is held and sent the "
-                        .. "next time you are both online.")
-                    or ""))
-            or (reason or "")
-    )
+                if not SYL.KeystoneRequests.IsOnline(held.name) then
+                    text = text .. " They are offline, so it is held and sent "
+                        .. "the next time you are both online."
+                end
+
+                return text
+            end
+        )
+    end
 end

@@ -31,9 +31,17 @@ local currentKey
 local currentEntry
 local offset = 0
 
+-- DATE HELD NO DATE IT COULD EVER BE GIVEN. Utilities.FormatDateCompact
+-- returns "09/30/25 10:59 AM" -- 106.5 at the row font -- and every other
+-- value it can produce measures between 97 and 107. The column was 92, so
+-- the AM/PM was cut off every single time, on every row, from the day it
+-- shipped. 110 clears the widest with room.
+--
+-- Taken out of ITEM, which had 62 to spare: the longest item name this tier
+-- is "Vexhul's Everflowing Gland" at 146, and 196 still holds it.
 local COLUMNS = {
-    { key = "date", label = "DATE", width = 92, gap = 6 },
-    { key = "item", label = "ITEM", width = 208, gap = 6 },
+    { key = "date", label = "DATE", width = 110, gap = 6 },
+    { key = "item", label = "ITEM", width = 196, gap = 6 },
     { key = "boss", label = "BOSS", width = 132, gap = 6 },
     { key = "chose", label = "CHOSE", width = 74, gap = 6 },
     { key = "roll", label = "ROLL", width = 40, gap = 6 },
