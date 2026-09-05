@@ -200,14 +200,38 @@ function LockoutsGrid.Refresh()
                 header.label, column.seasonal and "textMuted" or "warning"
             )
 
-            SYL.Tooltips.Attach(
-                header,
-                tostring(column.name),
-                column.seasonal
-                    and "In this season's Mythic+ rotation."
-                    or "Not in the season's rotation, but somebody is saved to "
-                        .. "it — shown so a lockout is never hidden."
-            )
+            -- ATTACHED ONCE, RESOLVED ON HOVER. Tooltips.Attach uses
+            -- HookScript, which adds a handler rather than replacing one, and
+            -- this is a refresh path -- so every redraw of the grid left
+            -- another pair of closures on the header, each holding whichever
+            -- dungeon had been in that column at the time.
+            --
+            -- The column moves under the header as the season rotates, so
+            -- the text has to be read at hover rather than captured anyway.
+            header.column = column
+
+            if not header.tooltipAttached then
+                header.tooltipAttached = true
+
+                SYL.Tooltips.Attach(
+                    header,
+                    function()
+                        return header.column
+                            and tostring(header.column.name) or nil
+                    end,
+                    function()
+                        if not header.column then
+                            return nil
+                        end
+
+                        return header.column.seasonal
+                            and "In this season's Mythic+ rotation."
+                            or "Not in the season's rotation, but somebody is "
+                                .. "saved to it — shown so a lockout is never "
+                                .. "hidden."
+                    end
+                )
+            end
 
             header:Show()
         else

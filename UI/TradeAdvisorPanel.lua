@@ -203,13 +203,34 @@ Refresh = function()
         return
     end
 
+    -- ONLY WHAT FITS, and it is checked as it goes rather than capped up
+    -- front: a block here is 38 plus a row per candidate, so two entries can
+    -- be a different height from each other. The panel's height is capped at
+    -- 400 and the drawing never was, so a third win was laid out past the
+    -- bottom -- over the footnote and then off the frame, with no scrolling
+    -- and nothing clipping children.
+    --
+    -- The title still counts every one, so the panel says how many there are
+    -- even when it cannot draw them all.
+    local room = 400 - CHROME_HEIGHT
     local top = 0
+    local drawn = 0
 
     for index, entry in ipairs(active) do
-        top = top + DrawEntry(EntryFrame(index), entry, top)
+        local block = EntryFrame(index)
+        local height = DrawEntry(block, entry, top)
+
+        if top + height > room and drawn > 0 then
+            block:Hide()
+
+            break
+        end
+
+        top = top + height
+        drawn = drawn + 1
     end
 
-    for index = #active + 1, #frame.blocks do
+    for index = drawn + 1, #frame.blocks do
         frame.blocks[index]:Hide()
     end
 

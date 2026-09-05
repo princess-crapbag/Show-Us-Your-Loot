@@ -138,6 +138,7 @@ function KeyRequestList.Refresh(pane)
     -- reads Features: the runtime one is set at login, so switching the
     -- feature on mid-session left the panel insisting it was off.
     if not SYL.Features.IsEnabled("keyRequests") then
+        KeyRequestList.ResetEmpty(pane)
         pane.empty:SetText(
             "Key requests are switched off. Turn them on in Settings to let "
             .. "guildies ask to run your key, and to ask for theirs."
@@ -152,6 +153,7 @@ function KeyRequestList.Refresh(pane)
     end
 
     if #requests == 0 then
+        KeyRequestList.ResetEmpty(pane)
         pane.empty:SetText(
             "Nobody has asked to run your key. When somebody does it appears "
             .. "here and in chat, and stays until the weekly reset."
@@ -198,9 +200,22 @@ function KeyRequestList.Refresh(pane)
     end
 
     if #requests > shown then
+        -- BORROWED AND GIVEN BACK. This moved the empty-state font string to
+        -- the bottom of the pane to serve as an overflow line and never put
+        -- it back -- so after one busy night, "Nobody has asked to run your
+        -- key" was drawn at the bottom of the pane for the rest of the
+        -- session, wrapping upward from there.
         pane.empty:SetText("+ " .. (#requests - shown) .. " more")
         pane.empty:ClearAllPoints()
         pane.empty:SetPoint("BOTTOMLEFT", PAD, 8)
         pane.empty:Show()
     end
+end
+
+-- Where the empty message belongs: under the heading, which is where it is
+-- created and where every path that writes a message wants it.
+function KeyRequestList.ResetEmpty(pane)
+    pane.empty:ClearAllPoints()
+    pane.empty:SetPoint("TOPLEFT", PAD, -32)
+    pane.empty:SetPoint("TOPRIGHT", -PAD, -32)
 end

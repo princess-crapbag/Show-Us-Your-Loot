@@ -218,6 +218,13 @@ local function UpdateProgress()
         stopButton:Hide()
         sendButton:Show()
 
+        -- AND PUT THE WORDS BACK. This cleared the bar and left the prose,
+        -- which on the sending path reads "Going out now, four messages a
+        -- second". Two ways out of a transfer never call Refresh -- it
+        -- finishing, and them declining -- so the window sat there describing
+        -- a send that had already stopped, over an empty bar.
+        bodyText:SetText(ShareWindow.Describe())
+
         return
     end
 
@@ -408,8 +415,10 @@ function ShareWindow.Show()
     ShareWindow.Refresh()
 
     -- The bar has to move on its own while the send runs, and nothing else on
-    -- screen changes to prompt a redraw. Started here and stopped on hide, so
-    -- a window nobody has opened costs nothing.
+    -- screen changes to prompt a redraw. Started here and STOPPED ON HIDE --
+    -- which is what the comment used to claim while no OnHide existed, so the
+    -- ticker ran every half second for the rest of the session after the
+    -- window was first opened.
     if C_Timer and C_Timer.NewTicker and not ticker then
         ticker = C_Timer.NewTicker(0.5, function()
             if frame and frame:IsShown() then
@@ -417,6 +426,13 @@ function ShareWindow.Show()
             end
         end)
     end
+
+    window:SetScript("OnHide", function()
+        if ticker then
+            ticker:Cancel()
+            ticker = nil
+        end
+    end)
 
     SYL.WindowStack.ShowWindow(window)
 

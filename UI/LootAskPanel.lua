@@ -249,13 +249,25 @@ Refresh = function()
         return
     end
 
+    -- ONLY WHAT THE PANEL CAN ACTUALLY HOLD. The height is capped at 400 but
+    -- the drawing never was, so a fifth concurrent item was laid out at y 304
+    -- in a body of 324 and the ones after it hung below the panel entirely --
+    -- over the footnote, then off the frame onto the game world. There is no
+    -- scrolling here and nothing clips children.
+    --
+    -- Nothing is silently dropped: the title counts every entry, so "YOU CAN
+    -- ASK FOR 6 ITEMS" over four blocks still tells the truth about how many
+    -- there are, and the trade window keeps the rest until they are taken.
+    local room = 400 - CHROME_HEIGHT
+    local fits = math.max(1, math.floor(room / BLOCK_HEIGHT))
+
     local top = 0
 
-    for index, entry in ipairs(active) do
-        top = top + DrawEntry(EntryFrame(index), entry, top)
+    for index = 1, math.min(fits, #active) do
+        top = top + DrawEntry(EntryFrame(index), active[index], top)
     end
 
-    for index = #active + 1, #frame.blocks do
+    for index = math.min(fits, #active) + 1, #frame.blocks do
         frame.blocks[index]:Hide()
     end
 

@@ -265,6 +265,12 @@ function CouncilMatchWindow.Show()
     if #changes == 0 then
         window.apply:Disable()
         Theme.SetTextColor(window.apply.label, "textMuted")
+
+        -- RESET, or it keeps a count from the last time. Apply eight, which
+        -- hides the window; reopen with nothing left to do and the button
+        -- still read "Apply 8", greyed and dead -- a number describing work
+        -- that has already been done.
+        window.apply.label:SetText("Apply")
     else
         window.apply:Enable()
         Theme.SetTextColor(window.apply.label, "textPrimary")
