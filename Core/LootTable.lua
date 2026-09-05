@@ -81,11 +81,37 @@ local function GetItems(dungeonEncounterID, difficultyID, mayWalk)
 
     -- Saved and restored because these calls move what the player is looking
     -- at, and this can run while their journal is open.
+    --
+    -- THE CLASS FILTER IS PART OF THAT STATE, and not clearing it made this
+    -- whole feature quietly wrong. Aimee: "when it reads the adventure guide,
+    -- is it only showing me items my class or spec can use?"
+    --
+    -- It was, for anybody whose Adventure Guide is set that way -- which is
+    -- the default the moment somebody uses the class dropdown in it once.
+    -- EJ_GetNumLoot answers whatever that filter allows, so "never dropped"
+    -- was really "never dropped, of the items my own class can wear", while
+    -- the caveat under the list claimed the exact opposite: that it lists
+    -- what a boss can drop for ANY specialization.
+    --
+    -- A number that is wrong AND explained wrongly is worse than either. The
+    -- filter is cleared for the read and put back afterwards, the same as the
+    -- instance and the difficulty around it -- this is the player's own
+    -- window and it must look the way they left it.
     local ok = pcall(function()
         local previousInstance = EJ_GetCurrentInstance and
             EJ_GetCurrentInstance() or nil
         local previousDifficulty = EJ_GetDifficulty and
             EJ_GetDifficulty() or nil
+
+        local previousClass, previousSpec
+
+        if EJ_GetLootFilter then
+            previousClass, previousSpec = EJ_GetLootFilter()
+        end
+
+        if EJ_SetLootFilter then
+            EJ_SetLootFilter(0, 0)
+        end
 
         EJ_SelectInstance(entry.journalInstanceID)
 
@@ -103,6 +129,10 @@ local function GetItems(dungeonEncounterID, difficultyID, mayWalk)
 
         if previousDifficulty and EJ_SetDifficulty then
             EJ_SetDifficulty(previousDifficulty)
+        end
+
+        if EJ_SetLootFilter and previousClass then
+            EJ_SetLootFilter(previousClass, previousSpec or 0)
         end
     end)
 

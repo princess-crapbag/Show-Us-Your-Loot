@@ -130,8 +130,25 @@ function BossLoot.Create(parent, width, top)
     pane.divider:SetWidth(1)
     pane.divider:SetPoint("BOTTOM", pane, "BOTTOM", 0, 56)
 
+    -- BELOW THE COLUMN HEADINGS, not on top of them. This sat at -54 while
+    -- the headings sit at LIST_TOP - 16, four pixels apart, so "Pick a boss
+    -- on the left" was drawn straight through "IT HAS GIVEN YOU".
+    --
+    -- It is only ever shown when there is nothing in the lists -- no boss
+    -- picked, or the journal unread -- so it takes the space the rows would
+    -- have used rather than needing any of its own.
+    pane.missingNote =
+        Theme.CreateText(pane, Theme.sizes.rowSmall, "textMuted")
+    pane.missingNote:SetPoint(
+        "TOPLEFT", PAD + column + COLUMN_GAP, -(LIST_TOP + 4)
+    )
+    pane.missingNote:SetWidth(column)
+    pane.missingNote:SetJustifyH("LEFT")
+    pane.missingNote:SetWordWrap(true)
+    pane.missingNote:Hide()
+
     pane.status = Theme.CreateText(pane, Theme.sizes.rowSmall, "textMuted")
-    pane.status:SetPoint("TOPLEFT", PAD, -54)
+    pane.status:SetPoint("TOPLEFT", PAD, -(LIST_TOP + 4))
     pane.status:SetWidth(width - (PAD * 2))
     pane.status:SetJustifyH("LEFT")
     pane.status:SetWordWrap(true)
@@ -240,10 +257,20 @@ local function DrawList(pane, side, items, describe)
 
         -- Colored by rarity, the way every other item in this addon is, so a
         -- list of names reads as a list of items.
+        --
+        -- AN ARRAY, NOT A NAMED TABLE, and reading color.r instead of
+        -- color[1] is what left this whole screen blank. SetTextColor(nil,
+        -- nil, nil) throws in the client, so Render died here -- after the
+        -- left heading and before the right one, which is exactly what the
+        -- screenshot showed. The stub frame in the tests accepts any
+        -- arguments at all, so 62 green files said nothing.
+        --
+        -- UI/Rows.lua and UI/RaidersDetailCards.lua both take the array form;
+        -- this was the only caller that invented a shape for it.
         local color = link and Theme.GetItemQualityColor(link)
 
         if color then
-            row.name:SetTextColor(color.r, color.g, color.b)
+            Theme.SetCustomTextColor(row.name, color[1], color[2], color[3])
         else
             Theme.SetTextColor(row.name, "textPrimary")
         end
@@ -305,6 +332,7 @@ function BossLoot.Render(pane, boss, _, journalRead)
         pane.missingHeading:SetText("")
         pane.missingCount:SetText("")
         pane.status:SetText("Pick a boss on the left.")
+        pane.missingNote:Hide()
         pane.footnote:SetText("")
 
         HideAllRows(pane)
@@ -365,25 +393,28 @@ function BossLoot.Render(pane, boss, _, journalRead)
         pane.missingCount:SetText("")
         HideRowsFrom(pane, "missing", 1)
 
-        -- The status line carries this rather than the missing column,
-        -- because it is about the whole screen and not about one list.
-        pane.status:SetText(
+        -- UNDER ITS OWN COLUMN, because it is about that list and not about
+        -- the screen -- the left list is drawn and correct either way, and a
+        -- message across both would cover it.
+        pane.missingNote:SetText(
             journalRead
-                and ("The Adventure Guide has no loot table for this boss, so "
-                    .. "the second list cannot be filled in. Dungeon bosses "
-                    .. "are never in it -- it covers raids only.")
-                or ("Press \"Read the Adventure Guide\" above to fill in the "
-                    .. "second list. It reads every raid tier once, which is "
-                    .. "why it is a button rather than something that happens "
-                    .. "when you open this tab.")
+                and ("No loot table for this boss in the Adventure Guide. "
+                    .. "Dungeon bosses are never in it -- it covers raids "
+                    .. "only.")
+                or ("Press \"Read the Adventure Guide\" above to fill this "
+                    .. "in. It reads every raid tier once, which is why it "
+                    .. "is a button rather than something that happens when "
+                    .. "you open the tab.")
         )
 
+        pane.missingNote:Show()
         pane.footnote:SetText("")
 
         return
     end
 
     pane.status:SetText("")
+    pane.missingNote:Hide()
 
     pane.missingCount:SetText(
         (total or 0) > 0 and (#missing .. " of " .. (total or 0)) or ""

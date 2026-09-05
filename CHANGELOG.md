@@ -89,6 +89,18 @@ this says what you will notice.
 
 ### Fixed
 
+- **The Adventure Guide list was filtered to your own class, silently.** The
+  journal answers with whatever class filter the player last set in Blizzard's
+  own Adventure Guide window — and the addon never cleared it. So *"6 of 8
+  never dropped"* really meant *"of the items my class can wear"*, while the
+  caveat underneath claimed the exact opposite: that it lists what a boss can
+  drop for any specialization. A number that is wrong and explained wrongly is
+  worse than either. The filter is cleared for the read and put back
+  afterwards, like the instance and difficulty around it.
+
+  If you had read the guide before this, reload once — the cached list is
+  from before the fix.
+
 - **Text overlapped in three places, and one of them was hiding a third of
   your guild.**
 

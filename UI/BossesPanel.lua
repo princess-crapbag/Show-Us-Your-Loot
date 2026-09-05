@@ -180,9 +180,15 @@ local function DrawRow(row, boss, isSelected)
 
     row.name:SetText(tostring(boss.name))
 
+    -- ONLY WHEN IT TELLS YOU SOMETHING. With a difficulty chosen, every row
+    -- carries the same tag -- "HC" eight times down a list that already says
+    -- Heroic on the button above it. On ALL it is the only thing telling two
+    -- otherwise identical rows apart.
     row.difficulty:SetText(
-        SYL.Utilities.ShortDifficulty(boss.difficultyID, boss.difficultyName)
-        or ""
+        difficulty == "all"
+            and (SYL.Utilities.ShortDifficulty(
+                boss.difficultyID, boss.difficultyName) or "")
+            or ""
     )
 
     -- A boss pulled and never killed is the interesting case on a progression

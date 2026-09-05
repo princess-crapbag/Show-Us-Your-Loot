@@ -325,6 +325,57 @@ try:
 except Exception as err:  # noqa: BLE001
     check("the pane draws when the journal knows nothing", False, err)
 
+
+# --- the shape of a quality color -----------------------------------------
+#
+# THE BUG THAT BLANKED THIS WHOLE SCREEN. Theme.GetItemQualityColor returns an
+# ARRAY -- { red, green, blue } -- and the first version of the two-column
+# pane read color.r off it. SetTextColor(nil, nil, nil) throws in the client,
+# so Render died between the left column heading and the right one: headings
+# drawn, no items, no second list, and a stale "Pick a boss on the left"
+# underneath.
+#
+# The suite could not catch it. The stub frame accepts any arguments to any
+# method, so SetTextColor(nil, nil, nil) succeeds there -- the same reason the
+# filter bar regression got through. A source assertion is the guard that
+# works, so this is one.
+import re  # noqa: E402
+
+boss_loot = (Path(__file__).resolve().parent.parent
+             / "UI" / "BossLoot.lua").read_text(encoding="utf-8")
+
+check("the pane reads a quality color as an array, not as .r/.g/.b",
+      "color[1], color[2], color[3]" in boss_loot
+      and not re.search(r"color\.[rgb]", boss_loot),
+      "Theme.GetItemQualityColor returns { red, green, blue }")
+
+check("and the status line clears the column headings",
+      "-(LIST_TOP + 4)" in boss_loot and "-54)" not in boss_loot,
+      "the status sat four pixels from the headings and drew through them")
+
+check("the journal note is under its own column, not across both lists",
+      "pane.missingNote" in boss_loot,
+      "a message spanning both columns covers the list that IS correct")
+
+# --- the Adventure Guide's own class filter -------------------------------
+#
+# Aimee: "when it reads the adventure guide, is it only showing me items my
+# class or spec can use?" It was, for anybody whose journal is set that way --
+# EJ_GetNumLoot answers whatever the filter allows, and nothing here ever
+# cleared it, while the caveat under the list claimed it listed every
+# specialization.
+loot_table = (Path(__file__).resolve().parent.parent
+              / "Core" / "LootTable.lua").read_text(encoding="utf-8")
+
+check("THE CLASS FILTER IS CLEARED BEFORE THE JOURNAL IS READ",
+      "EJ_SetLootFilter(0, 0)" in loot_table,
+      "otherwise 'never dropped' means 'never dropped, for my class'")
+
+check("and put back afterwards, like the instance and the difficulty",
+      "EJ_GetLootFilter" in loot_table
+      and "EJ_SetLootFilter(previousClass" in loot_table,
+      "this is the player's own window and must look how they left it")
+
 print()
 print("FAILURES:", failures or "none")
 sys.exit(1 if failures else 0)
