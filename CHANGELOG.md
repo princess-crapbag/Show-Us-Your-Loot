@@ -89,6 +89,21 @@ this says what you will notice.
 
 ### Fixed
 
+- **Item icons on the Bosses tab stayed blank.** A boss's loot table is
+  mostly items your character has never seen, and the game answers for those
+  a moment after the screen is drawn. The list drew once and never looked
+  again, so the icons never arrived. It waits for the answer now, and stops
+  waiting the moment nothing is missing.
+
+- **Long boss names were cut off in a raider's loot history.** "Dimensius,
+  the All-Devouring" needed 153 pixels in a column with 132, and the same
+  pane's date column had been cutting the AM/PM off every row since it
+  shipped. Both are measured against the longest thing they can hold.
+
+- **The raider detail pane ignored the window's height.** It drew the number
+  of rows that fit the default size, so making the window taller gained you
+  nothing. It asks the pane now.
+
 - **A sweep of every screen found fourteen more overlaps, and fixed them.**
   Four passes over the screens that had no geometry checks at all. The ones
   you would have hit:
