@@ -51,13 +51,21 @@ local GROUP_COLUMNS = {
     { key = "marker", label = "", width = 38 },
 }
 
+-- MEASURED AGAINST WHAT THEY HOLD, and two of these were not.
+--
+-- Aimee, of her own drop detail: "the last column by my name in the
+-- screenshot is cutoff. im not sure what it says." It says GOT IT, which
+-- measures 37 in a column of 38 -- inside the width by the ruler above and
+-- outside it once the client rounds, so the one word naming who actually
+-- received the item was the word that would not fit. ILVL was worse: 44 for
+-- a string RCLootCouncil sends as 317.3125, which needs 51.
 local COUNCIL_COLUMNS = {
     { key = "name", label = "PLAYER", width = 150 },
     { key = "response", label = "RESPONSE", width = 90 },
     { key = "roll", label = "ROLL", width = 44 },
-    { key = "ilvl", label = "ILVL", width = 44 },
+    { key = "ilvl", label = "ILVL", width = 40 },
     { key = "votes", label = "VOTES", width = 52 },
-    { key = "marker", label = "", width = 38 },
+    { key = "marker", label = "", width = 48 },
 }
 
 --------------------------------------------------------------------------
@@ -140,7 +148,16 @@ local function FromCouncil(responses)
             class = entry.class,
             response = entry.response or "—",
             roll = entry.roll and tostring(entry.roll) or "—",
-            ilvl = entry.ilvl and tostring(entry.ilvl) or "—",
+            -- ROUNDED, because RCLootCouncil sends its own average and that
+            -- is a float: 317.3125 is eight characters, overflowed a column
+            -- sized for four, and drew as "317.3...". An item level is a
+            -- whole number everywhere a player has ever seen one -- the
+            -- character sheet, the tooltip, RCLootCouncil's own window -- so
+            -- the decimals were not information being lost, they were noise
+            -- pushing out the number.
+            ilvl = entry.ilvl
+                and tostring(math.floor(tonumber(entry.ilvl) or 0))
+                or "—",
             votes = entry.votes and tostring(entry.votes) or "—",
             marker = entry.isWinner and "GOT IT" or "",
         })

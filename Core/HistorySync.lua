@@ -58,6 +58,11 @@ HistorySync.PREFIX = PREFIX
 -- inside the limit because this feeds that one rather than racing it.
 HistorySync.INTERVAL = 0.25
 
+-- How long an unanswered offer waits before the sender is told. Long enough
+-- to read the prompt and think about it, short enough that "nothing is
+-- happening" is not a state you sit in wondering.
+HistorySync.ANSWER_SECONDS = 60
+
 -- Chunking is this file's own, rather than SyncTransport's, because that one
 -- is bolted to the RAID channel and to the `sync` feature switch. 255 is the
 -- hard cap; the envelope costs about 20 and the margin covers a longer serial
@@ -197,9 +202,13 @@ Drain = function()
         return false
     end
 
-    Whisper(outboxTarget, payload)
-
-    sentCount = sentCount + 1
+    -- COUNTED ONLY IF IT ACTUALLY WENT. The bar used to climb on messages
+    -- that were never queued -- a send with no target returns false here and
+    -- the number went up anyway, so the one screen that could have reported
+    -- the transfer failing was reporting it succeeding instead.
+    if Whisper(outboxTarget, payload) then
+        sentCount = sentCount + 1
+    end
 
     if C_Timer and C_Timer.After then
         C_Timer.After(HistorySync.INTERVAL, Drain)
@@ -270,12 +279,62 @@ function HistorySync.Offer(target, season)
 
     HistorySync.awaiting = target
 
+    -- AN OFFER THAT IS NEVER ANSWERED HAS TO SAY SO.
+    --
+    -- Without this the sender waits forever: IsSending stays true, the bar
+    -- sits at "waiting for them to answer", and pressing Send again is
+    -- refused with "a transfer is already going out" -- which reads as the
+    -- addon being stuck, and is the state Aimee actually hit.
+    --
+    -- Silence has exactly three causes and the message names all three,
+    -- because the sender cannot tell them apart and the fix differs for each:
+    -- the other person is on an older build, their addon is not loaded, or
+    -- they closed the prompt without answering. A version check would only
+    -- cover the first and needs its own round trip to do it.
+    if C_Timer and C_Timer.After then
+        local asked = target
+
+        C_Timer.After(HistorySync.ANSWER_SECONDS, function()
+            if not SYL.Utilities.SameCharacter(
+                HistorySync.awaiting or "", asked
+            ) then
+                return
+            end
+
+            HistorySync.Stop()
+
+            SYL:Print(
+                "No answer from " .. SYL.Utilities.ShortName(asked)
+                .. ". Nothing was sent. They may be on an older version of "
+                .. "the addon, may not have it loaded, or may have closed the "
+                .. "question without answering."
+            )
+
+            if SYL.ShareWindow and SYL.ShareWindow.Refresh then
+                SYL.ShareWindow.Refresh()
+            end
+        end)
+    end
+
     return true, summary
 end
 
 -- They said yes.
+--
+-- MATCHED BY CHARACTER, NOT BY STRING, and the version that compared strings
+-- is why this feature did nothing on its first day. The name here comes off
+-- the addon channel, always fully qualified; the one we sent to came off the
+-- guild roster, which omits the realm for anybody on your own. "Nychar" and
+-- "Nychar-Area52" are the same person and were not the same string, so Begin
+-- refused, nothing was sent, and the sender's bar sat on "waiting for them to
+-- answer" with no error anywhere. See Utilities.SameCharacter.
+--
+-- The reply's spelling wins from here on, because it is the one the whisper
+-- has to be addressed to.
 function HistorySync.Begin(target)
-    if HistorySync.awaiting ~= target or #outbox == 0 then
+    if not SYL.Utilities.SameCharacter(HistorySync.awaiting or "", target)
+        or #outbox == 0
+    then
         return false
     end
 
@@ -298,6 +357,15 @@ function HistorySync.Stop()
     outbox = {}
     outboxTarget = nil
     HistorySync.awaiting = nil
+
+    -- RESET, or the next transfer never starts. Begin returns early when a
+    -- drain is already running, and the flag is normally cleared by the drain
+    -- itself reaching an empty outbox. Stopping empties the outbox from
+    -- underneath it, so the flag is left standing on any path where that last
+    -- timer does not fire -- a reload mid-send, or a stop as the queue empties
+    -- -- and the module is then wedged for the rest of the session with
+    -- nothing on screen to say why.
+    draining = false
 
     return true
 end
@@ -489,7 +557,9 @@ function HistorySync.OnMessage(prefix, payload, _, sender)
     end
 
     if kind == DECLINE then
-        if HistorySync.awaiting == sender or outboxTarget == sender then
+        if SYL.Utilities.SameCharacter(HistorySync.awaiting or "", sender)
+            or SYL.Utilities.SameCharacter(outboxTarget or "", sender)
+        then
             HistorySync.Stop()
 
             -- Said out loud. A decline that looked like silence would leave

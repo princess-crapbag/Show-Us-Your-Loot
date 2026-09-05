@@ -48,6 +48,52 @@ function Utilities.ShortName(fullName)
     return (fullName:match("^([^-]+)")) or fullName
 end
 
+-- Whether two spellings name the same character.
+--
+-- THE BUG THIS EXISTS FOR, and it silently broke the loot history transfer on
+-- its first day. Three parts of the client spell a name three ways:
+--
+--   GetGuildRosterInfo   "Nychar" for somebody on your own realm,
+--                        "Nychar-Aerie Peak" for somebody on a connected one
+--                        -- WITH the space
+--   CHAT_MSG_ADDON       "Nychar-AeriePeak", always qualified, space stripped
+--   what a person types  whatever case they felt like
+--
+-- HistorySync picked a target out of the first and compared the answer from
+-- the second, so accepting a transfer did nothing at all: the sender's bar sat
+-- on "waiting for them to answer" forever and no error was printed anywhere.
+-- It only worked for cross-realm names, which is why it worked in testing.
+--
+-- A missing realm on either side is not a mismatch. It cannot be: the guild
+-- roster omits it precisely when the two are on the same realm, so demanding
+-- one would fail for exactly the people most likely to be sent to.
+function Utilities.SameCharacter(left, right)
+    if type(left) ~= "string" or type(right) ~= "string" then
+        return false
+    end
+
+    local function Split(name)
+        name = name:gsub("%s+", "")
+
+        local short, realm = name:match("^([^-]+)%-?(.*)$")
+
+        return (short or name):lower(), (realm ~= "" and realm:lower()) or nil
+    end
+
+    local leftName, leftRealm = Split(left)
+    local rightName, rightRealm = Split(right)
+
+    if leftName ~= rightName then
+        return false
+    end
+
+    if not leftRealm or not rightRealm then
+        return true
+    end
+
+    return leftRealm == rightRealm
+end
+
 -- Strips color codes and trailing punctuation from a name pulled out of a
 -- chat message, which is never guaranteed to be clean.
 function Utilities.NormalizePlayerName(name)

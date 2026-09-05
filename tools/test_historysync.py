@@ -508,6 +508,95 @@ check("AND STATES THE MERGE RULE BEFORE THE PRESS, not after",
       body[-200:])
 check("and says how long it will take", "4 minutes" in body, body)
 
+
+# --- 9. the name the accept comes back under -------------------------------
+#
+# THE BUG THAT MADE THIS FEATURE DO NOTHING ON ITS FIRST DAY. A target is
+# picked out of the guild roster, which omits the realm for anybody on your
+# own; the accept arrives over the addon channel, which always qualifies it
+# and strips spaces out of the realm. Compared as strings those are different
+# people, so Begin refused, no data was sent, and the sender's bar sat on
+# "waiting for them to answer" with nothing printed anywhere.
+#
+# Aimee: "i dont think the send loot to others worked."
+def handshake(picked, replies_as):
+    lua.execute("ShowUsYourLootDB = nil")
+    SYL.DatabaseInitialize()
+    lua.execute("""
+        local SYL = ShowUsYourLoot
+        SYL.Guild.IsMember = function() return true end
+    """)
+
+    SYL.HistorySync.Stop()
+    SYL.SendQueue.Reset()
+
+    live = SYL.GetActiveSeason()
+    live.drops[1] = drop("handshake-1")
+
+    SYL.HistorySync.Offer(picked, live)
+    flush()
+
+    G.ClearSent()
+
+    # Their yes. Begin sends the first message itself; the rest rides a timer
+    # the stub never fires, so one DATA message is the proof it started.
+    SYL.HistorySync.OnMessage("SYLHIST", "1" + chr(9) + "Y", "WHISPER",
+                              replies_as)
+    flush()
+
+    started = 0
+
+    for index in range(1, G.SentCount() + 1):
+        if G.SentPayload(index).startswith("1" + chr(9) + "D"):
+            started += 1
+
+    return started
+
+
+check("A SAME-REALM NAME IS THE SAME PERSON, roster spelling or not",
+      handshake("Nychar", "Nychar-Area52") > 0)
+check("and a realm the roster writes with a space still matches",
+      handshake("Nychar-Aerie Peak", "Nychar-AeriePeak") > 0)
+check("and case is not identity either",
+      handshake("nychar-area52", "Nychar-Area52") > 0)
+check("a cross-realm name, which is the only case that used to work",
+      handshake("Pringlesbop-Illidan", "Pringlesbop-Illidan") > 0)
+check("BUT A DIFFERENT PERSON IS STILL A DIFFERENT PERSON",
+      handshake("Nychar-Area52", "Saebie-Area52") == 0)
+
+# --- 10. the progress number cannot exceed what was sent -------------------
+lua.execute("ShowUsYourLootDB = nil")
+SYL.DatabaseInitialize()
+lua.execute("""
+    local SYL = ShowUsYourLoot
+    SYL.Guild.IsMember = function() return true end
+""")
+
+SYL.HistorySync.Stop()
+SYL.SendQueue.Reset()
+
+live = SYL.GetActiveSeason()
+
+for index in range(1, 4):
+    live.drops[index] = drop("count-%d" % index)
+
+SYL.HistorySync.Offer(OFFICER, live)
+flush()
+G.ClearSent()
+
+SYL.HistorySync.OnMessage("SYLHIST", "1" + chr(9) + "Y", "WHISPER", OFFICER)
+drain_history()
+
+sent, total = SYL.HistorySync.Progress()
+on_wire = 0
+
+for index in range(1, G.SentCount() + 1):
+    if G.SentPayload(index).startswith("1" + chr(9) + "D"):
+        on_wire += 1
+
+check("THE BAR COUNTS WHAT WENT, not what was popped off a list",
+      sent == on_wire and sent == total, (sent, on_wire, total))
+
 print("")
 print("FAILURES: " + (str(failures) if failures else "none"))
 
