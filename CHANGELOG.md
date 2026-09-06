@@ -24,9 +24,10 @@ this says what you will notice.
   either way, which is why a diff of the two showed nothing until the types
   were asked for by name.
 
-  **Anything already on your machine is repaired on login**, because a second
-  send would not have fixed it — a transfer never overwrites a drop you
-  already hold. You will see a line saying how many values were put right.
+  **Anything already on your machine is repaired once**, the first time you
+  log in on this version — a second send would not have fixed it, because a
+  transfer never overwrites a drop you already hold. You will see a line
+  saying how many values were put right, and it does not run again.
 
 - **A transfer could be cut through the middle of a letter.** Messages were
   split at exactly 200 bytes regardless of what was there, and a name with an

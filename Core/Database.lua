@@ -15,7 +15,7 @@ local SYL = _G.ShowUsYourLoot
 -- 5: syncEnabled became the "sync" feature.
 -- 6: announceCaptures' default flipped to off. See MigrateAnnounceDefault.
 -- 7: "everyone" left the Raiders scope rotation. See MigrateAudienceScope.
-local DATABASE_VERSION = 7
+local DATABASE_VERSION = 8
 
 -- A SERIAL, BECAUSE THE CLOCK IS NOT ENOUGH. This was the timestamp alone, to
 -- the second, which is unique right up until two seasons are created in the
@@ -301,14 +301,15 @@ function SYL.DatabaseInitialize()
         SYL:DebugPrint("Assigned ids to " .. backfilled .. " record(s)")
     end
 
-    -- RUN UNCONDITIONALLY, not behind a version guard.
-    --
-    -- Every other migration here overrules a saved choice once and must never
-    -- fire twice. This one only turns a string that is a number into that
-    -- number, which is a no-op the second time -- and it has to catch rows
-    -- that arrive from a sender still running the build that sent them as
-    -- text, which no version of THIS database can predict.
-    local restated = SYL.Migrations.RepairTransferredStates(ShowUsYourLootDB)
+    -- GUARDED, like every other migration in this file. It walks every drop
+    -- and every roll in the active season and all the archives -- thousands
+    -- of field checks on a real database, growing all season -- and after the
+    -- one pass there is nothing left for it to find. See its own header for
+    -- why "catch anything arriving broken later" is not a reason to keep it
+    -- running: nothing can arrive broken once the decoder is right.
+    local restated = SYL.Migrations.RepairTransferredStates(
+        ShowUsYourLootDB, storedVersion
+    )
 
     if restated > 0 then
         SYL:Write(

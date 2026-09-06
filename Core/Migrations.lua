@@ -261,6 +261,27 @@ end
 -- takes only the credit from the arriving copy. So the repair has to happen
 -- here, on the rows in the database.
 --
+-- RUNS ONCE, on the upgrade into database version 8.
+--
+-- The first version of this ran on every login, justified as having to catch
+-- rows from a sender still on the old build. That reasoning is wrong and the
+-- code is the proof: HistoryPayload.Encode has always written every field as
+-- text -- that is the wire format, not a bug -- and the fault was entirely in
+-- Decode. So a receiver on this build decodes correctly no matter what the
+-- sender is running, and nothing new can arrive broken. Only history needs
+-- repairing.
+--
+-- The cost of getting that wrong: a walk of every drop and every roll in the
+-- active season and every archive, on every login and every character
+-- switch. Aimee's database is about 7,000 field checks; Pringlesbop's is
+-- 12,000, and both grow all season.
+--
+-- KNOWN GAP, written down rather than papered over. databaseVersion is a
+-- high-water mark, so somebody who rolls back to 0.4.5, receives a transfer
+-- there, and comes forward again keeps the text states: the number never
+-- dropped below 8, so this never re-arms. Narrow, and recoverable by bumping
+-- the number in a later release.
+--
 -- ONLY THE FIELDS THAT ARE NUMBERS AND ONLY WHERE THEY ARE TEXT. tonumber on
 -- something already a number is a no-op, and a state that is genuinely not a
 -- number is left exactly as it is rather than being turned into nil.
@@ -282,10 +303,20 @@ local function FixState(holder, field)
     return true
 end
 
-function Migrations.RepairTransferredStates(db)
+-- `storedVersion` is what the database said before this session stamped it.
+-- Passing nil forces the walk, which is what the test suite and any future
+-- repair path wants; a first run has nothing to repair and is skipped by the
+-- caller having no stored version at all.
+function Migrations.RepairTransferredStates(db, storedVersion)
     db = db or ShowUsYourLootDB
 
     if type(db) ~= "table" then
+        return 0
+    end
+
+    if storedVersion ~= nil
+        and (type(storedVersion) ~= "number" or storedVersion >= 8)
+    then
         return 0
     end
 

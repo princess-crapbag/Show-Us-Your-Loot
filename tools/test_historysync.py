@@ -767,6 +767,27 @@ check("running it twice changes nothing more",
       SYL.Migrations.RepairTransferredStates(
           lua.globals().ShowUsYourLootDB) == 0)
 
+# AND IT DOES NOT RUN AGAIN ON EVERY LOGIN. Aimee: "so will this repair run
+# every single time someone logs in or changes characters?" It did, and the
+# reason written next to it -- that a sender on an older build could still
+# put text in -- was wrong: Encode has always written text, and the fault was
+# only ever in Decode. So it guards its own number like every other migration
+# here, and a database already at 8 is not walked at all.
+lua.execute("""
+    ShowUsYourLoot.GetActiveSeason().drops = {
+        { id = "text-2", winnerState = "2", rolls = {} },
+    }
+""")
+
+check("a database already on this version is not walked again",
+      SYL.Migrations.RepairTransferredStates(
+          lua.globals().ShowUsYourLootDB, 8) == 0,
+      "walking every drop and roll on every login is what this replaced")
+
+check("but one coming up from the version before it is",
+      SYL.Migrations.RepairTransferredStates(
+          lua.globals().ShowUsYourLootDB, 7) == 1)
+
 # A state that is genuinely not a number is left alone rather than nil'd.
 lua.execute("""
     ShowUsYourLoot.GetActiveSeason().drops[1].winnerState = "unknown"
