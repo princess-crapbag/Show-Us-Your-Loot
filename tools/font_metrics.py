@@ -149,14 +149,25 @@ def _record():
     # Importing a suite runs it, and every measurement it takes on the way
     # through is what gets written down. Suites are listed rather than
     # globbed so that adding one is a deliberate decision to record it.
-    for name in ("test_layout",):
+    #
+    # ADD THE SUITE HERE WHEN IT STARTS MEASURING. test_settingswindow began
+    # measuring the version line in the footer, the recorder did not know
+    # about it, and tools/test_fontwidths.py said so on the next run -- which
+    # is the whole point of that file, but only after this list was wrong.
+    for name in ("test_layout", "test_settingswindow"):
         print("--- recording " + name)
 
         try:
+            path = os.path.join(HERE, name + ".py")
+
+            # __file__ AS WELL AS __name__. A suite that locates the repo
+            # relative to itself -- which is how the source assertions read
+            # the Lua -- raises NameError without it, and the recorder then
+            # writes a table missing exactly the widths that suite takes.
             exec(compile(
-                io.open(os.path.join(HERE, name + ".py"),
-                        encoding="utf-8").read(),
-                name + ".py", "exec"), {"__name__": name})
+                io.open(path, encoding="utf-8").read(),
+                name + ".py", "exec"),
+                {"__name__": name, "__file__": path})
         except SystemExit as stop:
             # The suite's own verdict, not ours.
             code = code or (stop.code or 0)

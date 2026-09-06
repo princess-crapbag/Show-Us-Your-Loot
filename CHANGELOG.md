@@ -5,6 +5,17 @@ this says what you will notice.
 
 ## 0.4.6 — 2026-09-05
 
+### Added
+
+- **The version number is on screen.** Bottom left of the settings window,
+  opposite Close, on every tab — and on the minimap button's tooltip, which
+  is the fastest place to check it without opening anything. Two officers
+  comparing builds should not have to walk each other through a settings
+  window to do it.
+
+  It is read from the addon's own manifest rather than typed, so it always
+  says what actually shipped.
+
 ### Fixed
 
 - **A shared loot history arrived, and then scored nothing.** This is the one

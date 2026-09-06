@@ -225,6 +225,18 @@ local function ShowTooltip()
     GameTooltip:SetOwner(button, "ANCHOR_LEFT")
     GameTooltip:AddLine("Show Us Your Loot")
 
+    -- The fastest place to read the version without opening anything, which
+    -- is what it is for: two officers comparing builds over voice should not
+    -- have to walk each other through a settings window to do it. Dimmed,
+    -- because it is a fact about the addon rather than something to do with
+    -- it. Same source as the settings footer -- see UI/SettingsWindow.lua.
+    GameTooltip:AddLine(
+        tostring(SYL.version or "?"),
+        0.55,
+        0.55,
+        0.6
+    )
+
     GameTooltip:AddLine("Left-click: open the loot window", 0.8, 0.8, 0.85)
     GameTooltip:AddLine(
         "Right-click and drag: move it anywhere",

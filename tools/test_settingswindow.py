@@ -21,6 +21,7 @@ Needs `lupa` — see tools/test_lootmessages.py for the setup.
 
 Not shipped: tools/ is excluded in .pkgmeta.
 """
+import re
 import sys
 from pathlib import Path
 
@@ -34,6 +35,7 @@ except ImportError:
         "It is a dev dependency and the addon does not use it."
     )
 
+import font_metrics as metrics
 import test_load  # noqa: E402  — reuses its stubbed client and loaded addon
 
 lua = test_load.lua
@@ -265,6 +267,62 @@ check(
     "a link somebody edited is left alone",
     links["Raider.IO"] == "https://raider.io/mine",
     links["Raider.IO"],
+)
+
+# --- the version on screen -------------------------------------------------
+#
+# Aimee: "can we show the version number somewhere like in the settings page?"
+# Two places carry it now, and the assertion that matters for both is that
+# NEITHER TYPES IT. Main.lua reads it from the .toc through GetAddOnMetadata
+# and the packager rewrites that line from the git tag, so a literal here
+# would be the one number on screen that could be wrong -- which is the exact
+# failure Main.lua's header records, when a hardcoded 0.0.7 was being stamped
+# onto every export while the .toc said 0.0.9-alpha.
+from pathlib import Path  # noqa: E402
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def source(relative):
+    return (ROOT / relative).read_text(encoding="utf-8")
+
+
+settings_src = source("UI/SettingsWindow.lua")
+
+check(
+    "the settings footer shows the version",
+    'version:SetText("Show Us Your Loot  " .. tostring(SYL.version or "?"))'
+    in settings_src,
+)
+
+check(
+    "and reads it rather than spelling it out",
+    "SYL.version" in settings_src
+    and not re.search(r'"\d+\.\d+\.\d+', settings_src),
+    "a typed version is the one number on screen that can be wrong",
+)
+
+minimap_src = source("UI/MinimapButton.lua")
+
+check(
+    "the minimap tooltip carries it too",
+    'tostring(SYL.version or "?")' in minimap_src,
+)
+
+check(
+    "and does not spell it out either",
+    not re.search(r'"\d+\.\d+\.\d+', minimap_src),
+)
+
+# It has to fit beside Close, and it grows: "0.10.12-alpha" is a version this
+# project could plausibly reach.
+LONGEST = "Show Us Your Loot  0.10.12-alpha"
+ROOM = 560 - 16 - 100 - 16 - 12      # width, insets, the Close button, a gap
+
+check(
+    "and the longest version it could hold still clears the Close button",
+    metrics.measure(LONGEST, 10) <= ROOM,
+    "%.1f in %d" % (metrics.measure(LONGEST, 10), ROOM),
 )
 
 print()

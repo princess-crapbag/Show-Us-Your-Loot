@@ -125,6 +125,26 @@ local function CreateSettingsWindow()
 
     closeButton:SetPoint("BOTTOMRIGHT", -16, 12)
 
+    -- WHICH BUILD THIS IS. Aimee: "can we show the version number somewhere
+    -- like in the settings page?" Drawn three ways in
+    -- tools/mockup_version_line.py; this is the one she picked.
+    --
+    -- NOT TYPED HERE. SYL.version is read from the .toc in Main.lua, and the
+    -- packager rewrites that line from the git tag when it builds the zip --
+    -- so this reports what actually shipped rather than what somebody last
+    -- remembered to update. Main.lua's header records the release where the
+    -- two drifted apart.
+    --
+    -- The footer is the same on every tab, so it is here rather than on one
+    -- of them, and it fills space that was empty.
+    local version = Theme.CreateText(frame, Theme.sizes.columnHeader,
+        "textMuted")
+
+    version:SetPoint("BOTTOMLEFT", 16, 20)
+    version:SetText("Show Us Your Loot  " .. tostring(SYL.version or "?"))
+
+    frame.version = version
+
     -- WHERE THEY LEFT OFF. Somebody who opens settings twice in a row is
     -- nearly always going back to the same tab, and the first one is a poor
     -- guess for anybody whose reason for opening it is on the fifth.
