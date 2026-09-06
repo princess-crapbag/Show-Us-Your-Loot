@@ -44,9 +44,22 @@ local WINDOW_WIDTH = 460
 local BODY_TOP = 60
 local BODY_HEIGHT = 7 * 15
 local FACTS_TOP = BODY_TOP + BODY_HEIGHT + 22
-local FACTS_HEIGHT = 4 * 15
+
+-- FIVE LINES, NOT FOUR. The raid nights joined the block when they started
+-- travelling with the drops -- see Core/HistorySync.lua's Nights -- and the
+-- block is anchored off this number rather than measuring itself, so a line
+-- added without moving it would have drawn straight through SEND TO.
+local FACTS_HEIGHT = 5 * 15
+
 local TARGET_TOP = FACTS_TOP + 18 + FACTS_HEIGHT + 14
-local BAR_TOP = TARGET_TOP + 18 + 20 + 30
+
+-- Heading, box, then one row for either the count of who is online or the
+-- reason the typed name cannot be reached. ONE ROW FOR BOTH, so nothing below
+-- moves when an error appears -- a window that grows as you type is a window
+-- whose Send button is somewhere else by the time you reach for it.
+local BOX_TOP = TARGET_TOP + 16
+local NOTE_TOP = BOX_TOP + 20 + 8
+local BAR_TOP = NOTE_TOP + 15 + 20
 
 local WINDOW_HEIGHT = BAR_TOP + 14 + 60
 local PAD = 20
@@ -55,7 +68,7 @@ local CONTENT = WINDOW_WIDTH - PAD * 2
 local frame
 local bodyText
 local factsText
-local targetButton
+local targetBox
 local targetNote
 local barFill
 local barText
@@ -88,23 +101,75 @@ function ShareWindow.Targets()
     return names
 end
 
--- Cycles rather than opening a menu, the same as every other chooser in this
--- addon. A dropdown for a list that is usually four names long is two clicks
--- where this is one, and the roster rows already taught the cycle.
-function ShareWindow.NextTarget(current)
-    local names = ShareWindow.Targets()
+-- WHAT THE BOX SUGGESTS IS THE WHOLE GUILD, NOT ONLY WHO IS ONLINE.
+--
+-- Aimee, 2026-09-06: "search by typing in name to sync loot history and
+-- autofill the name. show an error if the player is not online." Those are two
+-- halves of one behavior and the second one is why the first list is wide.
+--
+-- A picker that offers only online names cannot answer "why is Nychar not
+-- here" -- their absence is the error, delivered as nothing at all, which is
+-- the failure mode this addon keeps finding. So every guild member is
+-- offerable, the row says which ones are online, and a name that cannot be
+-- reached is refused in words when it is picked.
+function ShareWindow.Candidates()
+    local entries = {}
+    local me = SYL.Utilities.GetPlayerFullName()
 
-    if #names == 0 then
-        return nil
-    end
-
-    for index, name in ipairs(names) do
-        if name == current then
-            return names[(index % #names) + 1]
+    for _, member in pairs(SYL.Guild.GetMembers()) do
+        if member.name ~= me then
+            table.insert(entries, {
+                name = member.name,
+                class = member.class,
+                isOnline = member.isOnline and true or false,
+            })
         end
     end
 
-    return names[1]
+    return entries
+end
+
+-- Online is the fact that decides whether the button will work, so it is the
+-- one the row carries -- ahead of the class, which is decoration here.
+function ShareWindow.Note(entry)
+    if not entry.isOnline then
+        return "offline"
+    end
+
+    return SYL.ClassColor and SYL.ClassColor.Label(entry.class) or "online"
+end
+
+-- Whether a typed name can be sent to, and why not. Returns ok, reason.
+--
+-- MATCHED THE WAY THE WHISPER WILL BE ADDRESSED. The roster spells a name on
+-- your own realm without one and the box may have either -- see
+-- Utilities.SameCharacter, and the day this feature did nothing because
+-- "Nychar" and "Nychar-Area52" were not the same string.
+function ShareWindow.Check(name)
+    if type(name) ~= "string" or name:gsub("%s+", "") == "" then
+        return false, nil
+    end
+
+    local me = SYL.Utilities.GetPlayerFullName()
+
+    if SYL.Utilities.SameCharacter(name, me or "") then
+        return false, "That is you. Pick somebody else."
+    end
+
+    for _, member in pairs(SYL.Guild.GetMembers()) do
+        if SYL.Utilities.SameCharacter(member.name, name) then
+            if member.isOnline then
+                return true, nil
+            end
+
+            return false, SYL.Utilities.ShortName(member.name)
+                .. " is not online. A whisper cannot reach somebody who is "
+                .. "not logged in."
+        end
+    end
+
+    return false, SYL.Utilities.ShortName(name)
+        .. " is not in the guild, or has not been seen from here yet."
 end
 
 --------------------------------------------------------------------------
@@ -164,6 +229,13 @@ function ShareWindow.Facts()
         .. SYL.Utilities.Count(summary.drops, "drop")
         .. ", with who won each one and who rolled\n"
         .. summary.credited .. " of them carrying credit you set by hand\n"
+        -- THE LINE THE WHOLE TRANSFER TURNED OUT TO NEED. Without the
+        -- nights a receiver divides complete loot by their own
+        -- attendance, which is how one officer's board read "of 4"
+        -- against a season that had run nine. Core/HistoryPayload.lua
+        -- has the measurement.
+        .. SYL.Utilities.Count(summary.nights, "guild raid night")
+        .. ", so their attendance matches yours\n"
         .. summary.messages .. " messages, about "
         .. SYL.Utilities.Count(minutes, "minute")
         .. " at the pace the client allows"
@@ -174,8 +246,17 @@ end
 --------------------------------------------------------------------------
 
 function ShareWindow.Send()
-    if not target then
-        return false, "pick somebody to send to first"
+    if not target or target == "" then
+        return false, "type a name to send to first"
+    end
+
+    -- CHECKED AT THE PRESS, not only as it was typed. Somebody can log out in
+    -- the seconds between their name being picked and Send being pressed, and
+    -- the refusal that matters is the one for the state things are in now.
+    local reachable, why = ShareWindow.Check(target)
+
+    if not reachable then
+        return false, why or "that name cannot be sent to"
     end
 
     local ok, result = SYL.HistorySync.Offer(target, SYL.GetActiveSeason())
@@ -327,16 +408,56 @@ local function CreateWindow()
     toHeading:SetPoint("TOPLEFT", PAD, -TARGET_TOP)
     toHeading:SetText("SEND TO")
 
-    targetButton = Theme.CreateButton(frame, 200, 20, "-", function()
-        target = ShareWindow.NextTarget(target)
+    -- A NAME YOU TYPE, NOT A NAME YOU CYCLE TO.
+    --
+    -- The button here pressed through the online guild members one at a time,
+    -- which is one click at four names and forty at forty. Aimee asked for the
+    -- box instead, and the box is also what makes an honest refusal possible:
+    -- a cycle can only ever offer names it is willing to send to, so a name
+    -- that is missing is an error delivered as silence.
+    --
+    -- Bordered, because UI/SearchBox.lua reserves the outline for a field that
+    -- is a value rather than a filter, and this one is a value -- nothing
+    -- happens to it until Send is pressed.
+    targetBox = SYL.SearchBox.Create(
+        frame, 200, "Type a name...",
+        function(text)
+            target = text
 
-        ShareWindow.Refresh()
-    end)
+            ShareWindow.RefreshTarget()
+        end,
+        { bordered = true }
+    )
 
-    targetButton:SetPoint("TOPLEFT", PAD, -(TARGET_TOP + 16))
+    targetBox:SetPoint("TOPLEFT", PAD, -BOX_TOP)
+
+    -- OPENS OVER THE HEADING, NOT OVER THE BOX. Two pixels above the box is
+    -- where "SEND TO" is drawn, and the row below the box is where the offline
+    -- error goes -- so the default anchor covered both the label of the
+    -- control being used and the answer it was about to give.
+    --
+    -- THREE ROWS, AND THE NUMBER WAS MEASURED RATHER THAN CHOSEN. Four is 102
+    -- pixels tall and reaches eleven past the WHAT GOES heading; three is 82
+    -- and clears it by nine. tools/test_layout.py does that arithmetic off
+    -- these constants, so a taller row or a fifth fact moves it and says so.
+    -- Six -- NameSuggest's own cap -- would reach the third paragraph.
+    SYL.NameSuggest.Attach(targetBox, {
+        getCandidates = ShareWindow.Candidates,
+        noteFor = ShareWindow.Note,
+        above = toHeading,
+        maxRows = 3,
+        onAccept = function(name)
+            target = name
+
+            ShareWindow.RefreshTarget()
+        end,
+    })
 
     targetNote = Theme.CreateText(frame, Theme.sizes.columnHeader, "textMuted")
-    targetNote:SetPoint("TOPLEFT", PAD, -(TARGET_TOP + 42))
+    targetNote:SetPoint("TOPLEFT", PAD, -NOTE_TOP)
+    targetNote:SetWidth(CONTENT)
+    targetNote:SetJustifyH("LEFT")
+    targetNote:SetWordWrap(false)
 
     CreateBar(frame, -BAR_TOP)
 
@@ -380,6 +501,48 @@ local function CreateWindow()
     return frame
 end
 
+-- ONE ROW, TWO JOBS, and it is deliberate that they share it.
+--
+-- Empty box: how many people could be sent to at all, which is the thing
+-- somebody wants to know before they start typing. Typed name: whether that
+-- one can, and why not. Neither pushes the other down the window, so the
+-- Send button does not move while a name is being entered.
+function ShareWindow.RefreshTarget()
+    if not frame then
+        return
+    end
+
+    local typed = target or ""
+
+    if typed:gsub("%s+", "") == "" then
+        local names = ShareWindow.Targets()
+
+        Theme.SetTextColor(targetNote, "textMuted")
+
+        targetNote:SetText(#names == 0
+            and "nobody in the guild is online right now"
+            or (SYL.Utilities.Count(#names, "guild member")
+                .. " online · start typing a name"))
+
+        return
+    end
+
+    local reachable, why = ShareWindow.Check(typed)
+
+    if reachable then
+        Theme.SetTextColor(targetNote, "textMuted")
+        targetNote:SetText("online · ready to send")
+
+        return
+    end
+
+    -- Said in the color the rest of the addon says refusals in, because a
+    -- muted line here reads as a hint and this one is the reason the button
+    -- will not work.
+    Theme.SetTextColor(targetNote, "warning")
+    targetNote:SetText(why or "")
+end
+
 function ShareWindow.Refresh()
     if not frame then
         return
@@ -388,21 +551,7 @@ function ShareWindow.Refresh()
     bodyText:SetText(ShareWindow.Describe())
     factsText:SetText(ShareWindow.Facts())
 
-    local names = ShareWindow.Targets()
-
-    if #names == 0 then
-        targetButton.label:SetText("nobody online")
-        targetNote:SetText("guild members who are online right now")
-    else
-        targetButton.label:SetText(
-            SYL.Utilities.ShortName(target) ~= "Somebody" and target
-            or names[1]
-        )
-        targetNote:SetText(
-            SYL.Utilities.Count(#names, "guild member")
-            .. " online · click to change"
-        )
-    end
+    ShareWindow.RefreshTarget()
 
     UpdateProgress()
 end
@@ -410,7 +559,11 @@ end
 function ShareWindow.Show()
     local window = CreateWindow()
 
-    target = target or ShareWindow.Targets()[1]
+    -- NOT PREFILLED. The cycle button had to start somewhere and picked the
+    -- first name online, which meant Send always had a target -- including the
+    -- one time somebody pressed it without reading. A box that starts empty
+    -- asks the question instead of answering it.
+    target = targetBox and targetBox.editBox:GetText() or ""
 
     ShareWindow.Refresh()
 

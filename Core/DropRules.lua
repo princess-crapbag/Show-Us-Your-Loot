@@ -75,12 +75,19 @@ end
 -- can now earn anything on. Core/DueList.lua counts nights through NightsOnly
 -- in the same commit as this line. If one of them is ever reverted, revert
 -- both.
+--
+-- ASKED ABOUT THE DROP, NOT ABOUT THE CLOCK. This passed a timestamp, which
+-- is all the rule needed while every drop on the board was one this client
+-- had watched. A transfer can now hand over another officer's whole season,
+-- pugs included, and a bare moment in time cannot tell a night this client
+-- was too new to record from a night it was never in. The drop can, because it
+-- carries where it came from. See RaidSession.IsGuildNightForDrop.
 local function IsGuildNightDrop(drop)
     if not SYL.RaidSession then
         return true
     end
 
-    return SYL.RaidSession.IsGuildNightAt(drop.timestamp)
+    return SYL.RaidSession.IsGuildNightForDrop(drop)
 end
 
 function DropRules.CountsAsUpgrade(drop)

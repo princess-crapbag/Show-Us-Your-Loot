@@ -391,6 +391,287 @@ check("and it is cleared before each row is drawn",
       'row.cells.response:SetText("")' in panel,
       "a stale reply would carry into the next player's row")
 
+
+# --- a person, not a character ---------------------------------------------
+#
+# Aimee, 2026-09-06: "can i ask pronglez for his key on pringlescat and it
+# send to whichever character he is online with and show which key im asking
+# for?"
+#
+# Both halves are one change and the second is what makes the first safe: once
+# a request can land on any character of a person, "your key" is a question
+# with as many answers as they have characters. On her roster that guildie
+# held +14 and +13 on one dungeon and +15 on another.
+#
+# THE ALT MAPPING IS THE WHOLE MECHANISM and it is worth a test of its own,
+# because it is also the thing that was missing. Before she linked them, five
+# of that person's eight characters pointed at the main and Pronglez -- the
+# one she wanted -- did not, so asking Pronglez could only ever reach
+# Pronglez. That is the fallback below, not a failure.
+
+g.Reset()
+
+lua.execute(
+    """
+    -- One person on four characters, which is the registry shape
+    -- Players.SetMain writes: alts carry mainGUID, the main carries none.
+    ShowUsYourLootDB.players = {
+        ['P-CAT'] = { guid = 'P-CAT', name = 'Pringlescat',
+                      fullName = 'Pringlescat-Illidan', class = 'DRUID' },
+        ['P-BOP'] = { guid = 'P-BOP', name = 'Pringlesbop',
+                      fullName = 'Pringlesbop-Illidan', class = 'PALADIN',
+                      mainGUID = 'P-CAT' },
+        ['P-LEZ'] = { guid = 'P-LEZ', name = 'Pronglez',
+                      fullName = 'Pronglez-Illidan', class = 'MAGE',
+                      mainGUID = 'P-CAT' },
+        -- Nobody's alt, and the control for every assertion below.
+        ['S-ONE'] = { guid = 'S-ONE', name = 'Selunne',
+                      fullName = 'Selunne-Illidan', class = 'PRIEST' },
+    }
+
+    ShowUsYourLoot.Players.RebuildIndex()
+
+    -- Their keys, per character, the way Core/Keystone.lua stores them.
+    ShowUsYourLootDB.keystones = {
+        ['Pronglez-Illidan'] = { name = 'Pronglez-Illidan',
+                                 mapID = 585, level = 15 },
+        ['Pringlescat-Illidan'] = { name = 'Pringlescat-Illidan',
+                                    mapID = 249, level = 14 },
+    }
+
+    ONLINE = {}
+    """
+)
+
+check("all of a person's characters are found from any one of them",
+      sorted(list(R.CharactersOf("Pronglez-Illidan").values()))
+      == ["Pringlesbop-Illidan", "Pringlescat-Illidan", "Pronglez-Illidan"],
+      list(R.CharactersOf("Pronglez-Illidan").values()))
+
+check("and somebody with no alts is just themselves",
+      list(R.CharactersOf("Selunne-Illidan").values())
+      == ["Selunne-Illidan"])
+
+# --- which door the request goes through -----------------------------------
+
+g.SetOnline("Pronglez-Illidan", True)
+
+check("THE CHARACTER ASKED FOR WINS WHEN THEY ARE ONLINE",
+      R.DeliveryFor("Pronglez-Illidan") == "Pronglez-Illidan",
+      R.DeliveryFor("Pronglez-Illidan"))
+
+g.SetOnline("Pronglez-Illidan", False)
+g.SetOnline("Pringlesbop-Illidan", True)
+
+check("AND AN ALT OF THEIRS CARRIES IT WHEN THEY ARE NOT",
+      R.DeliveryFor("Pronglez-Illidan") == "Pringlesbop-Illidan",
+      R.DeliveryFor("Pronglez-Illidan"))
+
+g.SetOnline("Pringlesbop-Illidan", False)
+
+check("and nothing of theirs online is nobody, not somebody else",
+      R.DeliveryFor("Pronglez-Illidan") is None,
+      R.DeliveryFor("Pronglez-Illidan"))
+
+# THE FALLBACK, which is what an unmapped character does. This is the state
+# Aimee's own registry was in before she linked Pronglez, and the behavior has
+# to be "reaches nobody but themselves" rather than "reaches somebody at
+# random" -- Players.ResolveToMain answers with the character's own key when
+# it knows of no mapping, and that is what makes this safe.
+g.SetOnline("Pringlesbop-Illidan", True)
+
+check("an UNMAPPED character reaches only themselves",
+      R.DeliveryFor("Selunne-Illidan") is None,
+      "an unlinked alt must not inherit somebody else's delivery")
+
+# --- and it says which key ------------------------------------------------
+
+g.Reset()
+lua.execute("ONLINE = { ['Pringlesbop-Illidan'] = true }")
+
+ok, _ = R.Ask("Pronglez-Illidan", "HEALER")
+
+check("asking for an offline character's key still goes out", ok is True)
+
+sent = R.GetOutgoing("Pronglez-Illidan")
+
+check("the row is keyed on WHOSE KEY IT IS", sent.target == "Pronglez-Illidan")
+check("and remembers where it actually went",
+      sent.sentTo == "Pringlesbop-Illidan", sent.sentTo)
+check("and which key was asked about",
+      sent.mapID == 585 and sent.level == 15, (sent.mapID, sent.level))
+check("so it is not queued -- somebody received it",
+      sent.queued is None, sent.queued)
+
+# Drained so the whispers are on the wire rather than in the queue.
+while SYL.SendQueue.Drain():
+    pass
+
+check("both messages went to the character who is online, as whispers",
+      g.Channels() == "WHISPER->Pringlesbop-Illidan,"
+                      "WHISPER->Pringlesbop-Illidan",
+      g.Channels())
+
+# THE KEY GOES FIRST, so the receiver is holding it when the ask lands. Both
+# ride SendQueue, which is first in first out.
+check("THE KEY IS SENT AHEAD OF THE ASK",
+      g.SENT[1].payload.split("|")[1] == "K"
+      and g.SENT[2].payload.split("|")[1] == "R",
+      [g.SENT[1].payload, g.SENT[2].payload])
+
+check("and it names the character whose key it is",
+      g.SENT[1].payload.split("|")[2].split(chr(9))[0] == "Pronglez-Illidan",
+      g.SENT[1].payload)
+
+# --- receiving it ----------------------------------------------------------
+#
+# The other end of the same wire, replayed into this client.
+
+g.Reset()
+lua.execute("ShowUsYourLoot.Keystone.CharacterKey = function() "
+            "return 'Pringlesbop-Illidan' end")
+
+g.Deliver("K", "Pronglez-Illidan" + chr(9) + "585" + chr(9) + "15", "Aimee")
+g.Deliver("R", "HEALER", "Aimee")
+
+incoming = R.Incoming()[1]
+
+check("the arriving request knows which of MY characters is meant",
+      incoming.keyOwner == "Pronglez-Illidan", incoming.keyOwner)
+check("and which key", incoming.mapID == 585 and incoming.level == 15,
+      (incoming.mapID, incoming.level))
+check("and the role asked for", incoming.role == "HEALER", incoming.role)
+
+# A CLIENT ON AN OLDER BUILD SENDS NO KEY, and must still land a request. This
+# is the whole reason the key is its own message rather than a longer ask:
+# 0.4.6 sends only the role, and it still works.
+g.Reset()
+g.Deliver("R", "TANK", "Aimee")
+
+older = R.Incoming()[1]
+
+check("A REQUEST WITH NO KEY STILL ARRIVES",
+      older.status == "pending" and older.role == "TANK", older.role)
+check("and simply does not name one", older.mapID is None, older.mapID)
+
+# --- the answer finds the row it belongs to --------------------------------
+#
+# We asked Pronglez. Pringlesbop replies. Without the key in hand there is no
+# row named "Pringlesbop" and the answer would be dropped -- so somebody who
+# did reply reads as never having.
+
+g.Reset()
+
+# BACK TO BEING OURSELVES. The receiving block above logged this client in as
+# Pringlesbop to read his side of the wire, and OnMessage drops anything from
+# our own character -- so leaving it set would silently discard every answer
+# below and the assertions would read as the routing being broken.
+lua.execute("ShowUsYourLoot.Keystone.CharacterKey = function() "
+            "return 'Aimee-Area52' end")
+
+lua.execute("""
+    ShowUsYourLootDB.players = {
+        ['P-CAT'] = { guid = 'P-CAT', name = 'Pringlescat',
+                      fullName = 'Pringlescat-Illidan' },
+        ['P-BOP'] = { guid = 'P-BOP', name = 'Pringlesbop',
+                      fullName = 'Pringlesbop-Illidan', mainGUID = 'P-CAT' },
+        ['P-LEZ'] = { guid = 'P-LEZ', name = 'Pronglez',
+                      fullName = 'Pronglez-Illidan', mainGUID = 'P-CAT' },
+    }
+
+    ShowUsYourLoot.Players.RebuildIndex()
+
+    ONLINE = { ['Pronglez-Illidan'] = true }
+""")
+
+R.Ask("Pronglez-Illidan", "DPS")
+
+g.Deliver("K", "Pronglez-Illidan" + chr(9) + "585" + chr(9) + "15",
+          "Pringlesbop-Illidan")
+g.Deliver("A", "approved", "Pringlesbop-Illidan")
+
+answered = R.GetOutgoing("Pronglez-Illidan")
+
+check("AN ANSWER FROM AN ALT LANDS ON THE ROW IT ANSWERS",
+      answered.status == "approved", answered.status)
+
+# And the same thing from a client that cannot name the key, which falls back
+# to resolving the speaker to the person who was asked.
+lua.execute("ShowUsYourLootDB.keyRequests = nil")
+SYL.KeystoneRequests.Store()
+g.ClearSent()
+
+R.Ask("Pronglez-Illidan", "DPS")
+g.Deliver("A", "denied", "Pringlesbop-Illidan")
+
+fallback = R.GetOutgoing("Pronglez-Illidan")
+
+check("and so does one from an older build that cannot name it",
+      fallback.status == "denied", fallback.status)
+
+# TWO OPEN QUESTIONS TO ONE PERSON CANNOT BE TOLD APART FROM A BARE NAME, and
+# marking the wrong one answered is worse than leaving both waiting.
+lua.execute("ShowUsYourLootDB.keyRequests = nil")
+SYL.KeystoneRequests.Store()
+
+R.Ask("Pronglez-Illidan", "DPS")
+R.Ask("Pringlescat-Illidan", "DPS")
+
+g.Deliver("A", "approved", "Pringlesbop-Illidan")
+
+check("but an ambiguous one is left alone rather than guessed at",
+      R.GetOutgoing("Pronglez-Illidan").status == "pending"
+      and R.GetOutgoing("Pringlescat-Illidan").status == "pending",
+      "a bare name cannot say which of two open questions it answers")
+
+# --- the alert ------------------------------------------------------------
+#
+# What the popup would say, without drawing it. The wording is the feature:
+# a request that arrives on an alt is correct and looks like a bug unless the
+# window says why.
+
+g.Reset()
+lua.execute("ShowUsYourLoot.Keystone.CharacterKey = function() "
+            "return 'Pringlesbop-Illidan' end")
+lua.execute("ShowUsYourLoot.Keystone.GetMapName = function() "
+            "return 'Operation: Floodgate' end")
+
+g.Deliver("K", "Pronglez-Illidan" + chr(9) + "585" + chr(9) + "15", "Aimee")
+g.Deliver("R", "HEALER", "Aimee")
+
+Alert = SYL.KeyRequestAlert
+pending = Alert.Next()
+
+check("the alert picks up the unanswered request",
+      pending is not None and pending.sender == "Aimee")
+check("names the key rather than saying 'your key'",
+      Alert.Key(pending) == "+15 Operation: Floodgate", Alert.Key(pending))
+check("and the character it sits on",
+      Alert.Owner(pending) == "on Pronglez", Alert.Owner(pending))
+
+routed = Alert.Routed(pending)
+
+check("AND WHY IT ARRIVED HERE AND NOT THERE",
+      routed is not None and "Pronglez" in routed
+      and "Pringlesbop" in routed, routed)
+
+# The other half: a request that landed where it was aimed has nothing to
+# explain, and a sentence explaining it anyway is noise on every normal ask.
+lua.execute("ShowUsYourLoot.Keystone.CharacterKey = function() "
+            "return 'Pronglez-Illidan' end")
+
+check("and nothing to explain when it landed where it was aimed",
+      Alert.Routed(pending) is None, Alert.Routed(pending))
+
+# A hidden request must not raise the popup again -- that is the difference
+# between Hide and an answer, and the reason Hide is safe.
+R.Dismiss("Aimee")
+
+check("HIDE TAKES IT OFF THE POPUP", Alert.Next() is None)
+check("and leaves it on the Keys tab", len(R.Incoming()) == 1,
+      len(R.Incoming()))
+
+
 print()
 print("FAILURES:", failures or "none")
 sys.exit(1 if failures else 0)

@@ -92,6 +92,7 @@ lua.execute(
         -- RaidSession.CountsAsNight. tools/test_guildnights.py owns that
         -- behavior; these assertions are about credit and upgrade counting.
         IsGuildNightAt = function() return true end,
+        IsGuildNightForDrop = function() return true end,
     }
 
     ShowUsYourLoot.GetActiveRaids = function() return {} end

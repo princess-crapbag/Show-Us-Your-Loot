@@ -165,6 +165,10 @@ end
 --                    .isAlt, .mainName, .isIncoming
 --   nameFor(entry)   the name a pick should insert; defaults to entry.name
 --   onAccept(name)   called with the chosen name; optional
+--   noteFor(entry)   the right-hand note; defaults to the class and team one
+--   above           the frame to open over, when the box itself is the wrong
+--                   thing to clear; defaults to the holder
+--   maxRows         fewer than MAX_ROWS, for a window with less room
 function NameSuggest.Attach(holder, config)
     local editBox = holder.editBox
 
@@ -174,9 +178,17 @@ function NameSuggest.Attach(holder, config)
 
     local popup = CreateFrame("Frame", nil, holder, "BackdropTemplate")
 
-    -- Opens upward. Every box this is attached to so far sits in a window
-    -- footer, where there is nothing below it to open into.
-    popup:SetPoint("BOTTOMLEFT", holder, "TOPLEFT", 0, 2)
+    -- OPENS UPWARD, over whatever `above` names. Every box this was first
+    -- attached to sat in a window footer, where there is nothing below to open
+    -- into and nothing above but the window -- so the box itself was the right
+    -- thing to clear.
+    --
+    -- UI/ShareWindow.lua is the case that needed more. Two pixels above ITS
+    -- box is the "SEND TO" heading -- the heading of the control being used --
+    -- and the row under the box where the offline error goes. Both were
+    -- covered by a list that appeared as somebody typed. So a caller can name
+    -- the thing to clear, and this one names the heading.
+    popup:SetPoint("BOTTOMLEFT", config.above or holder, "TOPLEFT", 0, 2)
     popup:SetWidth(220)
     popup:SetFrameStrata("DIALOG")
     popup:SetFrameLevel(holder:GetFrameLevel() + 20)
@@ -205,11 +217,21 @@ function NameSuggest.Attach(holder, config)
         end
     end
 
+    local rowLimit = math.min(config.maxRows or MAX_ROWS, MAX_ROWS)
+
     local function Show(matches, typed)
         if #matches == 0 then
             Hide()
 
             return
+        end
+
+        -- Trimmed here rather than in Match, so the cap is a property of the
+        -- window rather than of the matching -- and so `shown` and the rows
+        -- drawn are the same list. Enter takes the first, and taking a row
+        -- nobody can see is worse than offering fewer.
+        for index = #matches, rowLimit + 1, -1 do
+            matches[index] = nil
         end
 
         popup.shown = matches
@@ -223,7 +245,9 @@ function NameSuggest.Attach(holder, config)
 
             SYL.ClassColor.Set(row.name, entry.class)
 
-            row.note:SetText(Note(entry))
+            row.note:SetText(
+                (config.noteFor and config.noteFor(entry)) or Note(entry)
+            )
 
             row:SetScript("OnClick", function()
                 Accept(config.nameFor and config.nameFor(entry) or entry.name)

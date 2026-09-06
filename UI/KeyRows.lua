@@ -212,15 +212,45 @@ function KeyRows.Create(index, config)
 
         local ok, reason = SYL.KeystoneRequests.Ask(row.playerName, config.getRole())
 
+        -- READ BACK RATHER THAN GUESSED. A request is now posted through
+        -- whichever character of that person is logged in, and which one that
+        -- was is a fact only the stored request holds -- recomputing it a
+        -- second later can name somebody who has since logged out.
+        local sent = ok and SYL.KeystoneRequests.GetOutgoing(row.playerName)
+        local role = SYL.KeystoneRequests.ROLE_LABELS[config.getRole()]
+            or config.getRole()
+
         SYL:Write(ok
-            and ("Asked " .. row.playerName .. " to run their key as "
-                .. (SYL.KeystoneRequests.ROLE_LABELS[config.getRole()] or config.getRole()) .. ".")
+            and ("Asked for " .. row.playerName .. "'s key as " .. role .. "."
+                .. SYL.KeyRows.DeliveryNote(row.playerName, sent))
             or (reason or "Could not ask."))
 
         config.onChanged()
     end)
 
     row.ask:SetPoint("LEFT", response.x, 0)
+
+    -- SOMETHING TO HOVER OVER THE ANSWER. The cells are font strings and a
+    -- font string cannot take a tooltip, so the one column whose story does
+    -- not fit in it gets an invisible button its own size. Only shown when
+    -- there is a request to explain -- an empty column with a hover target on
+    -- it is a thing people find by accident and wonder about.
+    row.responseHover = CreateFrame("Button", nil, row)
+    row.responseHover:SetPoint("LEFT", response.x, 0)
+    row.responseHover:SetSize(response.width, config.rowHeight)
+    row.responseHover:Hide()
+
+    SYL.Tooltips.Attach(
+        row.responseHover,
+        function()
+            return row.askRequest and "This request" or nil
+        end,
+        function()
+            return row.askRequest
+                and KeyRows.DescribeRequest(row.askRequest)
+                or nil
+        end
+    )
 
     -- Right-click to copy. These names carry the realm, because that is the
     -- form a keystone is stored under.
@@ -234,6 +264,68 @@ end
 -- The button says what will happen, or why it will not. A grayed button with
 -- no explanation is the thing this is avoiding: "offline" and "you already
 -- asked" are different problems and only one of them is worth waiting on.
+-- WHERE A REQUEST ACTUALLY WENT, in one clause or none.
+--
+-- Said only when it went somewhere other than where it was aimed, because
+-- that is the only case anybody needs telling about -- and it is a case that
+-- looks like a bug from either end: the asker sees Waiting on Pronglez's row
+-- while a whisper went to Pringlesbop, and the answer comes back from a
+-- character they never asked.
+function KeyRows.DeliveryNote(name, request)
+    local sentTo = request and request.sentTo
+
+    if not sentTo then
+        return " They are offline on every character, so it is held and sent "
+            .. "the next time you are both online."
+    end
+
+    if SYL.Utilities.SameCharacter(sentTo, name or "") then
+        return ""
+    end
+
+    return " " .. SYL.Utilities.ShortName(name) .. " is offline, so it went "
+        .. "to " .. SYL.Utilities.ShortName(sentTo) .. " -- the same person."
+end
+
+-- The whole story of one request, for the hover on the RESPONSE column.
+--
+-- IT GOES IN A TOOLTIP BECAUSE THE COLUMN CANNOT HOLD IT. RESPONSE is sized
+-- from "Not sent yet", and the note above this file's COLUMNS table records
+-- what happened the one time the words were allowed to grow instead: the
+-- table reached 459 in a 436 list and drew underneath the request pane.
+function KeyRows.DescribeRequest(request)
+    if type(request) ~= "table" then
+        return nil
+    end
+
+    local Requests = SYL.KeystoneRequests
+    local parts = {}
+
+    local key = Requests.DescribeKey({
+        mapID = request.mapID, level = request.level,
+        owner = request.target,
+    }, false)
+
+    table.insert(parts, "Asked for " .. (key or "their key") .. " as "
+        .. (Requests.ROLE_LABELS[request.role] or tostring(request.role))
+        .. ".")
+
+    local note = KeyRows.DeliveryNote(request.target, request)
+
+    if note ~= "" then
+        table.insert(parts, (note:gsub("^ ", "")))
+    end
+
+    if request.status == Requests.STATUS.PENDING then
+        table.insert(parts, "They answer once, for this key.")
+    elseif request.answeredAt then
+        table.insert(parts, "Answered: "
+            .. (Requests.STATUS_LABELS[request.status] or "?") .. ".")
+    end
+
+    return table.concat(parts, " ")
+end
+
 function KeyRows.DrawAsk(row, entry, config)
     -- Cleared on every draw before anything decides to fill it. Rows are
     -- pooled, so a reply left behind would be read as this player's answer —
@@ -242,14 +334,22 @@ function KeyRows.DrawAsk(row, entry, config)
 
     if entry.isOwn then
         row.ask:Hide()
+        row.responseHover:Hide()
+        row.askRequest = nil
 
         return
     end
 
     local existing = SYL.KeystoneRequests.GetOutgoing(entry.name)
 
+    -- Held for the hover, which is attached once and reads what the row is
+    -- carrying right now -- rows are pooled, so a captured request would
+    -- describe whoever was in this slot when the window opened.
+    row.askRequest = existing
+
     if existing and existing.status ~= SYL.KeystoneRequests.STATUS.DENIED then
         row.ask:Hide()
+        row.responseHover:Show()
 
         -- In the response column at full width, not appended to the level.
         --
@@ -278,6 +378,9 @@ function KeyRows.DrawAsk(row, entry, config)
 
     row.ask.label:SetText(existing and "Ask again" or "Ask")
     row.ask:Show()
+
+    -- The button owns the column again, so the hover behind it comes off.
+    row.responseHover:Hide()
 
     -- Left clickable either way so the tooltip can be read; the click prints
     -- the reason rather than doing nothing.
@@ -321,7 +424,10 @@ function KeyRows.DrawAsk(row, entry, config)
                     return "Cannot ask"
                 end
 
-                return SYL.KeystoneRequests.IsOnline(held.name)
+                -- ASKED OF THE PERSON, not of the character. They may be
+                -- standing in front of you on an alt, and this used to read
+                -- "Ask when they log in" at somebody who plainly had.
+                return SYL.KeystoneRequests.DeliveryFor(held.name)
                     and "Ask for this key"
                     or "Ask when they log in"
             end,
@@ -340,17 +446,32 @@ function KeyRows.DrawAsk(row, entry, config)
 
                 local role = row.askConfig and row.askConfig.getRole()
 
-                local text = "Sends a request to " .. held.name .. " as "
+                local text = "Asks for " .. held.name .. "'s key as "
                     .. (SYL.KeystoneRequests.ROLE_LABELS[role] or tostring(role))
                     .. ". Only they see it."
 
-                -- SAYS WHAT IT CAN AND CANNOT PROMISE. Nothing in the game
-                -- can put a message in front of somebody who is not logged
-                -- in, so "they see it when they log in" is true only while
-                -- you are online too. Better said here than assumed.
-                if not SYL.KeystoneRequests.IsOnline(held.name) then
-                    text = text .. " They are offline, so it is held and sent "
-                        .. "the next time you are both online."
+                local deliverTo = SYL.KeystoneRequests.DeliveryFor(held.name)
+
+                -- SAYS WHERE IT WILL GO BEFORE IT GOES, because a request
+                -- that arrives on an alt is correct and looks wrong from both
+                -- ends unless somebody was told to expect it.
+                if deliverTo
+                    and not SYL.Utilities.SameCharacter(deliverTo, held.name)
+                then
+                    text = text .. " " .. SYL.Utilities.ShortName(held.name)
+                        .. " is offline, so it goes to "
+                        .. SYL.Utilities.ShortName(deliverTo)
+                        .. " -- the same person."
+                end
+
+                -- AND WHAT IT CANNOT PROMISE. Nothing in the game can put a
+                -- message in front of somebody who is not logged in, so "they
+                -- see it when they log in" is true only while you are online
+                -- too. Better said here than assumed.
+                if not deliverTo then
+                    text = text .. " They are offline on every character, so "
+                        .. "it is held and sent the next time you are both "
+                        .. "online."
                 end
 
                 return text

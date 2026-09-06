@@ -122,6 +122,7 @@ lua.execute(
         end,
 
         IsGuildNightAt = function() return true end,
+        IsGuildNightForDrop = function() return true end,
     }
     """
 )

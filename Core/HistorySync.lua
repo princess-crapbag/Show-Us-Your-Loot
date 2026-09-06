@@ -110,11 +110,36 @@ end
 -- taken out of the maths themselves. A drop somebody excluded on purpose is a
 -- decision about their own database, and pushing it into somebody else's is
 -- the one thing a transfer must not do.
+--
+-- AND EXCEPT WHAT ARRIVED IN SOMEBODY ELSE'S TRANSFER, which is the second cut
+-- and was added the day the first transfer came back the other way.
+--
+-- Aimee took 151 drops from another officer on 2026-09-06. Her send window,
+-- which had read 135 drops and four minutes since the feature shipped, now
+-- read 286 drops and ten -- and 151 of those were his pug runs, which the
+-- guild-share rule refuses on arrival anyway. Ten minutes of wire to deliver
+-- records the receiver is going to throw away is not a transfer, it is an
+-- echo, and in a guild with three officers passing history around it doubles
+-- every time somebody presses Send.
+--
+-- SO A TRANSFER HANDS OVER YOUR OWN SEASON, not a relay of everybody's. That
+-- is the same rule as the exclusion above -- what is in your database because
+-- you decided it belongs there is yours to pass on; what is in it because
+-- somebody handed it to you is theirs to pass on -- and it makes A -> B -> C
+-- deliver what A recorded exactly once instead of once per hop.
+--
+-- Records that arrived LIVE, over Core/Sync.lua's raid channel, are not
+-- touched by this and must not be: a co-officer's capture of a boss you were
+-- both standing at is a night this client was in, and it carries no SOURCE.
 function HistorySync.Records(season)
     local records = {}
+    local arrived = SYL.HistoryPayload.SOURCE
 
     for _, drop in ipairs((season and season.drops) or {}) do
-        if drop.id and not drop.excludedFromAnalytics then
+        if drop.id
+            and not drop.excludedFromAnalytics
+            and drop.source ~= arrived
+        then
             table.insert(records, drop)
         end
     end
@@ -122,28 +147,81 @@ function HistorySync.Records(season)
     return records
 end
 
+-- THE NIGHTS THOSE DROPS WERE WON ON, which travel beside them and without
+-- which the drops are worth less than they look.
+--
+-- Pringlescat's board on 0.4.6 held every one of Aimee's drops and scored them
+-- to the point -- and read "4 of 4" raid nights where the season had run nine,
+-- because both halves of that cell come from season.raids and nothing had ever
+-- put a session there. Points per night is score divided by nights, so his
+-- board showed Arcangila at 275.0 against a true 122.2. See the header of
+-- Core/HistoryPayload.lua for the measurement.
+--
+-- NIGHTS ONLY, AND THAT IS BOTH THE CHEAP CUT AND THE RIGHT ONE.
+--
+-- Right, because RaidSession.NightsOnly is the exact filter every screen that
+-- counts attendance already applies -- BuildAttendance runs it, and the
+-- board's denominator runs it -- so a session that fails it would arrive and
+-- be discarded on the other side having cost a minute of wire.
+--
+-- Cheap, because what it removes is the pug. Two LFR runs in Aimee's season
+-- carry 49 and 74 people, and those two alone are 53 of the 216 messages the
+-- unfiltered set would cost. Sending 123 strangers' names to another officer
+-- for records that will be filtered out on arrival is the thing this file's
+-- header says a transfer must not do.
+function HistorySync.Nights(season)
+    local mine = {}
+    local arrived = SYL.HistoryPayload.SOURCE
+
+    -- Nights that arrived in somebody else's transfer are not passed on, for
+    -- the reason Records gives at length: a transfer hands over your own
+    -- season rather than relaying everybody's.
+    for _, session in ipairs((season and season.raids) or {}) do
+        if session.source ~= arrived then
+            table.insert(mine, session)
+        end
+    end
+
+    return SYL.RaidSession.NightsOnly(mine)
+end
+
 -- What the offer says, and what the send window shows before anybody presses
 -- anything. Counted rather than estimated: "about a minute" for something
 -- that takes four is how a progress bar loses its credibility on first use.
 function HistorySync.Describe(season)
     local records = HistorySync.Records(season)
+    local sessions = HistorySync.Nights(season)
     local credited = 0
     local messages = 0
+
+    local function Count(text)
+        messages = messages + math.max(1, math.ceil(#text / CHUNK_SIZE))
+    end
 
     for _, record in ipairs(records) do
         if record.creditOverride then
             credited = credited + 1
         end
 
-        local size = #SYL.HistoryPayload.Encode(record)
+        Count(SYL.HistoryPayload.Encode(record))
+    end
 
-        messages = messages + math.max(1, math.ceil(size / CHUNK_SIZE))
+    for _, session in ipairs(sessions) do
+        Count(SYL.HistoryPayload.EncodeSession(session))
     end
 
     return {
         seasonName = (season and season.name) or "this season",
         drops = #records,
         credited = credited,
+
+        -- Evenings, not sessions. A Heroic clear and the Mythic pulls after it
+        -- are two rows in season.raids and one night on every board, so a
+        -- window saying "18 raid nights" over a season that ran ten would be
+        -- describing a number nothing else in the addon prints.
+        nights = SYL.RaidSession.CountNights(sessions),
+        sessions = #sessions,
+
         messages = messages,
         seconds = math.floor(messages * HistorySync.INTERVAL),
     }
@@ -267,14 +345,34 @@ function HistorySync.Prepare(target, season)
 
     local serial = 0
 
-    for _, record in ipairs(records) do
+    -- ONE SERIAL SEQUENCE ACROSS BOTH KINDS, not two. A chunk carries nothing
+    -- that says which sort of record it belongs to -- the protocol tag is
+    -- inside the reassembled payload, not on the envelope -- so two sequences
+    -- would collide the moment a drop and a session shared a number, and
+    -- ReceiveData would splice half of each into one unparseable string.
+    local function Load(payload)
         serial = serial + 1
 
-        local chunks = Chunk(SYL.HistoryPayload.Encode(record))
+        local chunks = Chunk(payload)
 
         for index, data in ipairs(chunks) do
             table.insert(outbox, Encode(serial, index, #chunks, data))
         end
+    end
+
+    for _, record in ipairs(records) do
+        Load(SYL.HistoryPayload.Encode(record))
+    end
+
+    -- THE NIGHTS GO LAST, deliberately. A transfer that is cut short -- they
+    -- reload, the sender zones, somebody presses Stop -- ends with the
+    -- receiver holding drops and no sessions, which is exactly the board they
+    -- had before and reads as an unfinished transfer. Sending them first would
+    -- end it with sessions and no drops: a denominator with no numerator, and
+    -- every raider on the board reading zero points across ten nights they
+    -- demonstrably raided.
+    for _, session in ipairs(HistorySync.Nights(season)) do
+        Load(SYL.HistoryPayload.EncodeSession(session))
     end
 
     totalCount = #outbox
@@ -427,7 +525,12 @@ function HistorySync.AcceptOffer()
         return false
     end
 
-    incoming = { from = pendingOffer.source, records = {}, pieces = {} }
+    incoming = {
+        from = pendingOffer.source,
+        records = {},
+        sessions = {},
+        pieces = {},
+    }
 
     Whisper(pendingOffer.source, VERSION .. "\t" .. ACCEPT)
 
@@ -474,16 +577,32 @@ function HistorySync.ReceiveData(sender, serial, index, count, data)
         end
     end
 
-    local record = SYL.HistoryPayload.Decode(table.concat(set.parts))
+    local payload = table.concat(set.parts)
 
     set.serial = nil
     set.parts = {}
 
+    -- WHICH KIND IT WAS IS READ OFF THE PAYLOAD, not off the envelope. The
+    -- chunk framing above is identical for both and deliberately unchanged:
+    -- a receiver on an older build reassembles a session exactly the same way,
+    -- hands it to Decode, is told it is not an "H1" record, and drops it. That
+    -- is the whole of the backward compatibility story and it needs no version
+    -- negotiation to work.
+    local record = SYL.HistoryPayload.Decode(payload)
+
     if record then
         table.insert(incoming.records, record)
+
+        return record
     end
 
-    return record
+    local session = SYL.HistoryPayload.DecodeSession(payload)
+
+    if session then
+        table.insert(incoming.sessions, session)
+    end
+
+    return session
 end
 
 -- Written into the season in one go at the end rather than drop by drop, so a
@@ -491,29 +610,47 @@ end
 -- a third merged. Returns added, updated, skipped.
 function HistorySync.Commit()
     if not incoming then
-        return 0, 0, 0
+        return 0, 0, 0, 0
     end
 
     local season = SYL.GetActiveSeason()
     local records = incoming.records
+    local sessions = incoming.sessions or {}
 
     incoming = nil
 
     if not season then
-        return 0, 0, 0
+        return 0, 0, 0, 0
     end
 
     local added, updated, skipped = SYL.HistoryPayload.Merge(season, records)
 
+    -- Nights second, so a season that gains drops and nights in one go gains
+    -- them in the order the outbox sent them. Returned as a fourth number
+    -- rather than folded into `added`: they are not drops, and the line the
+    -- receiver reads has to be able to say so.
+    local nights = SYL.HistoryPayload.MergeSessions(season, sessions)
+
     if added > 0 or updated > 0 then
         SYL.LootHistoryStore.RebuildIndex()
+    end
+
+    if added > 0 or updated > 0 or nights > 0 then
+        -- THE ROSTER CACHE HAS TO BE TOLD. Core/RosterData.lua caches its
+        -- whole build until something invalidates it, and attendance is read
+        -- through that cache -- so without this the nights arrive, the
+        -- database is right, and every screen goes on drawing the numbers it
+        -- worked out before they did.
+        if SYL.RosterData and SYL.RosterData.Invalidate then
+            SYL.RosterData.Invalidate()
+        end
 
         if SYL.RefreshMainWindow then
             SYL:RefreshMainWindow()
         end
     end
 
-    return added, updated, skipped
+    return added, updated, skipped, nights
 end
 
 function HistorySync.IsReceiving()
@@ -623,11 +760,16 @@ function HistorySync.OnMessage(prefix, payload, _, sender)
     end
 
     if kind == DONE then
-        local added, updated = HistorySync.Commit()
+        local added, updated, _, nights = HistorySync.Commit()
 
+        -- THE NIGHTS ARE NAMED, because they are what makes the drops mean
+        -- anything and because a line that reported only drops is what let a
+        -- transfer look complete while every points-per-night on the board was
+        -- still being divided by the wrong number.
         SYL:Print(
             "Loot history from " .. SYL.Utilities.ShortName(sender) .. ": "
-            .. added .. " new drops, " .. updated .. " credit corrections."
+            .. added .. " new drops, " .. updated .. " credit corrections, "
+            .. SYL.Utilities.Count(nights, "raid night") .. " you did not have."
         )
     end
 end

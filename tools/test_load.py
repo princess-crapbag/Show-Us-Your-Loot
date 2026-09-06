@@ -65,6 +65,15 @@ lua.execute(
                     return function() return false end
                 end
 
+                -- Same reason again. UI/NameSuggest.lua stacks its popup
+                -- twenty levels above whatever it is attached to, and a
+                -- frame returned here failed as "attempt to perform
+                -- arithmetic on a table" inside the addon rather than as
+                -- the missing stub it actually was.
+                if key == 'GetFrameLevel' then
+                    return function() return 1 end
+                end
+
                 local value = function(...) return self end
 
                 rawset(self, key, value)

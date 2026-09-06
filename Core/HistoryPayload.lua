@@ -51,6 +51,37 @@ SYL.HistoryPayload = HistoryPayload
 
 HistoryPayload.PROTOCOL = "H1"
 
+-- THE SECOND THING A TRANSFER CARRIES, and the reason the first one alone was
+-- not enough.
+--
+-- Pringlescat took a full transfer on 0.4.6. Every points total on his board
+-- matched Aimee's exactly -- Rakahasa 640 off eight items, Hawt 320 off four,
+-- Jtkurayami 240 off four -- and every RAID NIGHTS cell still read "of 4"
+-- against a season that had run nine. Points per night, which is the column
+-- the board sorts by and the bar draws, was her loot over his attendance:
+-- Arcangila 1100 / 4 = 275.0 where the true figure is 1100 / 9.
+--
+-- WHY THE DROPS COULD NOT ANSWER IT. Core/Analytics.lua says it in one line --
+-- "Nights come from the raid roster, not from loot" -- and it is right:
+-- somebody eligible for nothing all evening still raided, and only the roster
+-- knows that. Both halves of "8 of 10" read season.raids, which nothing in a
+-- transfer had ever written to. So a receiver divided a complete numerator by
+-- their own partial denominator and every row was wrong in the same direction.
+--
+-- NIGHTS ONLY, NOT EVERY SESSION. Core/HistorySync.lua makes that cut and the
+-- header there says why; what matters here is that a session arrives carrying
+-- the guildRank it was recorded with, so the receiver reaches the same
+-- CountsAsNight verdict the sender did rather than re-deciding it against a
+-- roster they never saw.
+--
+-- A SEPARATE PROTOCOL TAG RATHER THAN A LONGER DROP. Decode below refuses
+-- anything that is not "H1", so a client on an older build reads these as
+-- records it cannot parse and drops them -- which is the correct behavior and
+-- costs it nothing it had before. The envelope in Core/HistorySync.lua is
+-- untouched for the same reason: an offer that changed shape would fail to
+-- match on 0.4.6 and the prompt would never be raised at all.
+HistoryPayload.SESSION_PROTOCOL = "R1"
+
 local FIELD = "\t"
 local ROLL = "\30"
 local PART = "\31"
@@ -105,6 +136,53 @@ local NUMERIC = {
 -- a field that is genuinely text survives being asked.
 local ROLL_NUMERIC = { roll = true, state = true }
 local CREDIT_NUMERIC = { setAt = true, state = true }
+
+-- A raid session, in the same three-level shape a drop uses: header fields on
+-- tabs, then one field holding the roster and one holding the encounters, each
+-- a ROLL-separated list of PART-separated records.
+--
+-- `pendingEncounter` is not here and must not be: it is the boss currently
+-- being fought on the sender's client, and it is meaningless on somebody
+-- else's machine an hour later. `summarized` is not here either -- see Merge
+-- below, which sets it rather than carrying it.
+local SESSION_HEADER = {
+    "id", "seasonID", "dateText",
+    "instanceID", "instanceName", "instanceType",
+    "difficultyID", "difficultyName",
+    "startedAt", "endedAt", "rosterCount", "recordedBy",
+}
+
+-- THE MAP KEY IS SENT, not recomputed. Core/RaidSession.lua keys the roster on
+-- `member.guid or member.fullName`, so it is derivable -- right up until a
+-- character was recorded with neither field set the way it is today, and then
+-- the receiver keys somebody differently from the sender and BuildAttendance
+-- counts them as two people who each raided half as often.
+local MEMBER_FIELDS = {
+    "key", "guid", "name", "fullName", "class", "guildRank",
+    "encounters", "firstSeen", "lastSeen",
+}
+
+-- guildRank is the load-bearing one and it is worth saying why a rank string
+-- travels at all. RaidSession.GuildCounts counts the roster entries that have
+-- one, and CountsAsNight compares that share against the threshold -- so
+-- without it every arriving night reads as a pug and is thrown away by the
+-- filter it was sent to satisfy.
+local SESSION_NUMERIC = {
+    instanceID = true, difficultyID = true,
+    startedAt = true, endedAt = true, rosterCount = true,
+}
+
+local MEMBER_NUMERIC = {
+    encounters = true, firstSeen = true, lastSeen = true,
+}
+
+local ENCOUNTER_FIELDS = {
+    "encounterID", "name", "difficultyID", "groupSize", "at",
+}
+
+local ENCOUNTER_NUMERIC = {
+    encounterID = true, difficultyID = true, groupSize = true, at = true,
+}
 
 local function Clean(value)
     if value == nil then
@@ -293,6 +371,171 @@ function HistoryPayload.Decode(payload)
 end
 
 --------------------------------------------------------------------------
+-- One raid session, out and back
+--------------------------------------------------------------------------
+
+local function EncodeList(items, fields, flag)
+    local out = {}
+
+    for _, item in ipairs(items or {}) do
+        local parts = {}
+
+        for _, name in ipairs(fields) do
+            table.insert(parts, Clean(item[name]))
+        end
+
+        if flag then
+            table.insert(parts, item[flag] and "1" or "")
+        end
+
+        table.insert(out, table.concat(parts, PART))
+    end
+
+    return table.concat(out, ROLL)
+end
+
+local function DecodeList(text, fields, numeric, flag)
+    if text == nil or text == "" then
+        return {}
+    end
+
+    local items = {}
+
+    for _, piece in ipairs(Split(text, ROLL)) do
+        local parts = Split(piece, PART)
+        local item = {}
+
+        for index, name in ipairs(fields) do
+            local value = parts[index]
+
+            if value ~= nil and value ~= "" then
+                item[name] = (numeric[name] and tonumber(value)) or value
+            end
+        end
+
+        if flag then
+            item[flag] = parts[#fields + 1] == "1" or nil
+        end
+
+        table.insert(items, item)
+    end
+
+    return items
+end
+
+-- The roster is a MAP on the way in and a LIST on the wire, because pairs()
+-- has no order and a set of chunks does. Turned back into a map by Decode.
+local function RosterList(roster)
+    local list = {}
+
+    for key, member in pairs(roster or {}) do
+        local copy = { key = key }
+
+        for _, name in ipairs(MEMBER_FIELDS) do
+            if name ~= "key" then
+                copy[name] = member[name]
+            end
+        end
+
+        table.insert(list, copy)
+    end
+
+    -- Sorted so the same session encodes to the same bytes twice running,
+    -- which is what makes a size measured in one place the size sent in
+    -- another -- see HistorySync.Describe, whose whole promise is that the
+    -- number on the window is the number on the wire.
+    table.sort(list, function(left, right)
+        return tostring(left.key) < tostring(right.key)
+    end)
+
+    return list
+end
+
+function HistoryPayload.EncodeSession(session)
+    local fields = { HistoryPayload.SESSION_PROTOCOL }
+
+    for _, name in ipairs(SESSION_HEADER) do
+        table.insert(fields, Clean(session[name]))
+    end
+
+    table.insert(
+        fields, EncodeList(RosterList(session.roster), MEMBER_FIELDS)
+    )
+
+    table.insert(
+        fields,
+        EncodeList(session.encounters, ENCOUNTER_FIELDS, "killed")
+    )
+
+    return table.concat(fields, FIELD)
+end
+
+-- Returns a session, or nil for anything this build cannot read -- including
+-- every drop record, which carries the other protocol tag. Nil rather than a
+-- half-filled session for the reason Decode gives: one without an id cannot be
+-- matched against a session the receiver already holds, and a duplicate night
+-- would double the denominator every board divides by.
+function HistoryPayload.DecodeSession(payload)
+    if type(payload) ~= "string" then
+        return nil
+    end
+
+    local parts = Split(payload, FIELD)
+
+    if parts[1] ~= HistoryPayload.SESSION_PROTOCOL then
+        return nil
+    end
+
+    local session = {}
+
+    for index, name in ipairs(SESSION_HEADER) do
+        local value = parts[index + 1]
+
+        if value ~= nil and value ~= "" then
+            session[name] = SESSION_NUMERIC[name] and tonumber(value) or value
+        end
+    end
+
+    if not session.id then
+        return nil
+    end
+
+    local roster = {}
+
+    for _, member in ipairs(DecodeList(
+        parts[#SESSION_HEADER + 2], MEMBER_FIELDS, MEMBER_NUMERIC
+    )) do
+        local key = member.key or member.guid or member.fullName
+
+        if key then
+            member.key = nil
+            roster[key] = member
+        end
+    end
+
+    session.roster = roster
+
+    session.encounters = DecodeList(
+        parts[#SESSION_HEADER + 3], ENCOUNTER_FIELDS, ENCOUNTER_NUMERIC,
+        "killed"
+    )
+
+    -- Counted from what actually arrived rather than trusted from the wire.
+    -- rosterCount is what UI/NightsPanel.lua prints as "24 raiders", and a
+    -- session whose last chunk was thrown away would otherwise say a number
+    -- its own roster cannot account for.
+    local counted = 0
+
+    for _ in pairs(roster) do
+        counted = counted + 1
+    end
+
+    session.rosterCount = counted
+
+    return session
+end
+
+--------------------------------------------------------------------------
 -- Putting it into the season
 --------------------------------------------------------------------------
 
@@ -350,6 +593,96 @@ function HistoryPayload.Merge(season, records)
             updated = updated + 1
         else
             skipped = skipped + 1
+        end
+    end
+
+    return added, updated, skipped
+end
+
+-- THE MERGE RULE FOR NIGHTS, and it is not quite the drops' rule.
+--
+-- A night the receiver never recorded is added whole. A night they were on is
+-- kept -- but the two rosters are UNIONED rather than one winning, because
+-- they are the same evening seen from two places and neither is a correction
+-- of the other. Somebody who joined at the third boss recorded a roster that
+-- starts at the third boss; the officer who was there from the pull recorded
+-- the people who left before it. Taking either one alone drops real raiders
+-- off an attendance column, and RaidSession.CountsAsNight already states the
+-- principle this follows: absent information never removes a night somebody
+-- actually turned up to.
+--
+-- A member both sides hold is left exactly as the receiver has them. Their own
+-- firstSeen and encounters came off their own client watching the fight, which
+-- is the same reason a local roll list is never overwritten.
+--
+-- SESSION IDS AGREE ACROSS CLIENTS. Core/RaidSession.lua builds them from the
+-- instance, the difficulty and the date -- "raid-3004-15-20260903" -- so two
+-- people in one raid generate the same id and this matches rather than
+-- duplicating. That is load-bearing: a second copy of a night would raise
+-- every board's denominator without adding anybody to its numerator.
+--
+-- Returns added, updated, skipped.
+function HistoryPayload.MergeSessions(season, sessions)
+    if type(season) ~= "table" then
+        return 0, 0, 0
+    end
+
+    season.raids = season.raids or {}
+
+    local byID = {}
+
+    for _, session in ipairs(season.raids) do
+        if session.id then
+            byID[session.id] = session
+        end
+    end
+
+    local added, updated, skipped = 0, 0, 0
+
+    for _, session in ipairs(sessions or {}) do
+        local existing = session.id and byID[session.id]
+
+        if not existing then
+            -- The receiver's season, not the sender's. Nothing reads this
+            -- field to filter a night today, and a row carrying somebody
+            -- else's season id is a trap for the first thing that does.
+            session.seasonID = season.id or session.seasonID
+
+            -- SET, NOT CARRIED. Core/RaidSummary.lua shows the night's summary
+            -- for any session that has not been summarized yet, and an evening
+            -- from three weeks ago arriving over the wire must not raise one.
+            session.summarized = true
+
+            -- Stamped for the same reason a drop is, and read in the same
+            -- place: HistorySync.Records and HistorySync.Nights both refuse to
+            -- pass on what somebody else handed over. A night unioned into one
+            -- this client recorded itself below is NOT stamped -- that session
+            -- is still theirs, it has simply learned about a few more people
+            -- who were standing in it.
+            session.source = HistoryPayload.SOURCE
+
+            table.insert(season.raids, session)
+
+            byID[session.id] = session
+            added = added + 1
+        else
+            existing.roster = existing.roster or {}
+
+            local gained = 0
+
+            for key, member in pairs(session.roster or {}) do
+                if existing.roster[key] == nil then
+                    existing.roster[key] = member
+                    gained = gained + 1
+                end
+            end
+
+            if gained > 0 then
+                existing.rosterCount = (existing.rosterCount or 0) + gained
+                updated = updated + 1
+            else
+                skipped = skipped + 1
+            end
         end
     end
 

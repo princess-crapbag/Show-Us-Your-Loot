@@ -699,6 +699,106 @@ function RaidSession.IsGuildNightAt(timestamp)
     return RaidSession.CountsAsNight(session)
 end
 
+-- THE SAME QUESTION ASKED ABOUT A DROP, and the reason it is a second function
+-- is one word in the note above: "or synced from somebody whose session this
+-- client never saw". That clause was written when a transfer could only carry
+-- records the sender had watched on the guild's own nights, and it stopped
+-- being safe the moment a transfer could carry anybody's season.
+--
+-- Aimee, 2026-09-06, after taking a transfer from another officer: "151 new
+-- drops. realizing those were from his raid pugs. but now my numbers in the
+-- board are weird." Sixteen items and 1,520 points landed on one raider off
+-- pugs her guild was never in, and the rule that should have caught it -- the
+-- 80% guild share, which the calendar and the dashboard have applied since it
+-- was written -- waved them through, because falling open is what it does when
+-- it cannot find the night.
+--
+-- SO UNKNOWN STILL COUNTS FOR A DROP THIS CLIENT WATCHED, and no longer does
+-- for one that arrived. The two are not the same kind of unknown:
+--
+--   A local drop with no session is old. It was captured before this addon
+--   recorded sessions at all, on a night the person running it was there for.
+--   Refusing it would erase real history, which is the case the original rule
+--   was protecting and is still right.
+--
+--   A transferred drop with no session is a night NOBODY here has evidence
+--   for. The sender's client did have that session -- it is how they recorded
+--   the drop -- so either they are on a build that sent no sessions, or the
+--   session was cut by the guild-share filter on the way out and was never
+--   offered. Both of those mean "not one of ours", and there is no third
+--   reading in which it is a guild night this client should score.
+--
+-- Which makes the fix and the transfer two halves of one change, the same way
+-- the note on IsGuildNightDrop says the LFR rule was: from here on a guild
+-- night arrives WITH its session, so the drops on it match one and count, and
+-- the drops that match nothing are the pugs. See Core/HistorySync.lua's
+-- Nights, which is what puts the sessions on the wire.
+-- THE SESSION A DROP BELONGS TO, MATCHED BY WHO WATCHED IT.
+--
+-- SessionAt alone is not enough once records can arrive from another client,
+-- and the reason is the twelve-hour window it deliberately uses. That window
+-- is right for a drop this client recorded -- it is what stops a kill stamped
+-- after a session closed from belonging to nothing -- and it is wrong for a
+-- drop recorded on somebody else's machine, because it will happily hand back
+-- OUR raid for THEIR pug that started the same evening.
+--
+-- Measured on Aimee's own database the morning after she took a transfer:
+-- of the 151 drops that arrived, 122 matched no session of hers and 29 did --
+-- nine on 08-25, four on 09-01, and sixteen stamped 09-04, a date she never
+-- raided at all, which fell inside twelve hours of her 09-03 session. Those
+-- 29 would have gone on scoring on her board.
+--
+-- So the recorder is part of the match. A drop and the session it happened on
+-- were written by the same client in the same moment, and both carry that
+-- client's name -- so a drop of Pringlescat's can only belong to a session of
+-- Pringlescat's, which is exactly what the transfer now delivers alongside it.
+--
+-- A DROP WITH NO RECORDER FALLS BACK TO THE PLAIN WINDOW. Records written
+-- before that field existed have no name on them, and refusing to match them
+-- would quietly change the answer for history that predates all of this.
+local function SessionForDrop(drop)
+    local sessions = SYL.GetActiveRaids()
+
+    if not drop.recordedBy then
+        return RaidSession.SessionAt(sessions, drop.timestamp)
+    end
+
+    local mine = {}
+
+    for _, session in ipairs(sessions or {}) do
+        if session.recordedBy
+            and SYL.Utilities.SameCharacter(
+                session.recordedBy, drop.recordedBy
+            )
+        then
+            table.insert(mine, session)
+        end
+    end
+
+    return RaidSession.SessionAt(mine, drop.timestamp)
+end
+
+function RaidSession.IsGuildNightForDrop(drop)
+    if type(drop) ~= "table" then
+        return true
+    end
+
+    local session = SessionForDrop(drop)
+
+    if session then
+        return RaidSession.CountsAsNight(session)
+    end
+
+    -- Read here rather than at file scope: Core/HistoryPayload.lua is loaded
+    -- long after this one, and indexing it at load would kill the file --
+    -- which reads downstream as every screen being empty rather than broken.
+    -- See the same note on DropRules' WorthHavingStates.
+    local arrived = SYL.HistoryPayload and SYL.HistoryPayload.SOURCE
+        or "SYNC_HISTORY"
+
+    return drop.source ~= arrived
+end
+
 function RaidSession.GetCurrent()
     if not currentSessionID then
         return nil

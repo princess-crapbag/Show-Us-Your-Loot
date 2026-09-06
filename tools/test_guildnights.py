@@ -231,6 +231,131 @@ drop_checks = [
 for label, ok in drop_checks:
     check(label, ok)
 
+# --- and the one unknown that does NOT count ------------------------------
+#
+# Aimee, 2026-09-06, after taking a loot-history transfer from another
+# officer: "151 new drops. realizing those were from his raid pugs. but now my
+# numbers in the board are weird." Sixteen items and 1,520 points landed on
+# one raider off raids her guild was never in.
+#
+# The rule above is why. A transferred drop matches no session here -- it
+# happened on somebody else's night -- so "unknown counts" waved every one of
+# them onto her board, past the exact filter written to keep pugs off it.
+#
+# The two unknowns are not the same unknown, and only the drop can tell them
+# apart. A local drop with no session was captured before sessions existed and
+# must keep counting; an arriving one is a night nobody here has any evidence
+# for, and the sender's own client did have that session.
+
+
+def drop_at(at, source=None):
+    return lua.table_from(
+        {"timestamp": at, "source": source} if source
+        else {"timestamp": at}
+    )
+
+
+# The literal rather than HistoryPayload.SOURCE, and the literal is the point:
+# this fixture loads three files and that is not one of them, which is exactly
+# the load order the real addon has -- Core/HistoryPayload.lua comes far below
+# Core/RaidSession.lua in the .toc. If the fallback in IsGuildNightForDrop ever
+# stops matching the constant, this line fails and says so.
+SYNCED = "SYNC_HISTORY"
+
+transfer_checks = [
+    ("a LOCAL win older than every session still counts",
+     RaidSession.IsGuildNightForDrop(drop_at(10)) is True),
+    ("AN ARRIVING WIN THAT MATCHES NO SESSION DOES NOT",
+     RaidSession.IsGuildNightForDrop(drop_at(10, SYNCED)) is False),
+    # The half that must not break: a transfer that carries its nights lands
+    # the session too, so these drops match one and are judged on it rather
+    # than on where they came from.
+    ("an arriving win ON A NIGHT THAT ARRIVED WITH IT counts",
+     RaidSession.IsGuildNightForDrop(drop_at(9000, SYNCED)) is True),
+    ("and an arriving win on a pug night is still refused",
+     RaidSession.IsGuildNightForDrop(drop_at(1200, SYNCED)) is False),
+    ("a local win on the guild raid is unaffected",
+     RaidSession.IsGuildNightForDrop(drop_at(9000)) is True),
+    ("and something that is not a drop at all does not throw",
+     RaidSession.IsGuildNightForDrop(None) is True),
+]
+
+for label, ok in transfer_checks:
+    check(label, ok)
+
+# --- and the window is not enough on its own ------------------------------
+#
+# SessionAt matches the last session that STARTED within twelve hours, which is
+# right for a drop this client recorded -- it is what stops a kill stamped
+# after a session closed from belonging to nothing -- and wrong for a drop
+# recorded on somebody else's machine, because it hands back OUR raid for
+# THEIR pug that started the same evening.
+#
+# On Aimee's own database this was 29 of the 151 that arrived: nine on 08-25,
+# four on 09-01, and sixteen stamped 09-04 -- a date she never raided at all,
+# which fell inside twelve hours of her 09-03 session. So the recorder is part
+# of the match: a drop and the session it happened on were written by the same
+# client in the same moment, and both carry that client's name.
+
+lua.execute("""
+    SESSIONS[2].recordedBy = 'Arcangila-Area52'
+    SESSIONS[2].roster = {
+        ['Player-1-A'] = { fullName = 'Arcangila-Area52', guildRank = 'GM' },
+    }
+""")
+
+
+def theirs(at):
+    return lua.table_from({
+        "timestamp": at, "source": SYNCED,
+        "recordedBy": "Pringlescat-Illidan",
+    })
+
+
+def ours(at):
+    return lua.table_from({
+        "timestamp": at, "recordedBy": "Arcangila-Area52",
+    })
+
+
+# 9000 is inside her guild session's window. Before the recorder was part of
+# the match, this drop of his read as a win on her raid night.
+check("THEIR DROP DOES NOT INHERIT OUR NIGHT just for landing in its window",
+      RaidSession.IsGuildNightForDrop(theirs(9000)) is False)
+check("and ours on the same evening still counts",
+      RaidSession.IsGuildNightForDrop(ours(9000)) is True)
+
+# The half that must keep working, and it is what the transfer now delivers:
+# his night arrives carrying his name, so his drops match it and are judged on
+# its guild share like anybody's.
+lua.execute("""
+    table.insert(SESSIONS, {
+        instanceType = 'raid', difficultyID = 15,
+        startedAt = 8500, endedAt = 12000,
+        recordedBy = 'Pringlescat-Illidan',
+        roster = {
+            ['P1'] = { fullName = 'Pringlescat-Illidan', guildRank = 'Officer' },
+            ['P2'] = { fullName = 'Someone-Illidan', guildRank = 'Raider' },
+        },
+    })
+""")
+
+check("but their drop DOES match their own night once it arrives",
+      RaidSession.IsGuildNightForDrop(theirs(9000)) is True)
+
+# And that night is still judged, not waved through. Same drop, same arriving
+# session, a roster that is one guildie in twenty-one.
+lua.execute("""
+    local night = SESSIONS[#SESSIONS]
+
+    for index = 1, 20 do
+        night.roster['X' .. index] = { fullName = 'Pug' .. index .. '-Illidan' }
+    end
+""")
+
+check("and their PUG night is refused on its guild share, as ours would be",
+      RaidSession.IsGuildNightForDrop(theirs(9000)) is False)
+
 # --- a night is an evening, not an instance -------------------------------
 #
 # Aimee, on finding three guild nights where she had raided twice: "that has

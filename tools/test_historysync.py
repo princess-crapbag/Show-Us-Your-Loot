@@ -405,7 +405,7 @@ SYL.HistorySync.OnMessage(
     "SYLHIST", "1\tD\t1\t1\t2\t" + big[:100], "WHISPER", OFFICER
 )
 
-landed, corrected, ignored = SYL.HistorySync.Commit()
+landed, corrected, ignored, arrived_nights = SYL.HistorySync.Commit()
 
 check("A HALF-ARRIVED RECORD IS NOT COMMITTED",
       landed == 0 and corrected == 0,
@@ -798,6 +798,391 @@ SYL.Migrations.RepairTransferredStates(lua.globals().ShowUsYourLootDB)
 check("and a value that is not a number is left as it is",
       str(SYL.GetActiveSeason().drops[1]["winnerState"]) == "unknown",
       SYL.GetActiveSeason().drops[1]["winnerState"])
+
+# --- 9. the nights travel with the drops -----------------------------------
+#
+# THE BUG THIS HALF EXISTS FOR, and it shipped looking like it worked.
+#
+# Pringlescat took a full transfer on 0.4.6. Every points total on his board
+# matched Aimee's to the point -- Rakahasa 640 off eight items, Hawt 320 off
+# four -- and every RAID NIGHTS cell read "of 4" against a season that had run
+# nine, because both halves of that cell come from season.raids and a transfer
+# had never written one. Points per night is score over nights and is the
+# column the board sorts by, so his Arcangila read 275.0 where hers reads
+# 122.2 -- a complete numerator over his own partial denominator.
+#
+# Core/Analytics.lua states the reason in one line: "Nights come from the raid
+# roster, not from loot." Somebody eligible for nothing all evening still
+# raided, and no amount of drops can say so.
+
+lua.execute("ShowUsYourLootDB = nil")
+SYL.DatabaseInitialize()
+lua.execute("""
+    local SYL = ShowUsYourLoot
+    SYL.Guild.IsMember = function() return true end
+""")
+
+
+def session(session_id, started, guilded, strangers=0, date="2026-09-03"):
+    """One evening. `guilded` carry a rank, `strangers` do not — which is the
+    only thing RaidSession.GuildCounts looks at."""
+    roster = {}
+
+    for index in range(guilded):
+        key = "Player-1-G%03d" % index
+        roster[key] = lua.table_from({
+            "guid": key, "name": "Guildie%d" % index,
+            "fullName": "Guildie%d-Area52" % index,
+            "class": "MAGE", "guildRank": "Raider",
+            "encounters": 3, "firstSeen": started, "lastSeen": started + 60,
+        })
+
+    for index in range(strangers):
+        key = "Player-9-P%03d" % index
+        roster[key] = lua.table_from({
+            "guid": key, "name": "Pug%d" % index,
+            "fullName": "Pug%d-Illidan" % index,
+            "class": "ROGUE",
+            "encounters": 1, "firstSeen": started, "lastSeen": started + 60,
+        })
+
+    return lua.table_from({
+        "id": session_id,
+        "seasonID": "season-theirs",
+        "dateText": date,
+        "instanceID": 3004, "instanceName": "The Venomous Abyss",
+        "instanceType": "raid",
+        "difficultyID": 15, "difficultyName": "Heroic",
+        "startedAt": started, "endedAt": started + 7200,
+        "rosterCount": guilded + strangers,
+        # THE RECORDER HAS TO BE IN THEIR OWN ROSTER, carrying a rank.
+        # RaidSession.GuildDataIsTrustworthy looks them up before it will
+        # believe any share at all, and answers "unknown" when it cannot find
+        # them — which counts as a night. That is exactly right on the wire
+        # too: the sender's own entry travels with its rank, so the receiver
+        # reaches the same verdict on the same evidence.
+        "recordedBy": "Guildie0-Area52",
+        "roster": lua.table_from(roster),
+        "encounters": lua.table_from([lua.table_from({
+            "encounterID": 3421, "name": "The Twin Fangs",
+            "difficultyID": 15, "groupSize": 20,
+            "killed": True, "at": started + 600,
+        })]),
+        # Set on the sender, never sent. See MergeSessions.
+        "summarized": True,
+        "pendingEncounter": lua.table_from({"encounterID": 9999}),
+    })
+
+
+guild_night = session("raid-3004-15-20260903", 100000, guilded=12)
+# One guildie — the person who recorded it — and twenty strangers. 1 of 21 is
+# under the 80% threshold, which is the whole rule.
+pug_night = session("raid-3004-15-20260901", 90000, guilded=1, strangers=20,
+                    date="2026-09-01")
+
+roundtrip = SYL.HistoryPayload.DecodeSession(
+    SYL.HistoryPayload.EncodeSession(guild_night)
+)
+
+check("A SESSION SURVIVES THE WIRE", roundtrip is not None)
+check("with its id, which is what stops a night arriving twice",
+      roundtrip.id == "raid-3004-15-20260903", roundtrip.id)
+check("and its whole roster, which is the attendance itself",
+      SYL.Utilities.CountKeys(roundtrip.roster) == 12,
+      SYL.Utilities.CountKeys(roundtrip.roster))
+check("keyed the way the sender keyed it",
+      roundtrip.roster["Player-1-G007"] is not None)
+# THE FIELD THE FILTER READS. RaidSession.GuildCounts counts roster entries
+# carrying a rank, and CountsAsNight compares that share to the threshold — so
+# a rank that did not travel would make every arriving night read as a pug and
+# be thrown away by the very filter it was sent to satisfy.
+check("carrying the guild rank the night is judged on",
+      roundtrip.roster["Player-1-G007"].guildRank == "Raider",
+      roundtrip.roster["Player-1-G007"].guildRank)
+check("its numbers back as numbers, not as the text of numbers",
+      roundtrip.startedAt == 100000
+      and roundtrip.roster["Player-1-G007"].encounters == 3,
+      (roundtrip.startedAt, roundtrip.roster["Player-1-G007"].encounters))
+check("its encounters, with the kill flag still a boolean",
+      len(roundtrip.encounters) == 1
+      and roundtrip.encounters[1].killed is True)
+check("and the boss currently being fought on THEIR client left behind",
+      roundtrip.pendingEncounter is None)
+
+# A drop record must not be readable as a session, or a receiver would file
+# 135 drops as 135 raid nights and every denominator on the board would be the
+# number of items won.
+check("A DROP IS NOT A SESSION",
+      SYL.HistoryPayload.DecodeSession(
+          SYL.HistoryPayload.Encode(drop("not-a-night"))) is None)
+# And the other way, which is the whole backward-compatibility story: a client
+# on 0.4.6 reassembles a session exactly as it does a drop, hands it to Decode,
+# is told it is not an "H1" record, and drops it. No version negotiation.
+check("and a session is not a drop, so an older build simply ignores it",
+      SYL.HistoryPayload.Decode(
+          SYL.HistoryPayload.EncodeSession(guild_night)) is None)
+
+# --- only the guild's own nights are offered -------------------------------
+#
+# The cheap cut and the right one. NightsOnly is the exact filter every screen
+# that counts attendance already applies, so a pug would arrive and be
+# discarded on the other side having cost a minute of wire — and Aimee's two
+# LFR runs carry 49 and 74 strangers between them.
+
+lua.execute("""
+    local SYL = ShowUsYourLoot
+    local season = SYL.GetActiveSeason()
+    season.raids = { GUILD_NIGHT, PUG_NIGHT }
+""", )
+G = lua.globals()
+G.GUILD_NIGHT = guild_night
+G.PUG_NIGHT = pug_night
+lua.execute("""
+    local SYL = ShowUsYourLoot
+    SYL.GetActiveSeason().raids = { GUILD_NIGHT, PUG_NIGHT }
+""")
+
+offered = SYL.HistorySync.Nights(SYL.GetActiveSeason())
+
+check("THE PUG IS NOT OFFERED", len(offered) == 1, len(offered))
+check("and the guild night is",
+      offered[1].id == "raid-3004-15-20260903", offered[1].id)
+
+summary = SYL.HistorySync.Describe(SYL.GetActiveSeason())
+
+check("the offer counts the nights it is actually sending",
+      summary.nights == 1, summary.nights)
+
+
+
+# --- the whole thing, end to end, into a client that has nothing -----------
+#
+# The board Pringlescat was actually looking at. He held every drop and no
+# nights; this asserts the second half now arrives with the first.
+
+lua.execute("""
+    local SYL = ShowUsYourLoot
+    local season = SYL.GetActiveSeason()
+    season.drops = { }
+""")
+
+season_out = SYL.GetActiveSeason()
+season_out.drops[1] = drop("night-1")
+season_out.drops[2] = drop("night-2")
+
+G.ClearSent()
+SYL.SendQueue.Reset()
+SYL.HistorySync.Stop()
+
+SYL.HistorySync.Offer(OFFICER, season_out)
+SYL.HistorySync.Begin(OFFICER)
+drain_history()
+
+wire = [G.SentPayload(i) for i in range(1, G.SentCount() + 1)]
+
+# The receiver: a fresh database with one night of its own, which is the state
+# that matters. A client that had nothing would take everything whatever the
+# merge rule was; a client that was THERE is the one a bad rule overwrites.
+lua.execute("ShowUsYourLootDB = nil")
+SYL.DatabaseInitialize()
+lua.execute("""
+    local SYL = ShowUsYourLoot
+    SYL.Guild.IsMember = function() return true end
+""")
+
+theirs = session("raid-3004-15-20260903", 100000, guilded=3)
+theirs.summarized = False
+
+SYL.GetActiveSeason().raids[1] = theirs
+
+# The handshake first, exactly as the wire carries it: nothing is received
+# until this client has been asked and has said yes.
+SYL.HistorySync.OnMessage(
+    "SYLHIST", "1	O	Midnight Season 2	2	0	%d" % len(wire),
+    "WHISPER", OFFICER
+)
+SYL.HistorySync.AcceptOffer()
+
+for payload in wire:
+    SYL.HistorySync.OnMessage("SYLHIST", payload, "WHISPER", OFFICER)
+
+landed = SYL.GetActiveSeason()
+
+check("THE NIGHT ARRIVES ALONGSIDE THE DROPS",
+      len(landed.raids) == 1 and len(landed.drops) == 2,
+      (len(landed.raids), len(landed.drops)))
+
+# THE UNION, and it is the rule this needs rather than the drops' rule. The
+# same evening seen from two places: somebody who joined at the third boss
+# recorded a roster that starts there, and the officer who was there from the
+# pull recorded the people who left before it. Taking either alone drops real
+# raiders off an attendance column.
+check("and the roster it already had is UNIONED, not replaced",
+      SYL.Utilities.CountKeys(landed.raids[1].roster) == 12,
+      SYL.Utilities.CountKeys(landed.raids[1].roster))
+check("with rosterCount following what is actually in there",
+      landed.raids[1].rosterCount == 12, landed.raids[1].rosterCount)
+
+# A second delivery of the same season. The night must not land twice: a
+# duplicate would raise every board's denominator without adding one person to
+# a numerator, so everybody's points per night would fall for nothing.
+SYL.HistorySync.OnMessage(
+    "SYLHIST", "1	O	Midnight Season 2	2	0	%d" % len(wire),
+    "WHISPER", OFFICER
+)
+SYL.HistorySync.AcceptOffer()
+
+for payload in wire:
+    SYL.HistorySync.OnMessage("SYLHIST", payload, "WHISPER", OFFICER)
+
+check("SENDING THE SAME NIGHT TWICE DOES NOT DOUBLE IT",
+      len(SYL.GetActiveSeason().raids) == 1,
+      len(SYL.GetActiveSeason().raids))
+
+# --- a night that arrives does not raise last night's summary --------------
+#
+# Core/RaidSummary.lua shows the evening's summary for any session not yet
+# marked summarized. An evening from three weeks ago landing over the wire
+# must not pop one.
+lua.execute("ShowUsYourLootDB = nil")
+SYL.DatabaseInitialize()
+lua.execute("""
+    local SYL = ShowUsYourLoot
+    SYL.Guild.IsMember = function() return true end
+""")
+
+fresh = SYL.GetActiveSeason()
+
+SYL.HistoryPayload.MergeSessions(
+    fresh, lua.table_from([SYL.HistoryPayload.DecodeSession(
+        SYL.HistoryPayload.EncodeSession(guild_night))])
+)
+
+check("AN ARRIVING NIGHT IS ALREADY SUMMARIZED, so nothing pops up",
+      fresh.raids[1].summarized is True, fresh.raids[1].summarized)
+check("and it is filed under the season it landed in, not the one it left",
+      fresh.raids[1].seasonID == fresh.id,
+      (fresh.raids[1].seasonID, fresh.id))
+
+
+
+# --- 10. the name you type -------------------------------------------------
+#
+# Aimee, 2026-09-06: "search by typing in name to sync loot history and
+# autofill the name. show an error if the player is not online."
+#
+# WHY THE SUGGESTION LIST IS WIDER THAN THE THINGS IT WILL SEND TO. The target
+# used to be a cycle button over online guild members, and a picker that can
+# only offer names it is willing to send to cannot answer "why is Nychar not
+# in here" -- their absence IS the error, delivered as nothing at all. So
+# every guild member is offerable, the row says which are online, and a name
+# that cannot be reached is refused in words at the moment it is picked.
+
+lua.execute("ShowUsYourLootDB = nil")
+SYL.DatabaseInitialize()
+
+lua.execute(
+    """
+    local SYL = ShowUsYourLoot
+
+    SYL.Guild.GetMembers = function()
+        return {
+            ['g1'] = { name = 'Nychar-Area52',  class = 'PRIEST',
+                       isOnline = false },
+            ['g2'] = { name = 'Rakahasa-Area52', class = 'ROGUE',
+                       isOnline = true },
+            ['g3'] = { name = 'Aimee-Area52',   class = 'HUNTER',
+                       isOnline = true },
+        }
+    end
+    """
+)
+
+Share = SYL.ShareWindow
+
+names = sorted(
+    str(Share.Candidates()[i].name)
+    for i in range(1, len(Share.Candidates()) + 1)
+)
+
+check("EVERY GUILD MEMBER IS OFFERABLE, not only the ones online",
+      names == ["Nychar-Area52", "Rakahasa-Area52"], names)
+
+check("and never yourself", "Aimee-Area52" not in names, names)
+
+# Online is the fact that decides whether the button will work, so it is the
+# one the row carries -- ahead of the class, which is decoration here.
+offline_entry = None
+online_entry = None
+
+for index in range(1, len(Share.Candidates()) + 1):
+    entry = Share.Candidates()[index]
+
+    if str(entry.name).startswith("Nychar"):
+        offline_entry = entry
+    else:
+        online_entry = entry
+
+check("an offline row says so", Share.Note(offline_entry) == "offline",
+      Share.Note(offline_entry))
+check("and an online one does not", Share.Note(online_entry) != "offline",
+      Share.Note(online_entry))
+
+# --- the refusal, which is the half that was asked for --------------------
+
+ok, why = Share.Check("Rakahasa-Area52")
+
+check("somebody online can be sent to", ok is True, why)
+
+ok, why = Share.Check("Nychar-Area52")
+
+check("SOMEBODY OFFLINE IS REFUSED IN WORDS", ok is False)
+check("and the words say which of the two things went wrong",
+      why is not None and "not online" in why, why)
+
+# MATCHED THE WAY THE WHISPER WILL BE ADDRESSED. The guild roster omits the
+# realm for anybody on your own, and the box may hold either form -- this is
+# the same trap that made the first history transfer do nothing at all.
+ok, _ = Share.Check("Rakahasa")
+
+check("a name typed without its realm is the same person", ok is True)
+
+ok, _ = Share.Check("rakahasa-area52")
+
+check("and so is one typed in the wrong case", ok is True)
+
+ok, why = Share.Check("Somebodyelse")
+
+check("a name nobody knows is refused", ok is False)
+check("and does not claim they are merely offline",
+      why is not None and "not in the guild" in why, why)
+
+ok, why = Share.Check("Aimee-Area52")
+
+check("sending to yourself is refused here too", ok is False, why)
+
+ok, why = Share.Check("")
+
+check("and an empty box is not an error, it is just not ready",
+      ok is False and why is None, why)
+
+# --- and Send re-checks at the press --------------------------------------
+#
+# Somebody can log out in the seconds between their name being picked and the
+# button being pressed, and the refusal that matters is the one for the state
+# things are in now.
+
+lua.execute("""
+    local SYL = ShowUsYourLoot
+
+    SYL.ShareWindow.Refresh = function() end
+""")
+
+sent, reason = Share.Send()
+
+check("Send with an empty box asks for a name rather than throwing",
+      sent is False and reason is not None, reason)
+
 
 print("")
 print("FAILURES: " + (str(failures) if failures else "none"))

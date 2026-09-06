@@ -3,6 +3,90 @@
 What changed, for the person installing it. The commit history explains why;
 this says what you will notice.
 
+## 0.4.7 — 2026-09-06
+
+### Fixed
+
+- **A shared loot history arrived complete and every raid night was wrong.**
+  This is the same feature as last release and the other half of the same
+  fault. The drops arrived, the credit arrived, and every points total on the
+  receiving board matched the sender's exactly — while the RAID NIGHTS column
+  read *"of 4"* against a season that had run nine.
+
+  Nights are not counted from loot. Someone who was eligible for nothing all
+  evening still raided, and only the raid roster knows that — so both halves
+  of that cell read the raid sessions, and a transfer had never sent one. The
+  receiver was dividing a complete numerator by their own partial attendance:
+  1,100 points over four nights instead of nine, which is 275.0 per night
+  where the true figure is 122.2. Points per night is the column the board
+  sorts by and the bar draws.
+
+  **The raid nights now travel with the drops.** Guild nights only — a pug
+  roster is not something to put on somebody else's wire or in their database
+  — and a night you were also at keeps everything you recorded and gains only
+  the people you did not see. A night that arrives is already marked as
+  summarized, so an evening from three weeks ago does not raise last night's
+  summary.
+
+- **Another officer's pug loot counted on your board.** The 80% guild rule has
+  applied to the fairness maths since it was written, and it fell open on
+  anything that arrived over a transfer: a drop from a night this client has
+  no record of was read as "old, from before sessions existed" and counted.
+
+  Those are two different unknowns. A drop **you** recorded with no session is
+  genuinely old history and still counts. A drop that **arrived** with no
+  session is a night nobody here has any evidence for — the sender's own
+  client had that session, so either they are on an older build or it was cut
+  by the guild-share filter on the way out. Either way it is not one of yours.
+
+  A drop is also matched to its session **by who recorded it** now, not only
+  by when it happened. The twelve-hour window was handing another officer's
+  pugs your raid nights — measured on one real database, 29 of 151 arriving
+  drops landed inside a session of hers, including sixteen stamped on a date
+  she never raided at all.
+
+- **Sending a season no longer relays what somebody sent you.** A send window
+  that had read 135 drops and four minutes started reading 286 and ten, and
+  151 of those were another officer's pugs that the receiver would refuse on
+  arrival. A transfer hands over your own season. Records that arrived live
+  over the raid channel during a night you were at are yours and still go.
+
+### Added
+
+- **A pop-up when somebody asks to run your key.** It used to be one line in
+  chat that told you to type a slash command, which on a raid night is a line
+  that has already scrolled. The Keys tab has always kept the durable list, so
+  closing this cannot lose anything — Hide takes it off the count and leaves
+  the row there until the weekly reset.
+
+- **Ask a person, not a character.** Asking for somebody's key now reaches
+  whichever of their characters is logged in, and the request says which key
+  it is about — *"+15 Operation: Floodgate on Pronglez"* — because once it can
+  arrive anywhere, "your key" is a question with as many answers as they have
+  alts. The alert says why it landed where it did when that is not where it
+  was aimed, and their answer finds the right row whichever character replies
+  from.
+
+  It works through the alt mapping, so a character that is not linked to its
+  main still only reaches itself. Settings → Tools will scan guild notes for
+  you, or set one by hand on the roster.
+
+  A guildie on 0.4.6 still receives a plain request with the right role rather
+  than nothing at all.
+
+- **Type a name to send loot history to.** The target was a button you clicked
+  through one guild member at a time, which is fine at four names and not at
+  forty. It suggests as you type, from the whole guild rather than only who is
+  online — because a picker that can only offer names it will send to answers
+  *"why is Nychar not in this list"* with silence. A name that cannot be
+  reached says so in a line under the box.
+
+### Changed
+
+- **The send window says how many raid nights are going.** Fifth line of WHAT
+  GOES, beside the drops and the credit marks, because it is what makes the
+  numbers on the other end mean the same thing as the numbers on yours.
+
 ## 0.4.6 — 2026-09-05
 
 ### Added

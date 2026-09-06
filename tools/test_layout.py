@@ -1030,6 +1030,148 @@ check("the detail pane holds back room for its own scroll line",
       "local SCROLL_LINE" in parts and "full - SCROLL_LINE" in parts,
       "the line that says the list is cut short was drawn past the bottom")
 
+# --- the send window, after the box replaced the cycle button --------------
+#
+# Two changes landed in this window at once and each moves the other's floor:
+# WHAT GOES grew a fifth line when the raid nights started travelling, and the
+# target became a typed box with a row under it for the reason a name cannot
+# be sent to. Every block below is anchored off the one above it in the
+# source, so the arithmetic here is the arithmetic the client does.
+
+print("\n-- send window " + "-" * 61)
+
+SHARE = src("UI/ShareWindow.lua")
+
+SHARE_W = number(SHARE, r"local WINDOW_WIDTH = (\d+)", "ShareWindow width")
+SHARE_PAD = number(SHARE, r"local PAD = (\d+)", "ShareWindow PAD")
+SHARE_CONTENT = SHARE_W - SHARE_PAD * 2
+
+BODY_TOP = number(SHARE, r"local BODY_TOP = (\d+)", "BODY_TOP")
+BODY_LINES = number(SHARE, r"local BODY_HEIGHT = (\d+) \* 15", "BODY_HEIGHT")
+FACTS_LINES = number(SHARE, r"local FACTS_HEIGHT = (\d+) \* 15",
+                     "FACTS_HEIGHT")
+
+FACTS_TOP = BODY_TOP + BODY_LINES * 15 + 22
+TARGET_TOP = FACTS_TOP + 18 + FACTS_LINES * 15 + 14
+BOX_TOP = TARGET_TOP + 16
+NOTE_TOP = BOX_TOP + 20 + 8
+BAR_TOP = NOTE_TOP + 15 + 20
+SHARE_H = BAR_TOP + 14 + 60
+
+# THE FIFTH LINE IS THE POINT. Facts writes five lines now, and a block still
+# reserving four would draw the last one through the SEND TO heading. Counted
+# out of the function rather than asserted as a number, so adding a sixth line
+# without widening the block fails here instead of on Aimee's screen.
+FACT_BODY = SHARE[SHARE.index("function ShareWindow.Facts"):
+                  SHARE.index("-- Doing it")]
+
+FACT_LINES = FACT_BODY.count(chr(92) + 'n"')
+
+check("WHAT GOES reserves a row for every line it writes",
+      FACTS_LINES >= FACT_LINES + 1,
+      "%d rows reserved, %d newlines written" % (FACTS_LINES, FACT_LINES))
+
+gap("the facts block clears SEND TO",
+    FACTS_TOP + 18 + FACTS_LINES * 15, TARGET_TOP)
+gap("SEND TO clears the box", TARGET_TOP + 14, BOX_TOP)
+gap("the box clears the row under it", BOX_TOP + 20, NOTE_TOP)
+gap("that row clears the progress bar", NOTE_TOP + 15, BAR_TOP)
+
+# The footer rule is 42 up from the bottom, and the bar must stay above it.
+gap("the progress bar clears the footer", BAR_TOP + 14, SHARE_H - 42)
+
+# THE REFUSAL IS THE LONGEST THING THAT ROW EVER HOLDS, and it is one line
+# with word wrap off -- so a string that does not fit is drawn cut, not
+# wrapped. This is the longest ShareWindow.Check can build: the widest name on
+# Aimee's roster in the branch with the most words after it.
+LONGEST_REFUSAL = ("Likestoflash is not in the guild, or has not been seen "
+                   "from here yet.")
+
+check("the longest refusal fits the row it shares",
+      measure(LONGEST_REFUSAL, HEADER) <= SHARE_CONTENT,
+      "%.1f in %d" % (measure(LONGEST_REFUSAL, HEADER), SHARE_CONTENT))
+
+# THE SUGGESTION LIST OPENS OVER THE HEADING, NOT OVER THE BOX, which is the
+# whole reason NameSuggest grew an anchor. Two pixels above the box is where
+# SEND TO is drawn and the refusal row is directly below it, so the default
+# anchor covered the label of the control being used and the answer it was
+# about to give.
+SUGGEST = src("UI/NameSuggest.lua")
+
+SUGGEST_ROW = number(SUGGEST, r"local ROW_HEIGHT = (\d+)", "suggest row")
+SUGGEST_HEAD = number(SUGGEST, r"local HEADING_HEIGHT = (\d+)",
+                      "suggest heading")
+SUGGEST_PAD = number(SUGGEST, r"local PAD = (\d+)", "suggest PAD")
+
+SHARE_ROWS = number(SHARE, r"maxRows = (\d+)", "ShareWindow maxRows")
+
+POPUP_H = SUGGEST_HEAD + SHARE_ROWS * SUGGEST_ROW + SUGGEST_PAD + 2
+POPUP_TOP = TARGET_TOP - 2 - POPUP_H
+
+check("the suggestion list opens over the heading, not the box",
+      "above = toHeading" in SHARE,
+      "anchored to the box it would cover SEND TO and the refusal row")
+
+gap("and stops short of the WHAT GOES heading", FACTS_TOP + 14, POPUP_TOP)
+
+
+# --- the key request alert -------------------------------------------------
+#
+# Laid out by walking it rather than from constants, because three of its five
+# blocks are optional -- a client on an older build sends no key, a request
+# that landed where it was aimed has nothing to explain, and the dungeon name
+# is whatever the client returns in whatever language it runs in. So what is
+# checked here is that the widest each block can ever be still fits, and that
+# the button row cannot meet in the middle.
+
+print("\n-- key request alert " + "-" * 55)
+
+ALERT = src("UI/KeyRequestAlert.lua")
+
+ALERT_W = number(ALERT, r"local WINDOW_WIDTH = (\d+)", "alert width")
+ALERT_PAD = number(ALERT, r"local PAD = (\d+)", "alert PAD")
+ALERT_CONTENT = ALERT_W - ALERT_PAD * 2
+
+# THE WIDEST KEY LINE BLIZZARD HAS SHIPPED, taken from UI/KeyRows.lua's own
+# note on what its DUNGEON column has had to hold: "Operation: Mechagon -
+# Workshop" is wider than anything in the current pool, and the pool rotates
+# twice a year. Here it is drawn beside the character the key sits on, and
+# the pair share one row with no wrapping.
+WIDEST_KEY = "+30 Operation: Mechagon - Workshop"
+WIDEST_OWNER = "on Likestoflash"
+
+check("the key and the character it sits on share one row",
+      measure(WIDEST_KEY, SMALL) + 8 + measure(WIDEST_OWNER, SMALL)
+      <= ALERT_CONTENT,
+      "%.1f in %d" % (measure(WIDEST_KEY, SMALL) + 8
+                      + measure(WIDEST_OWNER, SMALL), ALERT_CONTENT))
+
+# Five buttons: three answers and Whisper right-aligned, Hide on the left.
+# Widths are declared in the source, so this reads them rather than repeating
+# them and checks the two runs cannot meet.
+ALERT_BUTTONS = re.findall(
+    r"Theme\.CreateButton\(\s*frame, (\d+), BUTTON_H", ALERT
+)
+
+check("the alert declares all five of its buttons",
+      len(ALERT_BUTTONS) == 5, ALERT_BUTTONS)
+
+if len(ALERT_BUTTONS) == 5:
+    WIDTHS = [int(w) for w in ALERT_BUTTONS]
+
+    # Source order is deny, maybe, yes, whisper, hide.
+    RIGHT_RUN = sum(WIDTHS[:4]) + 8 * 3
+    HIDE = WIDTHS[4]
+
+    gap("Hide does not reach the answers",
+        ALERT_PAD + HIDE + 8, ALERT_W - ALERT_PAD - RIGHT_RUN)
+
+    for width, label in zip(WIDTHS, ("No", "Maybe", "Yes", "Whisper", "Hide")):
+        check("the alert's %s button fits its label" % label,
+              measure(label, SMALL) <= width - 8,
+              "%.1f in %d" % (measure(label, SMALL), width - 8))
+
+
 print()
 print("FAILURES: " + (", ".join(FAILURES) if FAILURES else "none"))
 sys.exit(1 if FAILURES else 0)
