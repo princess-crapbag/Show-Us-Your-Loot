@@ -81,12 +81,30 @@ local CREDIT_FIELDS = { "guid", "name", "state", "setAt", "setBy" }
 -- Numbers that must come back as numbers. Everything on the wire is a string,
 -- and a timestamp compared as text sorts "9" after "10" -- which is the kind
 -- of bug that only shows up on the day the digit count changes.
+-- NUMBERS COME BACK AS NUMBERS. Everything on the wire is text, and a field
+-- left as text is not the value it used to be: Lua's "2" == 2 is false, so a
+-- state that arrives as a string matches none of the ROLL_STATE constants and
+-- classifies as nothing at all.
+--
+-- winnerState was missing from this list, and roll.state and credit.state
+-- were never converted at all. The drops arrived, the credit arrived, the
+-- roll lists arrived -- and every one of them counted as a win that was
+-- neither a need, an offspec, a transmog nor a greed, so the whole board
+-- scored zero and read as a column of dashes. That is the exact complaint
+-- this feature was built to answer: "its not showing the score of the items
+-- i marked to match rclc."
 local NUMERIC = {
     encounterID = true, difficultyID = true, instanceID = true,
     itemID = true, itemLevel = true, winnerRoll = true,
     eligibleCount = true, groupSize = true, timestamp = true,
-    lootListID = true,
+    lootListID = true, winnerState = true,
 }
+
+-- A roll's state and a credit's state are the same kind of value and need the
+-- same treatment. `tonumber(value) or value` rather than a bare tonumber, so
+-- a field that is genuinely text survives being asked.
+local ROLL_NUMERIC = { roll = true, state = true }
+local CREDIT_NUMERIC = { setAt = true, state = true }
 
 local function Clean(value)
     if value == nil then
@@ -194,7 +212,7 @@ local function DecodeRolls(text)
             local value = parts[index]
 
             if value ~= nil and value ~= "" then
-                roll[name] = (name == "roll" and tonumber(value)) or value
+                roll[name] = (ROLL_NUMERIC[name] and tonumber(value)) or value
             end
         end
 
@@ -220,7 +238,7 @@ local function DecodeCredit(text)
         local value = parts[index]
 
         if value ~= nil and value ~= "" then
-            credit[name] = (name == "setAt" and tonumber(value)) or value
+            credit[name] = (CREDIT_NUMERIC[name] and tonumber(value)) or value
         end
     end
 

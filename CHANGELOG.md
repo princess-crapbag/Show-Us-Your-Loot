@@ -3,6 +3,36 @@
 What changed, for the person installing it. The commit history explains why;
 this says what you will notice.
 
+## 0.4.6 — 2026-09-05
+
+### Fixed
+
+- **A shared loot history arrived, and then scored nothing.** This is the one
+  the whole feature exists for, and it was broken in a way neither screen
+  could show you: the drops arrived, the roll lists arrived, every credit
+  correction arrived — and every raider on the receiving board still read as
+  a dash.
+
+  Everything on the wire travels as text. The decoder turned some fields back
+  into numbers and not others, and the response on a drop — need, offspec,
+  transmog, greed — was one of the ones it missed. In Lua `"2"` and `2` are
+  not equal, so an arriving win matched none of the four and counted as a win
+  that was none of them. The totals were right; nothing was classified, so
+  nothing scored.
+
+  Found by reading two real databases side by side. The value prints the same
+  either way, which is why a diff of the two showed nothing until the types
+  were asked for by name.
+
+  **Anything already on your machine is repaired on login**, because a second
+  send would not have fixed it — a transfer never overwrites a drop you
+  already hold. You will see a line saying how many values were put right.
+
+- **A transfer could be cut through the middle of a letter.** Messages were
+  split at exactly 200 bytes regardless of what was there, and a name with an
+  accent in it is two bytes per letter — so a message could go out holding
+  half a character. It splits on character boundaries now.
+
 ## 0.4.5 — 2026-09-05
 
 ### Added

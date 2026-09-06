@@ -683,6 +683,101 @@ landed = len(SYL.GetActiveSeason().drops or [])
 
 check("and all four accented drops land intact", landed == 4, landed)
 
+# --- 12. a state that arrives as text is not a state ------------------------
+#
+# THE BUG THAT MADE THE WHOLE FEATURE LOOK LIKE IT HAD NOT RUN, found in
+# Pringlesbop's real database next to Aimee's: 135 drops present, all 57
+# credit overrides present, every roll list intact -- and every raider on his
+# board reading a dash.
+#
+# Everything on the wire is text. The decoder converted some fields back to
+# numbers and not others: winnerState was missing from the list, and neither
+# a roll's state nor the credit's state was converted at all. Lua's "2" == 2
+# is false, so every arriving drop matched none of the ROLL_STATE constants
+# and counted as a win that was neither a need, an offspec, a transmog nor a
+# greed. Wins totalled correctly; nothing scored.
+#
+# Asserted on TYPE, because the value prints identically either way -- which
+# is why a diff of the two databases showed nothing until the types were
+# asked for by name.
+lua_type = lua.eval("function(v) return type(v) end")
+
+sample = drop("typed-1", item=182000, rolls=3, credited={
+    "guid": "Player-60-095B9C0B",
+    "name": "Rakahasa",
+    "state": 3,
+    "setAt": 1788400123,
+    "setBy": AIMEE,
+})
+sample["winnerState"] = 2
+
+decoded = SYL.HistoryPayload.Decode(SYL.HistoryPayload.Encode(sample))
+
+check("the winner's response comes back a number, not the text of one",
+      lua_type(decoded["winnerState"]) == "number",
+      lua_type(decoded["winnerState"]))
+
+check("and so does the credit override's",
+      lua_type(decoded["creditOverride"]["state"]) == "number",
+      lua_type(decoded["creditOverride"]["state"]))
+
+check("and every roll's",
+      all(lua_type(decoded["rolls"][i]["state"]) == "number"
+          for i in range(1, len(decoded["rolls"]) + 1)),
+      [lua_type(decoded["rolls"][i]["state"])
+       for i in range(1, len(decoded["rolls"]) + 1)])
+
+# The whole point of the types: the board can classify the win.
+check("so an arriving transmog counts as a transmog",
+      decoded["winnerState"] == SYL.LootHistoryAPI.ROLL_STATE.Transmog,
+      (decoded["winnerState"], SYL.LootHistoryAPI.ROLL_STATE.Transmog))
+
+# --- and the repair for rows that already landed as text -------------------
+#
+# Fixing the decoder does not reach what is already in somebody's database,
+# and a second send will not either: Merge keeps a record it already holds
+# and takes only the credit from the arriving copy.
+lua.execute("""
+    local season = ShowUsYourLoot.GetActiveSeason()
+
+    season.drops = {
+        {
+            id = "text-1",
+            winnerState = "2",
+            creditOverride = { name = "Rakahasa", state = "3" },
+            rolls = { { name = "Rakahasa", state = "0", roll = "97" } },
+        },
+    }
+""")
+
+fixed = SYL.Migrations.RepairTransferredStates(lua.globals().ShowUsYourLootDB)
+
+check("the repair converts every state already sitting in the database",
+      fixed == 4, fixed)
+
+repaired = SYL.GetActiveSeason().drops[1]
+
+check("and they are numbers afterwards",
+      lua_type(repaired["winnerState"]) == "number"
+      and lua_type(repaired["creditOverride"]["state"]) == "number"
+      and lua_type(repaired["rolls"][1]["state"]) == "number"
+      and lua_type(repaired["rolls"][1]["roll"]) == "number")
+
+check("running it twice changes nothing more",
+      SYL.Migrations.RepairTransferredStates(
+          lua.globals().ShowUsYourLootDB) == 0)
+
+# A state that is genuinely not a number is left alone rather than nil'd.
+lua.execute("""
+    ShowUsYourLoot.GetActiveSeason().drops[1].winnerState = "unknown"
+""")
+
+SYL.Migrations.RepairTransferredStates(lua.globals().ShowUsYourLootDB)
+
+check("and a value that is not a number is left as it is",
+      str(SYL.GetActiveSeason().drops[1]["winnerState"]) == "unknown",
+      SYL.GetActiveSeason().drops[1]["winnerState"])
+
 print("")
 print("FAILURES: " + (str(failures) if failures else "none"))
 

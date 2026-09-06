@@ -246,3 +246,81 @@ function Migrations.MigrateSyncFeature(storedVersion)
         ShowUsYourLootDB.features.sync = wasEnabled
     end
 end
+
+-- THE STATES THAT ARRIVED AS TEXT.
+--
+-- Core/HistoryPayload.lua put every field on the wire as text and converted
+-- only some of them back. winnerState, each roll's state and the credit
+-- override's state came through as strings, and Lua's "2" == 2 is false --
+-- so every drop from a transfer counted as a win that was neither a need, an
+-- offspec, a transmog nor a greed. The receiving board scored zero for
+-- everyone and read as a column of dashes.
+--
+-- The decoder is fixed, but that does not reach what has already landed, and
+-- a second send will not either: Merge keeps a record it already holds and
+-- takes only the credit from the arriving copy. So the repair has to happen
+-- here, on the rows in the database.
+--
+-- ONLY THE FIELDS THAT ARE NUMBERS AND ONLY WHERE THEY ARE TEXT. tonumber on
+-- something already a number is a no-op, and a state that is genuinely not a
+-- number is left exactly as it is rather than being turned into nil.
+local function FixState(holder, field)
+    local value = holder and holder[field]
+
+    if type(value) ~= "string" then
+        return false
+    end
+
+    local number = tonumber(value)
+
+    if not number then
+        return false
+    end
+
+    holder[field] = number
+
+    return true
+end
+
+function Migrations.RepairTransferredStates(db)
+    db = db or ShowUsYourLootDB
+
+    if type(db) ~= "table" then
+        return 0
+    end
+
+    local repaired = 0
+
+    local function Season(season)
+        for _, drop in ipairs((season and season.drops) or {}) do
+            if FixState(drop, "winnerState") then
+                repaired = repaired + 1
+            end
+
+            if FixState(drop.creditOverride, "state") then
+                repaired = repaired + 1
+            end
+
+            for _, roll in ipairs(drop.rolls or {}) do
+                if FixState(roll, "state") then
+                    repaired = repaired + 1
+                end
+
+                if FixState(roll, "roll") then
+                    repaired = repaired + 1
+                end
+            end
+        end
+    end
+
+    Season(db.activeSeason)
+
+    -- Archives too. A season that was archived while holding text states
+    -- keeps them forever otherwise, and the archive board reads the same
+    -- fields the live one does.
+    for _, archive in ipairs(db.archives or {}) do
+        Season(archive)
+    end
+
+    return repaired
+end

@@ -301,6 +301,24 @@ function SYL.DatabaseInitialize()
         SYL:DebugPrint("Assigned ids to " .. backfilled .. " record(s)")
     end
 
+    -- RUN UNCONDITIONALLY, not behind a version guard.
+    --
+    -- Every other migration here overrules a saved choice once and must never
+    -- fire twice. This one only turns a string that is a number into that
+    -- number, which is a no-op the second time -- and it has to catch rows
+    -- that arrive from a sender still running the build that sent them as
+    -- text, which no version of THIS database can predict.
+    local restated = SYL.Migrations.RepairTransferredStates(ShowUsYourLootDB)
+
+    if restated > 0 then
+        SYL:Write(
+            SYL.colors.highlight .. "[SYL]" .. SYL.colors.reset
+            .. " repaired " .. restated
+            .. " loot value(s) that arrived from another player as text."
+            .. " Needs, greeds and transmog wins on those drops count again."
+        )
+    end
+
     -- A HIGH-WATER MARK, NOT THE CURRENT VERSION.
     --
     -- Installing an older file over a newer one is an ordinary thing to do on
