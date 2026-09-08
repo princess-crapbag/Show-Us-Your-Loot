@@ -3,6 +3,30 @@
 What changed, for the person installing it. The commit history explains why;
 this says what you will notice.
 
+## 0.4.8 — 2026-09-07
+
+### Fixed
+
+- **A raid team arrived on login that nobody asked you for.** Aimee: *"as soon
+  as i logged in i received the raid team from pringles. i thought this was
+  changed to only send on demand."* It was, and only half of it.
+
+  When a client logs in without a shared roster it asks the guild whether
+  anybody has one. That part is right and quiet. The answer was not: every
+  officer with sharing on replied by **broadcasting their whole team to the
+  entire guild**, so one person's login raised a prompt on every screen in it
+  — including people who already had a roster and had asked nothing.
+
+  The reply is whispered to whoever actually asked now. Pressing **Send my
+  raid team** still broadcasts when you choose the guild, because that one you
+  meant.
+
+  The wait between answers is also per person rather than one clock for the
+  whole guild. It could be shared while the reply reached everybody at once;
+  addressed, it would have answered the first person to log in and left the
+  next two with nothing — which looks exactly like nobody having shared a
+  roster.
+
 ## 0.4.7 — 2026-09-06
 
 ### Fixed

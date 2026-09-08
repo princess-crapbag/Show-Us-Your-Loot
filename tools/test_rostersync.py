@@ -775,6 +775,131 @@ SYL.RosterSync.Announce()
 check("SENDING AN EMPTY ROSTER FORGETS WHO WAS USING IT",
       SYL.RosterReceipts.Count() == 0, SYL.RosterReceipts.Count())
 
+
+# --- answering a request reaches the asker, and nobody else ----------------
+#
+# Aimee, 2026-09-07, on logging in: "as soon as i logged in i received the raid
+# team from pringles. i thought this was changed to only send on demand."
+#
+# She had asked for nothing, and her client had not asked either -- she was
+# already holding a roster, and RequestWhenReady declines when it has one.
+# SOMEBODY ELSE in the guild logged in without one, their client asked, and
+# every sharing officer answered by broadcasting a full team to the whole
+# guild. Every client in it raised a prompt for a question one person asked.
+#
+# The manual path was fixed in 0.4.5 -- "Send my raid team" grew a window with
+# one player, the raid team or the guild on it -- and the reply to a request
+# kept going out the old way. So this reads as a regression when it is the
+# opposite: the half nobody pressed was the half nobody had looked at.
+
+lua.execute("ShowUsYourLootDB = nil")
+SYL.DatabaseInitialize()
+
+ensure(TALESTRA, "Talestra", "MAGE")
+ensure(SAEBIE, "Saebie", "PRIEST")
+
+SYL.RaidTeam.SetMember(TALESTRA, True)
+SYL.RaidTeam.SetMember(SAEBIE, True)
+
+SYL.Features.SetEnabled("rosterSharing", True)
+
+# EVERY SENDER HERE IS IN THE GUILD. OnMessage drops anything from outside it
+# before it decides anything at all -- rightly, since this ends in rows being
+# written into somebody's roster -- so a stub that says no would make every
+# assertion below pass for the wrong reason.
+lua.execute("ShowUsYourLoot.Guild.IsMember = function() return true end")
+
+G.ClearSent()
+SYL.SendQueue.Reset()
+
+
+# The request goes through the real message handler, which is where the
+# answering decision lives -- reached through Listen's frame in the client and
+# through the module here.
+lua.execute(
+    """
+    function AskFrom(name)
+        ShowUsYourLoot.RosterSync.OnMessage('SYLROST', '?', 'GUILD', name)
+    end
+    """
+)
+
+G.AskFrom(OTHER)
+
+while SYL.SendQueue.Drain():
+    pass
+
+check("A REQUEST IS ANSWERED", G.SentCount() == 2, G.SentCount())
+
+channels = set(str(G.SentChannel(i)) for i in range(1, G.SentCount() + 1))
+targets = set(str(G.SentTarget(i)) for i in range(1, G.SentCount() + 1))
+
+check("AS A WHISPER, NOT A BROADCAST TO THE WHOLE GUILD",
+      channels == {"WHISPER"}, channels)
+check("and addressed to whoever actually asked",
+      targets == {OTHER}, targets)
+
+# THE THROTTLE IS PER ASKER NOW. It was one clock for the whole guild, which
+# was survivable only while the answer was a broadcast: three people logging in
+# inside twenty seconds got one answer between them and it happened to reach
+# all three. Addressed, that same clock answers the first and leaves the other
+# two with nothing -- which looks exactly like nobody having shared a roster.
+G.ClearSent()
+
+G.AskFrom(OTHER)
+
+while SYL.SendQueue.Drain():
+    pass
+
+check("asking twice in a row is throttled", G.SentCount() == 0, G.SentCount())
+
+G.ClearSent()
+
+G.AskFrom(OFFICER)
+
+while SYL.SendQueue.Drain():
+    pass
+
+check("BUT A DIFFERENT PERSON ASKING IS NOT",
+      G.SentCount() == 2, G.SentCount())
+check("and their copy is addressed to them",
+      set(str(G.SentTarget(i)) for i in range(1, G.SentCount() + 1))
+      == {OFFICER})
+
+# Announce is still a broadcast and still right for what it is: an officer
+# saying "here is my team" on purpose, and the only way to send the empty set
+# that tells everybody a team was cleared.
+G.ClearSent()
+
+SYL.RosterSync.Announce()
+
+while SYL.SendQueue.Drain():
+    pass
+
+check("PRESSING SEND STILL BROADCASTS, because that one was asked for",
+      set(str(G.SentChannel(i)) for i in range(1, G.SentCount() + 1))
+      == {"GUILD"},
+      set(str(G.SentChannel(i)) for i in range(1, G.SentCount() + 1)))
+
+# Nothing to say, so say nothing -- the guard that predates this and still
+# holds. An officer whose own team is empty must not answer at all, or every
+# client holding a roster loses it.
+lua.execute("ShowUsYourLootDB.players = {}")
+SYL.RaidTeam.SetMember(TALESTRA, False)
+SYL.RaidTeam.SetMember(SAEBIE, False)
+
+G.ClearSent()
+lua.execute("LAST = nil")
+
+G.AskFrom("Somebodynew-Area52")
+
+while SYL.SendQueue.Drain():
+    pass
+
+check("an officer with no team of their own still answers nothing",
+      G.SentCount() == 0, G.SentCount())
+
+
 print()
 print("FAILURES:", failures or "none")
 sys.exit(1 if failures else 0)

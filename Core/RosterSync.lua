@@ -73,7 +73,16 @@ local frame
 local listening = false
 
 local ANSWER_THROTTLE_SECONDS = 20
-local lastAnswerAt = 0
+
+-- PER ASKER, NOT ONE CLOCK FOR THE WHOLE GUILD.
+--
+-- It was a single timestamp, which was survivable only because the reply was
+-- a broadcast: three people logging in inside twenty seconds got one answer
+-- between them and it happened to reach all three. Now that an answer is
+-- addressed, that same clock would answer the first and leave the other two
+-- with nothing -- which is indistinguishable from nobody having shared a
+-- roster, the exact failure RequestWhenReady's note is about.
+local lastAnswerAt = {}
 
 -- Sets being assembled, keyed by sender. A set is committed only once every
 -- piece has arrived, so a half-delivered broadcast never shows a roster with
@@ -283,16 +292,48 @@ end
 -- SharedRoster now refuses an empty set from anyone but the accepted source,
 -- which is the guard that matters. This is the other half: do not send it.
 -- Nothing to say, so say nothing.
-local function Answer()
-    if not IsSharing() or not CanSend() then
+--
+-- AND IT IS WHISPERED TO WHOEVER ASKED, which is the half that was missing.
+--
+-- Aimee, 2026-09-07, on logging in: "as soon as i logged in i received the
+-- raid team from pringles. i thought this was changed to only send on
+-- demand." She had asked for nothing. She already held a roster, so her own
+-- client had not even sent a request -- RequestWhenReady declines when
+-- SharedRoster.HasShared. Somebody ELSE in the guild logged in without one,
+-- their client asked, and this answered by broadcasting a full team to the
+-- entire guild. Every client in it raised a prompt.
+--
+-- The manual path was fixed in 0.4.5 and this one was not, which is why it
+-- reads as a regression when it is the opposite: "Send my raid team" grew a
+-- window with one player, the raid team, or the guild on it, and the reply to
+-- a request kept going out the old way, to everyone, for a question one
+-- person had asked.
+--
+-- A REQUEST IS FROM ONE CLIENT AND SO IS ITS ANSWER. Announce stays a
+-- broadcast and is still right for what it is -- an officer saying "here is
+-- my team" on purpose, and the only way to send the empty set that tells
+-- everybody a team was cleared. This is not that.
+local function Answer(asker)
+    if not IsSharing() or not CanSend() or not asker then
         return false
     end
 
-    if #RosterSync.Own() == 0 then
+    local mine = RosterSync.Own()
+
+    if #mine == 0 then
         return false
     end
 
-    return RosterSync.Announce()
+    serial = serial + 1
+
+    for index, member in ipairs(mine) do
+        SYL.SendQueue.Queue(
+            PREFIX, RosterSync.Encode(serial, index, #mine, member),
+            "WHISPER", asker, CanSend
+        )
+    end
+
+    return true
 end
 
 -- Asked by a client that has just logged in. Answering is gated on sharing;
@@ -446,7 +487,11 @@ local function FromGuildMember(sender)
         or SYL.Guild.IsMember(nil, sender)
 end
 
-local function OnMessage(prefix, payload, _, sender)
+-- EXPORTED, for the reason Receive and ReceiveReceipt already are: the
+-- interesting behavior here is the ANSWERING decision -- who it goes to and
+-- how often -- and that lives nowhere else. It is unreachable through the
+-- event frame from a test, and it is the half that shipped wrong.
+function RosterSync.OnMessage(prefix, payload, _, sender)
     if prefix ~= PREFIX then
         return
     end
@@ -462,13 +507,13 @@ local function OnMessage(prefix, payload, _, sender)
 
         local now = time()
 
-        if now - lastAnswerAt < ANSWER_THROTTLE_SECONDS then
+        if now - (lastAnswerAt[sender] or 0) < ANSWER_THROTTLE_SECONDS then
             return
         end
 
-        lastAnswerAt = now
+        lastAnswerAt[sender] = now
 
-        Answer()
+        Answer(sender)
 
         return
     end
@@ -568,7 +613,7 @@ function RosterSync.Listen()
 
     frame:SetScript("OnEvent", function(_, event, ...)
         if event == "CHAT_MSG_ADDON" then
-            OnMessage(...)
+            RosterSync.OnMessage(...)
         end
     end)
 
